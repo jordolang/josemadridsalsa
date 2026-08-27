@@ -48,6 +48,18 @@ the root `package.json` is canonical.
 
 ### Fixed
 
+- **The report builder opens instead of failing with a minified React error.** `/admin/data/new`
+  passed `datasetsFor(...)` — full `DatasetDef` objects — from a Server Component straight into
+  `ReportBuilder`, which is `'use client'`. Every measure on a definition carries a `read`
+  function, and React cannot serialise a function across that boundary, so the render threw
+  "Functions cannot be passed directly to Client Components" on every visit. In production the
+  message is stripped, leaving only *Minified React error #441* behind the admin error boundary,
+  and the streamed response still reported HTTP 200 — so nothing showed up in the server logs
+  either. The page now passes the ids of the datasets the caller may read, and the builder
+  rebuilds the definitions from the registry it already imports client-side, which keeps the
+  permission filtering server-side and sends less over the wire. The page has been broken since
+  the builder shipped.
+
 - **The Choose 3/5/6/12 packs now cost what they say they cost.** Picking five salsas in a
   Choose 5 Pack advertised at $28 put five loose jars in the cart at catalogue price and rang
   up $45 at checkout. `lib/bundles.ts` is now the one definition of the packs — id, size and

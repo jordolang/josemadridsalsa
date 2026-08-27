@@ -131,4 +131,27 @@ describe('data-studio registry', () => {
       expect(datasetsFor(defaultRolePermissions.ADMIN).length).toBe(DATASETS.length)
     })
   })
+
+  /**
+   * A definition is behaviour, not data: every measure carries a `read` function. React cannot
+   * serialise a function across the server/client boundary, so a Server Component that hands
+   * `datasetsFor(...)` straight to a `'use client'` component throws during the Server Components
+   * render — in production that surfaces only as minified React error #441. The builder is therefore
+   * given ids and rebuilds the definitions from its own registry import.
+   */
+  describe('server to client boundary', () => {
+    it('holds functions, so a definition may never be passed to a client component', () => {
+      for (const dataset of DATASETS) {
+        expect(dataset.measures.some((measure) => typeof measure.read === 'function')).toBe(true)
+      }
+    })
+
+    it('rebuilds a caller\'s datasets from ids alone', () => {
+      const available = datasetsFor(defaultRolePermissions.ADMIN)
+      const ids = available.map((dataset) => dataset.id)
+
+      expect(ids.every((id) => typeof id === 'string')).toBe(true)
+      expect(ids.map((id) => getDataset(id))).toEqual(available)
+    })
+  })
 })

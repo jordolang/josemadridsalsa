@@ -38,7 +38,7 @@ export default async function NewReportPage({
           Choose what to measure and how to group it. Nothing is saved until you say so.
         </p>
       </div>
-      <ReportBuilder datasets={available} initialDatasetId={requested} />
+      <ReportBuilder datasetIds={available.map((dataset) => dataset.id)} initialDatasetId={requested} />
     </div>
   )
 }
