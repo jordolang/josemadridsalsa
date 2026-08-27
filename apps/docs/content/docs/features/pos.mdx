@@ -1,0 +1,61 @@
+---
+title: Point of Sale
+description: In-person selling at shows and the counter, running through a Square Terminal.
+---
+
+# Point of Sale
+
+`/pos` is the in-person register — the counter, farmers markets, shows. It is a
+staff-facing surface inside the storefront app, not a separate deployment.
+
+| Route | Purpose |
+|---|---|
+| `/pos` | The register: search products, build a cart, take payment |
+| `/pos/orders` | Orders taken on this register |
+| `/pos/settings` | Terminal and receipt-printer configuration |
+
+## Taking a payment
+
+`POST /api/pos/create-terminal-checkout` does the work. It:
+
+1. Requires an RBAC permission (`requirePermission`) — the register is not open to
+   anonymous callers.
+2. Validates the payload with Zod: at least one line item, a positive integer
+   `total`, an optional `taxAmount`, and a `deviceId` (defaulting to `'default'`).
+3. **Reserves inventory** for every line via `reserveMultipleProducts()` before
+   charging, and calls `releaseInventory()` if the checkout does not complete.
+4. Creates the `Order` with a `POS-YYYYMMDD-NNNN` order number and emits
+   `orderCreated`.
+5. Sends the amount to the Square Terminal via the Square SDK.
+
+`GET /api/pos/terminal-status` polls for the result — the customer taps or inserts
+their card on the terminal, and the register waits for Square to report back.
+
+Payments are recorded with `provider: SQUARE` and `channel: POS`, which is what
+separates counter takings from online orders in reporting and in the ledger.
+
+## Configuration
+
+| Variable | Purpose |
+|---|---|
+| `SQUARE_ACCESS_TOKEN` | Required — the route throws without it |
+| `SQUARE_TERMINAL_DEVICE_ID` | The terminal to send the charge to when `deviceId` is `'default'`. Without it the route returns *"No Square Terminal device configured."* |
+| `SQUARE_LOCATION_ID` | Required by the Square provider |
+| `SQUARE_SANDBOX` | Sandbox vs production |
+
+<Callout type="warn">
+**`/pos/settings` is not yet real.** The "Paired Devices" list renders two
+hard-coded example terminals, and "Pair New Device" is disabled. The printer
+dropdown is a static list of models. Nothing on that page is read from Square or
+persisted anywhere — the register itself works, but device pairing must be done in
+the Square dashboard, and the terminal actually charged comes from
+`SQUARE_TERMINAL_DEVICE_ID` (or an explicit `deviceId` in the request), never from
+this page.
+</Callout>
+
+## Related
+
+- [Square Integration](/docs/features/square)
+- [Payment Architecture](/docs/features/payment-architecture)
+- [Inventory Management](/docs/features/inventory)
+- [Bookkeeping Ledger](/docs/features/bookkeeping-ledger)

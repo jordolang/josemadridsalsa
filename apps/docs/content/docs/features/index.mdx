@@ -1,55 +1,92 @@
 ---
 title: Features
-description: Comprehensive guide to José Madrid Salsa features
+description: Every product surface in the platform, and where its code lives.
 ---
 
 # Features
 
-<PageInlineTOC>Jump to feature</PageInlineTOC>
+<PageInlineTOC>Jump to section</PageInlineTOC>
 
-Explore the core features and functionality of the José Madrid Salsa platform.
+Almost all of this ships from `apps/storefront` — the public store, the customer
+account area, the admin console, the fundraiser portal and the register are route
+groups within one Next.js app.
 
-## E-Commerce
+## Storefront
 
-- [Product Management](/docs/features/products) - Catalog, inventory, pricing
-- [Shopping Cart](/docs/features/shopping-cart) - Cart operations and management
-- [Checkout Flow](/docs/features/checkout) - Complete checkout process
-- [Order Management](/docs/features/orders) - Order lifecycle and tracking
+- [Products](/docs/features/products) — catalogue, variants, heat levels, labels
+- [Recipes](/docs/features/recipes) — the recipe catalogue at `/recipes`
+- [Shopping Cart](/docs/features/shopping-cart) — cart and abandoned-cart recovery
+- [Checkout](/docs/features/checkout) — the checkout surface
+- [Checkout Flow](/docs/features/checkout-flow) — the full pipeline, cart to confirmation
+- [Recommendations](/docs/features/recommendations) — related and suggested products
+- [Reviews](/docs/features/reviews) — product and site reviews, moderation
+- [Polls](/docs/features/polls) — community polls at `/polls`
+- [Location Map](/docs/features/location-map) — the homepage map component
+- [Content Management](/docs/features/content-management) — pages, banners, navigation, redirects
+- [SEO](/docs/features/seo) — metadata, robots.txt, sitemap, structured data
 
-## Payment Processing
+## Customer
 
-- [Payment Methods](/docs/features/payments) - Supported payment gateways
-- [Stripe Integration](/docs/features/stripe) - Stripe payment processing
-- [PayPal Integration](/docs/features/paypal) - PayPal checkout
-- [Square Integration](/docs/features/square) - Square payment integration
+- [User Accounts](/docs/features/accounts) — registration, profiles, addresses
+- [Password Reset](/docs/features/password-reset)
+- [Order History](/docs/features/order-history)
+- [Wishlist](/docs/features/wishlist)
+- [Loyalty Program](/docs/features/loyalty) — points, tiers and their discounts
+- [Gift Certificates](/docs/features/gift-certificates)
+- [AI Chat](/docs/features/ai-chat) — the Picante assistant and live-team handoff
 
-## Customer Features
+## Payments
 
-- [User Accounts](/docs/features/accounts) - Account management and profiles
-- [AI Chat](/docs/features/ai-chat) - Picante assistant launcher and live-team handoff
-- [Wishlist](/docs/features/wishlist) - Save favorite products
-- [Order History](/docs/features/order-history) - Track past orders
-- [Gift Certificates](/docs/features/gift-certificates) - Gift card system
+- [Payments](/docs/features/payments) — overview
+- [Payment Architecture](/docs/features/payment-architecture) — providers, channels, adapters
+- [Payment Integration](/docs/features/payment-integration) — wiring a provider in
+- [Stripe](/docs/features/stripe) · [PayPal](/docs/features/paypal) · [Square](/docs/features/square)
+- [Point of Sale](/docs/features/pos) — in-person selling at shows and the counter
+- [Taxes](/docs/features/taxes) — Stripe Tax
+- [Discount Codes](/docs/features/discounts)
 
-## Store Operations
+## Orders & fulfilment
 
-- [Customers](/docs/features/customers) - Unified contact list, account types, and imports
-- [Timeclock](/docs/features/timeclock) - Append-only staff clock in/out and hour tracking
-- [Location Management](/docs/features/locations) - Store locations and store locator
-- [Inventory Management](/docs/features/inventory) - Stock tracking and management
-- [Shipping](/docs/features/shipping) - Shipping calculations and management
-- [Taxes](/docs/features/taxes) - Tax calculation engine
+- [Orders](/docs/features/orders) — admin order management
+- [Order Lifecycle](/docs/features/order-lifecycle) — every state and what moves it
+- [Shipping](/docs/features/shipping) — rates, carriers, flat-rate presets
+- [Shipping Guide](/docs/features/shipping-guide) — the operational walkthrough
+- [Inventory Management](/docs/features/inventory) — stock, reservations, low-stock alerts
 
-## Marketing & Analytics
+## Fundraising
 
-- [Email Marketing](/docs/features/email-marketing) - Email campaigns and templates
-- [Analytics](/docs/features/analytics) - Usage tracking and reporting
-- [Lead Generation](/docs/features/lead-generation) - Advanced scraping system
-- [Recommendations](/docs/features/recommendations) - Product recommendations
+- [Fundraising](/docs/features/fundraising) — campaigns, participants, pricing, commission
+- [Battle Arena](/docs/features/battle-arena) — the gamified sales layer
+- [Fundraiser Contacts](/docs/features/fundraiser-contacts) — the CRM built from the archive
 
-## Admin Features
+## Marketing
 
-- [Admin Dashboard](/docs/features/admin-dashboard) - Management interface
-- [Staff Management](/docs/features/staff) - User roles and permissions
-- [Reports](/docs/features/reports) - Business analytics
-- [Content Management](/docs/features/content) - Page and content editing
+- [Email Marketing](/docs/features/email-marketing) — campaigns, automations, lists, segments
+- [Social Commerce](/docs/features/social-commerce) — connected accounts, scheduled posts, shop listings
+- [Blog Social Cross-Posting](/docs/features/blog-social-crossposting)
+- [Lead Generation](/docs/features/lead-generation)
+- [Form Capture](/docs/features/form-capture)
+
+## Back office
+
+- [Admin Dashboard](/docs/features/admin-dashboard)
+- [Staff & Permissions](/docs/features/staff-and-permissions) — roles and the RBAC system
+- [Credential Vault](/docs/features/credential-vault) — encrypted third-party credentials
+- [Customers](/docs/features/customers) — the unified contact list and imports
+- [Wholesale Accounts](/docs/features/wholesale)
+- [Store Locations](/docs/features/locations) — the retail-location database
+- [Events & Shows](/docs/features/events) — booking pipeline, staffing, manifests
+- [Timeclock](/docs/features/timeclock) — append-only staff clock in/out
+- [Notifications & Audit Log](/docs/features/notifications)
+- [Analytics](/docs/features/analytics) — Amplitude, GA4, admin reporting
+- [Data Studio](/docs/features/data-studio)
+- [Store Settings](/docs/features/store-settings)
+
+## Financials
+
+- [Bookkeeping Ledger](/docs/features/bookkeeping-ledger) — one running record of every dollar
+- [QuickBooks Online](/docs/integrations/quickbooks) — the accounting source of truth
+
+## Other apps
+
+- [macOS Admin App](/docs/features/macos-admin-app) — the native Swift admin client

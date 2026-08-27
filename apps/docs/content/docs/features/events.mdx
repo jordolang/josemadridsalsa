@@ -1,0 +1,83 @@
+---
+title: Events & Shows
+description: The show calendar — booking pipeline, "Where is Jose?", staffing, and pack-out manifests.
+---
+
+# Events & Shows
+
+Shows are where a large share of the business actually happens: festivals, markets,
+fairs. `/admin/events` manages the whole pipeline, from "we might apply" through to
+what got packed into the van.
+
+## The event
+
+`FeaturedEvent` carries both the calendar facts and the booking facts:
+
+| Field | Notes |
+|---|---|
+| `title`, `description`, `location` | Display copy |
+| `startDate`, `endDate` | When the show runs |
+| `featuredFrom`, `featuredTo` | When it appears on the site |
+| `isWhereIsJose` | Whether it shows on the "Where is Jose?" page |
+| `displayPriority` | Ordering among concurrent events |
+| `venue`, `address`, `city`, `state` | From the 20-column Show import CSV |
+| `driveTime` | Driving time from the shop, as exported (`"7h 04m"`) |
+
+<Callout type="info">
+Every column sourced from the Show import CSV is nullable, and an empty cell there
+means **"not published"** — never zero. Do not coalesce those fields to `0` when
+summarising.
+</Callout>
+
+### Booking pipeline
+
+`bookingStatus` tracks where a show is:
+
+`INTERESTED` → `APPLIED` → `WAITLISTED` → `ACCEPTED` → `CONFIRMED`, with `DECLINED`
+and `CANCELLED` as exits. The default is `CONFIRMED`.
+
+`applicationDeadline` is deliberately distinct from `startDate` — **deadlines
+routinely fall months before the event itself**, and treating the start date as the
+thing to watch means missing the application window entirely.
+
+`boothFee` records the vendor fee.
+
+## Google Calendar
+
+`googleEventId` links an event to its Google Calendar counterpart, with
+`lastGoogleSync` recording the last sync. `manuallyModified` and `modifiedFields`
+protect local edits: once a field has been changed by hand, a sync must not
+overwrite it. `customDescription` is the locally-authored description used in place
+of the calendar's.
+
+See [Google Calendar Two-Way Sync](/docs/integrations/google-calendar-sync).
+
+## Staffing and contacts
+
+`EventStaff` records who is working a show; `EventContact` holds the organiser
+contacts for it.
+
+## Manifests
+
+`EventManifest` is the pack-out list for a show — one per event, with
+`EventManifestItem` rows for what went:
+
+| Status | Meaning |
+|---|---|
+| `DRAFT` | Being built |
+| … | `packedAt` and `returnedAt` stamp the two ends of the trip |
+
+The difference between what was packed and what came back is what the show actually
+sold, which is how show takings reach the
+[bookkeeping ledger](/docs/features/bookkeeping-ledger).
+
+## Permissions
+
+Governed by the `EVENTS` permission category. `events:read` is in the default
+`STAFF` set; writing is not.
+
+## Related
+
+- [Google Calendar Two-Way Sync](/docs/integrations/google-calendar-sync)
+- [Bookkeeping Ledger](/docs/features/bookkeeping-ledger)
+- [Point of Sale](/docs/features/pos)

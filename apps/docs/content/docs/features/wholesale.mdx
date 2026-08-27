@@ -1,0 +1,50 @@
+---
+title: Wholesale Accounts
+description: Trade accounts — application, approval, and the pricing they unlock.
+---
+
+# Wholesale Accounts
+
+A wholesale account is a business that buys to resell. It hangs off a `User` with
+the `WHOLESALE` role and is managed at `/admin/wholesale`.
+
+## Application
+
+`WholesaleAccount` is created when a business applies:
+
+| Field | Notes |
+|---|---|
+| `businessName`, `contactName` | Required |
+| `businessType` | `RETAIL_STORE`, `RESTAURANT`, `DISTRIBUTOR`, `ONLINE_STORE`, `OTHER` |
+| `taxId`, `resaleNumber` | For tax-exempt resale |
+| `website`, `yearsInBusiness`, `estimatedVolume` | Qualification detail |
+
+One account per user (`userId` is unique).
+
+## Approval
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | Awaiting review |
+| `APPROVED` | Trading — `approvedAt` / `approvedBy` record who signed it off |
+| `REJECTED` | Declined |
+| `SUSPENDED` | Was approved, now stopped |
+
+## Trade terms
+
+Two fields carry the commercial arrangement:
+
+- **`discountRate`** — a percentage off catalogue price, `Decimal(5,2)`, defaulting
+  to zero.
+- **`minimumOrder`** — the order value below which the account cannot check out.
+
+<Callout type="info">
+The `WHOLESALE` role carries **no** admin permissions by default. It designates the
+account type; it does not grant back-office access.
+</Callout>
+
+## Related
+
+- [Staff & Permissions](/docs/features/staff-and-permissions)
+- [Customers](/docs/features/customers)
+- [Taxes](/docs/features/taxes)

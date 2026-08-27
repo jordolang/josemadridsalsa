@@ -1,0 +1,47 @@
+---
+title: Loyalty Program
+description: Points, tiers and the discounts they earn.
+---
+
+# Loyalty Program
+
+Customers accumulate points, points determine a tier, and a tier carries a standing
+discount. Implemented in `lib/loyalty.ts`, exposed through `/api/loyalty`.
+
+## Earning
+
+| Action | Points |
+|---|---|
+| Purchase | **10 per dollar** spent |
+| Referral | 500 |
+| Writing a review | 50 |
+| Birthday | 250 |
+
+## Tiers
+
+Tier is derived from **lifetime** points, so it never goes down when points are
+redeemed.
+
+| Tier | Lifetime points | Standing discount |
+|---|---|---|
+| `BRONZE` | 0 | — |
+| `SILVER` | 500 | 5% |
+| `GOLD` | 1,000 | 10% |
+| `PLATINUM` | 2,500 | 15% |
+
+## Data model
+
+`LoyaltyAccount` is created lazily — `getOrCreateLoyaltyAccount(userId)` returns the
+existing account or makes one, with the ten most recent transactions attached. Every
+change goes through `awardPoints()`, which writes a transaction row, updates the
+balance and lifetime total, recalculates the tier, and reports whether the tier
+changed so the caller can congratulate the customer.
+
+Points are awarded with a **positive** value and redeemed with a negative one —
+there is one code path, not two.
+
+## Related
+
+- [User Accounts](/docs/features/accounts)
+- [Discount Codes](/docs/features/discounts)
+- [Reviews](/docs/features/reviews)

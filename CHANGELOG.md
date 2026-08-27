@@ -13,6 +13,84 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **The documentation site now deploys as its own Vercel project from this repository.**
+  `apps/docs` has always been the Fumadocs source of truth, but it had no deployment
+  configuration of its own — the standalone `salsadocs` repository was the thing being
+  deployed, and it had gone stale in July while `apps/docs` kept moving. `apps/docs/vercel.json`
+  closes that gap: `git.deploymentEnabled` restricts it to `main` exactly as the storefront
+  does, so no branch push creates a preview deployment, and `ignoreCommand` runs
+  `turbo-ignore @jose-madrid/docs`, so a commit that touches nothing the docs depend on skips
+  the docs build entirely. The two projects share a repository and deploy independently.
+  `apps/docs/README.md` — until now the untouched `create-next-app` boilerplate — describes the
+  workspace, its content conventions, and that deployment arrangement.
+
+- **Twenty documentation pages for parts of the platform that had none.** Each is written
+  against the code rather than from memory:
+  - `integrations/quickbooks` — the OAuth connection, the chart-of-accounts mapping that gates
+    `autoSyncEnabled`, the durable `QuickBooksSyncRecord` queue and why `BLOCKED` is deliberately
+    distinct from `FAILED`, and the two mapping traps (duplicate QBO account names; a save with
+    an unloaded dropdown nulling the whole map).
+  - `features/fundraising` — campaign lifecycle, participants and referral codes, the
+    above-retail pricing rule and why the override check is `??` and not truthiness, the
+    commission base and the shipping/tax exclusion that once overpaid groups by 60%, and the
+    warning that "goal" and "raised" mean gross sales rather than commission.
+  - `features/staff-and-permissions`, `features/credential-vault`, `features/pos`,
+    `features/seo`, `features/locations`, `features/loyalty`, `features/discounts`,
+    `features/reviews`, `features/recipes`, `features/social-commerce`, `features/wholesale`,
+    `features/events`, `features/notifications`.
+  - `api/webhooks` — all five inbound endpoints, how each verifies its sender, every handled
+    event, and the `WebhookEvent` idempotency record.
+  - `configuration/cron-jobs` — the ten scheduled routes with their real schedules, and the
+    `CRON_SECRET` guard that refuses rather than fails open in production.
+  - `integrations/easypost` (including the ounces-not-pounds convention),
+    `integrations/email-dns`, `guides/jsdoc-conventions`.
+
+### Fixed
+
+- **Picante, the storefront chat mascot, answers again.** `/api/ai-chat` only ever had two
+  working backends, OpenAI and a `smileyface` provider whose host does not resolve, and the
+  OpenAI account behind the shared key has been out of credit — so every message a shopper sent
+  Picante failed upstream. Two changes bring him back. `anthropic` is now a real provider and
+  the default: it calls `client.messages.create` through `@anthropic-ai/sdk`, which the
+  form-capture extractor already uses, passing the Picante persona and its RAG context as the
+  top-level `system` field rather than as a message, so it needs only `ANTHROPIC_API_KEY` to
+  run. `AI_CHAT_PROVIDER=openai` still selects the old path unchanged.
+
+- **A failed chat reply now reads as a failure.** The route rebuilt its final response with
+  `NextResponse.json(responseData, { headers })`, dropping the provider's status code, so a 400
+  or 429 reached the browser as `200 OK` with an `error` field and no `reply`. The widget's
+  `response.ok` check passed and Picante answered "Sorry, I could not generate a response" —
+  the outage looked like the mascot being unhelpful. The status is now preserved, and the
+  Anthropic path returns its own wording rather than the provider's, so quota and billing text
+  never reaches a shopper.
+- **Eight broken links and twenty-two unlisted pages in the documentation site.** The section
+  index pages had drifted from the file tree in both directions: they linked to
+  `features/content`, `features/locations`, `features/reports`, `features/staff`,
+  `integrations/constant-contact`, `integrations/email-dns`, `integrations/github-webhooks` and
+  `integrations/quickbooks`, none of which existed, while twenty-two real pages — including
+  `deployment/monorepo`, `guides/testing` and `guides/versioning` — were listed nowhere. Every
+  index now matches what is actually on disk.
+- **`deployment/monorepo` described a repository that does not exist.** It documented an
+  `apps/backend` deployment boundary (removed in the reverted function-split; API routes live in
+  `apps/storefront/app/api`), listed five cron jobs on daily schedules when there are ten, most
+  running every five minutes to every two hours, and linked to three root markdown files that
+  were deleted. Rewritten against `vercel.json`, `turbo.json` and the CI workflow, and it now
+  covers `apps/docs` as a deployment target.
+- **Getting-started told new contributors to install Node 24 and offered a pnpm path.** The
+  repository pins Node 20 in `.nvmrc` and `npm@11.12.1`; installing with pnpm, or from anywhere
+  other than the repository root, produces a different dependency tree because npm only honours
+  the root `overrides` block from there. It also linked an OAuth guide at a `docs/` path that no
+  longer exists, and claimed Neon for production, which is Supabase.
+- **The root documentation index listed PostHog**, which is not a dependency, and showed a
+  single-app directory tree for what is a Turborepo monorepo.
+- **`configuration/environment-variables` was missing every PayPal and Square variable, all four
+  non-Stripe webhook secrets, `CRON_SECRET` and `UNSUBSCRIBE_SECRET`** — including
+  `PAYPAL_WEBHOOK_ID`, whose absence makes the webhook route reject every inbound event, and
+  `CRON_SECRET`, whose absence in production makes every scheduled route refuse.
+- **`api/index` pointed at an OpenAPI specification at `/docs/openapi.yaml` that is not
+  published.**
+
 ### Removed
 - **227 MB of editor caches, staging copies and stale dumps that had been committed to the
   repository.** 2,550 files — very nearly half of everything tracked, which fell from 5,228 files

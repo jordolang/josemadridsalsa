@@ -70,6 +70,13 @@ See [Error Responses](/docs/api/errors) for comprehensive error handling informa
 
 The API implements rate limiting. See [Rate Limiting](/docs/api/rate-limiting) for details.
 
-## OpenAPI Specification
+## Inbound Webhooks
 
-The complete OpenAPI specification is available at `/docs/openapi.yaml`
+Five providers post events back to the platform. See [Webhooks](/docs/api/webhooks)
+for each endpoint, how it verifies its sender, and what it changes.
+
+## Full Endpoint Reference
+
+[REST API](/docs/api/rest-api) documents the endpoint surface in detail. Route
+handlers live in `apps/storefront/app/api` — roughly fifty route groups, all
+deployed with the storefront.

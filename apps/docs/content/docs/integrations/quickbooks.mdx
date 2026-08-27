@@ -1,0 +1,164 @@
+---
+title: QuickBooks Online
+description: OAuth connection, chart-of-accounts mapping, and the queue that pushes orders, refunds and ledger entries into QuickBooks.
+---
+
+# QuickBooks Online
+
+**QuickBooks Online is the source of truth for accounting.** The website is where
+money is *earned*; QBO is where it is *booked*. This integration is the one-way
+bridge between them, plus a read-back of live reports into the admin financials
+dashboard.
+
+Code lives in `lib/quickbooks/`:
+
+| File | Responsibility |
+|---|---|
+| `config.ts` | OAuth endpoints, environment selection, app credential resolution |
+| `oauth.ts` | Authorization-code exchange and token refresh |
+| `connection.ts` | The single live connection, token storage, validity |
+| `sync.ts` | The push queue — customers, items, receipts, journal entries |
+| `mappers.ts` | Order/refund → QBO payload shapes |
+| `journal.ts` | Ledger entries → double-entry `JournalEntry` |
+| `ledger-accounts.ts`, `ledger-account-settings.ts` | Chart-of-accounts mapping |
+| `reports.ts` | Read-back: P&L, expenses, bills, vendors |
+| `client.ts` | Authenticated v3 API calls |
+
+## Connecting
+
+Settings → Integrations → QuickBooks (`/admin/settings/integrations/quickbooks`).
+
+The Intuit **Client ID and Secret** can be entered in the admin panel — they are
+stored encrypted in `QuickBooksAppCredential` — or supplied as environment
+variables. Admin-entered values win:
+
+| Variable | Purpose |
+|---|---|
+| `QUICKBOOKS_CLIENT_ID` | Intuit app client id (fallback if not set in admin) |
+| `QUICKBOOKS_CLIENT_SECRET` | Intuit app client secret (fallback) |
+| `QUICKBOOKS_ENVIRONMENT` | `sandbox` (default) or `production` — only the default for a *new* connect flow; a saved connection carries its own |
+
+The redirect URI registered in the Intuit app must exactly match
+`${NEXTAUTH_URL}/api/integrations/quickbooks/callback`. The only scope requested is
+`com.intuit.quickbooks.accounting`.
+
+### OAuth routes
+
+| Route | Purpose |
+|---|---|
+| `/api/integrations/quickbooks/connect` | Starts the authorize flow |
+| `/api/integrations/quickbooks/callback` | Exchanges the code, saves the connection |
+| `/api/integrations/quickbooks/disconnected` | Intuit's disconnect notification |
+
+### Tokens
+
+`QuickBooksConnection` holds one row per connected company (realm). Access and
+refresh tokens are encrypted at rest with AES-256-GCM using the same `MASTER_KEY`
+machinery as the [credential vault](/docs/features/credential-vault).
+
+QBO access tokens last about an hour; refresh tokens about 100 days on a rolling
+basis. Both expiries are persisted and `getValidAccessToken()` refreshes
+proactively — so a company that goes untouched for over 100 days must be
+reconnected by hand.
+
+## Mapping the chart of accounts
+
+`QuickBooksSettings` (one row per realm) is where the website learns which QBO
+accounts to post into. **`autoSyncEnabled` stays off until these are set.**
+
+| Setting | What it controls |
+|---|---|
+| `incomeAccountId` | Income account for Items the sync auto-creates. Without it an Item cannot be created at all. |
+| `depositAccountId` | Where SalesReceipt proceeds land — typically Undeposited Funds |
+| `shippingItemId` | The QBO Item used for the shipping line |
+| `discountAccountId` | Where a checkout discount is booked |
+| `giftCertificateAccountId` | The liability account certificates were sold into; redemptions draw it down |
+| `refundItemId` | Item a *partial* refund lands on (our refunds carry an amount but no line detail) |
+| `ledgerAccountMap` | Per-`LedgerCategory` account + offset mapping for journal entries |
+| `syncStartDate` | Orders before this date are left out of the books entirely |
+
+<Callout type="warn">
+Two traps worth knowing about, both learned the hard way:
+
+- QBO permits **duplicate account names**. Map by account *id*, and when two rows
+  read the same in a dropdown, confirm the id before saving.
+- Saving the mapping screen while a dropdown has not loaded its options writes
+  `null` over the whole mapping. Confirm every field is populated before saving,
+  and re-check the page after a save.
+</Callout>
+
+## How records reach QuickBooks
+
+Checkout **never** calls QuickBooks inline. A completed payment writes a row to
+`QuickBooksSyncRecord` and returns; a cron drains the queue.
+
+```
+paid Order ─┐
+Refund ─────┼─▶ QuickBooksSyncRecord (PENDING) ─▶ /api/cron/quickbooks-sync ─▶ QBO
+LedgerEntry ┘        (durable queue + audit trail)      (hourly, :15)
+```
+
+`QuickBooksSyncRecord` is unique on `(entityType, entityId)` — one lineage per
+record, which is what makes the sweeper idempotent and a replay harmless.
+
+### Statuses
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | Queued, waiting for the next drain |
+| `PROCESSING` | Being posted right now |
+| `SYNCED` | Posted; `quickbooksId` holds the QBO object id |
+| `FAILED` | Transient failure — will retry after `nextAttemptAt` |
+| `BLOCKED` | Needs a human decision (e.g. an unmapped account). **Retrying will never fix it** — deliberately distinct from `FAILED` |
+| `SKIPPED` | Deliberately excluded — predates `syncStartDate`, or skipped by hand |
+
+Retries use exponential backoff (`backoffFor`), gated by `nextAttemptAt`.
+
+### Entity types
+
+| Type | Source | Becomes |
+|---|---|---|
+| `CUSTOMER` | Order's user or email | QBO Customer |
+| `ITEM` | Product | QBO Item |
+| `SALES_RECEIPT` | Paid `Order` | SalesReceipt |
+| `REFUND_RECEIPT` | `Refund` | RefundReceipt |
+| `JOURNAL_ENTRY` | `LedgerEntry` | Double-entry JournalEntry |
+
+`JOURNAL_ENTRY` exists for money that never became an order — cash and show
+takings, hand-entered expenses, imported statement rows. There is no customer or
+line detail to build a SalesReceipt from, so it posts as a journal entry against
+the accounts in `ledgerAccountMap`. See
+[Bookkeeping Ledger](/docs/features/bookkeeping-ledger).
+
+### Never a second customer
+
+`QuickBooksEntityMap` keeps a stable local-id → QBO-id mapping, scoped by realm, so
+a re-sync can never create a duplicate Customer or Item. Scoping by realm matters:
+sandbox ids are meaningless in production, so switching companies starts from a
+clean map rather than silently reusing ids that point at nothing.
+
+## Reading back
+
+`reports.ts` pulls live figures into `/admin/financials`:
+
+- `getProfitAndLoss(start, end)` — the P&L card
+- `listRecentExpenses()` / `listRecentBills()` / `listAllExpenses()` — expense feed
+- `listVendors()` — vendor balances
+
+These are read-only queries against QBO's Reports API; nothing is cached in Postgres.
+
+## Receipt capture
+
+Receipt capture is **QuickBooks' own feature** — the QBO mobile app and the
+receipt-forwarding email address. Nothing is built here for it, and nothing should
+be: photographing a receipt into QBO puts it exactly where the books already are.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Sync rows stuck `BLOCKED` | An account in `QuickBooksSettings` is unmapped | Map it in Settings → Integrations → QuickBooks, then requeue |
+| Nothing syncs at all | `autoSyncEnabled` is false | Finish the account mapping; the switch stays off until it is complete |
+| "Unauthorized" after months idle | Refresh token expired (~100 days) | Reconnect from the settings page |
+| Amounts post against the wrong account | Duplicate account names selected by name | Verify account **ids**, re-save, and check the page after saving |
+| Old orders appear in the books | `syncStartDate` unset or too early | Set it, and mark the pre-cutoff rows `SKIPPED` |

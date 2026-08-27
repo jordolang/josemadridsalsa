@@ -1,0 +1,101 @@
+---
+title: Staff & Permissions
+description: Roles, the fine-grained permission system, and how admin access is actually decided.
+---
+
+# Staff & Permissions
+
+Access control has two layers: a coarse **role** on the user, and a fine-grained
+**permission** grant per role. Helpers live in `lib/rbac.ts`, with admin-specific
+shortcuts in `lib/admin-auth.ts` and the fundraiser boundary in
+`lib/fundraiser-auth.ts`.
+
+## Roles
+
+`UserRole` is the coarse layer:
+
+| Role | Who |
+|---|---|
+| `CUSTOMER` | A shopper. No admin access. |
+| `STAFF` | Day-to-day operations — orders, products, content, messaging |
+| `ADMIN` | Everything except developer-only permissions |
+| `DEVELOPER` | Platform super admin. Every permission, plus `/admin/developer` |
+| `WHOLESALE` | A wholesale account holder |
+| `FUNDRAISER` | A fundraiser coordinator — portal only, no admin |
+
+<Callout type="info">
+`DEVELOPER` is the super admin. The designated developer account is auto-promoted at
+sign-in; `npm run create-developer` promotes one manually, and
+`npm run create-admin` creates an admin.
+</Callout>
+
+## Permissions
+
+`Permission` rows are named `resource:action` (`orders:read`, `products:write`) and
+grouped by `PermissionCategory`:
+
+`ORDERS`, `PRODUCTS`, `USERS`, `CONTENT`, `ANALYTICS`, `SETTINGS`, `FINANCIALS`,
+`API_KEYS`, `MESSAGING`, `SOCIAL_MEDIA`, `SEO`, `GIFT_CERTIFICATES`, `LOCATIONS`,
+`EVENTS`, `AI_TRAINING`, `CREDENTIALS`, `FUNDRAISER_PORTAL`, `DEVELOPER`.
+
+`RolePermission` joins a role to a permission. The catalogue and the default
+role→permission map are **defined in code** at `lib/permissions-data.ts` (66
+permissions) and written to the database by the seed:
+
+```bash
+npm run db:seed:permissions --workspace @jose-madrid/storefront
+```
+
+The seed also runs automatically during `vercel-build`.
+
+### Defaults
+
+- **`DEVELOPER`** — every permission.
+- **`ADMIN`** — every permission except the developer-only ones.
+- **`STAFF`** — a fixed operational set: full orders (read/write/export/import/
+  modify/print-labels), products (read/write/bulk/import), `users:read`,
+  `content:read`/`write`, `analytics:read`, `data:read`, messaging
+  (read/reply/assign), gift certificates (read/write), `locations:read`,
+  `events:read`, `seo:read`, `ai:view-analytics`.
+- **`FUNDRAISER`** — the four `fundraiser:*` portal permissions.
+- **`CUSTOMER`**, **`WHOLESALE`** — none.
+
+## Checking access
+
+```ts
+import {
+  getCurrentUser, isAdmin, isDeveloper, isStaff,
+  hasPermission, hasAllPermissions, hasAnyPermission,
+  requireRole, requirePermission, requireAnyPermission,
+  canAccessAdmin, requireAdminAccess,
+} from '@/lib/rbac'
+```
+
+`has*` return a boolean. `require*` throw, and are the right choice at the top of a
+route handler or server component — a check whose failure mode is "return false and
+carry on" is how an authorisation hole gets written.
+
+## Navigation
+
+`lib/permissions-map.ts` holds `adminNavigation`: the admin sidebar, with a
+`permission` on each item. Items without one are visible to all staff. **Hiding a
+nav item is not access control** — the route itself must still check.
+
+## Missing tables
+
+If the `permissions` / `role_permissions` tables do not exist yet, Prisma raises
+`P2021`. `lib/prisma-errors.ts` (`isMissingTableError`) detects it and the code falls
+back to `fallbackPermissionsFor(role)` — the in-code default map — rather than
+locking everyone out. This is what makes a fresh database usable before the seed has
+run.
+
+## Managing staff
+
+`/admin/users` lists users and their roles. Changing a role changes the whole
+permission set with it, since permissions are granted per role rather than per user.
+
+## Related
+
+- [User Management](/docs/guides/user-management)
+- [Credential Vault](/docs/features/credential-vault)
+- [Admin Dashboard](/docs/features/admin-dashboard)

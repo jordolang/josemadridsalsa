@@ -1,0 +1,98 @@
+---
+title: Social Commerce
+description: Connected social accounts, scheduled posts, and product listings pushed to marketplace platforms.
+---
+
+# Social Commerce
+
+Two related things live under `/admin/social`: **publishing** (scheduled posts to
+social channels) and **listing** (pushing products into marketplace catalogues).
+
+## Connected accounts
+
+`SocialAccount` is one connected destination:
+
+| Platform | `SocialMediaPlatform` |
+|---|---|
+| Facebook | `FACEBOOK` |
+| Instagram | `INSTAGRAM` |
+| X / Twitter | `TWITTER` |
+| Google Business | `GOOGLE_MY_BUSINESS` |
+| TikTok | `TIKTOK` |
+
+Access and refresh tokens are encrypted at rest (`accessTokenIv`, `refreshTokenIv`)
+with the same AES-256-GCM machinery as the
+[credential vault](/docs/features/credential-vault). `isActive`, `lastVerifiedAt`
+and `connectionError` are what the admin surfaces as connection health — a token
+that has quietly expired shows as an error rather than as a silent no-op.
+
+Unique on `(platform, accountId)`, so the same page cannot be connected twice.
+
+<Callout type="info">
+Connection uses **direct per-platform OAuth with an explicit destination-account
+selection step** — you choose which page or account to publish to, rather than the
+integration guessing. An "easy mode" aggregator (Ayrshare) was carried alongside this
+for a while and has been removed; direct OAuth is the path that works.
+</Callout>
+
+## Posts
+
+`SocialMediaPost` targets one or more platforms with a shared `content` field plus
+optional per-platform overrides (`facebookContent`, `twitterContent`,
+`tiktokContent`, `instagramContent`) — the same message, tuned for each channel's
+length and tone.
+
+| Status | Meaning |
+|---|---|
+| `DRAFT` | Being written |
+| `SCHEDULED` | Has a `scheduledAt`, waiting for the publisher |
+| `PUBLISHED` | Sent — `externalIds` holds each platform's post id |
+| `FAILED` | Publishing failed |
+
+`SocialPostPublish` records the per-account outcome, so a post that succeeds on
+Facebook and fails on X shows exactly that instead of one aggregate status.
+`SocialMediaPostMedia` carries attached images.
+
+Scheduled posts are sent by `/api/cron/social-publish`, every five minutes.
+
+### Blog cross-posts
+
+`blogPostId` is set when the post was generated from a Heat Index article, and is
+unique so one article maps to at most one social post. See
+[Blog Social Cross-Posting](/docs/features/blog-social-crossposting).
+
+## Shop listings
+
+`ShopListing` pushes a product into a marketplace catalogue:
+
+| Platform | `ShopPlatform` |
+|---|---|
+| Facebook Shop | `FACEBOOK_SHOP` |
+| Facebook Marketplace | `FACEBOOK_MARKETPLACE` |
+| TikTok Shop | `TIKTOK_SHOP` |
+| Amazon | `AMAZON` |
+| Google Shopping | `GOOGLE_SHOPPING` |
+
+Unique on `(productId, shopPlatform)` — one listing per product per platform.
+
+Each listing can override `title`, `description` and `price` for that marketplace
+without touching the catalogue, and carries `condition`, `availability` and
+`marketplaceCategory` because marketplaces demand their own taxonomy.
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | Queued, not yet sent |
+| `SYNCING` | In flight |
+| `ACTIVE` | Live on the platform (`externalUrl` points at it) |
+| `PAUSED` | Deliberately taken down |
+| `REJECTED` | The platform refused it |
+| `ERROR` | Sync failed — `syncError` has the reason |
+
+`SocialPlatformCredential` holds the app-level API credentials, separate from the
+per-account OAuth tokens.
+
+## Related
+
+- [Blog Social Cross-Posting](/docs/features/blog-social-crossposting)
+- [Products](/docs/features/products)
+- [Scheduled Jobs](/docs/configuration/cron-jobs)

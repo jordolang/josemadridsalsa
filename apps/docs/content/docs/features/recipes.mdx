@@ -1,0 +1,55 @@
+---
+title: Recipes
+description: The recipe catalogue behind /recipes — fields, tags, and how recipes get indexed.
+---
+
+# Recipes
+
+Recipes are first-class content with their own public pages at `/recipes`, their own
+SEO template, and their own sitemap entries.
+
+## The model
+
+| Field | Notes |
+|---|---|
+| `title` | Unique |
+| `slug` | Unique — the public URL |
+| `description` | Required |
+| `category`, `difficulty` | Free-text classification |
+| `prepTime`, `cookTime` | Stored as strings (`"20 min"`), not durations |
+| `servings` | Integer |
+| `ingredients`, `instructions` | String arrays, ordered |
+| `featured`, `featuredImage` | Homepage and listing placement |
+| `metaTitle`, `metaDescription`, `ogImage` | Per-recipe SEO overrides |
+
+`RecipeTag` provides the tag join for filtering.
+
+<Callout type="info">
+`prepTime` and `cookTime` are strings on purpose — they are display copy, not
+arithmetic. Do not parse them into minutes without changing the column.
+</Callout>
+
+## Seeding
+
+```bash
+npm run db:seed:recipes    --workspace @jose-madrid/storefront
+npm run db:seed:nutrition  --workspace @jose-madrid/storefront
+```
+
+## API
+
+`/api/recipes` serves the catalogue for the public pages.
+
+## Search indexing
+
+Recipe URLs are built into the sitemap from Prisma in `app/sitemap.ts`. Metadata
+falls back to `SeoConfiguration.recipeTitleTemplate` /
+`recipeDescTemplate` when `metaTitle` / `metaDescription` are empty. Hold the
+overrides to **30–60 characters** for the title and **≤160** for the description —
+the same limits enforced for blog posts.
+
+## Related
+
+- [SEO](/docs/features/seo)
+- [Content Management](/docs/features/content-management)
+- [Products](/docs/features/products)

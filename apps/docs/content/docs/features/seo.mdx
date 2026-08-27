@@ -1,0 +1,97 @@
+---
+title: SEO
+description: Database-driven site metadata, robots.txt, the sitemap, and structured data.
+---
+
+# SEO
+
+Search configuration is **data, not code**. A single `SeoConfiguration` row drives
+titles, descriptions, `robots.txt` and sitemap priorities, and it is edited at
+`/admin/seo`. Code lives in `lib/seo/`.
+
+| File | Responsibility |
+|---|---|
+| `configuration.ts` | Reading and writing the config row |
+| `metadata.ts` | Building Next.js `Metadata` from templates |
+| `templates.ts` | The per-entity title/description templates |
+| `schema-generator.ts` | JSON-LD generation |
+| `analyzer.ts` | On-page SEO checks in the admin |
+| `search-console.ts` | Search Console reporting |
+
+## The configuration row
+
+| Field | Effect |
+|---|---|
+| `siteName`, `siteDescription`, `siteUrl` | Site-wide defaults; `siteUrl` is the canonical base |
+| `defaultOgImage`, `twitterHandle`, `facebookAppId` | Social cards |
+| `defaultKeywords` | Fallback keywords |
+| `productTitleTemplate` / `productDescTemplate` | Product page metadata |
+| `categoryTitleTemplate` / `categoryDescTemplate` | Category pages |
+| `recipeTitleTemplate` / `recipeDescTemplate` | Recipe pages |
+| `locationTitleTemplate` / `locationDescTemplate` | Store locator pages |
+| `robotsTxt` | Raw `robots.txt`, parsed at request time |
+| `sitemapPriorities` | Per-section priority overrides |
+| `googleSiteVerification`, `gscProperty`, `gscServiceAccountJson` | Search Console |
+
+## robots.txt
+
+`app/robots.ts` reads `SeoConfiguration.robotsTxt` and parses `User-agent:`,
+`Allow:`, `Disallow:` and `Sitemap:` lines into Next's robots object. If the column
+is empty — or the database is unreachable — it falls back to allowing everything
+except `/admin/` and `/api/`.
+
+## Sitemap
+
+`app/sitemap.ts` builds the sitemap from Prisma at request time: static pages plus
+products, recipes, locations, blog posts and CMS landing pages. `siteUrl` from the
+config becomes the base; `sitemapPriorities` overrides the per-section defaults.
+
+<Callout type="warn">
+**A page absent from the sitemap is a page you asked Google not to crawl.** When you
+add a public URL, register it in `app/sitemap.ts` — extend the Prisma query for a
+collection rather than hardcoding a row.
+</Callout>
+
+## noindex vs robots.txt
+
+They are not interchangeable:
+
+- `robots: { index: false }` in a page's `metadata` keeps a **reachable, crawlable**
+  page out of the index.
+- A `Disallow:` in `robots.txt` stops the crawl entirely — so a `noindex` tag on a
+  disallowed page is **never read**, and the page can still be indexed from external
+  links.
+
+Use `noindex` to unlist a page you want to keep online. Use `robots.txt` for whole
+trees that should never be fetched.
+
+## Metadata limits
+
+Meta title **30–60 characters**, meta description **≤160**. This is enforced for
+blog posts in `lib/blog/schemas.ts` against the *effective* values
+(`seoTitle ?? title`, `seoDescription ?? excerpt`). Hold every other page to the same
+numbers.
+
+## Structured data
+
+`StructuredData` stores JSON-LD per entity, unique on `(entityType, entityId)`, with
+an `isActive` switch. `schema-generator.ts` produces it; the entity's page renders it.
+
+## Changing the domain
+
+Update `SeoConfiguration.siteUrl` **and** every hardcoded canonical in the same
+change. Then a human must run Search Console's **Change of Address** tool — it is
+never a code-only change.
+
+<Callout type="warn">
+No agent has Search Console access. **URL Inspection, Removals and Change of Address
+are always handoff items** — they can be recommended but never reported as done.
+After shipping a new public URL, ask a human to run URL Inspection on it and to check
+a few weeks later that indexed-page count is rising.
+</Callout>
+
+## Related
+
+- [Analytics](/docs/features/analytics)
+- [Content Management](/docs/features/content-management)
+- [Google Analytics](/docs/integrations/google-analytics)

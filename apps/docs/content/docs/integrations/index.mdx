@@ -1,15 +1,18 @@
 ---
 title: Integrations
-description: Third-party service integrations
+description: Every third-party service the platform talks to, and how each is wired.
 ---
 
 # Integrations
 
 <PageInlineTOC>Jump to integration</PageInlineTOC>
 
-José Madrid Salsa integrates with numerous third-party services to extend functionality.
+Most integrations are optional and degrade gracefully when their environment
+variables are unset. Credentials for several can be entered in the admin panel
+instead of in the environment — those are stored encrypted, and admin-entered values
+win over environment ones.
 
-## Upstream SDK Repositories
+## Upstream SDK repositories
 
 <Cards>
   <GithubInfo owner="stripe" repo="stripe-node" />
@@ -19,44 +22,56 @@ José Madrid Salsa integrates with numerous third-party services to extend funct
   <GithubInfo owner="resend" repo="resend-node" />
 </Cards>
 
-## Payment Processing
+## Payments
 
-- [Stripe Integration](/docs/integrations/stripe) - Credit card processing
-- [PayPal Integration](/docs/integrations/paypal) - PayPal Checkout
-- [Square Integration](/docs/integrations/square) - Square payment platform
+- [Stripe](/docs/integrations/stripe) — cards, Checkout Sessions, Elements, Stripe Tax
+- [PayPal](/docs/integrations/paypal) — create/capture order
+- [Square](/docs/integrations/square) — online and the in-person terminal
 
-## Maps & Location Services
+## Accounting
 
-- [Google Maps Integration](/docs/integrations/google-maps) - Embedded maps and location services
-- [Google Places Integration](/docs/integrations/google-places) - Location autocomplete and details
-- [Store Locator](/docs/integrations/store-locator) - Find nearby locations
+- [QuickBooks Online](/docs/integrations/quickbooks) — **the source of truth for accounting**
 
-## Google Services
+## Shipping
 
-- [Google Calendar Integration](/docs/integrations/google-calendar) - Read-only calendar feed
-- [Google Calendar Two-Way Sync](/docs/integrations/google-calendar-sync) - Publish and pull "Where is Jose?" events
-- [Google Reviews Integration](/docs/integrations/google-reviews) - Aggregate reviews
-- [Google Analytics Integration](/docs/integrations/google-analytics) - Web analytics
+- [EasyPost](/docs/integrations/easypost) — rates, labels, tracking
 
-## Email & Communication
+## Email
 
-- [Email Integration](/docs/integrations/email) - Email sending and templates
-- [Email DNS Setup](/docs/integrations/email-dns) - Configure email delivery
+- [Email Integration](/docs/integrations/email) — Resend and Nodemailer
+- [Email DNS Setup](/docs/integrations/email-dns) — SPF, DKIM, DMARC
 
-## Version Control
+## Maps & location
 
-- [GitHub Integration](/docs/integrations/github) - GitHub API integration
-- [GitHub Webhooks](/docs/integrations/github-webhooks) - GitHub event handling
+- [Google Maps](/docs/integrations/google-maps) — embedded maps
+- [Google Places](/docs/integrations/google-places) — autocomplete, place details, photos
+- [Store Locator](/docs/integrations/store-locator)
 
-## Other Services
+## Google services
 
-- [Constant Contact](/docs/integrations/constant-contact) - Email marketing
-- [Auth Providers](/docs/integrations/auth) - External authentication providers
+- [Google Calendar](/docs/integrations/google-calendar) — read-only calendar feed
+- [Google Calendar Two-Way Sync](/docs/integrations/google-calendar-sync) — publish and pull "Where is Jose?" events
+- [Google Reviews](/docs/integrations/google-reviews) — aggregated reviews
+- [Google Analytics](/docs/integrations/google-analytics) — reporting API
 
-## Integration Status
+## Authentication
 
-Each integration page includes:
-- Setup instructions
-- Configuration requirements
-- API documentation
-- Troubleshooting guide
+- [Auth Providers](/docs/integrations/auth) — NextAuth providers
+
+## Developer tooling
+
+- [GitHub](/docs/integrations/github) — repository integration and event handling
+
+## Elsewhere in the docs
+
+Some integrations are documented with the feature they serve rather than here:
+
+- **Social platforms** (Facebook, Instagram, X/Twitter, TikTok, Google Business, Amazon) — [Social Commerce](/docs/features/social-commerce)
+- **Anthropic** (AI chat and RAG) — [AI Chat](/docs/features/ai-chat)
+- **Sentry, Amplitude, Vercel Analytics** — [Monitoring](/docs/deployment/monitoring)
+- **UploadThing** — [Image Hosting](/docs/guides/image-hosting)
+
+## Inbound events
+
+Every provider that posts back to us is documented together in
+[Webhooks](/docs/api/webhooks) — five endpoints, and how each verifies its sender.
