@@ -229,6 +229,21 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **The QuickBooks account mapping silently erased itself.** When the settings page could not
+  reach QuickBooks — an expired token, a network blip — it caught the error, logged it in a
+  banner, and then rendered every account picker with nothing in it but "Not mapped". A mapping
+  that was safely in the database looked gone, and pressing Save wrote those blanks over it, so
+  re-entering the mapping appeared to never stick. The page now hides both Save buttons while the
+  account list is unavailable and says why, and each save action re-reads the catalog and refuses
+  to write rather than store a form it knows is empty.
+
+  Two smaller causes of the same silence went with it. A stored account id that QuickBooks no
+  longer offers — deactivated, deleted, or filtered out of that field by type — now gets an option
+  of its own instead of the select falling back to "Not mapped" and discarding it on the next
+  save. And the pickers show each account's qualified `Parent:Child` path rather than its leaf
+  name: this company's chart of accounts holds three separate accounts all named "Refunds &
+  discounts to customers", which were previously impossible to tell apart. The stored account
+  names, which the ledger's journal file is imported into QuickBooks by, are now qualified too.
 - **The mobile "Live chats" tab covered the admin controls underneath it.** On a phone the tab is
   pinned to the right edge at mid-height, where it sat on top of the edit and delete buttons in
   Admin → Reusable sections (and any other right-aligned action at that height). It can now be

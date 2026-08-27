@@ -116,6 +116,12 @@ export async function getCompanyInfo(realmId: string): Promise<QuickBooksCompany
 export type QuickBooksAccount = {
   Id: string
   Name: string
+  /**
+   * `Parent:Child` for a sub-account. QuickBooks lets several sub-accounts share a leaf `Name` —
+   * this company has three separate accounts called "Refunds & discounts to customers" — so this
+   * is the only field that tells them apart in a picker or an export.
+   */
+  FullyQualifiedName?: string
   AccountType: string
   AccountSubType?: string
 }
