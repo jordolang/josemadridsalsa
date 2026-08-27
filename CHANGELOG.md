@@ -14,6 +14,29 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Removed
+- **227 MB of editor caches, staging copies and stale dumps that had been committed to the
+  repository.** 2,550 files — very nearly half of everything tracked, which fell from 5,228 files
+  to 2,678. None of it was reachable from any build, and every path removed here was already
+  listed in `.gitignore`; being tracked, the ignore never applied to them, because `.gitignore`
+  only governs files git is not already following.
+
+  - `.smart-env/` (2,488 files, **222 MB**) and `.smtcmp_vector_db.tar.gz` (4.2 MB) — Obsidian
+    Smart Connections and Smart Composer vector databases. Machine-local editor state.
+  - `.integration/` — a staging copy of the growth dashboard, superseded by the real component
+    at `components/dashboard/growth-dashboard` that `/admin/growth` actually imports. It was
+    already in both `.gitignore` and `.vercelignore`.
+  - `apps/docs/imported/` (51 files) — a dump of the old standalone docs repo, kept while its
+    content was folded into `apps/docs/content/docs`. The copies had drifted: they still
+    documented the Shopify integration after it was removed.
+  - `apps/storefront/data/backups/` — a header-only PostgreSQL dump carrying no table data, and
+    a SQLite backup from October 2025.
+  - `google-debug.png`, a stray debug screenshot, and `hive.yml`, whose only use of it was as
+    that tool's icon.
+  - `.yarnrc.yml` — a Yarn setting in a repository that uses npm workspaces and pins
+    `npm@11.12.1`.
+
+  `.gitignore` now also covers `apps/storefront/data/backups/` and `apps/docs/imported/`, so
+  neither returns.
 - **The Shopify integration, in full.** The Shopify store this synced to has been shut down and
   the platform is not migrating to or from it, but the dead integration was still wired into all
   three order-creating paths — `queueShopifySync()` fired on every checkout, every direct order,
