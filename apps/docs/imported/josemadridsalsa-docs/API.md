@@ -342,7 +342,6 @@ Create a new order from cart items. This endpoint:
 - Creates the order and order items
 - Removes cart items after successful order creation
 - Creates a Stripe payment intent
-- Queues Shopify sync
 
 **Endpoint:** `POST /api/orders`
 

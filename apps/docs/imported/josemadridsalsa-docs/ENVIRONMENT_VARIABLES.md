@@ -84,12 +84,6 @@ Notes:
 
 ## Shipping Integrations
 
-### Shopify
-- `SHOPIFY_SHOP_DOMAIN` - Shopify shop domain
-- `SHOPIFY_API_KEY` - Shopify API key
-- `SHOPIFY_API_SECRET` - Shopify API secret
-- `SHOPIFY_ACCESS_TOKEN` - Shopify access token
-- `SHOPIFY_WEBHOOK_SECRET` - Shopify webhook secret
 
 ### ShipStation (Optional)
 - `SHIPSTATION_API_KEY` - ShipStation API key

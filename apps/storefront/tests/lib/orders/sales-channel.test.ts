@@ -24,12 +24,10 @@ describe('deriveSalesChannel', () => {
     expect(deriveSalesChannel({ paymentChannel: 'POS' })).toBe('POS')
   })
 
-  it('identifies marketplace orders that arrived from Shopify', () => {
-    expect(deriveSalesChannel({ shopifyOrderId: '12345' })).toBe('MARKETPLACE')
-  })
-
-  it('prefers marketplace over import when an order carries both', () => {
-    expect(deriveSalesChannel({ shopifyOrderId: '12345', importSource: 'csv' })).toBe('MARKETPLACE')
+  it('honours an explicit marketplace channel', () => {
+    // Marketplace sales are entered by hand now that there is no storefront sync to derive
+    // them from, so they arrive as an explicit channel rather than being inferred.
+    expect(deriveSalesChannel({ explicitChannel: 'MARKETPLACE' })).toBe('MARKETPLACE')
   })
 
   it('identifies migrated rows', () => {
@@ -37,7 +35,7 @@ describe('deriveSalesChannel', () => {
   })
 
   it('ignores empty-string signals rather than treating them as present', () => {
-    expect(deriveSalesChannel({ fundraiserId: '', shopifyOrderId: '', importSource: '' })).toBe(
+    expect(deriveSalesChannel({ fundraiserId: '', importSource: '' })).toBe(
       'WEBSITE'
     )
   })

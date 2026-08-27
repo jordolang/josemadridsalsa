@@ -135,7 +135,6 @@ Our implementation is closest to the **Payment Intents API with Payment Element*
 ✅ **Tax and shipping** calculated server-side
 ✅ **Inventory management** integrated
 ✅ **Email automation** on payment success
-✅ **Shopify sync** for multi-channel inventory
 
 ### Comparison to Other Patterns
 

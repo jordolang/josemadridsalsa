@@ -13,6 +13,28 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Removed
+- **The Shopify integration, in full.** The Shopify store this synced to has been shut down and
+  the platform is not migrating to or from it, but the dead integration was still wired into all
+  three order-creating paths — `queueShopifySync()` fired on every checkout, every direct order,
+  and every gift-certificate purchase.
+
+  Gone: `app/api/shopify/` (order sync and cancel), `app/api/webhooks/shopify/`, `lib/shopify/`
+  (client, sync, webhook), the `shopify:test-webhook` script, the `orders:sync-shopify`
+  permission, the "View in Shopify" button on the admin order page, the MSW Admin-API mocks, and
+  both docs-site integration pages. Migration `20260826230000_remove_shopify_integration` drops
+  the six `orders.shopify*` columns and their unique index, and rebuilds `ShippingProviderType`
+  without its `SHOPIFY` value. No order ever synced successfully, so those columns held nothing
+  but the failure strings the dead integration wrote.
+
+  `deriveSalesChannel()` no longer infers `MARKETPLACE` from a Shopify order id. The channel is
+  still there and still reachable — a marketplace sale is now entered with an explicit channel
+  rather than derived from a sync that no longer runs.
+
+  `scripts/test-production-webhook.sh` went with it. It carried a hardcoded Shopify webhook
+  secret, which is in the git history and should be treated as burned regardless of the store
+  being dead.
+
 ### Added
 - **Contact form in the Picante chat.** The chat's opening message now carries an
   "Or fill out a contact form by clicking here" button beneath it, for visitors who would rather
@@ -229,6 +251,51 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **The QuickBooks account mapping silently erased itself.** When the settings page could not
+  reach QuickBooks — an expired token, a network blip — it caught the error, logged it in a
+  banner, and then rendered every account picker with nothing in it but "Not mapped". A mapping
+  that was safely in the database looked gone, and pressing Save wrote those blanks over it, so
+  re-entering the mapping appeared to never stick. The page now hides both Save buttons while the
+  account list is unavailable and says why, and each save action re-reads the catalog and refuses
+  to write rather than store a form it knows is empty.
+
+  Two smaller causes of the same silence went with it. A stored account id that QuickBooks no
+  longer offers — deactivated, deleted, or filtered out of that field by type — now gets an option
+  of its own instead of the select falling back to "Not mapped" and discarding it on the next
+  save. And the pickers show each account's qualified `Parent:Child` path rather than its leaf
+  name: this company's chart of accounts holds three separate accounts all named "Refunds &
+  discounts to customers", which were previously impossible to tell apart. The stored account
+  names, which the ledger's journal file is imported into QuickBooks by, are now qualified too.
+- **The two remaining reads that loaded a whole mailing list in one shot.** A list built from the
+  customer database holds around 22,000 contacts, and both of these fetched every one of them with
+  every column — `customFields` included, the JSON blob where the importer parks each unmapped
+  column of the source CSV.
+
+  Creating a campaign against a mailing list is the worse of the two, because it runs inside a
+  server action: `createCampaign` loaded the entire list into an in-memory `recipientsList` and
+  then wrote it back as a single nested `create`. It now counts the list, creates the campaign row
+  on its own, and pages through the subscribers a thousand at a time, writing each batch out as
+  `EmailRecipient` rows before reading the next — so neither the list nor the insert is ever fully
+  resident. `customFields` is fetched only when a variable mapping actually reads one. Splitting
+  the recipients off the campaign row gave up the nested write's atomicity, so a failed batch — or
+  one that materialises nobody because the list emptied mid-run — now deletes the campaign rather
+  than leaving a recipient-less draft that looks like a success, and `totalRecipients` is corrected
+  if someone unsubscribes between the count and the read. A create killed part-way by a timeout or
+  a deployment leaves no in-process handler to undo it, so **launching** a campaign now refuses a
+  draft holding fewer recipients than it advertises instead of quietly sending to a partial
+  audience and reporting a complete run.
+
+  The subscriber CSV export (`GET /api/admin/mailing-lists/[id]/export`) built one CSV string in
+  memory from the same unbounded read — several megabytes held twice over against Vercel's
+  response cap, with no `maxDuration`. It now streams: the header goes out first, then each page of
+  subscribers is unparsed and written straight into the response body, with only the columns the
+  file actually contains selected. Export order moves from oldest-first to email order, which is
+  what lets the read page forward — a CSV import stamps thousands of rows with the same
+  `createdAt`, so paging on it would repeat or skip rows. Both reads page on an `email > last`
+  predicate rather than a Prisma `cursor`: a cursor has to locate the boundary row, so an admin
+  removing that subscriber between pages would end the read early and hand back a truncated export,
+  or a campaign missing everyone past that point. An empty list now downloads a header-only file
+  instead of an empty one.
 - **The mobile "Live chats" tab covered the admin controls underneath it.** On a phone the tab is
   pinned to the right edge at mid-height, where it sat on top of the edit and delete buttons in
   Admin → Reusable sections (and any other right-aligned action at that height). It can now be

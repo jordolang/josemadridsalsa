@@ -193,7 +193,7 @@ export default function CredentialFormDialog({
               </Label>
               <Input
                 id="serviceName"
-                placeholder="e.g. AT&T, Shopify, Public Works"
+                placeholder="e.g. AT&T, Verizon, Public Works"
                 {...register('serviceName')}
               />
               {errors.serviceName && (

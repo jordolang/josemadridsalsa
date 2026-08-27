@@ -62,7 +62,7 @@ From the BigCommerce Optimized One-Page Checkout (OOPC) and account templates, t
 - **User (`users` table):** `email`, `name`, `password` (hashed), `phone`, `dateOfBirth` (optional), `role`, `isEmailVerified`, `lastLoginAt`, `stripeCustomerId`  
 - **Address (`addresses` table):** `type` (SHIPPING/BILLING), `firstName`, `lastName`, `company`, `street`, `city`, `state`, `zipCode`, `country` (default US), `phone`, `isDefault`  
 - **Checkout form (`app/(public)/checkout/page.tsx`):** `firstName`, `lastName`, `email`, `phone`, `address1`, `address2`, `city`, `state`, `postalCode`, `notes`  
-- **Order (`orders` table):** `orderNumber`, `userId` or `guestEmail` \+ `guestPhone`, `status`, `subtotal`, `shippingCost`, `tax`, `discountAmount`, `total`, `shippingMethod`, `trackingNumber`, `estimatedDelivery`, `actualDelivery`, `shippingLabelUrl`, `packingSlipUrl`, `invoiceUrl`, `paymentStatus`, `paymentMethod`, `stripePaymentId`, `customerNotes`, `adminNotes`, `fundraiserId`, `participantId`, `paymentChannel`, `paymentProvider`, plus Shopify sync metadata  
+- **Order (`orders` table):** `orderNumber`, `userId` or `guestEmail` \+ `guestPhone`, `status`, `subtotal`, `shippingCost`, `tax`, `discountAmount`, `total`, `shippingMethod`, `trackingNumber`, `estimatedDelivery`, `actualDelivery`, `shippingLabelUrl`, `packingSlipUrl`, `invoiceUrl`, `paymentStatus`, `paymentMethod`, `stripePaymentId`, `customerNotes`, `adminNotes`, `fundraiserId`, `participantId`, `paymentChannel`, `paymentProvider`  
 - **OrderItem:** `productId`, `quantity`, `unitPrice`, `totalPrice`, snapshotted `productName`, `productSku`, `productImage`  
 - **Payment:** `stripePaymentIntentId`, `stripeCheckoutSessionId`, `paypalCaptureId`, `paypalOrderId`, `squarePaymentId`, `squareTerminalCheckoutId`, `provider`, `methodType`, `amount`, `currency`, `paidAt`  
 - **GiftCertificate:** `code`, `originalAmount`, `balance`, `purchaserName/Email`, `recipientName/Email`, `theme`, `message`, `status`, `expiresAt`, `redeemedAt`  
@@ -167,14 +167,14 @@ From the BigCommerce Optimized One-Page Checkout (OOPC) and account templates, t
 | REST \+ GraphQL APIs \+ webhooks | ✅ | ✅ Next.js route handlers \+ `WebhookEvent` model \+ `PartnerApiKey` |  |
 | RBAC | ✅ tiered staff roles | ✅ 5 roles, 28 permissions |  |
 | Audit logs | ⚠️ limited | ✅ `/admin/audit-logs` |  |
-| Multi-storefront / channels | ✅ Pro+ (Channels) | ✅ via fundraiser subdomains \+ `ShopListing` for TikTok/Shopify |  |
+| Multi-storefront / channels | ✅ Pro+ (Channels) | ✅ via fundraiser subdomains \+ `ShopListing` for TikTok/Facebook |  |
 | **Fundraising** | ❌ off-platform (`josemadridsalsafundraising.com`) | ✅ **full native portal** w/ subdomains, participants, referral codes, gamification, characters, championships, seasons, share events, shields | *Ahead of BC* |
 | **Wholesale** | ❌ off-platform (Faire) | ✅ native `WholesaleAccount` \+ `/admin/wholesale` | *Ahead of BC* |
 | **POS / in-person** | ✅ BigCommerce for POS \+ Square integrations | ✅ `/pos/*` \+ Square Terminal via `/api/pos/create-terminal-checkout` |  |
 | **Forms builder** | ❌ static | ✅ `/api/forms/*` \+ versioning | *Ahead of BC* |
 | **Financials (expenses, payroll, taxes)** | ❌ | ✅ `/admin/financials/{expenses,payroll,taxes}` | *Ahead of BC* |
 | Email marketing automations | ❌ requires app (Klaviyo etc.) | ✅ `/admin/email-marketing/automations` \+ `/admin/communications/suppressions` | *Ahead of BC* |
-| Social shop listings (Shopify / TikTok) | ⚠️ via channels | ✅ `ShopListing` w/ status, error tracking, per-channel overrides | *Ahead of BC* |
+| Social shop listings (TikTok / Facebook) | ⚠️ via channels | ✅ `ShopListing` w/ status, error tracking, per-channel overrides | *Ahead of BC* |
 
 ---
 
@@ -216,7 +216,7 @@ Ordered by **migration risk** (highest first).
 
 ### 🟢 Already at parity or ahead
 
-The .net side already beats BigCommerce on: native fundraising portal, native wholesale, native loyalty, multi-channel publishing (TikTok/Shopify), Square Terminal POS, live chat, audit logs, forms builder, expense/payroll/tax tracking, email marketing automations, and order-import infrastructure (which exists *specifically* to migrate the BC catalog and history into .net).
+The .net side already beats BigCommerce on: native fundraising portal, native wholesale, native loyalty, multi-channel publishing (TikTok/Facebook), Square Terminal POS, live chat, audit logs, forms builder, expense/payroll/tax tracking, email marketing automations, and order-import infrastructure (which exists *specifically* to migrate the BC catalog and history into .net).
 
 ### Open verification questions (for Jordan to confirm)
 
@@ -362,7 +362,7 @@ The .net side already beats BigCommerce on: native fundraising portal, native wh
 
 10\. Multi-channel        Orders attributed via Order.fundraiserId \+ participantId
 
-                          ShopListing syncs catalog to TikTok / Shopify / others (status, last sync, error)
+                          ShopListing syncs catalog to TikTok / Facebook / others (status, last sync, error)
 
                           POS orders via /pos/\* \+ Square Terminal
 

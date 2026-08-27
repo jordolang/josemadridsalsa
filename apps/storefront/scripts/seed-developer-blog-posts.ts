@@ -38,7 +38,7 @@ This platform is not a template. It is a custom-built, full-stack commerce, mark
 - **Locations**: a geocoded directory of every retailer carrying the product, with maps, search, and photo galleries pulled and optimized at build time.
 - **Recipes, content, and storytelling**: editorial pages, recipe schema for Google, brand storytelling components.
 - **Lead generation pipeline**: scraping, enrichment, deduping, outbound email automation, response tracking.
-- **Integrations**: Shopify, TikTok Shop product export, Stripe, Postmark, Sanity (CMS), Sentry (error tracking), PostHog (analytics), and more.
+- **Integrations**: TikTok Shop product export, Stripe, Postmark, Sanity (CMS), Sentry (error tracking), PostHog (analytics), and more.
 - **Infrastructure**: Vercel deployments, Postgres via Prisma, environment management across preview/production, CI/CD, automated migrations, backup strategy.
 
 That is not a website. That is a small SaaS company.
@@ -49,7 +49,7 @@ Here is where I have to correct myself, because I used to put a much bigger numb
 
 So the honest way to size it is replacement cost — what this business would actually pay to have the same thing stood up by someone else:
 
-- **A themed Shopify or BigCommerce store with paid apps**: $1,500–$5,000, and it would do a fraction of what this does.
+- **A themed hosted storefront with paid apps**: $1,500–$5,000, and it would do a fraction of what this does.
 - **An independent developer rebuilding this feature set to spec**: $8,000–$18,000, working from a finished reference rather than an open-ended discovery phase.
 - **All of it at once — storefront, fundraising, admin, iOS app — as one fixed-price project**: $20,000–$30,000, and that is a ceiling, not a quote.
 

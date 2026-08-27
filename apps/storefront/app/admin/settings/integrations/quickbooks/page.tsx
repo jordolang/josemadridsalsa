@@ -8,7 +8,12 @@ import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import { createMetadata } from '@/lib/metadata'
 import { getConnectionStatus } from '@/lib/quickbooks/connection'
-import { listAccounts, listItems } from '@/lib/quickbooks/client'
+import {
+  listAccounts,
+  listItems,
+  type QuickBooksAccount,
+  type QuickBooksItem,
+} from '@/lib/quickbooks/client'
 import {
   getLedgerAccountMap,
   saveLedgerAccountMap,
@@ -63,6 +68,60 @@ const ACCOUNT_FIELDS = [
   },
 ] as const
 
+/**
+ * What to call an account in a picker or an export.
+ *
+ * The leaf `Name` is not unique: QuickBooks creates one "Refunds & discounts to customers" under
+ * every income account, so a list of bare names offers the same word three times with no way to
+ * tell which is which. The qualified path is also the form QuickBooks itself matches on when the
+ * ledger's journal file is imported, so the same string serves both.
+ */
+function accountLabel(account: QuickBooksAccount): string {
+  return account.FullyQualifiedName ?? account.Name
+}
+
+type MappingChoice = { id: string; label: string }
+
+/**
+ * The `<option>` list for one mapping select, always including whatever is currently stored.
+ *
+ * A stored id that QuickBooks no longer offers — a deleted or deactivated account, or one filtered
+ * out of this field by type — has no matching option, so the select silently displays "Not mapped"
+ * and the next save writes that lie back to the database. Giving the stored id an option of its own
+ * means the page shows what is actually mapped, and a mapping can only be cleared on purpose.
+ */
+function mappingOptions(choices: MappingChoice[], current: string) {
+  return (
+    <>
+      <option value="">Not mapped</option>
+      {current && !choices.some((choice) => choice.id === current) && (
+        <option value={current}>Saved id {current} — not offered by QuickBooks</option>
+      )}
+      {choices.map((choice) => (
+        <option key={choice.id} value={choice.id}>
+          {choice.label}
+        </option>
+      ))}
+    </>
+  )
+}
+
+/**
+ * Read the account catalog, or send the operator back to the page rather than saving.
+ *
+ * Every select on this page is built from that catalog. When it cannot be read they are all empty,
+ * so a submit — from a tab left open, or a render that failed the same way — carries nothing but
+ * blanks, and storing it would wipe a working mapping. That is precisely how this page used to lose
+ * one. Refusing re-renders the page, where the banner at the top says why nothing could be saved.
+ */
+async function requireAccountCatalog(): Promise<QuickBooksAccount[]> {
+  try {
+    return await listAccounts()
+  } catch {
+    redirect('/admin/settings/integrations/quickbooks')
+  }
+}
+
 async function saveSettingsAction(formData: FormData) {
   'use server'
 
@@ -73,6 +132,8 @@ async function saveSettingsAction(formData: FormData) {
 
   const status = await getConnectionStatus()
   if (!status.connected) redirect('/admin/settings/integrations')
+
+  await requireAccountCatalog()
 
   const value = (key: string) => {
     const raw = formData.get(key)
@@ -148,12 +209,7 @@ async function saveLedgerAccountsAction(formData: FormData) {
   // Names are stored beside the ids so the file exports can print a real account name rather
   // than falling back to a suggestion, and so the mapping stays readable if QuickBooks is
   // unreachable when someone opens this page.
-  let names = new Map<string, string>()
-  try {
-    names = new Map((await listAccounts()).map((a) => [a.Id, a.Name]))
-  } catch {
-    // A saved mapping is still correct without the names; the export falls back to its defaults.
-  }
+  const names = new Map((await requireAccountCatalog()).map((a) => [a.Id, accountLabel(a)]))
 
   const clearingId = value('ledgerClearingAccountId')
   const inventoryId = value('ledgerInventoryAccountId')
@@ -233,14 +289,17 @@ export default async function QuickBooksSettingsPage() {
 
   // The company may be unreachable (expired refresh token, network); the page
   // still has to render so the operator can see why.
-  let accounts: Awaited<ReturnType<typeof listAccounts>> = []
-  let items: Awaited<ReturnType<typeof listItems>> = []
+  let accounts: QuickBooksAccount[] = []
+  let items: QuickBooksItem[] = []
   let catalogError: string | null = null
   try {
     ;[accounts, items] = await Promise.all([listAccounts(), listItems()])
   } catch (error) {
     catalogError = error instanceof Error ? error.message : 'Could not reach QuickBooks'
   }
+
+  const accountChoices: MappingChoice[] = accounts.map((a) => ({ id: a.Id, label: accountLabel(a) }))
+  const itemChoices: MappingChoice[] = items.map((i) => ({ id: i.Id, label: i.Name }))
 
   const counts = await prisma.quickBooksSyncRecord.groupBy({
     by: ['status'],
@@ -274,10 +333,19 @@ export default async function QuickBooksSettingsPage() {
       </div>
 
       {catalogError && (
-        <Card className="border-destructive/50 bg-destructive/5 p-4">
-          <p className="flex items-center gap-2 text-sm text-destructive">
+        <Card className="space-y-2 border-destructive/50 bg-destructive/5 p-4">
+          <p className="flex items-center gap-2 text-sm font-medium text-destructive">
             <TriangleAlert className="h-4 w-4" />
             Could not load accounts from QuickBooks: {catalogError}
+          </p>
+          <p className="text-sm text-destructive/90">
+            Saving is turned off until this clears, because the pickers below are empty and a
+            save would blank the mapping you already have. Nothing has been lost — reload once
+            QuickBooks is reachable, or reconnect from{' '}
+            <Link href="/admin/settings/integrations" className="underline">
+              Integrations
+            </Link>{' '}
+            if the connection has expired.
           </p>
         </Card>
       )}
@@ -294,7 +362,9 @@ export default async function QuickBooksSettingsPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             {ACCOUNT_FIELDS.map((field) => {
-              const options = accounts.filter((a) => field.types.includes(a.AccountType as never))
+              const choices = accounts
+                .filter((a) => field.types.includes(a.AccountType as never))
+                .map((a) => ({ id: a.Id, label: accountLabel(a) }))
               const current = settings?.[field.name] ?? ''
               return (
                 <div key={field.name} className="space-y-2">
@@ -305,12 +375,7 @@ export default async function QuickBooksSettingsPage() {
                     defaultValue={current}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="">Not mapped</option>
-                    {options.map((a) => (
-                      <option key={a.Id} value={a.Id}>
-                        {a.Name}
-                      </option>
-                    ))}
+                    {mappingOptions(choices, current)}
                   </select>
                   <p className="text-xs text-muted-foreground">{field.help}</p>
                 </div>
@@ -325,12 +390,7 @@ export default async function QuickBooksSettingsPage() {
                 defaultValue={settings?.shippingItemId ?? ''}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="">Not mapped</option>
-                {items.map((i) => (
-                  <option key={i.Id} value={i.Id}>
-                    {i.Name}
-                  </option>
-                ))}
+                {mappingOptions(itemChoices, settings?.shippingItemId ?? '')}
               </select>
               <p className="text-xs text-muted-foreground">
                 The QuickBooks item used for the shipping line.
@@ -345,12 +405,7 @@ export default async function QuickBooksSettingsPage() {
                 defaultValue={settings?.refundItemId ?? ''}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="">Not mapped</option>
-                {items.map((i) => (
-                  <option key={i.Id} value={i.Id}>
-                    {i.Name}
-                  </option>
-                ))}
+                {mappingOptions(itemChoices, settings?.refundItemId ?? '')}
               </select>
               <p className="text-xs text-muted-foreground">
                 Where partial refunds land. Full refunds reverse the original lines instead,
@@ -383,7 +438,13 @@ export default async function QuickBooksSettingsPage() {
             Push paid orders to QuickBooks automatically
           </label>
 
-          <Button type="submit">Save mapping</Button>
+          {catalogError ? (
+            <p className="text-sm text-muted-foreground">
+              Saving is unavailable while the QuickBooks account list cannot be loaded.
+            </p>
+          ) : (
+            <Button type="submit">Save mapping</Button>
+          )}
         </Card>
       </form>
 
@@ -421,12 +482,7 @@ export default async function QuickBooksSettingsPage() {
                 defaultValue={clearingAccountId}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="">Not mapped</option>
-                {accounts.map((a) => (
-                  <option key={a.Id} value={a.Id}>
-                    {a.Name}
-                  </option>
-                ))}
+                {mappingOptions(accountChoices, clearingAccountId)}
               </select>
               <p className="text-xs text-muted-foreground">
                 The other side of every entry: where money in lands and money out comes from.
@@ -442,12 +498,7 @@ export default async function QuickBooksSettingsPage() {
                 defaultValue={inventoryAccountId}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="">Not mapped</option>
-                {accounts.map((a) => (
-                  <option key={a.Id} value={a.Id}>
-                    {a.Name}
-                  </option>
-                ))}
+                {mappingOptions(accountChoices, inventoryAccountId)}
               </select>
               <p className="text-xs text-muted-foreground">
                 The other side for cost of goods only. Cost of goods is offset against inventory,
@@ -471,12 +522,7 @@ export default async function QuickBooksSettingsPage() {
                   defaultValue={ledgerAccounts[category]?.accountId ?? ''}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="">Not mapped</option>
-                  {accounts.map((a) => (
-                    <option key={a.Id} value={a.Id}>
-                      {a.Name}
-                    </option>
-                  ))}
+                  {mappingOptions(accountChoices, ledgerAccounts[category]?.accountId ?? '')}
                 </select>
                 <p className="text-xs text-muted-foreground">
                   Suggested: {DEFAULT_ACCOUNT_MAP[category].account}
@@ -486,7 +532,13 @@ export default async function QuickBooksSettingsPage() {
             ))}
           </div>
 
-          <Button type="submit">Save ledger accounts</Button>
+          {catalogError ? (
+            <p className="text-sm text-muted-foreground">
+              Saving is unavailable while the QuickBooks account list cannot be loaded.
+            </p>
+          ) : (
+            <Button type="submit">Save ledger accounts</Button>
+          )}
         </Card>
       </form>
 
