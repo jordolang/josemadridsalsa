@@ -77,34 +77,32 @@ catch (error) {
 
 ## Shipping Rate Configuration
 
-Default rates are defined in `lib/shipping-calculator.ts`:
+Rates come from the `ShippingSettings` singleton where a store has set them, and fall back
+field-by-field to the built-in defaults in `lib/shipping/rate-config.ts`:
 
 ```typescript
-const SHIPPING_RATES = {
-
-  FLAT_RATE: {
-    cost: 6.99,
-    estimatedDays: '3-5 business days',
-  },
-
-  WEIGHT_BASED: {
-    baseRate: 4.99,
-    perPound: 0.50,
-    estimatedDays: '3-5 business days',
-  },
-
-  INTERNATIONAL: {
-    cost: 24.99,
-    estimatedDays: '7-14 business days',
-  },
-
-  STATE_MULTIPLIERS: {
-    AK: 1.5, // Alaska
-    HI: 1.5, // Hawaii
-    PR: 2.0, // Puerto Rico
-  },
+export const DEFAULT_RATE_CONFIG: ShippingRateConfig = {
+  flatRateCents: 699,
+  weightSurchargeBaseCents: 499,
+  weightSurchargePerLbCents: 50,
+  weightSurchargeThresholdLb: 5,
+  internationalRateCents: 2499,
+  stateSurcharges: { AK: 1.5, HI: 1.5, PR: 2.0 },
 }
 ```
+
+These are **carriage only**. A flat $4.00 packaging-and-materials fee
+(`lib/shipping/handling-fee.ts`) is added once per order to every customer-facing quote — live
+carrier rates included — so what the customer actually sees is:
+
+| Method | Carriage | Customer pays |
+| --- | --- | --- |
+| Standard domestic | $6.99 | $10.99 |
+| International | $24.99 | $28.99 |
+
+The fee is not scaled by the state surcharge or the weight surcharge, which price carriage rather
+than packaging. The admin label routes call `getShippingRates` directly and do not include it —
+buying postage is a cost, not a quote.
 
 ## Origin Address Configuration
 
@@ -166,7 +164,8 @@ const estimate = await getShippingEstimate({
   state: 'CA',
   country: 'US',
 })
-// Returns: 6.99 — shipping is charged on every order
+// Returns: 10.99 — the $6.99 carriage plus the $4.00 packaging fee.
+// Shipping is charged on every order, and the preview matches what checkout will charge.
 ```
 
 ## Parcel Dimensions
