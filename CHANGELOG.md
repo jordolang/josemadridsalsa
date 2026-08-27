@@ -229,6 +229,17 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **The mobile "Live chats" tab covered the admin controls underneath it.** On a phone the tab is
+  pinned to the right edge at mid-height, where it sat on top of the edit and delete buttons in
+  Admin → Reusable sections (and any other right-aligned action at that height). It can now be
+  dragged: press and move it to slide it anywhere along the edge, or across the screen's midpoint
+  to switch it to the left edge, and the arrow keys move it for keyboard and screen-reader users.
+  The chosen spot is saved per device in `localStorage`, a "Reset tab position" button in the
+  queue panel puts it back, and a drag no longer opens the queue panel on release. Tap behaviour
+  and the desktop pill are unchanged.
+
+  The geometry is a pure module (`lib/admin/live-chat-dock.ts`) driven by a `useLiveChatDock`
+  hook, so the clamping and edge-snapping are tested without a DOM.
 - **A mailing list imported from the customer database could not be opened.** Loading one failed
   with "Unable to Load Dashboard — An unexpected response was received from the server." The
   subscribers page read *every* subscriber with *every* column, including the `customFields` blob
