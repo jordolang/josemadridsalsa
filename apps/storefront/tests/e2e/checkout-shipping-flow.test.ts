@@ -1,6 +1,16 @@
 import { it, expect, beforeAll } from 'vitest'
 import { describeIfE2E, e2eBaseUrl } from '../helpers/e2e'
+import { HANDLING_FEE } from '@/lib/shipping/handling-fee'
 import prisma from '@/lib/prisma'
+
+/**
+ * The carriage half of a quoted shipping cost — what the state multiplier actually scales.
+ *
+ * A quote is `rate × stateMultiplier + packagingFee`, and the fee is flat by design, so dividing
+ * two all-in quotes understates the multiplier ($14.48 / $10.99 is 1.32, not 1.5). Netting the fee
+ * off both sides pins the multiplier itself.
+ */
+const carriage = (shippingCost: number): number => shippingCost - HANDLING_FEE
 
 /**
  * E2E Test: Checkout Flow with Real Shipping Rates
@@ -270,7 +280,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
       expect(akData.shippingCost).toBeGreaterThan(caData.shippingCost)
 
       // Verify surcharge is approximately 1.5x (allowing for rounding)
-      const surchargeRatio = akData.shippingCost / caData.shippingCost
+      const surchargeRatio = carriage(akData.shippingCost) / carriage(caData.shippingCost)
       expect(surchargeRatio).toBeGreaterThanOrEqual(1.4)
       expect(surchargeRatio).toBeLessThanOrEqual(1.6)
 
@@ -328,7 +338,7 @@ describeIfE2E('E2E: Checkout Flow with Real Shipping Rates', () => {
       expect(hiData.shippingCost).toBeGreaterThan(caData.shippingCost)
 
       // Verify surcharge is approximately 1.5x (allowing for rounding)
-      const surchargeRatio = hiData.shippingCost / caData.shippingCost
+      const surchargeRatio = carriage(hiData.shippingCost) / carriage(caData.shippingCost)
       expect(surchargeRatio).toBeGreaterThanOrEqual(1.4)
       expect(surchargeRatio).toBeLessThanOrEqual(1.6)
 
