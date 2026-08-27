@@ -73,7 +73,10 @@ export function CartSidebar() {
               </div>
             ) : (
               <div className="space-y-4">
-                {items.map((item) => (
+                {items.map((item) => {
+                  // A pack is priced as a whole, so its jars are added and removed together.
+                  const isBundleItem = Boolean(item.bundleGroupId)
+                  return (
                   <div key={item.id} className="flex items-center space-x-4 rounded-xl bg-muted p-3 transition hover:bg-card">
                     <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                       <Image
@@ -95,35 +98,48 @@ export function CartSidebar() {
                         </Badge>
                         <span className="text-xs text-muted-foreground">{item.sku}</span>
                       </div>
+                      {isBundleItem && item.bundleName && (
+                        <p className="mt-1 text-xs font-medium text-salsa-600">
+                          Part of your {item.bundleName}
+                        </p>
+                      )}
                       <p className="mt-1 text-sm font-medium text-foreground">
                         {formatPrice(item.price)}
                       </p>
                     </div>
 
                     <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        disabled={item.quantity <= 1}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      
-                      <span className="text-sm font-medium w-8 text-center">
-                        {item.quantity}
-                      </span>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        disabled={item.quantity >= (item.maxQuantity || 99)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                      {isBundleItem ? (
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Qty {item.quantity}
+                        </span>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+
+                          <span className="text-sm font-medium w-8 text-center">
+                            {item.quantity}
+                          </span>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            disabled={item.quantity >= (item.maxQuantity || 99)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
                     </div>
 
                     <Button
@@ -133,10 +149,13 @@ export function CartSidebar() {
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500"
                     >
                       <X className="h-3 w-3" />
-                      <span className="sr-only">Remove item</span>
+                      <span className="sr-only">
+                        {isBundleItem ? 'Remove pack' : 'Remove item'}
+                      </span>
                     </Button>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

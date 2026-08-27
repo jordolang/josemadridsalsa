@@ -6,53 +6,19 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Gift, ArrowRight } from 'lucide-react'
+import { SALSA_BUNDLES, bundleSavings } from '@/lib/bundles'
 import { formatPrice } from '@/lib/utils'
 
-type GiftBoxOption = {
-  id: string
-  name: string
-  size: number
-  price: number
-  image: string
-  description: string
+interface GiftBoxQuickAddProps {
+  /**
+   * What a single jar sells for, from the catalogue the page has already loaded. The "was"
+   * price and savings badge are shown only when this is known, rather than against a figure
+   * hardcoded here that the catalogue can drift away from.
+   */
+  jarPrice?: number | null
 }
 
-const giftBoxOptions: GiftBoxOption[] = [
-  {
-    id: 'choose-3',
-    name: 'Choose 3 Pack',
-    size: 3,
-    price: 23.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/3-product-box.webp',
-    description: 'Perfect gift for trying new flavors',
-  },
-  {
-    id: 'choose-5',
-    name: 'Choose 5 Pack',
-    size: 5,
-    price: 28.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/6-products.webp',
-    description: 'Great variety for any occasion',
-  },
-  {
-    id: 'choose-6',
-    name: 'Choose 6 Pack',
-    size: 6,
-    price: 32.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/6-products.webp',
-    description: 'Popular choice for families',
-  },
-  {
-    id: 'choose-12',
-    name: 'Choose 12 Pack',
-    size: 12,
-    price: 60.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/12-products.webp',
-    description: 'Best value - stock up and save',
-  },
-]
-
-export function GiftBoxQuickAdd() {
+export function GiftBoxQuickAdd({ jarPrice = null }: GiftBoxQuickAddProps) {
   return (
     <section className="bg-gradient-to-br from-salsa-50 to-chile-50 dark:from-salsa-950/20 dark:to-chile-950/20 py-12 border-y border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -77,7 +43,9 @@ export function GiftBoxQuickAdd() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {giftBoxOptions.map((box) => (
+          {SALSA_BUNDLES.map((box) => {
+            const savings = bundleSavings(box, jarPrice)
+            return (
             <div
               key={box.id}
               className="group card bg-card hover:shadow-xl transition-all duration-300 overflow-hidden"
@@ -90,11 +58,13 @@ export function GiftBoxQuickAdd() {
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                 />
-                <div className="absolute top-3 left-3">
-                  <Badge className="bg-salsa-500 text-white">
-                    Save ${((box.size * 7) - box.price).toFixed(2)}
-                  </Badge>
-                </div>
+                {savings !== null && (
+                  <div className="absolute top-3 left-3">
+                    <Badge className="bg-salsa-500 text-white">
+                      Save {formatPrice(savings)}
+                    </Badge>
+                  </div>
+                )}
               </div>
 
               <div className="p-4">
@@ -110,9 +80,11 @@ export function GiftBoxQuickAdd() {
                     <span className="text-2xl font-bold text-salsa-600">
                       {formatPrice(box.price)}
                     </span>
-                    <span className="text-sm text-muted-foreground line-through">
-                      {formatPrice(box.size * 7)}
-                    </span>
+                    {savings !== null && jarPrice !== null && (
+                      <span className="text-sm text-muted-foreground line-through">
+                        {formatPrice(jarPrice * box.size)}
+                      </span>
+                    )}
                   </div>
                   <span className="text-sm text-muted-foreground">
                     {box.size} jars
@@ -127,7 +99,8 @@ export function GiftBoxQuickAdd() {
                 </Link>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         <div className="mt-6 text-center md:hidden">

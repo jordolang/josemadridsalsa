@@ -5,6 +5,10 @@ import { prisma } from '@/lib/prisma'
 
 const CartItemSchema = z.object({
   id: z.string(),
+  // Kept alongside the line id because a pack line is keyed by pack instance, not by product,
+  // and a recovered cart has to come back as the pack the customer built — a pack that lost
+  // its tags would be recovered as loose jars and charged at catalogue price.
+  productId: z.string().optional(),
   name: z.string(),
   slug: z.string(),
   price: z.number(),
@@ -13,6 +17,9 @@ const CartItemSchema = z.object({
   sku: z.string(),
   heatLevel: z.string(),
   maxQuantity: z.number().int().optional(),
+  bundleId: z.string().optional(),
+  bundleGroupId: z.string().optional(),
+  bundleName: z.string().optional(),
 })
 
 const TrackCartSchema = z.object({

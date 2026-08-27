@@ -16,6 +16,7 @@ import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
 import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { validateDiscountCode } from '@/lib/discounts'
+import { BundlePricingError, priceCartLines } from '@/lib/bundles'
 import { validateGiftCertificate } from '@/lib/gift-certificates'
 import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
 import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
@@ -26,6 +27,11 @@ const CheckoutSchema = z.object({
       z.object({
         productId: z.string().cuid(),
         quantity: z.number().int().positive(),
+        // Which mix-and-match pack this jar belongs to, and which instance of it. Only the
+        // tags travel; the pack price is read from the catalogue of packs server-side, for
+        // the same reason shippingCost is not accepted below.
+        bundleId: z.string().optional(),
+        bundleGroupId: z.string().optional(),
       })
     )
     .min(1, 'Cart is empty'),
@@ -106,12 +112,14 @@ export async function POST(request: NextRequest) {
 
     const { items, customer, shipping, notes, discountCode, giftCertificateCode, recoveryToken, shippingMethod, referralCode } = parsed.data
 
-    const productIds = items.map((item) => item.productId)
+    // Deduplicated: the same salsa can appear on more than one line — once loose and once
+    // inside a pack, or in two different packs — and each is a line of its own.
+    const productIds = Array.from(new Set(items.map((item) => item.productId)))
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
     })
 
-    if (products.length !== items.length) {
+    if (products.length !== productIds.length) {
       return NextResponse.json(
         { error: 'One or more products could not be found.' },
         { status: 400 }
@@ -124,6 +132,24 @@ export async function POST(request: NextRequest) {
     // fundraiser page. Resolved from the referral code here rather than accepted from the
     // client, for the same reason shipping and discounts are recomputed server-side.
     const fundraiserPrices = await getFundraiserPriceOverrides(referralCode, productIds)
+
+    // Packs are priced here, from the pack definitions, never from anything the browser
+    // sent. A Choose 5 advertised at $28 is charged at $28: the jars share that price
+    // instead of being charged at catalogue price, which is what checkout used to do.
+    let pricedItems
+    try {
+      pricedItems = priceCartLines(items, (line) => {
+        const product = productMap.get(line.productId)
+        return product
+          ? fundraiserUnitPrice(product.price, fundraiserPrices.get(line.productId))
+          : 0
+      })
+    } catch (error) {
+      if (error instanceof BundlePricingError) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+      throw error
+    }
 
     let subtotal = 0
     // Explicitly typed: the tax and shipping closures below both read this, and an inferred
@@ -139,23 +165,21 @@ export async function POST(request: NextRequest) {
       productImage: string | undefined
     }> = []
 
-    for (const item of items) {
+    for (const item of pricedItems) {
       const product = productMap.get(item.productId)
       if (!product) continue
 
-      const unitPrice = fundraiserUnitPrice(product.price, fundraiserPrices.get(product.id))
-      const lineTotal = unitPrice * item.quantity
-      subtotal += lineTotal
+      subtotal = round2(subtotal + item.lineTotal)
 
       orderItems.push({
         productId: product.id,
         quantity: item.quantity,
-        unitPrice: toDecimal(unitPrice),
+        unitPrice: toDecimal(item.unitPrice),
         // Snapshot the cost at the moment of sale. Margin computed from the product's
         // *current* cost would silently recalculate every past order whenever a supplier
         // changes price. Null stays null — an unknown cost must not become zero.
         unitCost: product.costPrice ?? undefined,
-        totalPrice: toDecimal(lineTotal),
+        totalPrice: toDecimal(item.lineTotal),
         productName: product.name,
         productSku: product.sku,
         productImage: product.featuredImage ?? undefined,
@@ -194,15 +218,29 @@ export async function POST(request: NextRequest) {
     // With no discount this equals subtotal, so undiscounted orders are unaffected.
     const discountedSubtotal = subtotal - discountAmount
 
+    // Reserved per product, not per line: two lines of the same salsa are two claims on one
+    // stock figure, and reserving them separately checks each against the full availability.
+    const reservationQuantities = new Map<string, number>()
+    for (const item of items) {
+      reservationQuantities.set(
+        item.productId,
+        (reservationQuantities.get(item.productId) ?? 0) + item.quantity
+      )
+    }
+    const reservationLines = Array.from(reservationQuantities, ([productId, quantity]) => ({
+      productId,
+      quantity,
+    }))
+
     // Reserve inventory for all items atomically before proceeding with checkout.
     // reserveMultipleProducts uses a single Serializable transaction: if any item
     // has insufficient stock the entire reservation is rolled back automatically.
     let reservationResults: Awaited<ReturnType<typeof reserveMultipleProducts>>
     try {
       reservationResults = await reserveMultipleProducts(
-        items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
+        reservationLines.map((line) => ({
+          productId: line.productId,
+          quantity: line.quantity,
           userId: user?.id,
           notes: 'Checkout reservation',
         }))
@@ -239,9 +277,11 @@ export async function POST(request: NextRequest) {
         const taxableFactor = subtotal > 0 ? discountedSubtotal / subtotal : 1
 
         const taxResult = await calculateTax({
-          lineItems: orderItems.map((item) => ({
+          lineItems: orderItems.map((item, index) => ({
             amount: Math.round(Number(item.totalPrice) * taxableFactor * 100), // cents
-            reference: item.productId,
+            // Stripe Tax wants a reference unique within the calculation, and one salsa can
+            // hold two lines now — loose and inside a pack, or in two packs.
+            reference: `${item.productId}-${index}`,
             taxCode: 'txcd_30011000', // Food & beverage - Packaged food
           })),
           shippingAddress: {
@@ -568,10 +608,10 @@ export async function POST(request: NextRequest) {
       // Release all reservations in parallel on any downstream failure
       console.error('[Checkout] Post-reservation error, releasing all reservations:', postReservationError)
       const releaseResults = await Promise.allSettled(
-        items.map((item) =>
+        reservationLines.map((line) =>
           releaseInventory({
-            productId: item.productId,
-            quantity: item.quantity,
+            productId: line.productId,
+            quantity: line.quantity,
             userId: user?.id,
             notes: 'Checkout failed - releasing reservation',
           })

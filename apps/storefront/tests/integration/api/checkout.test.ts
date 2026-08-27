@@ -284,7 +284,7 @@ describe('Checkout API Integration Tests', () => {
           lineItems: expect.arrayContaining([
             expect.objectContaining({
               amount: 1798, // $17.98 in cents
-              reference: 'clxxx1234567890abc',
+              reference: 'clxxx1234567890abc-0',
               taxCode: 'txcd_30011000',
             }),
           ]),
