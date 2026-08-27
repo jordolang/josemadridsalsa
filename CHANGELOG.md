@@ -60,6 +60,25 @@ the root `package.json` is canonical.
 
 ### Fixed
 
+- **The Choose 3/5/6/12 packs now cost what they say they cost.** Picking five salsas in a
+  Choose 5 Pack advertised at $28 put five loose jars in the cart at catalogue price and rang
+  up $45 at checkout. `lib/bundles.ts` is now the one definition of the packs — id, size and
+  price — and the one place a pack price is split across its jars, and both halves of the sale
+  read from it. The storefront adds a pack as a group of cart lines whose prices total exactly
+  the pack price (largest-remainder, so a $23 three-pack is $7.67/$7.67/$7.66 rather than $23.01),
+  and a pack is added and removed whole: its jars cannot be re-quantified out of shape.
+  `/api/checkout` and the PayPal and Square order routes accept the pack tags — never a price —
+  look the pack up server-side, refuse a group that does not hold the jars it claims to, and
+  charge the pack price. Jars bought loose are still catalogue price, as before. The savings
+  copy on the storefront's pack cards is now figured against the catalogue's own jar price
+  instead of a $7 figure hardcoded when the catalogue still sold at $7, and is hidden when
+  there is no saving to claim.
+
+- **A repeat purchase of the same salsa no longer reserves its stock twice over.** The checkout
+  routes reserved inventory per cart line, so two lines naming one product were validated
+  separately against the same availability and could reserve more than existed. Reservations
+  (and their release when checkout fails) are now aggregated per product.
+
 - **Picante, the storefront chat mascot, answers again.** `/api/ai-chat` only ever had two
   working backends, OpenAI and a `smileyface` provider whose host does not resolve, and the
   OpenAI account behind the shared key has been out of credit — so every message a shopper sent

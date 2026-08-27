@@ -115,7 +115,8 @@ describe('Checkout Tax Calculation API Integration Tests', () => {
         lineItems: [
           {
             amount: 1798, // $17.98 in cents
-            reference: 'clxxx1234567890abc',
+            // Suffixed by line, so a salsa bought loose and in a pack stays two references.
+            reference: 'clxxx1234567890abc-0',
             taxCode: 'txcd_30011000', // Food & beverage
           },
         ],
@@ -528,7 +529,7 @@ describe('Checkout Tax Calculation API Integration Tests', () => {
           lineItems: [
             {
               amount: 500000, // $5000 in cents
-              reference: 'clxxx1234567890abc',
+              reference: 'clxxx1234567890abc-0',
               taxCode: 'txcd_30011000',
             },
           ],
@@ -614,7 +615,7 @@ describe('Checkout Tax Calculation API Integration Tests', () => {
           lineItems: [
             {
               amount: 2997, // $29.97 rounded to cents
-              reference: 'clxxx1234567890abc',
+              reference: 'clxxx1234567890abc-0',
               taxCode: 'txcd_30011000',
             },
           ],

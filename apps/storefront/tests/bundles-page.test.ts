@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createMetadata } from '@/lib/metadata'
+import { SALSA_BUNDLES } from '@/lib/bundles'
 
 describe('Bundles Page', () => {
   describe('metadata', () => {
@@ -32,32 +33,9 @@ describe('Bundles Page', () => {
   })
 
   describe('gift box options', () => {
-    const giftBoxOptions = [
-      {
-        id: 'choose-3',
-        name: 'Choose 3 Pack',
-        size: 3,
-        price: 23.0,
-      },
-      {
-        id: 'choose-5',
-        name: 'Choose 5 Pack',
-        size: 5,
-        price: 28.0,
-      },
-      {
-        id: 'choose-6',
-        name: 'Choose 6 Pack',
-        size: 6,
-        price: 32.0,
-      },
-      {
-        id: 'choose-12',
-        name: 'Choose 12 Pack',
-        size: 12,
-        price: 60.0,
-      },
-    ]
+    // Read from the definitions the page, the cart and checkout all price from, so this
+    // cannot pass while the storefront and the server disagree about what a pack costs.
+    const giftBoxOptions = SALSA_BUNDLES
 
     it('should have 4 bundle size options', () => {
       expect(giftBoxOptions).toHaveLength(4)

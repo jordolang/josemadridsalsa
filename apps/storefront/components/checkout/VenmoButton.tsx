@@ -1,11 +1,7 @@
 'use client'
 
 import { PayPalButtons, FUNDING } from '@paypal/react-paypal-js'
-
-interface CartItem {
-  id: string
-  quantity: number
-}
+import { toCheckoutItems, type CartItem } from '@/lib/store/cart'
 
 interface CustomerInfo {
   email: string
@@ -52,10 +48,7 @@ export function VenmoButton({ items, customer, shipping, notes, shippingMethod, 
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                items: items.map((item) => ({
-                  productId: item.id,
-                  quantity: item.quantity,
-                })),
+                items: toCheckoutItems(items),
                 customer,
                 shipping,
                 notes,

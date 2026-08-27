@@ -248,6 +248,95 @@ describe('Checkout API', () => {
       expect(data.error).toContain('Insufficient inventory')
     })
 
+    it('charges a Choose 5 pack the $28 it was advertised at', async () => {
+      const { prisma } = await import('@/lib/prisma')
+
+      const jars = ['a', 'b', 'c', 'd', 'e'].map((suffix) => ({
+        ...mockProduct,
+        id: `clxxx123456789000${suffix}`,
+        sku: `TEST-${suffix}`,
+        price: 9,
+      }))
+      vi.mocked(prisma.product.findMany).mockResolvedValue(jars as any)
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...validCheckoutData,
+          items: jars.map((jar) => ({
+            productId: jar.id,
+            quantity: 1,
+            bundleId: 'choose-5',
+            bundleGroupId: 'group-1',
+          })),
+        }),
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(200)
+
+      const orderData = vi.mocked(prisma.order.create).mock.calls[0][0].data as any
+      // Five jars at catalogue price would be $45. The pack is $28, and $28 is what the
+      // order — and so the payment — is written for.
+      expect(Number(orderData.subtotal)).toBe(28)
+      const lineTotals = orderData.items.create.map((item: any) => Number(item.totalPrice))
+      expect(lineTotals.reduce((sum: number, total: number) => sum + total, 0)).toBe(28)
+    })
+
+    it('rejects a pack that does not hold the jars it claims to', async () => {
+      const { prisma } = await import('@/lib/prisma')
+
+      const jars = ['a', 'b'].map((suffix) => ({
+        ...mockProduct,
+        id: `clxxx123456789000${suffix}`,
+        sku: `TEST-${suffix}`,
+        price: 9,
+      }))
+      vi.mocked(prisma.product.findMany).mockResolvedValue(jars as any)
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...validCheckoutData,
+          items: jars.map((jar) => ({
+            productId: jar.id,
+            quantity: 1,
+            bundleId: 'choose-5',
+            bundleGroupId: 'group-1',
+          })),
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('Choose 5 Pack')
+      expect(prisma.order.create).not.toHaveBeenCalled()
+    })
+
+    it('still charges catalogue price for jars bought loose', async () => {
+      const { prisma } = await import('@/lib/prisma')
+
+      vi.mocked(prisma.product.findMany).mockResolvedValue([{ ...mockProduct, price: 9 }] as any)
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
+
+      const request = new NextRequest('http://localhost/api/checkout', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...validCheckoutData,
+          items: [{ productId: mockProduct.id, quantity: 5 }],
+        }),
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(200)
+
+      const orderData = vi.mocked(prisma.order.create).mock.calls[0][0].data as any
+      expect(Number(orderData.subtotal)).toBe(45)
+    })
+
     it('should create order for guest user', async () => {
       const { prisma } = await import('@/lib/prisma')
       const { getServerSession } = await import('next-auth')
