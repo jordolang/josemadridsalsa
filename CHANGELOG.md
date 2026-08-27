@@ -14,6 +14,28 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Desktop admin apps for Windows 11 and macOS, and the guarded database console they carry.**
+  Both apps are hardened windows onto the real admin panel rather than reimplementations of it:
+  at 163 admin pages and 352 API routes, a native rewrite would mean building every future admin
+  feature three times, and a wrapper means a feature shipped to the web is in both apps the same
+  day. `apps/windows-admin` is a new Electron workspace that packages an NSIS installer
+  (`npm run dist:win --workspace=@jose-madrid/windows-admin`), cross-building from macOS and
+  Linux as well as Windows; `apps/macos-admin`, which was a 300-line WKWebView shell, gains the
+  same behaviour. Over a browser tab they add: a shared section menu with matching keyboard
+  shortcuts, the OS save dialog for every CSV/PDF/label export with a reveal-in-folder
+  notification when it lands, real printing, a persistent signed-in session, an offline screen
+  that names the address and the reason, and — on Windows — background updates from a rolling
+  `desktop-latest` release. External links (Stripe, QuickBooks, Vercel, a customer's site) are
+  handed to the default browser, but Google, GitHub, Facebook and Apple sign-in redirects
+  deliberately stay in-window: an OAuth round trip that finishes in Safari sets the session
+  cookie there and strands the app on the sign-in page. Both apps present a browser-shaped user
+  agent for the same reason — identity providers refuse to serve sign-in to something they
+  detect as an embedded webview. Neither build is code-signed yet, so Windows shows SmartScreen
+  once and macOS needs a first right-click-to-open; both are structured so a certificate drops
+  in without other changes. The **Desktop Apps** workflow builds the installer on
+  `windows-latest` and the app bundle on `macos-15` — the macOS build needs a full Xcode, since
+  the standalone Command Line Tools omit the SwiftUI macro plugins `@State` expands through.
+
 - **A guarded SQL console at `/admin/developer/database`**, behind the new `developer:database`
   permission, for direct data work that has no admin screen. Credentials never leave the server:
   statements are posted to `POST /api/developer/admin/sql` and run through Prisma. Because this

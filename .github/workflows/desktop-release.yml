@@ -1,0 +1,134 @@
+name: Desktop Apps
+
+permissions:
+  contents: write
+
+on:
+  # Cutting a desktop build is a deliberate act, not something every push should do.
+  workflow_dispatch:
+  push:
+    tags:
+      - 'desktop-v*'
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check the desktop shell
+        run: |
+          npm run lint --workspace=@jose-madrid/windows-admin
+          npm run type-check --workspace=@jose-madrid/windows-admin
+          npm run test --workspace=@jose-madrid/windows-admin
+
+      # Produces the NSIS installer plus latest.yml, which is the update feed the
+      # installed app reads. Both have to reach the release for updates to work.
+      - name: Build installer
+        run: npm run dist:win --workspace=@jose-madrid/windows-admin
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            apps/windows-admin/release/*.exe
+            apps/windows-admin/release/*.blockmap
+            apps/windows-admin/release/latest.yml
+          if-no-files-found: error
+
+  macos:
+    name: macOS app
+    # A full Xcode toolchain is required: the SwiftUI macro plugins that @State
+    # expands through are absent from the standalone Command Line Tools.
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build app bundle
+        working-directory: apps/macos-admin
+        run: ./build-app.sh
+
+      - name: Package disk image
+        working-directory: apps/macos-admin
+        run: |
+          VERSION=$(node -p "require('../../package.json').version")
+          hdiutil create \
+            -volname "Jose Madrid Salsa Admin" \
+            -srcfolder "dist/Jose Madrid Salsa Admin.app" \
+            -ov -format UDZO \
+            "dist/JoseMadridSalsaAdmin-${VERSION}.dmg"
+
+      - name: Upload disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: apps/macos-admin/dist/*.dmg
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect files
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.blockmap' -o -name 'latest.yml' \) \
+            -exec cp {} release/ \;
+          ls -la release
+
+      # One rolling tag holds the current installers. The app's update feed points
+      # at this tag by name, so it cannot be shadowed by a platform release.
+      - name: Publish to the rolling desktop release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view desktop-latest >/dev/null 2>&1; then
+            gh release upload desktop-latest release/* --clobber
+          else
+            gh release create desktop-latest release/* \
+              --title "Desktop Apps (latest)" \
+              --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
+          fi
+
+      # A tagged run additionally keeps a fixed copy of that build.
+      - name: Publish the tagged release
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release/* \
+            --title "Desktop Apps ${GITHUB_REF_NAME}" \
+            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel."

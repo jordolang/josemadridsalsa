@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self';" />
+    <title>Server Settings</title>
+    <link rel="stylesheet" href="shell.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Server settings</h1>
+      <p>Which admin panel this app connects to. Signing in again may be required after a change.</p>
+      <label for="endpoint">Admin URL</label>
+      <input id="endpoint" type="text" spellcheck="false" autocomplete="off" />
+      <div class="hint" style="margin-top: 8px">
+        HTTPS is required, except for a localhost development server.
+      </div>
+      <div class="message" id="message"></div>
+      <div class="actions">
+        <button class="primary" id="save" type="button">Save</button>
+        <button id="production" type="button">Use production</button>
+        <button id="cancel" type="button">Cancel</button>
+      </div>
+      <p class="hint" id="version" style="margin-top: 20px"></p>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>
