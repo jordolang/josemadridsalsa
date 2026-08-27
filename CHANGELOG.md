@@ -229,6 +229,36 @@ the root `package.json` is canonical.
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
 
 ### Fixed
+- **The two remaining reads that loaded a whole mailing list in one shot.** A list built from the
+  customer database holds around 22,000 contacts, and both of these fetched every one of them with
+  every column — `customFields` included, the JSON blob where the importer parks each unmapped
+  column of the source CSV.
+
+  Creating a campaign against a mailing list is the worse of the two, because it runs inside a
+  server action: `createCampaign` loaded the entire list into an in-memory `recipientsList` and
+  then wrote it back as a single nested `create`. It now counts the list, creates the campaign row
+  on its own, and pages through the subscribers a thousand at a time, writing each batch out as
+  `EmailRecipient` rows before reading the next — so neither the list nor the insert is ever fully
+  resident. `customFields` is fetched only when a variable mapping actually reads one. Splitting
+  the recipients off the campaign row gave up the nested write's atomicity, so a failed batch — or
+  one that materialises nobody because the list emptied mid-run — now deletes the campaign rather
+  than leaving a recipient-less draft that looks like a success, and `totalRecipients` is corrected
+  if someone unsubscribes between the count and the read. A create killed part-way by a timeout or
+  a deployment leaves no in-process handler to undo it, so **launching** a campaign now refuses a
+  draft holding fewer recipients than it advertises instead of quietly sending to a partial
+  audience and reporting a complete run.
+
+  The subscriber CSV export (`GET /api/admin/mailing-lists/[id]/export`) built one CSV string in
+  memory from the same unbounded read — several megabytes held twice over against Vercel's
+  response cap, with no `maxDuration`. It now streams: the header goes out first, then each page of
+  subscribers is unparsed and written straight into the response body, with only the columns the
+  file actually contains selected. Export order moves from oldest-first to email order, which is
+  what lets the read page forward — a CSV import stamps thousands of rows with the same
+  `createdAt`, so paging on it would repeat or skip rows. Both reads page on an `email > last`
+  predicate rather than a Prisma `cursor`: a cursor has to locate the boundary row, so an admin
+  removing that subscriber between pages would end the read early and hand back a truncated export,
+  or a campaign missing everyone past that point. An empty list now downloads a header-only file
+  instead of an empty one.
 - **The mobile "Live chats" tab covered the admin controls underneath it.** On a phone the tab is
   pinned to the right edge at mid-height, where it sat on top of the edit and delete buttons in
   Admin → Reusable sections (and any other right-aligned action at that height). It can now be
