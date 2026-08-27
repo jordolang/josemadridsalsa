@@ -112,6 +112,7 @@ async function getRecentAudit() {
 }
 
 const CONTROL_LINKS = [
+  { label: 'Database Console', href: '/admin/developer/database', icon: Database, description: 'Guarded SQL against the platform database' },
   { label: 'File Explorer', href: '/admin/developer/files', icon: HardDrive, description: 'josemadridsalsa-blob storage' },
   { label: 'Developer Blog', href: '/admin/developer/blog', icon: PenSquare, description: 'Write and publish posts' },
   { label: 'Page Content', href: '/admin/developer/content', icon: FileText, description: 'Customize /developer' },
