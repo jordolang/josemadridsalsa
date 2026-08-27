@@ -3,21 +3,6 @@ import SwiftUI
 
 @main
 struct JoseMadridAdminApp: App {
-  var body: some Scene {
-    WindowGroup("Jose Madrid Salsa Admin") {
-      AdminWorkspace()
-        .frame(minWidth: 1100, minHeight: 720)
-    }
-    .windowStyle(.hiddenTitleBar)
-    .windowToolbarStyle(.unifiedCompact)
-
-    Settings {
-      ConnectionSettings()
-    }
-  }
-}
-
-private struct AdminWorkspace: View {
   @AppStorage("adminEndpoint") private var endpoint = AdminEndpoint.production.absoluteString
   @StateObject private var browser = BrowserController()
 
@@ -25,8 +10,88 @@ private struct AdminWorkspace: View {
     AdminEndpoint.validated(endpoint) ?? AdminEndpoint.production
   }
 
+  var body: some Scene {
+    WindowGroup("Jose Madrid Salsa Admin") {
+      AdminWorkspace(adminURL: adminURL, browser: browser)
+        .frame(minWidth: 1100, minHeight: 720)
+    }
+    .windowStyle(.hiddenTitleBar)
+    .windowToolbarStyle(.unifiedCompact)
+    .commands {
+      AdminCommands(browser: browser, adminURL: adminURL)
+    }
+
+    Settings {
+      ConnectionSettings()
+    }
+  }
+}
+
+private let releasesURL = URL(string: "https://github.com/jordolang/josemadridsalsa/releases")!
+
+/// Menu bar entries: printing, section navigation and the update check. The
+/// section list is shared with the Windows app so both keep the same shortcuts.
+private struct AdminCommands: Commands {
+  @ObservedObject var browser: BrowserController
+  let adminURL: URL
+
+  var body: some Commands {
+    CommandGroup(replacing: .printItem) {
+      Button("Print…") { browser.print() }
+        .keyboardShortcut("p", modifiers: .command)
+    }
+
+    CommandGroup(after: .toolbar) {
+      Divider()
+      Button("Reload") { browser.reload() }
+        .keyboardShortcut("r", modifiers: .command)
+      Button("Back") { browser.goBack() }
+        .keyboardShortcut("[", modifiers: .command)
+        .disabled(!browser.canGoBack)
+      Button("Forward") { browser.goForward() }
+        .keyboardShortcut("]", modifiers: .command)
+        .disabled(!browser.canGoForward)
+    }
+
+    CommandMenu("Go") {
+      ForEach(AdminSections.all) { section in
+        let button = Button(section.label) { browser.navigate(to: section.path) }
+        if let shortcut = section.shortcut {
+          button.keyboardShortcut(KeyEquivalent(shortcut), modifiers: .command)
+        } else {
+          button
+        }
+      }
+
+      Divider()
+
+      Button("Open Current Page in Browser") {
+        NSWorkspace.shared.open(browser.currentURL ?? adminURL)
+      }
+    }
+
+    CommandGroup(replacing: .help) {
+      Button("Jose Madrid Salsa Admin Help") {
+        NSWorkspace.shared.open(URL(string: "https://github.com/jordolang/josemadridsalsa")!)
+      }
+      Button("Check for Updates…") {
+        NSWorkspace.shared.open(releasesURL)
+      }
+    }
+  }
+}
+
+private struct AdminWorkspace: View {
+  let adminURL: URL
+  @ObservedObject var browser: BrowserController
+
   var body: some View {
     AdminBrowser(initialURL: adminURL, controller: browser)
+      .onAppear { browser.endpoint = adminURL }
+      .onChange(of: adminURL) { _, newValue in
+        browser.endpoint = newValue
+        browser.load(newValue)
+      }
       .overlay {
         if let error = browser.errorMessage {
           ContentUnavailableView {
@@ -47,9 +112,9 @@ private struct AdminWorkspace: View {
           Button(action: browser.goForward) { Label("Forward", systemImage: "chevron.right") }
             .disabled(!browser.canGoForward)
           Button(action: browser.reload) { Label("Reload", systemImage: "arrow.clockwise") }
-          Button("Command Center") { open("/admin") }
-          Button("Operations") { open("/admin/orders") }
-          Button("Growth & Field") { open("/admin/events") }
+          Button("Command Center") { browser.navigate(to: "/admin") }
+          Button("Operations") { browser.navigate(to: "/admin/orders") }
+          Button("Growth & Field") { browser.navigate(to: "/admin/events") }
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
@@ -77,13 +142,6 @@ private struct AdminWorkspace: View {
       Label("Offline", systemImage: "exclamationmark.circle.fill")
         .foregroundStyle(.red)
     }
-  }
-
-  private func open(_ path: String) {
-    guard let origin = URL(string: "/", relativeTo: adminURL),
-          let url = URL(string: path, relativeTo: origin)?.absoluteURL
-    else { return }
-    browser.load(url)
   }
 
   private func openInBrowser() {

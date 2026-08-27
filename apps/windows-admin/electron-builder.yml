@@ -1,0 +1,46 @@
+appId: com.josemadridsalsa.admin
+productName: Jose Madrid Salsa Admin
+copyright: Copyright © Jose Madrid Salsa
+
+# electron is hoisted to the monorepo root, so electron-builder cannot infer the
+# version from this workspace's node_modules. State it rather than let the build
+# fail on a machine where hoisting lands differently.
+electronVersion: 44.0.0
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - build/icon.png
+  - package.json
+
+# Signing is not configured yet, so Windows shows a SmartScreen prompt on first
+# install. Dropping a certificate into CSC_LINK / CSC_KEY_PASSWORD is all that is
+# needed later — no other change to this file.
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.png
+  artifactName: JoseMadridSalsaAdmin-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Jose Madrid Salsa Admin
+  uninstallDisplayName: Jose Madrid Salsa Admin
+
+# The update feed is pinned to one rolling release tag rather than the GitHub
+# provider's "latest release", because this repo also cuts platform releases
+# (v1.0.0, v2.0.0) that carry no installer. Whichever of those is newest would
+# otherwise become the feed and every update check would come back empty.
+publish:
+  provider: generic
+  url: https://github.com/jordolang/josemadridsalsa/releases/download/desktop-latest
+  channel: latest

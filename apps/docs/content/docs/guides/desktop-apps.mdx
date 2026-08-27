@@ -1,0 +1,169 @@
+---
+title: Desktop Apps
+description: The Windows and macOS admin apps — what they are, how to install them, how they are built, and the guarded database console they carry
+---
+
+There are two desktop applications for running the business away from a browser tab:
+
+| App | Workspace | Technology | Installer |
+|---|---|---|---|
+| Windows 11 | `apps/windows-admin` | Electron 44 + TypeScript | `JoseMadridSalsaAdmin-Setup-<version>.exe` (NSIS) |
+| macOS (Apple silicon) | `apps/macos-admin` | SwiftUI + WKWebView | `JoseMadridSalsaAdmin-<version>.dmg` |
+
+Both are hardened windows onto the real admin panel at `https://www.josemadrid.net/admin`. That
+is a deliberate choice, not a shortcut: the admin panel is 163 pages and 352 API routes, and
+rebuilding it natively per platform would mean writing every future admin feature three times.
+Because the apps load the real thing, **everything the admin panel can do, they can do** —
+orders, products, inventory, customers, financials, fundraisers, events and shows, email
+marketing, social publishing, media and documents, analytics, settings — on the day the feature
+ships, with no desktop release required.
+
+What the desktop apps add over a browser tab is the native layer: their own menus and keyboard
+shortcuts, a save dialog for every export, real printing, a persistent signed-in session, an
+offline screen that explains itself, and — on Windows — automatic updates.
+
+## Installing
+
+### Windows 11
+
+1. Download `JoseMadridSalsaAdmin-Setup-<version>.exe` from the
+   [`desktop-latest` release](https://github.com/jordolang/josemadridsalsa/releases/tag/desktop-latest).
+2. Run it. The build is not code-signed yet, so SmartScreen shows
+   **"Windows protected your PC"** — choose **More info → Run anyway**. This is expected once.
+3. The installer offers a folder choice and creates desktop and Start menu shortcuts.
+
+Afterwards the app updates itself: it checks on launch and every six hours, downloads in the
+background, and offers to restart when an update is ready. **Help → Check for Updates…** forces
+a check.
+
+### macOS
+
+1. Download `JoseMadridSalsaAdmin-<version>.dmg` from the same release and drag the app to
+   Applications.
+2. The build carries an ad-hoc signature rather than a Developer ID, so the first launch needs
+   **right-click → Open → Open**. Afterwards it opens normally.
+
+The macOS app does not update itself. **Help → Check for Updates…** opens the releases page.
+
+## Using them
+
+Sign in once with the same account used on the web. The session persists across restarts.
+
+### Keyboard shortcuts
+
+Both apps share one section list, so the shortcuts match:
+
+| Shortcut | Section | | Shortcut | Section |
+|---|---|---|---|---|
+| `Ctrl/⌘ 1` | Dashboard | | `Ctrl/⌘ 6` | Financials |
+| `Ctrl/⌘ 2` | Orders | | `Ctrl/⌘ 7` | Fundraisers |
+| `Ctrl/⌘ 3` | Products | | `Ctrl/⌘ 8` | Events & Shows |
+| `Ctrl/⌘ 4` | Inventory | | `Ctrl/⌘ 9` | Email Marketing |
+| `Ctrl/⌘ 5` | Customers | | `Ctrl/⌘ P` | Print the current page |
+
+The rest of the sections — Analytics, Media & Documents, Social, Wholesale, Messages, Audit
+Logs, Settings, Developer Console, Database Console — are in the **Go** menu.
+
+### Downloads and printing
+
+CSV exports, invoices, packing slips and shipping labels open the operating system's save
+dialog. On Windows a finished download raises a notification; clicking it reveals the file in
+Explorer. On macOS the file is revealed in Finder. **Print…** prints whatever the window is
+showing.
+
+### Which server the app talks to
+
+**File → Server Settings…** on Windows, **Settings** on macOS. HTTPS is required except for a
+`localhost` development server, which is how you point either app at `npm run dev`.
+
+### Links and sign-in
+
+Links to other sites — Stripe, QuickBooks, Vercel, a customer's website — open in the default
+browser rather than inside the app. Identity providers are the exception: Google, GitHub,
+Facebook and Apple sign-in redirects stay in the app window, because an OAuth round trip that
+finishes in a browser sets the session cookie there and leaves the app on the sign-in page.
+
+## The database console
+
+Both apps reach `/admin/developer/database`, a guarded SQL console restricted to the
+`developer:database` permission (the `DEVELOPER` role). It exists for direct data work that has
+no admin screen. It is not a replacement for the admin panel: normal editing should go through
+the pages, which enforce validation, permissions and the transactional side effects that make
+inventory, payments and email behave correctly.
+
+The console never exposes database credentials to the desktop app. Statements are posted to
+`POST /api/developer/admin/sql` and run on the server. The guards are:
+
+- **One statement per request.** Comments and string literals are stripped before parsing, so a
+  `'; DROP TABLE orders; --'` inside a value cannot smuggle a second statement through.
+- **Reads run read-only.** A `SELECT` executes inside a `READ ONLY` transaction with a 15-second
+  statement timeout and a row cap (200 by default, 1000 maximum). Results export to CSV.
+- **Writes are previewed before they commit.** An `INSERT`, `UPDATE` or `DELETE` is executed
+  against real data to get a true affected-row count and then **rolled back**. The console reports
+  what it would change — shouting if an `UPDATE` or `DELETE` has no `WHERE` clause — and commits
+  only when you confirm. The confirmation is signed against that exact statement and user and
+  expires in five minutes, so it cannot be replayed against a different query.
+- **Data-modifying CTEs count as writes.** `WITH x AS (DELETE ... RETURNING *) SELECT * FROM x`
+  reads like a `SELECT` but is treated as a write.
+- **Schema changes are refused.** `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, `REVOKE`,
+  transaction control and `EXPLAIN ANALYZE` are rejected by name. Schema changes belong in a
+  Prisma migration, which keeps the migration history and the generated client honest.
+- **Everything is audited.** Reads, previews, commits, refusals and errors all write an
+  `AuditLog` row (`developer.sql.*`) with the statement, the affected-row count and the duration.
+  They are visible in **Audit Logs**.
+
+## Building
+
+### Windows installer
+
+```bash
+npm run dist:win --workspace=@jose-madrid/windows-admin
+```
+
+The installer and the `latest.yml` update feed land in `apps/windows-admin/release/`. This
+cross-compiles from macOS and Linux as well as Windows.
+
+Day-to-day work on the shell:
+
+```bash
+npm run start      --workspace=@jose-madrid/windows-admin  # run it
+npm run test       --workspace=@jose-madrid/windows-admin  # endpoint and navigation rules
+npm run type-check --workspace=@jose-madrid/windows-admin
+npm run lint       --workspace=@jose-madrid/windows-admin
+```
+
+### macOS app
+
+```bash
+cd apps/macos-admin && ./build-app.sh
+```
+
+The script first compiles and runs the endpoint checks in `Tests/main.swift` — the rules for
+where the app may point and what it hands to the browser — then builds the bundle into `dist/`.
+
+**A full Xcode installation is required.** The standalone Command Line Tools do not ship the
+SwiftUI macro plugins that `@State` expands through, and the build fails with
+`plugin for module 'SwiftUIMacros' not found`. The pure-logic files still compile without
+Xcode, which is why the endpoint checks run first.
+
+### Releasing both
+
+The **Desktop Apps** workflow (`.github/workflows/desktop-release.yml`) builds the Windows
+installer on `windows-latest` and the macOS app on `macos-15`, then publishes both to the
+rolling `desktop-latest` release. Run it from the Actions tab, or push a `desktop-v*` tag to
+also keep a fixed copy under that tag.
+
+The update feed is pinned to the `desktop-latest` tag by name rather than to GitHub's "latest
+release", because this repository also cuts platform releases (`v1.0.0`, `v2.0.0`) that carry no
+installer — whichever of those was newest would otherwise become the feed and every update check
+would come back empty.
+
+### Code signing
+
+Neither app is signed yet, which is the source of the SmartScreen and right-click-to-open
+prompts above. Both builds are structured for it:
+
+- **Windows** — set the `CSC_LINK` and `CSC_KEY_PASSWORD` secrets on the workflow. No change to
+  `electron-builder.yml` is needed.
+- **macOS** — replace the ad-hoc `codesign --sign -` at the end of `build-app.sh` with a
+  Developer ID identity, then notarize with `xcrun notarytool`.

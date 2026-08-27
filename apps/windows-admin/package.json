@@ -1,0 +1,31 @@
+{
+  "name": "@jose-madrid/windows-admin",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Jose Madrid Salsa desktop admin for Windows 11",
+  "author": "Jose Madrid Salsa",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "start": "npm run build && electron .",
+    "dev": "npm run start",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:win:publish": "npm run build && electron-builder --win --publish always",
+    "lint": "eslint src scripts",
+    "type-check": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "clean": "rm -rf dist release"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.4",
+    "electron": "44.0.0",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.37.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.1.11"
+  }
+}

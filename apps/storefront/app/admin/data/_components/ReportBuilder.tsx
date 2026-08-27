@@ -81,11 +81,21 @@ interface DraftFilter {
 }
 
 interface Props {
-  datasets: DatasetDef[]
+  /**
+   * Ids of the datasets this person may read, not the definitions themselves. A `DatasetDef` carries
+   * `read` functions on every measure, and functions cannot cross the server/client boundary — passing
+   * the objects throws in the Server Components render. The definitions are recovered here from the
+   * registry, which this component already imports client-side.
+   */
+  datasetIds: readonly string[]
   initialDatasetId?: string
 }
 
-export function ReportBuilder({ datasets, initialDatasetId }: Props) {
+export function ReportBuilder({ datasetIds, initialDatasetId }: Props) {
+  const datasets = useMemo(
+    () => datasetIds.map((id) => getDataset(id)).filter((d): d is DatasetDef => d !== undefined),
+    [datasetIds]
+  )
   const first = initialDatasetId ?? datasets[0]?.id ?? DATASETS[0].id
   const [datasetId, setDatasetId] = useState(first)
   const dataset = getDataset(datasetId) ?? datasets[0]
