@@ -209,7 +209,7 @@ export default async function TaxesPage({
       <Card className="space-y-3 p-6">
         <h2 className="text-xl font-semibold text-foreground">Documentation checklist</h2>
         <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>• Sales tax summaries from Shopify, wholesale invoices, and in-person events</li>
+          <li>• Sales tax summaries from online orders, wholesale invoices, and in-person events</li>
           <li>• Payroll tax exports (ADP, QuickBooks) including Form 941 & W-2 confirmations</li>
           <li>• Ohio CAT filings, federal EIN documentation, and accountant contact details</li>
         </ul>

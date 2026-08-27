@@ -305,7 +305,7 @@ To add a new dashboard view:
 ### Recommended Integrations
 
 1. **Analytics**: Google Analytics 4 via API
-2. **E-commerce**: Shopify/BigCommerce API
+2. **E-commerce**: storefront order API
 3. **Email**: Klaviyo/Mailchimp API
 4. **Social**: Instagram/TikTok Business APIs
 5. **Retail**: Manual entry or ERP integration
@@ -360,10 +360,6 @@ Store sensitive data in `.env.local`:
 # Analytics
 NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 ANALYTICS_API_SECRET=your_secret
-
-# E-commerce
-SHOPIFY_ACCESS_TOKEN=your_token
-SHOPIFY_SHOP_NAME=josemadridsalsa
 
 # Email
 KLAVIYO_API_KEY=your_key

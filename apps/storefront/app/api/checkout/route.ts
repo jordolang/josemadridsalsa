@@ -5,7 +5,6 @@ import { deriveSalesChannel } from '@/lib/orders/sales-channel'
 import { emitOrderCreated } from '@/lib/orders/events'
 import { getProvider } from '@/lib/payments'
 import { Prisma } from '@prisma/client'
-import { queueShopifySync } from '@/lib/shopify/sync'
 import { calculateTax } from '@/lib/tax-calculator'
 import { buildShippingItems, calculateShipping } from '@/lib/shipping-calculator'
 import { notifyOperators, severityFor, dedupeKeys } from '@/lib/notifications/dispatch'
@@ -469,13 +468,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('[Checkout] Failed to log audit:', error)
       // Don't block checkout if audit logging fails
-    }
-
-    try {
-      queueShopifySync(order.id)
-    } catch (error) {
-      console.error('[Checkout] Failed to queue Shopify sync:', error)
-      // Don't block checkout if Shopify sync fails
     }
 
     // A gift certificate can cover the order in full, leaving nothing to charge. Stripe

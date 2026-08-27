@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth'
 import { prisma as db } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getStripe } from '@/lib/stripe'
-import { queueShopifySync } from '@/lib/shopify/sync'
 import { calculateTax } from '@/lib/tax-calculator'
 import { calculateShipping } from '@/lib/shipping-calculator'
 import { notifyOperators, severityFor, dedupeKeys } from '@/lib/notifications/dispatch'
@@ -269,8 +268,6 @@ export async function POST(req: NextRequest) {
       userId,
     },
   })
-
-    queueShopifySync(order.id)
 
     return NextResponse.json({
       success: true,

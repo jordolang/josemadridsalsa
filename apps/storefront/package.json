@@ -54,7 +54,6 @@
     "security:baseline": "gitleaks detect --source . --verbose --report-format json --report-path gitleaks-report.json",
     "security:protect": "gitleaks protect --verbose --redact --staged",
     "security:scan": "gitleaks detect --source . --verbose --redact",
-    "shopify:test-webhook": "tsx scripts/test-shopify-webhook.ts",
     "start": "next start",
     "templates:backfill-owners": "tsx scripts/backfill-form-template-owners.ts",
     "test": "vitest run",

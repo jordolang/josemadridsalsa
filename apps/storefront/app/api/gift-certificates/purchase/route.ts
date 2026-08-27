@@ -4,7 +4,6 @@ import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { generateGiftCertificateCode } from '@/lib/utils'
-import { queueShopifySync } from '@/lib/shopify/sync'
 import { emitOrderCreated } from '@/lib/orders/events'
 
 const GiftCertificatePurchaseSchema = z.object({
@@ -68,8 +67,6 @@ export async function POST(request: Request) {
       // A gift certificate has no order items — the certificate itself is the goods.
       itemCount: 0,
     })
-
-    queueShopifySync(order.id)
 
     // Generate unique gift certificate code
     let code = generateGiftCertificateCode()

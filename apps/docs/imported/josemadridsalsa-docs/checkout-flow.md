@@ -223,7 +223,6 @@ Uses Zod schema (`CheckoutSchema`) to validate:
 9. **Referral attribution** - If `referralCode` provided, looks up participant and fundraiser IDs
 10. **Order creation** - Creates Order with items in Prisma, status `PENDING`, payment status `PENDING`
 11. **Audit logging** - Logs order creation event
-12. **Shopify sync** - Queues order for Shopify synchronization
 13. **Stripe PaymentIntent** - Creates PaymentIntent with order metadata (orderId, orderNumber, customerName)
 
 ### Response

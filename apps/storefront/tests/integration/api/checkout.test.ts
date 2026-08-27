@@ -68,9 +68,6 @@ vi.mock('@/lib/payments', () => ({
   })),
 }))
 
-vi.mock('@/lib/shopify/sync', () => ({
-  queueShopifySync: vi.fn(),
-}))
 
 vi.mock('@/lib/inventory-manager', () => ({
   reserveMultipleProducts: vi.fn(() =>
@@ -264,7 +261,6 @@ describe('Checkout API Integration Tests', () => {
       const { calculateTax } = await import('@/lib/tax-calculator')
       const { calculateShipping } = await import('@/lib/shipping-calculator')
       const { logAuditWithRequest } = await import('@/lib/audit')
-      const { queueShopifySync } = await import('@/lib/shopify/sync')
 
       vi.mocked(getCurrentUser).mockResolvedValue(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
@@ -359,9 +355,6 @@ describe('Checkout API Integration Tests', () => {
         }),
         request
       )
-
-      // Verify Shopify sync was queued
-      expect(queueShopifySync).toHaveBeenCalledWith('order-123')
     })
 
     it('should complete checkout for authenticated user', async () => {
@@ -777,43 +770,6 @@ describe('Checkout API Integration Tests', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Unable to initiate checkout. Please try again.')
-    })
-
-    it('should handle Shopify sync failure gracefully', async () => {
-      const { default: prisma } = await import('@/lib/prisma')
-      const { getCurrentUser } = await import('@/lib/rbac')
-      const { queueShopifySync } = await import('@/lib/shopify/sync')
-
-      vi.mocked(getCurrentUser).mockResolvedValue(null)
-      vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
-      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as any)
-
-      // Mock Shopify sync failure (synchronous throw)
-      vi.mocked(queueShopifySync).mockImplementation(() => {
-        throw new Error('Shopify sync error')
-      })
-
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-      const request = new NextRequest('http://localhost/api/checkout', {
-        method: 'POST',
-        body: JSON.stringify(validCheckoutData),
-      })
-
-      const response = await POST(request)
-      const data = await response.json()
-
-      // Should still succeed despite Shopify sync failure
-      expect(response.status).toBe(200)
-      expect(data.clientSecret).toBeDefined()
-
-      // Verify error was logged
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[Checkout] Failed to queue Shopify sync:',
-        expect.any(Error)
-      )
-
-      consoleErrorSpy.mockRestore()
     })
 
     it('should handle audit logging failure gracefully', async () => {

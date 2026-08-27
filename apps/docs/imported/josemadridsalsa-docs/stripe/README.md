@@ -264,6 +264,5 @@ This documentation is maintained as part of the Jose Madrid Salsa codebase.
 
 - 🏠 [Main Documentation](../README.md)
 - 📧 [Email Setup](../env-setup.md)
-- 🛒 [Shopify Integration](../shopify-integration.md)
 - 🔧 [Project Status](../PROJECT_STATUS.md)
 
