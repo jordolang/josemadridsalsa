@@ -50,13 +50,14 @@ export async function POST(request: Request) {
     const { items, shippingAddress } = parsed.data
 
     // Calculate subtotal and prepare line items for Stripe Tax
-    const lineItems = items.map((item) => {
+    const lineItems = items.map((item, index) => {
       const unitPriceInCents = Math.round(item.price * 100)
       const lineTotalInCents = unitPriceInCents * item.quantity
 
       return {
         amount: lineTotalInCents,
-        reference: item.productId,
+        // Unique within the calculation: one salsa can hold two lines, loose and in a pack.
+        reference: `${item.productId}-${index}`,
         // Food products may qualify for reduced tax rates in some states
         // You can customize tax codes per product if needed
         taxCode: 'txcd_30011000', // Food & beverage - Packaged food

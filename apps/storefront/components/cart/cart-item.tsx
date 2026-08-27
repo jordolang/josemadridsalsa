@@ -28,6 +28,8 @@ export function CartItem({ item, onUpdateQuantity, onRemove, onNavigate }: CartI
   }
 
   const isAtMaxQuantity = item.maxQuantity ? item.quantity >= item.maxQuantity : false
+  // A pack is priced as a whole, so its jars cannot be added or dropped one at a time.
+  const isBundleItem = Boolean(item.bundleGroupId)
 
   return (
     <div className="flex gap-4 py-4 border-b last:border-0">
@@ -51,40 +53,53 @@ export function CartItem({ item, onUpdateQuantity, onRemove, onNavigate }: CartI
         <p className="text-sm text-muted-foreground">
           Heat: {item.heatLevel}
         </p>
+        {isBundleItem && item.bundleName && (
+          <p className="text-xs font-medium text-salsa-600">
+            Part of your {item.bundleName}
+          </p>
+        )}
         <p className="text-sm font-semibold">
           {formatPrice(item.price)}
         </p>
 
         <div className="flex items-center gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-11 w-11 min-h-[44px] min-w-[44px]"
-            onClick={handleDecrease}
-            disabled={item.quantity <= 1}
-            aria-label="Decrease quantity"
-          >
-            <Minus className="h-3 w-3" />
-          </Button>
-          <span className="w-8 text-center text-sm font-medium">
-            {item.quantity}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-11 w-11 min-h-[44px] min-w-[44px]"
-            onClick={handleIncrease}
-            disabled={isAtMaxQuantity}
-            aria-label="Increase quantity"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
+          {isBundleItem ? (
+            <span className="text-sm text-muted-foreground">
+              Qty {item.quantity}
+            </span>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 min-h-[44px] min-w-[44px]"
+                onClick={handleDecrease}
+                disabled={item.quantity <= 1}
+                aria-label="Decrease quantity"
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="w-8 text-center text-sm font-medium">
+                {item.quantity}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 min-h-[44px] min-w-[44px]"
+                onClick={handleIncrease}
+                disabled={isAtMaxQuantity}
+                aria-label="Increase quantity"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </>
+          )}
           <Button
             variant="ghost"
             size="icon"
             className="h-11 w-11 min-h-[44px] min-w-[44px] ml-auto"
             onClick={handleRemove}
-            aria-label="Remove item"
+            aria-label={isBundleItem ? 'Remove pack' : 'Remove item'}
           >
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>

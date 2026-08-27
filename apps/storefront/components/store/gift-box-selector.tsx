@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Plus, Minus, X, ChevronDown } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
+import { SALSA_BUNDLES, type SalsaBundle } from '@/lib/bundles'
 import { formatPrice } from '@/lib/utils'
 
 type Product = {
@@ -18,51 +19,12 @@ type Product = {
   sku: string
 }
 
-type GiftBoxOption = {
-  id: string
-  name: string
-  size: number
-  price: number
-  image: string
-}
-
-const giftBoxOptions: GiftBoxOption[] = [
-  {
-    id: 'choose-3',
-    name: 'Choose 3 Pack',
-    size: 3,
-    price: 23.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/3-product-box.webp',
-  },
-  {
-    id: 'choose-5',
-    name: 'Choose 5 Pack',
-    size: 5,
-    price: 28.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/6-products.webp',
-  },
-  {
-    id: 'choose-6',
-    name: 'Choose 6 Pack',
-    size: 6,
-    price: 32.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/6-products.webp',
-  },
-  {
-    id: 'choose-12',
-    name: 'Choose 12 Pack',
-    size: 12,
-    price: 60.00,
-    image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/12-products.webp',
-  },
-]
-
 export function GiftBoxSelector() {
   const [products, setProducts] = useState<Product[]>([])
-  const [selectedBox, setSelectedBox] = useState<GiftBoxOption | null>(null)
+  const [selectedBox, setSelectedBox] = useState<SalsaBundle | null>(null)
   const [selections, setSelections] = useState<Record<number, Product | null>>({})
   const [loading, setLoading] = useState(true)
-  const addItem = useCartStore((state) => state.addItem)
+  const addBundle = useCartStore((state) => state.addBundle)
   const openCart = useCartStore((state) => state.openCart)
 
   useEffect(() => {
@@ -81,7 +43,7 @@ export function GiftBoxSelector() {
     fetchProducts()
   }, [])
 
-  const handleSelectBox = (box: GiftBoxOption) => {
+  const handleSelectBox = (box: SalsaBundle) => {
     setSelectedBox(box)
     // Initialize selections with null for each slot
     const newSelections: Record<number, Product | null> = {}
@@ -109,31 +71,34 @@ export function GiftBoxSelector() {
     if (!selectedBox) return
 
     const selectedProducts = Object.values(selections).filter((p) => p !== null) as Product[]
-    
+
     if (selectedProducts.length !== selectedBox.size) {
       alert(`Please select all ${selectedBox.size} salsas before adding to cart.`)
       return
     }
 
-    // Add each selected product to cart
-    selectedProducts.forEach((product) => {
-      addItem({
-        id: product.id,
+    // Added as a pack, not as loose jars. Adding them individually is what used to charge a
+    // $28 Choose 5 at five times the catalogue price once the customer reached checkout.
+    const added = addBundle(
+      selectedBox.id,
+      selectedProducts.map((product) => ({
+        productId: product.id,
         name: product.name,
         slug: product.slug,
-        price: product.price,
         image: product.featuredImage,
         sku: product.sku,
         heatLevel: product.heatLevel,
-        maxQuantity: 999,
-      })
-    })
+        price: product.price,
+      }))
+    )
 
-    // Also add the gift box itself as a line item (optional - you might want to handle this differently)
-    // For now, we'll just add the individual products
+    if (!added) {
+      alert('Sorry, this pack could not be added to your cart. Please try again.')
+      return
+    }
 
     openCart()
-    
+
     // Reset after adding
     setSelectedBox(null)
     setSelections({})
@@ -156,7 +121,7 @@ export function GiftBoxSelector() {
 
         {!selectedBox ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {giftBoxOptions.map((box) => (
+            {SALSA_BUNDLES.map((box) => (
               <div
                 key={box.id}
                 className="card p-6 text-center group hover:scale-105 transition-transform duration-300 cursor-pointer"

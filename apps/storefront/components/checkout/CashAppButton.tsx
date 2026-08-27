@@ -2,11 +2,7 @@
 
 import { CashAppPay } from 'react-square-web-payments-sdk'
 import { SquareProvider, SQUARE_APP_ID, SQUARE_LOCATION_ID } from './SquareProvider'
-
-interface CartItem {
-  id: string
-  quantity: number
-}
+import { toCheckoutItems, type CartItem } from '@/lib/store/cart'
 
 interface CustomerInfo {
   email: string
@@ -48,10 +44,7 @@ export function CashAppButton({ items, customer, shipping, total, notes, shippin
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
+          items: toCheckoutItems(items),
           customer,
           shipping,
           notes,

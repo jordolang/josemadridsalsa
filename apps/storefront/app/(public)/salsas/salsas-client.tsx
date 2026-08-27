@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProductCard, type Product } from '@/components/store/product-card'
 import { GiftBoxQuickAdd } from '@/components/store/gift-box-quick-add'
+import { typicalJarPrice } from '@/lib/bundles'
 import { cn } from '@/lib/utils'
 
 const heatLevels = [
@@ -232,7 +233,7 @@ export function SalsasClient({
       </section>
 
       {/* Gift Box Quick Add */}
-      <GiftBoxQuickAdd />
+      <GiftBoxQuickAdd jarPrice={typicalJarPrice(initialProducts.map((product) => product.price))} />
 
       {/* Products Grid */}
       <section className="py-12">

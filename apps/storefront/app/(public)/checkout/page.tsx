@@ -11,7 +11,7 @@ import {
   useStripe,
 } from '@stripe/react-stripe-js'
 import { useRouter } from 'next/navigation'
-import { useCartStore } from '@/lib/store/cart'
+import { useCartStore, toCheckoutItems, cartItemProductId } from '@/lib/store/cart'
 import { formatPrice } from '@/lib/utils'
 import { isShippingAddressReadyForRates } from '@/lib/checkout/shipping-address'
 import { Input } from '@/components/ui/input'
@@ -193,10 +193,7 @@ function ExpressCheckout({ items, formState, total, discountCode, giftCertificat
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
+          items: toCheckoutItems(items),
           customer: {
             email: billingDetails?.email || formState.email || '',
             firstName: billingDetails?.name?.split(' ')[0] || formState.firstName || '',
@@ -473,7 +470,7 @@ function CheckoutForm() {
         signal: controller.signal,
         body: JSON.stringify({
           items: items.map((item) => ({
-            productId: item.id,
+            productId: cartItemProductId(item),
             quantity: item.quantity,
             price: item.price,
           })),
@@ -528,10 +525,7 @@ function CheckoutForm() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
+          items: toCheckoutItems(items),
           shippingAddress: {
             address1: form.address1,
             address2: form.address2 || undefined,
@@ -711,10 +705,7 @@ function CheckoutForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.id,
-            quantity: item.quantity,
-          })),
+          items: toCheckoutItems(items),
           customer: {
             email: selectedPaymentMethod === 'link' ? (linkEmail || formState.email) : formState.email,
             firstName: formState.firstName,
@@ -1261,6 +1252,9 @@ function CheckoutForm() {
                       <p className="text-xs text-gray-500">
                         Qty {item.quantity} • SKU {item.sku}
                       </p>
+                      {item.bundleName && (
+                        <p className="text-xs text-salsa-600">Part of your {item.bundleName}</p>
+                      )}
                     </div>
                     <p className="font-medium text-gray-900">
                       {formatPrice(item.price * item.quantity)}
