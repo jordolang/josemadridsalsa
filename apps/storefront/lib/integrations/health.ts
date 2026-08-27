@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe'
-import { getAyrshareStatus } from '@/lib/social/ayrshare'
 import { getPlatformConfigStatus } from '@/lib/social/config'
 
 /**
@@ -90,31 +89,6 @@ async function checkEmail(): Promise<ServiceHealth> {
   }
 }
 
-async function checkAyrshare(): Promise<ServiceHealth> {
-  const base = { key: 'ayrshare', label: 'Ayrshare (easy-mode social)', category: 'Social', checkedAt: now() }
-  try {
-    const status = await withTimeout(getAyrshareStatus())
-    if (!status.configured) {
-      return { ...base, configured: false, status: 'unconfigured', detail: 'No Ayrshare API key saved.' }
-    }
-    if (status.error) {
-      return { ...base, configured: true, status: 'failing', detail: status.error }
-    }
-    const n = status.linkedAccounts.length
-    return {
-      ...base,
-      configured: true,
-      status: n > 0 ? 'healthy' : 'unchecked',
-      detail:
-        n > 0
-          ? `Reachable — ${n} account${n === 1 ? '' : 's'} linked: ${status.linkedAccounts.join(', ')}.`
-          : 'Key valid, but no social accounts are linked on Ayrshare yet.',
-    }
-  } catch (e) {
-    return { ...base, configured: true, status: 'failing', detail: msg(e, 'Could not reach Ayrshare.') }
-  }
-}
-
 async function checkSocialAccounts(): Promise<ServiceHealth> {
   const base = { key: 'social_oauth', label: 'Social accounts (direct OAuth)', category: 'Social', checkedAt: now() }
   try {
@@ -164,7 +138,7 @@ async function checkSocialAccounts(): Promise<ServiceHealth> {
 // Any admin-entered ServiceKey rows we don't have a dedicated probe for are
 // surfaced honestly as "configured, not health-checked" rather than implied OK.
 async function checkOtherServiceKeys(): Promise<ServiceHealth[]> {
-  const covered = new Set(['stripe', 'resend', 'email', 'ayrshare'])
+  const covered = new Set(['stripe', 'resend', 'email'])
   try {
     const rows = await prisma.serviceKey.findMany({
       orderBy: [{ serviceName: 'asc' }, { keyName: 'asc' }],
@@ -189,13 +163,12 @@ async function checkOtherServiceKeys(): Promise<ServiceHealth[]> {
 
 /** Run every probe in parallel and return the combined, ordered list. */
 export async function getIntegrationHealth(): Promise<ServiceHealth[]> {
-  const [core, stripe, email, ayrshare, social, others] = await Promise.all([
+  const [core, stripe, email, social, others] = await Promise.all([
     checkDatabase(),
     checkStripe(),
     checkEmail(),
-    checkAyrshare(),
     checkSocialAccounts(),
     checkOtherServiceKeys(),
   ])
-  return [core, stripe, email, ayrshare, social, ...others]
+  return [core, stripe, email, social, ...others]
 }

@@ -156,6 +156,19 @@ fbq('track', 'PageView');`,
             __html: `(function(){function start(){if(window.merchantwidget){window.merchantwidget.start({merchant_id:731675578});}}var s=document.getElementById('merchantWidgetScript');if(window.merchantwidget){start();}else if(s){s.addEventListener('load',start);}})();`,
           }}
         />
+        {/* Notifuse web analytics */}
+        <Script
+          id="notifuse-analytics-config"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `window.NotifuseAnalyticsConfig = { workspace_id: "zanesvillecloud", endpoint: "https://mail.zanesville.cloud" };`,
+          }}
+        />
+        <Script
+          id="notifuse-analytics"
+          src="https://mail.zanesville.cloud/na.js"
+          strategy="afterInteractive"
+        />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
         <noscript>

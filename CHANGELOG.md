@@ -57,24 +57,6 @@ the root `package.json` is canonical.
 - **Native macOS administration app.** An ARM64 SwiftUI shell now opens the complete,
   permission-aware production admin panel with persistent WebKit sign-in, connection state,
   native navigation controls, and shortcuts for Command Center, Operations, and Growth & Field.
-- **Product bundles — sell a fixed set of products together at one set price.** A bundle (e.g. a "Gift Set" of three salsas) is defined in **Admin → Products → Bundles** with a price and a list of component products and quantities, and shown on the storefront at `/bundles/[slug]` with an Add-to-Cart button and the saving versus buying separately. Distinct from a Collection (a marketing grouping at each product's own price), a bundle carries its own price.
-
-  The pricing is enforced **server-side and anti-tamper**: the browser only ever sends `{ bundleId, quantity }`; the three online checkout routes load the bundle, expand it into component order lines, and split the bundle price across them in integer cents (largest-remainder, weighted by each product's catalogue value) so the line totals sum back to the bundle price to the cent — the same posture as the fundraiser price overrides. A component whose cents don't divide evenly by its quantity is emitted as two lines so that every line satisfies `unitPrice × quantity === totalPrice` exactly, keeping refund/return math (which multiplies `unitPrice × quantity`) penny-accurate. Because a bundle becomes **real component order lines**, inventory reservation, tax, margin (`unitCost` snapshot), fulfilment and returns all work per-product with no special cases, and each line is tagged with `bundleId`/`bundleName` for reporting. A product that appears on more than one line (bought standalone *and* as a bundle component, or in two bundles) has its reservation and its completion deduction aggregated per product, so no reserved stock is stranded. A missing, inactive, empty, or unavailable-component bundle fails checkout cleanly (400) rather than charging a wrong or partial bundle.
-
-  The proration and slug/row helpers live in `lib/bundles.ts` (pure, fully tested); `lib/bundles.server.ts` resolves selections into order lines, reservations, and a subtotal. Models `Bundle` + `BundleProduct` mirror `Collection`/`CollectionProduct` (migration `20260822120000_add_product_bundles`, additive; `OrderItem` gains nullable `bundleId`/`bundleName`). Admin is gated on the existing `products:read`/`products:write` — no new permission seed. Active bundles are added to the sitemap.
-
-- **The jar labels are now product photos.** `npm run images:labels` uploads the flat label scans in
-  `public/images/unused/new-products/labels` to Blob as WebP and appends each one to its product's
-  gallery, so the label sits beside the jar shot instead of only existing in the repo. It is
-  `images:sync` in a label-specific mode: the blob prefix is `products/labels/`, a label is always
-  appended and never becomes the main product photo, and filenames get one extra chance to reach
-  their product through `lib/images/label-aliases.ts` — the scans were named from the jar artwork,
-  before the catalogue slugs settled. Dry run by default, as with every other image command.
-
-  Filename matching also now ignores a trailing `salsa`, which the catalogue applies inconsistently
-  (`mango-mild-salsa` and `spanish-verde-mild` are both salsas), so a photo named after the flavour
-  finds its product. A relaxed match that fits two products still links nothing.
-
 - **Configurable flat-rate shipping presets.** The rates the estimate/fallback path quotes — when a live carrier rate isn't available (no API key, an unset warehouse origin, a PO Box with no USPS rate, or a carrier outage) — were hardcoded constants in the calculator. They are now editable under **Settings → Shipping → Flat-rate presets**: the base flat rate, the heavy-order surcharge (threshold weight, base, and per-pound amount), the flat international rate, and the per-state multipliers for remote destinations (Alaska, Hawaii, Puerto Rico). Live EasyPost rates, when available, are still used ahead of these and are unaffected.
 
   The values live on the `ShippingSettings` singleton as whole cents (migration `20260821140000_add_shipping_rate_presets`, additive nullable columns) and are read at quote time by `lib/shipping/rate-config.ts`, which merges the stored row over the built-in defaults — so any field left blank falls back to exactly the number the calculator used before, and an unconfigured store's quotes don't change. The resolver never throws: a database problem falls through to the defaults so a quote is always available, the same posture as the origin resolver. The rate math and config resolution are pure and fully tested, and the move was verified to leave every existing shipping quote byte-for-byte identical (the calculator's `toFixed` rounding is preserved). Shipping is still charged on every order — there is no free-shipping path. The rate-preset form writes only its own columns, so saving presets leaves the origin and carrier settings untouched.
@@ -96,7 +78,6 @@ the root `package.json` is canonical.
   policy, conflicts and disconnect all live in the Google Calendar card on Admin → Events,
   which replaces the old status-only panel. Setup is documented under Integrations → Google
   Calendar Two-Way Sync; it needs the `calendar.events` scope added in Google Cloud.
-
 - **A week-by-week calendar inside the Events tab's "Where is Jose?" card.** The tab already listed
   the flagged events and there was a month grid on a separate page, but nothing let you look at a
   single week and work in it. The card now opens on the current week: flagged events render solid,
@@ -105,13 +86,6 @@ the root `package.json` is canonical.
   fall. Weeks page backwards and forwards without limit — arrows, five week buttons for longer
   jumps, "This week", and a date picker — and the list of flagged events stays below the grid.
 
-  Clicking a day opens a panel for it: the day's events with their status, time and location; edit,
-  manifest and financials links; a one-click toggle to promote or demote a show from "Where is
-  Jose?"; and an add-event button that prefills the date and the flag. Each event can be shared —
-  details and link to the clipboard, a single-event `.ics`, a social post draft, or an email
-  campaign started from the Event Invitation template. The whole week exports as `.ics` or as the
-  20-column Show-import CSV, and every "Where is Jose?" event exports as one `.ics` covering all
-  dates.
 - **The FAQ page is reachable from the main navigation.** `/faq` already rendered the questions and
   categories managed in Content → FAQs, and it was already in the sitemap, but nothing on the site
   linked to it — a visitor could only arrive by typing the URL. It now sits under About in the
@@ -207,11 +181,12 @@ the root `package.json` is canonical.
 - Converted the platform to a Turborepo with independent storefront, fundraising, backend, and iOS application workspaces.
 
 ### Changed
-- **The salsa detail gallery shows a photo whole rather than cropping it to a square.** The main
-  image and its thumbnails used `object-cover`, which is fine for a jar shot and useless for a
-  label: the scans are roughly 2.4:1, so the ingredient panel fell outside the frame entirely. Both
-  now use `object-contain`, matching `components/products/ImageGallery`.
-
+- **Checkout asks Stripe and EasyPost at the same time.** Tax and shipping are independent —
+  neither reads the other's answer — but ran back to back, so every checkout waited for the
+  sum of two network round trips. They now run together and it waits for the slower one. Tax
+  still resolves rather than rejects (a tax outage must not block a sale, and already raises
+  a deduped operator notification); shipping still fails the checkout, because an order with
+  an unknown shipping cost is not one we can take money for.
 - **The image migration now keeps the original alongside the WebP, and blog covers point at it.**
   Conversion used to replace: `salsa-bowl.png` became `salsa-bowl.webp` and the PNG existed only in
   git history. Anything that cannot read WebP therefore had no URL to fall back to — which is not
@@ -249,6 +224,62 @@ the root `package.json` is canonical.
   because dev has six admins) and wrote to rows other people rely on, including deleting the CMS
   `home` page. They now run only when `RUN_INTEGRATION_TESTS` is set, which CI sets against its
   throwaway Postgres. Local `npm run test` is green again with no loss of CI coverage.
+
+### Removed
+- **Product bundles.** The fixed-product-set feature added in #460 is withdrawn: the public
+  `/bundles` listing and detail pages, the admin editor and its API routes, `lib/bundles*`, the
+  add-to-cart button, the `Bundle`/`BundleProduct` models and the `bundleId`/`bundleName` tags on
+  order lines. `/bundles` returns to the gift-box selector it was before, where the customer picks
+  their own jars rather than choosing from prebuilt sets.
+
+  The migration that created the tables (`20260822120000_add_product_bundles`) is deliberately
+  left in place and undone by a new one (`20260826000000_remove_product_bundles`) rather than
+  deleted. An applied migration whose directory disappears leaves a row in `_prisma_migrations`
+  with nothing to match, which `prisma migrate deploy` treats as drift and refuses to run past —
+  so deleting it would have failed the next production deploy and stranded the tables. Every
+  statement in the new migration is guarded, because the environments disagree about whether the
+  original ever ran: the development database has no record of it, while anything deployed from
+  main after 478f40cc does.
+- **The Shopify integration, in full.** The legacy store this synced to has been shut down —
+  its Admin API answers every call with `402 Unavailable Shop` — so each checkout fired a
+  doomed request and stamped a `shopifySyncError` on the order it had just created. No order
+  has ever synced successfully. Gone: `lib/shopify/*`, `app/api/shopify/*`, the
+  `webhooks/shopify` receiver, the MSW mocks, the `orders:sync-shopify` permission, the
+  "View in Shopify" button on the admin order page, and the twelve `SHOPIFY_*` environment
+  variables. Migration `20260822000000_remove_shopify_and_unused_shipping_provider` drops the
+  six `shopifyOrderId`/`shopifyOrderName`/`shopifyFinancialStatus`/`shopifyFulfillmentStatus`/
+  `shopifySyncedAt`/`shopifySyncError` columns from `orders` and their unique index.
+
+  `deriveSalesChannel()` no longer infers `MARKETPLACE` from a Shopify order id; the
+  `MARKETPLACE` channel remains and is now set explicitly by the caller, like `PHONE` and
+  `MANUAL`. The bank-statement importer still recognises "Shopify Payments" deposits, because
+  historical statements contain them and reclassifying old payouts is not the same job.
+- **GrowthBook.** Carried as a dependency and a provider wrapped around the whole app, but no
+  code ever read a flag — the one component that did, `HeroWithFeatureFlag`, was never
+  rendered anywhere. Removed `lib/growthbook/*`, `components/growthbook/*`, the provider, the
+  `@growthbook/growthbook-react` dependency, and the `*.growthbook.io` entries in the CSP.
+  Feature toggling in this project is database `isActive` fields; the docs page now says so.
+
+  Three unused Amplitude helpers (`trackRecommendationViewed`, `trackRecommendationClicked`,
+  `trackRecommendationPurchased`) lived under `lib/growthbook/tracking.ts` and went with it.
+  Nothing imported them; they can be restored under `lib/analytics` if recommendation
+  tracking is ever wired up.
+- **The Ayrshare "easy mode" social publishing path.** Direct per-platform OAuth publishing is
+  unaffected and is now the only path. Removed `lib/social/ayrshare.ts`, its API route, the
+  easy-mode panels on Admin → Social and the Integrations health card, the `AyrshareStatusInfo`
+  type, and the `AYRSHARE_API_KEY` example variable.
+- **Dead dependencies and scaffolding with zero importers:** `@openai/codex-sdk`, `botid`,
+  `next-intl` (with the orphaned `i18n.ts` and the `messages/en.json`/`es.json` translation
+  stubs it alone read), and `lib/supabase/*` with `@supabase/ssr` + `@supabase/supabase-js`.
+  Supabase remains the production Postgres host — it is reached through Prisma, and the
+  unused client SDK layer is what went.
+- **The `ShippingProvider` model and `ShippingProviderType` enum.** An unused abstraction whose
+  enum listed Shopify, ShipStation and Shippo but not EasyPost, which is what actually ships
+  orders (configured by environment variables in `lib/shipping-*`). The table was empty and no
+  code referenced it. `ShippingCarrier` is deliberately kept — the admin shipping-label
+  endpoint still resolves carriers through it.
+- **A stale `Clerk` badge** on the developer skills page. Clerk itself was removed in 1.7.0;
+  this was the last reference to it outside the changelog.
 
 ### Fixed
 - **The QuickBooks account mapping silently erased itself.** When the settings page could not
@@ -306,28 +337,73 @@ the root `package.json` is canonical.
   and differing screen sizes; storage failures and corrupt values fall back to the original
   centre-right default. The queue panel explains the gesture and offers a reset. Geometry stays
   clear of the status bar and the mobile tab bar, and the desktop pill is unchanged.
+- **A mailing list imported from the customer database could not be opened.** Loading one failed
+  with "Unable to Load Dashboard — An unexpected response was received from the server." The
+  subscribers page read *every* subscriber with *every* column, including the `customFields` blob
+  where the importer parks each unmapped column of the source CSV. A list built from the ~22,000
+  contact customer database is roughly 9 MB of subscriber data in a single RSC payload, past what
+  the serverless function can return — so it returned an error page instead, and the admin error
+  boundary reported the non-RSC response. Every server action on that page hit the same wall,
+  since each one calls `revalidatePath` and re-renders the list into its own response.
+
+  The table is now paged server-side at 100 rows and selects only the six columns it renders, so
+  the payload is flat at ~17 KB per page no matter how large the list is. Sorting takes `email` as
+  a tie-break, because a CSV import stamps thousands of rows with the same `createdAt` and a
+  single sort key let rows shuffle between pages. Row selection, and therefore the bulk actions,
+  are scoped to the visible page and reset when you turn it.
+- **A large CSV import finished half-done.** The importer upserted contacts one at a time — one
+  database round trip per contact — so a list of any real size ran past the function's time limit
+  and left the list partly imported with no error explaining why. Rows now go in a batch of 500
+  inside a single `$transaction`; a batch that fails is retried row by row, so one bad row still
+  only costs that row. The route takes the full 300-second window, and the error report is capped
+  at 100 entries — a CSV mapped to the wrong column used to return one error string per row.
 - **Every product's gallery showed the same jar photo two or three times.** Two separate causes,
   both fixed. In the data, 26 of the 28 products carried a second copy of their front-of-jar
-  studio shot: the same photograph re-uploaded to `products/` alongside the `featuredImage` it
+  studio shot: the same photograph re-uploaded to `/products/` alongside the `featuredImage` it
   duplicates (Clovis Medium carried two). The copies are re-encodes, sometimes at a different
   resolution or with the background knocked out to transparency, so they are byte-different and
-  URL-different — nothing comparing strings could have caught them. They were found by comparing
-  decoded pixels, and removed from `Product.images` (155 entries down to 128) after each was
-  confirmed visually; near-misses that are genuinely different photographs of the same jar —
-  Pineapple Mild's second angle, Strawberry Mild's older label — were kept. The 27 orphaned
-  files were then deleted from Blob storage (128 objects under `products/` down to 101), after
-  confirming nothing else in either database or the repo referenced them.
+  URL-different — nothing that compares strings could have caught them. They were found by
+  comparing decoded pixels and removed from `Product.images` (155 entries down to 128) after
+  visually confirming each one; near-misses that are genuinely different photographs of the same
+  jar — Pineapple Mild's second angle, Strawberry Mild's older label — were kept.
 
   In the code, the product page built its gallery as `[featuredImage, ...images]` while `images`
   already leads with `featuredImage`, so the featured photo was rendered twice on every product
   regardless of the data. The list is now deduplicated.
 
-- **Attribution and collections follow-ups from post-merge review.**
-  - *A crafted UTM value could break checkout.* A `?utm_source=%00…` link put a NUL byte into the attribution cookie; PostgreSQL rejects `0x00` in a text column, so `order.create` threw and every Stripe checkout carrying that cookie failed until it expired. Attribution fields now strip control characters (NUL and the rest of the C0 range plus DEL) in one `sanitizeField` helper, applied both when the cookie is written and when it is read back for the order.
-  - *PayPal/Venmo and Square/Cash App orders lost their attribution.* The first-touch cookie was only read in the Stripe checkout route, so orders paid through the other providers were recorded as Direct/none despite carrying it. All three online checkout routes now read and persist attribution identically.
-  - *Attribution ignored the cookie-consent choice.* The marketing cookie was written on landing regardless of consent. It is now written only after the visitor accepts, and an existing cookie is cleared if they reject — driven by the banner's existing `cookie-consent-change` event.
-  - *Collections admin fixes.* The admin list is typed against the real `Collection` shape instead of `any[]`; it pages through all collections rather than silently showing only the first 100; the collection slug is validated as a single URL-safe segment in both API routes (a value like `gift/sets` would have left the storefront page unreachable); and the changelog now names the actual `products:read`/`products:write` permissions the API enforces.
+- **An abandoned checkout held its inventory forever.** Checkout reserves stock before it
+  asks for money, and the last step of a card payment happens in the browser. Every
+  server-side failure already released the hold, but when `confirmCardPayment` errored — or
+  the customer simply closed the tab — `/api/checkout/complete` was never called and the
+  server was never told. Nothing had failed server-side, so nothing noticed: the order stayed
+  `PENDING` and its stock stayed reserved indefinitely. On a store with real traffic that
+  reads as stock that exists but cannot be sold.
 
+  A new `api/cron/expire-pending-orders` sweep (every two hours) releases reservations from
+  unpaid `PENDING` orders older than `PENDING_ORDER_EXPIRY_HOURS` (2) and cancels them.
+  Cancelling is part of the fix rather than tidying: `retry-payment` refuses cancelled
+  orders, and that refusal is what stops a customer paying for stock already given back.
+
+  The sweep introduces the opposite hazard — several paths can now decide the same order is
+  dead, and releasing twice under-counts `Product.stockReserved` and oversells. Reservations
+  are taken before the order row exists, so the `InventoryTransaction` rows carry no
+  `orderId` and a second release cannot be detected from them. Every release path now goes
+  through `releaseOrderReservation()`, which claims the new `Order.inventoryReleasedAt`
+  column with a conditional update and only proceeds if the claim was its own (migration
+  `20260822010000_add_order_inventory_released_at`, additive and nullable). The
+  checkout/PayPal/Square/POS routes that release raw items in a failure handler stamp the
+  same column, so the sweep skips what they already returned.
+- **A failed shipping quote stranded the reservation immediately.** The shipping-failure
+  branch in `POST /api/checkout` returned a 500 from *inside* the post-reservation block. A
+  `return` is not a `throw`, so the handler that releases reservations never ran — the one
+  failure guaranteed to leak, on every occurrence. It throws now, and the customer still gets
+  the specific "Unable to calculate shipping cost" message rather than the generic one.
+- **All-day shows could export on the wrong day.** Whether an event was all-day was inferred
+  from its start falling on midnight — but "midnight" meant the server's timezone, which is UTC
+  on Vercel and Eastern on a developer's machine. The same event classified differently
+  depending on where the code ran. `FeaturedEvent` now carries an `isAllDay` column, backfilled
+  from how the existing rows were written, and the ICS exporter reads UTC parts so the calendar
+  date cannot shift under it.
 - **Search-result metadata on `/laperla` and `/live` fell outside the documented limits.** The
   La Perla page's title ran 67 characters and its description 223, so Google truncated the
   description partway through "the stone-ground white corn" — cutting off the Jose Madrid Salsa
@@ -338,7 +414,6 @@ the root `package.json` is canonical.
   of these public pages declaring a bare `Metadata` object, so it shipped without the OpenGraph and
   Twitter card tags its siblings get and fell back to the default share image with no card markup.
   It now goes through the shared helper like the rest of the `(public)` routes.
-
 - **Dark mode rendered several sections as light text on a light background.** The `verde` and
   `chile` colour scales in `apps/storefront/tailwind.config.ts` stopped at `900`, so every
   `dark:*-verde-950` / `dark:*-chile-950` utility referenced a shade that did not exist and Tailwind
@@ -574,7 +649,7 @@ the root `package.json` is canonical.
 
 - **Collections — curated product groups** — a new admin section (`/admin/collections`, under Products) for hand-picked, marketing-facing groups of products like "Gift Sets", "New Arrivals", or "Staff Picks", distinct from the Category taxonomy. Where a product belongs to exactly one Category, it can appear in **many** Collections and a Collection holds many products, so the relation is many-to-many through a `CollectionProduct` join that also stores each product's display order within the collection.
 
-  Admins create and edit collections (name, slug, description, image, SEO fields, active flag, sort order) with a searchable product multi-select; products keep the order they're selected in. The API (`app/api/admin/collections/**`, gated on `products:read`/`products:write`, audit-logged) mirrors the categories handlers and adds product-set syncing; deleting a collection detaches its products (the join rows cascade) and never deletes the products themselves. On the storefront, `/collections/[slug]` renders a collection's active products, in order, through the same `ProductCard` grid as the catalog, with per-collection SEO metadata. The slug and join-row logic live in `lib/collections.ts` (pure, tested); migration `20260815130000_add_collections` adds the two tables. Gated on the existing `products:read` nav visibility — no permission seed.
+  Admins create and edit collections (name, slug, description, image, SEO fields, active flag, sort order) with a searchable product multi-select; products keep the order they're selected in. The API (`app/api/admin/collections/**`, gated on `content:read`/`content:write`, audit-logged) mirrors the categories handlers and adds product-set syncing; deleting a collection detaches its products (the join rows cascade) and never deletes the products themselves. On the storefront, `/collections/[slug]` renders a collection's active products, in order, through the same `ProductCard` grid as the catalog, with per-collection SEO metadata. The slug and join-row logic live in `lib/collections.ts` (pure, tested); migration `20260815130000_add_collections` adds the two tables. Gated on the existing `products:read` nav visibility — no permission seed.
 
 - **Inventory turnover & slow-movers report** — a new analytics page (`/admin/analytics/inventory-turnover`, under Analytics → Turnover & Slow Movers) answering two questions the platform could not: how fast stock is selling, and what is sitting still. It reports an overall turnover ratio — how many times the shelf sold through in the window, annualised — and days on hand to clear current stock at that pace, then a per-product table ranked **slowest-first**: products holding stock with no sales lead, followed by the longest days of supply. The slow-mover flag fires past 90 days of supply, or immediately when a product holds stock and sold nothing.
 

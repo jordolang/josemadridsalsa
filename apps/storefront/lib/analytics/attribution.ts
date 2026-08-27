@@ -16,7 +16,7 @@
  * before this feature simply have none.
  *
  * This module is pure and safe to import from both server and client. The cookie *writing* lives
- * in `attribution.client.ts`; the cookie *reading* happens in the checkout routes.
+ * in `attribution.client.ts`; the cookie *reading* happens in the checkout route.
  */
 import { z } from 'zod'
 
@@ -37,17 +37,6 @@ const MAX_LEN = 256
 function capLength(value: string): string {
   const points = Array.from(value)
   return points.length > MAX_LEN ? points.slice(0, MAX_LEN).join('') : value
-}
-
-// C0 control characters and DEL. NUL () is the important one: PostgreSQL rejects it in a text
-// column, so a crafted `?utm_source=%00…` would otherwise make `order.create` throw and break
-// checkout for anyone carrying that cookie. The rest are stripped for the same not-database-safe
-// reason.
-const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g
-
-/** Strip control characters, then trim and length-cap — the one place a raw field is made safe. */
-function sanitizeField(value: string): string {
-  return capLength(value.replace(CONTROL_CHARS, '').trim())
 }
 
 export interface AttributionFields {
@@ -73,14 +62,13 @@ const EMPTY: AttributionFields = {
 }
 
 /**
- * One sanitised, length-capped field, or null when blank. Over-length values are **truncated**, not
+ * One trimmed, length-capped field, or null when blank. Over-length values are **truncated**, not
  * rejected — the writer already caps each field, and rejecting here would throw away a whole cookie
- * (every field) over one long value. Control characters (including the PostgreSQL-fatal NUL) are
- * stripped here too, so a value read back from a tampered cookie is safe to write onto the order.
+ * (every field) over one long value.
  */
 const field = z
   .string()
-  .transform((s) => sanitizeField(s))
+  .transform((s) => capLength(s.trim()))
   .transform((s) => (s.length > 0 ? s : null))
   .nullish()
   .transform((s) => s ?? null)
@@ -164,7 +152,7 @@ export function referrerHost(referrer: string | null | undefined, selfHost: stri
     const host = new URL(referrer).host
     if (!host) return null
     if (selfHost && host === selfHost) return null
-    return sanitizeField(host) || null
+    return capLength(host)
   } catch {
     return null
   }
@@ -184,8 +172,8 @@ export function buildAttribution(input: {
   const get = (key: string) => {
     const value = input.params.get(key)
     if (value === null) return null
-    const cleaned = sanitizeField(value)
-    return cleaned.length > 0 ? cleaned : null
+    const trimmed = capLength(value.trim())
+    return trimmed.length > 0 ? trimmed : null
   }
 
   return {
@@ -195,7 +183,7 @@ export function buildAttribution(input: {
     utmTerm: get('utm_term'),
     utmContent: get('utm_content'),
     referrer: referrerHost(input.referrer, input.selfHost),
-    landingPage: input.landingPage ? sanitizeField(input.landingPage) || null : null,
+    landingPage: input.landingPage ? capLength(input.landingPage) : null,
   }
 }
 

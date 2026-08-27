@@ -231,24 +231,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
-    const bundles = await prisma.bundle.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-    })
-
-    bundles.forEach((bundle) => {
-      urls.push({
-        url: `${baseUrl}/bundles/${bundle.slug}`,
-        lastModified: bundle.updatedAt,
-        changeFrequency: 'weekly',
-        priority: priorities.bundle || 0.7,
-      })
-    })
-  } catch (error) {
-    console.error('Failed to fetch bundles for sitemap:', error)
-  }
-
-  try {
     const recipes = await prisma.recipe.findMany({
       select: { slug: true, updatedAt: true },
     })

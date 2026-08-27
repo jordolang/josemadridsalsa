@@ -15,14 +15,12 @@ import type {
   CalendarPost,
   PlatformMetrics,
   PlatformConfigStatus,
-  AyrshareStatusInfo,
 } from '@/types/social'
 
 type Props = {
   createPostAction: (state: SocialComposerState, formData: FormData) => Promise<SocialComposerState>
   accounts: SocialAccountInfo[]
   platformConfig: PlatformConfigStatus[]
-  ayrshare: AyrshareStatusInfo
   statusCounts: Array<{ status: SocialMediaPostStatus; count: number }>
   platformFrequency: Record<string, number>
   recentPosts: Array<{
@@ -53,7 +51,6 @@ export function SocialDashboardClient({
   createPostAction,
   accounts,
   platformConfig,
-  ayrshare,
   statusCounts,
   platformFrequency,
   recentPosts,
@@ -97,7 +94,7 @@ export function SocialDashboardClient({
       )}
 
       {activeTab === 'accounts' && (
-        <SocialAccounts accounts={accounts} platformConfig={platformConfig} ayrshare={ayrshare} />
+        <SocialAccounts accounts={accounts} platformConfig={platformConfig} />
       )}
 
       {activeTab === 'analytics' && <SocialAnalytics metrics={metrics} />}

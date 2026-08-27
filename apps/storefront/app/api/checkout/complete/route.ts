@@ -4,7 +4,7 @@ import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
-import { deductReservedInventoryForItemsInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { deductReservedInventoryOnceInTx, releaseOrderReservation, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { redeemOrderCodesInTx } from '@/lib/orders/redeem-codes'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
@@ -129,23 +129,9 @@ export async function POST(request: Request) {
     }
 
     if (!isFullyCoveredByGiftCertificate && (!paymentConfirmation || paymentConfirmation.status !== 'SUCCEEDED')) {
-      // Release reserved inventory for all items in parallel since payment failed
-      const releaseResults = await Promise.allSettled(
-        order.items.map((item) =>
-          releaseInventory({
-            productId: item.productId,
-            quantity: item.quantity,
-            orderId: order!.id,
-            userId: order!.userId || undefined,
-            notes: `Payment failed for order ${order!.id}`,
-          })
-        )
-      )
-      for (const result of releaseResults) {
-        if (result.status === 'rejected') {
-          console.error('Failed to release inventory:', result.reason)
-        }
-      }
+      // Payment did not succeed, so the reservation goes back. Idempotent: if the sweep
+      // or another attempt already released this order, this is a no-op.
+      await releaseOrderReservation(order.id, `Payment failed for order ${order.id}`)
 
       return NextResponse.json(
         { error: 'Payment has not been confirmed.' },
@@ -275,23 +261,34 @@ export async function POST(request: Request) {
         // Stripe webhook, which completes the same order in parallel and awards them too.
         await creditPurchaseLoyaltyPoints(tx, order!.id)
 
-        // Deduct reserved inventory for the order's items inside the same transaction,
-        // aggregated per product. The Stripe webhook completes the same order in parallel
-        // and deducts the same items, so this skips any product it already recorded —
-        // deductReservedInventoryForItemsInTx is idempotent per (product, order). Without it
-        // a second deduction either throws (the reservation is gone) or silently consumes
-        // another customer's reservation, overselling the product.
-        itemDeductions.push(
-          ...(await deductReservedInventoryForItemsInTx(
-            order!.items,
+        // Deduct reserved inventory for each item inside the same transaction.
+        // The Stripe webhook completes the same order in parallel and deducts the
+        // same items, so skip any item it already recorded — deductReservedInventoryOnceInTx
+        // is idempotent per order item. Without it a second deduction either throws
+        // (the reservation is gone) or silently consumes another customer's
+        // reservation, overselling the product.
+        for (const item of order!.items) {
+          const result = await deductReservedInventoryOnceInTx(
             {
+              productId: item.productId,
+              quantity: item.quantity,
               orderId: order!.id,
               userId: order!.userId || undefined,
               notes: `Payment completed for order ${order!.id}`,
             },
             tx
-          ))
-        )
+          )
+
+          if (!result) {
+            continue
+          }
+
+          itemDeductions.push({
+            productId: item.productId,
+            newInventory: result.newInventory,
+            lowStockThreshold: result.product.lowStockThreshold,
+          })
+        }
 
         // Redeem the codes now that the order is paid. Deferring redemption to this
         // point means an abandoned checkout never burns a gift balance or consumes a
@@ -333,24 +330,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Checkout completion error:', error)
 
-    // Release reserved inventory in parallel if order exists and hasn't been paid
-    if (order && order.items && !isPaid(order.paymentStatus)) {
-      const releaseResults = await Promise.allSettled(
-        order.items.map((item) =>
-          releaseInventory({
-            productId: item.productId,
-            quantity: item.quantity,
-            orderId: order!.id,
-            userId: order!.userId || undefined,
-            notes: `Error during checkout completion for order ${order!.id}`,
-          })
-        )
+    // Release the reservation if the order exists and never got paid.
+    if (order && !isPaid(order.paymentStatus)) {
+      await releaseOrderReservation(
+        order.id,
+        `Error during checkout completion for order ${order.id}`
       )
-      for (const result of releaseResults) {
-        if (result.status === 'rejected') {
-          console.error('Failed to release inventory:', result.reason)
-        }
-      }
     }
 
     return NextResponse.json(

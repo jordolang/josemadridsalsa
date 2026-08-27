@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma'
 import { StructuredDataType, Prisma } from '@prisma/client'
-import { toIngredientList } from '@/lib/ingredients'
 
 export interface OrganizationSchema {
   '@context': 'https://schema.org'
@@ -247,7 +246,12 @@ export function buildProductSchema(product: ProductSchemaInput): ProductSchema {
 
   // Ingredients list
   const ingredientNames = product.productIngredients && product.productIngredients.length > 0
-    ? toIngredientList(product.productIngredients)
+    ? product.productIngredients
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((pi) => {
+          const name = pi.ingredient.name
+          return pi.qualifier ? `${name} (${pi.qualifier})` : name
+        })
     : product.ingredients
 
   if (ingredientNames && ingredientNames.length > 0) {

@@ -120,6 +120,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: message }, { status: 400 })
     }
 
+    // Tracked so the catch below can mark the order as already-released, keeping the
+    // expire-pending-orders sweep from releasing the same reservation twice.
+    let createdOrderId: string | null = null
+
     // Create DB order, then Square Terminal checkout. Release inventory on failure.
     try {
       const orderNumber = generateOrderNumber()
@@ -143,6 +147,8 @@ export async function POST(request: NextRequest) {
           },
         },
       })
+
+      createdOrderId = order.id
 
       await emitOrderCreated({
         id: order.id,
@@ -199,6 +205,18 @@ export async function POST(request: NextRequest) {
         } catch (releaseError) {
           console.error('[POS] Failed to release reservation:', releaseError)
         }
+      }
+      // The reservation is back, but the order row survives this failure as PENDING.
+      // Mark it so the expire-pending-orders sweep does not release it a second time.
+      if (createdOrderId) {
+        await prisma.order
+          .updateMany({
+            where: { id: createdOrderId, inventoryReleasedAt: null },
+            data: { inventoryReleasedAt: new Date() },
+          })
+          .catch((markError) =>
+            console.error('[POS] Failed to mark reservation released:', markError)
+          )
       }
       throw postReservationError
     }

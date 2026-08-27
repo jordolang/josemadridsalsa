@@ -68,7 +68,6 @@ vi.mock('@/lib/payments', () => ({
   })),
 }))
 
-
 vi.mock('@/lib/inventory-manager', () => ({
   reserveMultipleProducts: vi.fn(() =>
     Promise.resolve([
@@ -508,10 +507,11 @@ describe('Checkout API Integration Tests', () => {
       )
     })
 
-    it('should return error when shipping calculation fails', async () => {
+    it('should return error and release the reservation when shipping calculation fails', async () => {
       const { default: prisma } = await import('@/lib/prisma')
       const { getCurrentUser } = await import('@/lib/rbac')
       const { calculateShipping } = await import('@/lib/shipping-calculator')
+      const { releaseInventory } = await import('@/lib/inventory-manager')
 
       vi.mocked(getCurrentUser).mockResolvedValue(null)
       vi.mocked(prisma.product.findMany).mockResolvedValue([mockProduct])
@@ -530,6 +530,11 @@ describe('Checkout API Integration Tests', () => {
       // Should return error when shipping calculation fails
       expect(response.status).toBe(500)
       expect(data.error).toContain('Unable to calculate shipping cost')
+
+      // Regression: this branch used to `return` from inside the post-reservation block, so
+      // the release below never ran and the stock this request reserved was stranded until
+      // someone noticed. It throws now, which is what routes the failure into the release.
+      expect(releaseInventory).toHaveBeenCalled()
     })
 
     it('should validate required fields', async () => {

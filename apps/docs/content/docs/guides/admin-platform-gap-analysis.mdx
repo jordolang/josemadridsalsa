@@ -79,12 +79,12 @@ helper. Collapsing the enum itself is a separate data migration across every pay
 DELIVERED · RETURNED`), `Order.fulfillmentStatus`, `OrderItem.quantityFulfilled`, and
 `Fulfillment` + `FulfillmentItem` models so a shipment can cover a subset of an order.
 
-The important part is `lib/orders/fulfillment.ts`. Six places in the codebase advance an order
+The important part is `lib/orders/fulfillment.ts`. Five places in the codebase advance an order
 to shipped or delivered — `admin/orders/[id]/update-status`, `admin/orders/bulk-status`,
 `admin/orders/[id]/tracking`, `admin/orders/[id]/shipping-label`, and
-`lib/tracking/webhook-handlers.ts` (EasyPost). Rather than editing six routes to each set two
+`lib/tracking/webhook-handlers.ts` (EasyPost). Rather than editing five routes to each set two
 fields, `buildFulfillmentUpdate()` returns status, fulfillment status and timestamps as one
-object and all six call it. Nothing outside that module assigns `fulfillmentStatus` directly,
+object and all five call it. Nothing outside that module assigns `fulfillmentStatus` directly,
 so the two fields cannot drift.
 
 Rules the helper encodes, each with a test: a partially shipped order is `PROCESSING`, never
@@ -385,7 +385,7 @@ cannot be filed against anything.
 
 ### Operations (shipping, reviews, returns, staff, audit)
 
-**Shipping — Present:** EasyPost via `lib/shipping-*`, `ShippingProvider` /
+**Shipping — Present:** EasyPost via `lib/shipping-*`,
 `ShippingCarrier` / `ShippingLabel`, `ShippingSettings` (origin
 address, enabled carriers), real-time rates, tracking webhooks, `OrderNotificationRule` +
 `OrderNotificationSetting` for automated customer notifications.
@@ -457,7 +457,7 @@ Two defects surfaced while doing this, both fixed:
 **Present:** `/admin/settings` is an overview hub (role counts, permission count, service keys,
 recent audit activity — `app/admin/settings/page.tsx:24-45`) linking to profile, payments
 (`PaymentProviderConfig`), shipping, email (`EmailConfiguration`), integrations
-(`ThirdPartyIntegration`), and discount codes. Plus GrowthBook feature flags and `.env` secrets.
+(`ThirdPartyIntegration`), and discount codes. Plus `.env` secrets.
 **Missing (confirmed by reading the hub):** store identity/currency, tax configuration UI
 (Stripe Tax is code-configured in `lib/tax-calculator.ts`), legal pages, notification
 preferences beyond order events.

@@ -4,11 +4,11 @@ import { requirePermission } from '@/lib/rbac'
 import { ok, fail, failFromError } from '@/lib/api'
 import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
-import { collectionProductRows, slugSchema } from '@/lib/collections'
+import { collectionProductRows } from '@/lib/collections'
 
 const collectionSchema = z.object({
   name: z.string().min(1),
-  slug: slugSchema,
+  slug: z.string().min(1),
   description: z.string().nullable().optional(),
   image: z.string().url().nullable().optional(),
   isActive: z.boolean().optional(),

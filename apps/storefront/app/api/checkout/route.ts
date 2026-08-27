@@ -19,10 +19,8 @@ import { validateDiscountCode } from '@/lib/discounts'
 import { validateGiftCertificate } from '@/lib/gift-certificates'
 import { ATTRIBUTION_COOKIE, parseAttributionCookie } from '@/lib/analytics/attribution'
 import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
-import { resolveBundleSelections, BundleCheckoutError } from '@/lib/bundles.server'
 
-const CheckoutSchema = z
-  .object({
+const CheckoutSchema = z.object({
   items: z
     .array(
       z.object({
@@ -30,17 +28,7 @@ const CheckoutSchema = z
         quantity: z.number().int().positive(),
       })
     )
-    .default([]),
-  // Bundles are sent as id + quantity only; the server expands them and prices each component,
-  // for the same anti-tamper reason discount/shipping amounts are never accepted from the client.
-  bundles: z
-    .array(
-      z.object({
-        bundleId: z.string().cuid(),
-        quantity: z.number().int().positive(),
-      })
-    )
-    .optional(),
+    .min(1, 'Cart is empty'),
   customer: z.object({
     email: z.string().email(),
     firstName: z.string().min(1),
@@ -64,11 +52,19 @@ const CheckoutSchema = z
   // NOTE: shippingCost is intentionally NOT accepted from the client.
   // Shipping cost is always recalculated server-side to prevent tampering.
   referralCode: z.string().optional(),
-  })
-  .refine((data) => data.items.length > 0 || (data.bundles?.length ?? 0) > 0, {
-    message: 'Cart is empty',
-    path: ['items'],
-  })
+})
+
+/**
+ * Raised when shipping cannot be priced. Thrown rather than returned so the post-reservation
+ * handler releases the inventory this request reserved; the outer handler turns it back into
+ * the specific message the customer used to get.
+ */
+class ShippingUnavailableError extends Error {
+  constructor() {
+    super('Unable to calculate shipping cost. Please try again.')
+    this.name = 'ShippingUnavailableError'
+  }
+}
 
 const toDecimal = (value: number) =>
   new Prisma.Decimal(value.toFixed(2))
@@ -108,7 +104,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, bundles, customer, shipping, notes, discountCode, giftCertificateCode, recoveryToken, shippingMethod, referralCode } = parsed.data
+    const { items, customer, shipping, notes, discountCode, giftCertificateCode, recoveryToken, shippingMethod, referralCode } = parsed.data
 
     const productIds = items.map((item) => item.productId)
     const products = await prisma.product.findMany({
@@ -130,7 +126,18 @@ export async function POST(request: NextRequest) {
     const fundraiserPrices = await getFundraiserPriceOverrides(referralCode, productIds)
 
     let subtotal = 0
-    const orderItems = []
+    // Explicitly typed: the tax and shipping closures below both read this, and an inferred
+    // `any[]` cannot survive being captured.
+    const orderItems: Array<{
+      productId: string
+      quantity: number
+      unitPrice: Prisma.Decimal
+      unitCost: Prisma.Decimal | undefined
+      totalPrice: Prisma.Decimal
+      productName: string
+      productSku: string
+      productImage: string | undefined
+    }> = []
 
     for (const item of items) {
       const product = productMap.get(item.productId)
@@ -154,13 +161,6 @@ export async function POST(request: NextRequest) {
         productImage: product.featuredImage ?? undefined,
       })
     }
-
-    // Bundles: the server loads each bundle, expands it into component lines, and prorates the
-    // bundle price across them — the client only sent an id and a quantity. Their component
-    // products are reserved and taxed exactly like standalone lines.
-    const resolvedBundles = await resolveBundleSelections(bundles)
-    orderItems.push(...resolvedBundles.orderItems)
-    subtotal += resolvedBundles.subtotal
 
     // Minimum order is assessed on the goods subtotal (before discounts and shipping), so a
     // discount code cannot be used to duck under the threshold.
@@ -200,19 +200,12 @@ export async function POST(request: NextRequest) {
     let reservationResults: Awaited<ReturnType<typeof reserveMultipleProducts>>
     try {
       reservationResults = await reserveMultipleProducts(
-        [
-          ...items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            notes: 'Checkout reservation',
-          })),
-          // Each bundle component is real stock and must be reserved like any other line.
-          ...resolvedBundles.reservations.map((r) => ({
-            productId: r.productId,
-            quantity: r.quantity,
-            notes: 'Bundle checkout reservation',
-          })),
-        ].map((r) => ({ ...r, userId: user?.id }))
+        items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          userId: user?.id,
+          notes: 'Checkout reservation',
+        }))
       )
     } catch (error: any) {
       return NextResponse.json(
@@ -221,118 +214,144 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Tracked so the catch below can mark the order as already-released. Without it the
+    // expire-pending-orders sweep would find this PENDING order later and release a
+    // reservation that has already gone back.
+    let createdOrderId: string | null = null
+
     // Wrap all post-reservation logic so we can release reservations on any failure
     try {
-    // Calculate tax using Stripe Tax API
+    // Tax and shipping are independent: one asks Stripe, the other EasyPost, and neither
+    // reads the other's answer. They used to run back to back, so a checkout waited for the
+    // sum of two network round trips. Run together it waits for the slower one.
+    //
+    // Tax resolves rather than rejects — a tax outage is recoverable and must not block the
+    // sale — while shipping throws, because an order with an unknown shipping cost is not
+    // one we can take money for.
     let taxAmount = 0
-    try {
-      // Spread the discount across the line items proportionally, so tax is assessed on
-      // what the customer actually pays. With no discount this factor is 1.
-      const taxableFactor = subtotal > 0 ? discountedSubtotal / subtotal : 1
+    let finalShippingCost = 0
+    let finalShippingMethod = 'Standard Shipping'
 
-      const taxResult = await calculateTax({
-        lineItems: orderItems.map((item) => ({
-          amount: Math.round(Number(item.totalPrice) * taxableFactor * 100), // cents
-          reference: item.productId,
-          taxCode: 'txcd_30011000', // Food & beverage - Packaged food
-        })),
-        shippingAddress: {
-          line1: shipping.address1,
-          line2: shipping.address2,
-          city: shipping.city,
-          state: shipping.state,
-          postalCode: shipping.postalCode,
-          country: 'US',
-        },
-        customerEmail: customer.email,
-      })
+    const computeTax = async (): Promise<number> => {
+      try {
+        // Spread the discount across the line items proportionally, so tax is assessed on
+        // what the customer actually pays. With no discount this factor is 1.
+        const taxableFactor = subtotal > 0 ? discountedSubtotal / subtotal : 1
 
-      taxAmount = taxResult.taxAmountDecimal
-      console.log('[Checkout] Tax calculated:', {
-        subtotal,
-        taxAmount,
-        taxRate: taxResult.taxRate,
-        breakdown: taxResult.taxBreakdown,
-      })
-    } catch (error) {
-      console.error('[Checkout] Tax calculation failed, proceeding with $0 tax:', error)
-      // This used to be swallowed silently, so a bad Stripe Tax key could ship untaxed
-      // orders indefinitely with nothing surfacing it. Alert operators through the canonical
-      // path — deduped, so a sustained outage collapses to one row rather than one per order —
-      // and continue: an untaxed order is recoverable and now visible, whereas blocking all
-      // checkout on a tax outage is not. (See CHANGELOG for the hard-fail-vs-continue rationale.)
-      await notifyOperators({
-        type: 'INTEGRATION_FAILED',
-        severity: severityFor('INTEGRATION_FAILED'),
-        title: 'Tax calculation failed',
-        message:
-          'Stripe Tax did not return a calculation during checkout. Orders are being recorded with $0 tax until this is resolved.',
-        entityType: 'integration',
-        entityId: 'stripe-tax',
-        link: '/admin/settings/integrations',
-        dedupeKey: dedupeKeys.integrationFailed('stripe-tax'),
-      })
+        const taxResult = await calculateTax({
+          lineItems: orderItems.map((item) => ({
+            amount: Math.round(Number(item.totalPrice) * taxableFactor * 100), // cents
+            reference: item.productId,
+            taxCode: 'txcd_30011000', // Food & beverage - Packaged food
+          })),
+          shippingAddress: {
+            line1: shipping.address1,
+            line2: shipping.address2,
+            city: shipping.city,
+            state: shipping.state,
+            postalCode: shipping.postalCode,
+            country: 'US',
+          },
+          customerEmail: customer.email,
+        })
+
+        console.log('[Checkout] Tax calculated:', {
+          subtotal,
+          taxAmount: taxResult.taxAmountDecimal,
+          taxRate: taxResult.taxRate,
+          breakdown: taxResult.taxBreakdown,
+        })
+        return taxResult.taxAmountDecimal
+      } catch (error) {
+        console.error('[Checkout] Tax calculation failed, proceeding with $0 tax:', error)
+        // This used to be swallowed silently, so a bad Stripe Tax key could ship untaxed
+        // orders indefinitely with nothing surfacing it. Alert operators through the canonical
+        // path — deduped, so a sustained outage collapses to one row rather than one per order —
+        // and continue: an untaxed order is recoverable and now visible, whereas blocking all
+        // checkout on a tax outage is not. (See CHANGELOG for the hard-fail-vs-continue rationale.)
+        await notifyOperators({
+          type: 'INTEGRATION_FAILED',
+          severity: severityFor('INTEGRATION_FAILED'),
+          title: 'Tax calculation failed',
+          message:
+            'Stripe Tax did not return a calculation during checkout. Orders are being recorded with $0 tax until this is resolved.',
+          entityType: 'integration',
+          entityId: 'stripe-tax',
+          link: '/admin/settings/integrations',
+          dedupeKey: dedupeKeys.integrationFailed('stripe-tax'),
+        })
+        return 0
+      }
     }
 
     // ALWAYS recalculate shipping server-side to prevent client-side tampering.
     // The client sends shippingMethod as a preference; we validate it against
     // the server-computed options rather than trusting the client-provided cost.
-    let finalShippingCost = 0
-    let finalShippingMethod = 'Standard Shipping'
+    const computeShipping = async (): Promise<{ cost: number; method: string }> => {
+      try {
+        const itemsWithWeights = buildShippingItems(orderItems, productMap)
 
-    try {
-      const itemsWithWeights = buildShippingItems(orderItems, productMap)
+        const shippingResult = await calculateShipping({
+          items: itemsWithWeights,
+          shippingAddress: {
+            line1: shipping.address1,
+            line2: shipping.address2,
+            city: shipping.city,
+            state: shipping.state,
+            postalCode: shipping.postalCode,
+            country: 'US',
+          },
+          subtotal: discountedSubtotal,
+        })
 
-      const shippingResult = await calculateShipping({
-        items: itemsWithWeights,
-        shippingAddress: {
-          line1: shipping.address1,
-          line2: shipping.address2,
-          city: shipping.city,
-          state: shipping.state,
-          postalCode: shipping.postalCode,
-          country: 'US',
-        },
-        subtotal: discountedSubtotal,
-      })
+        let cost: number
+        let method: string
 
-      // If the client selected a specific shipping method, try to match it
-      // against server-computed options to use the correct cost
-      if (shippingMethod && shippingResult.availableOptions?.length) {
-        const matchedOption = shippingResult.availableOptions.find(
-          (opt) => opt.method === shippingMethod
-        )
-        if (matchedOption) {
-          finalShippingCost = matchedOption.cost
-          finalShippingMethod = matchedOption.method
+        // If the client selected a specific shipping method, try to match it
+        // against server-computed options to use the correct cost
+        if (shippingMethod && shippingResult.availableOptions?.length) {
+          const matchedOption = shippingResult.availableOptions.find(
+            (opt) => opt.method === shippingMethod
+          )
+          if (matchedOption) {
+            cost = matchedOption.cost
+            method = matchedOption.method
+          } else {
+            // Client sent an unknown method — use the server default
+            cost = shippingResult.shippingCost
+            method = shippingResult.shippingMethod
+            console.warn('[Checkout] Client shipping method not found in options, using default:', {
+              clientMethod: shippingMethod,
+              serverMethod: method,
+            })
+          }
         } else {
-          // Client sent an unknown method — use the server default
-          finalShippingCost = shippingResult.shippingCost
-          finalShippingMethod = shippingResult.shippingMethod
-          console.warn('[Checkout] Client shipping method not found in options, using default:', {
-            clientMethod: shippingMethod,
-            serverMethod: finalShippingMethod,
-          })
+          // No client preference or no options — use server default
+          cost = shippingResult.shippingCost
+          method = shippingResult.shippingMethod
         }
-      } else {
-        // No client preference or no options — use server default
-        finalShippingCost = shippingResult.shippingCost
-        finalShippingMethod = shippingResult.shippingMethod
-      }
 
-      console.log('[Checkout] Shipping calculated server-side:', {
-        subtotal,
-        shippingCost: finalShippingCost,
-        shippingMethod: finalShippingMethod,
-        estimatedDelivery: shippingResult.estimatedDelivery,
-      })
-    } catch (error) {
-      console.error('[Checkout] Shipping calculation failed:', error)
-      return NextResponse.json(
-        { error: 'Unable to calculate shipping cost. Please try again.' },
-        { status: 500 }
-      )
+        console.log('[Checkout] Shipping calculated server-side:', {
+          subtotal,
+          shippingCost: cost,
+          shippingMethod: method,
+          estimatedDelivery: shippingResult.estimatedDelivery,
+        })
+
+        return { cost, method }
+      } catch (error) {
+        console.error('[Checkout] Shipping calculation failed:', error)
+        // Throw rather than return: this runs inside the post-reservation block, and a bare
+        // `return` here would leave the function without ever reaching the release, stranding
+        // the reservation this request just took.
+        throw new ShippingUnavailableError()
+      }
     }
+
+    const [resolvedTax, resolvedShipping] = await Promise.all([computeTax(), computeShipping()])
+    taxAmount = resolvedTax
+    finalShippingCost = resolvedShipping.cost
+    finalShippingMethod = resolvedShipping.method
 
     // Shipping is charged on every order. There is deliberately no path that zeroes it — no
     // threshold, no discount type, no reward. See `lib/shipping-calculator.ts`.
@@ -438,6 +457,8 @@ export async function POST(request: NextRequest) {
         items: true,
       },
     })
+
+    createdOrderId = order.id
 
     await emitOrderCreated({
       id: order.id,
@@ -561,15 +582,25 @@ export async function POST(request: NextRequest) {
           console.error('[Checkout] Failed to release reservation:', result.reason)
         }
       }
+      // The reservation is back, but the order row survives this failure as PENDING.
+      // Mark it so the expire-pending-orders sweep does not release it a second time.
+      if (createdOrderId) {
+        await prisma.order
+          .updateMany({
+            where: { id: createdOrderId, inventoryReleasedAt: null },
+            data: { inventoryReleasedAt: new Date() },
+          })
+          .catch((markError) =>
+            console.error('[Checkout] Failed to mark reservation released:', markError)
+          )
+      }
       throw postReservationError
     }
   } catch (error) {
-    // A bad bundle (missing/inactive/unavailable) is the shopper's request being invalid, not a
-    // server fault — surface its message with a 400 rather than a generic 500.
-    if (error instanceof BundleCheckoutError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
     console.error('Checkout error:', error)
+    if (error instanceof ShippingUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json(
       { error: 'Unable to initiate checkout. Please try again.' },
       { status: 500 }

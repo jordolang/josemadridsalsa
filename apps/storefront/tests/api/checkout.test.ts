@@ -68,7 +68,6 @@ vi.mock('@/lib/payments', () => ({
   })),
 }))
 
-
 vi.mock('@/lib/inventory-manager', () => ({
   reserveMultipleProducts: vi.fn(() =>
     Promise.resolve([

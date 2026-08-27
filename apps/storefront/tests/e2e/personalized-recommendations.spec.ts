@@ -7,7 +7,7 @@
  * 3. Verify homepage shows personalized recommendations matching heat preferences
  * 4. Verify PDP shows relevant 'You May Also Like' products
  * 5. Verify order confirmation would include recommendations (component check)
- * 6. Verify GrowthBook tracking events are logged
+ * 6. Verify recommendation tracking events are logged
  *
  * @see playwright.config.ts for test configuration
  */
@@ -24,7 +24,7 @@ test.describe('Personalized recommendations flow', () => {
   }
 
   test.beforeEach(async ({ page }) => {
-    // Enable console logging to track GrowthBook events
+    // Enable console logging to track recommendation events
     page.on('console', (msg) => {
       if (msg.type() === 'log' && msg.text().includes('track')) {
         console.log('Browser console:', msg.text())
@@ -151,7 +151,7 @@ test.describe('Personalized recommendations flow', () => {
 
       console.log(`✓ ${cardCount} recommended products displayed`)
     } else {
-      console.log('⚠ PersonalizedHero not visible (may be controlled by GrowthBook feature flag)')
+      console.log('⚠ PersonalizedHero not visible')
 
       // If PersonalizedHero is not visible, the default HomeHero should be shown
       const defaultHero = page.locator('section').first()
@@ -208,7 +208,7 @@ test.describe('Personalized recommendations flow', () => {
     console.log('✓ Email recommendations verified via unit tests (see order-confirmation.test.tsx)')
 
     // ============================================================
-    // STEP 6: Verify GrowthBook tracking events
+    // STEP 6: Verify recommendation tracking events
     // ============================================================
 
     // Track events are logged to browser console via Amplitude
@@ -338,7 +338,7 @@ test.describe('Personalized recommendations flow', () => {
         // recommended products match the MILD heat level preference
         // For this E2E test, we verify the component renders
       } else {
-        console.log('⚠ PersonalizedHero not visible (controlled by GrowthBook feature flag)')
+        console.log('⚠ PersonalizedHero not visible')
       }
     } else {
       console.log('⚠ MILD filter button not found, skipping filter test')

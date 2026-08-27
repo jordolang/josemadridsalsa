@@ -20,7 +20,6 @@ import {
   Check,
   ExternalLink,
   KeyRound,
-  Zap,
 } from 'lucide-react'
 import type { SocialMediaPlatform } from '@prisma/client'
 import { Card } from '@/components/ui/card'
@@ -34,24 +33,7 @@ import type {
   SocialAccountInfo,
   PlatformConfigStatus,
   SocialCredentialProvider,
-  AyrshareStatusInfo,
 } from '@/types/social'
-
-// Friendly labels for the platform ids Ayrshare reports as linked.
-const AYRSHARE_PLATFORM_LABELS: Record<string, string> = {
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  twitter: 'X (Twitter)',
-  tiktok: 'TikTok',
-  gmb: 'Google Business',
-  linkedin: 'LinkedIn',
-  youtube: 'YouTube',
-  pinterest: 'Pinterest',
-  bluesky: 'Bluesky',
-  threads: 'Threads',
-  reddit: 'Reddit',
-  telegram: 'Telegram',
-}
 
 const PLATFORM_ICONS: Record<SocialMediaPlatform, React.ElementType> = {
   FACEBOOK: Facebook,
@@ -107,7 +89,6 @@ const ALL_PLATFORMS: SocialMediaPlatform[] = ['FACEBOOK', 'TWITTER', 'TIKTOK', '
 type Props = {
   accounts: SocialAccountInfo[]
   platformConfig: PlatformConfigStatus[]
-  ayrshare: AyrshareStatusInfo
 }
 
 function CopyButton({ value }: { value: string }) {
@@ -219,171 +200,6 @@ function CredentialForm({
   )
 }
 
-// Easy mode: connect every platform through one free Ayrshare login — no
-// developer apps, no per-platform keys. This is the path that matches "one
-// click, no developer settings" without a paid plan.
-function AyrshareEasyMode({
-  status,
-  onChanged,
-}: {
-  status: AyrshareStatusInfo
-  onChanged: () => void
-}) {
-  const [apiKey, setApiKey] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
-
-  const save = async () => {
-    setError(null)
-    if (!apiKey.trim()) {
-      setError('Paste your Ayrshare API key.')
-      return
-    }
-    setBusy(true)
-    try {
-      const res = await fetch('/api/social/ayrshare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: apiKey.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Failed to save key.')
-        setBusy(false)
-        return
-      }
-      setApiKey('')
-      setBusy(false)
-      onChanged()
-    } catch {
-      setError('Failed to save key.')
-      setBusy(false)
-    }
-  }
-
-  const remove = async () => {
-    if (!confirm('Remove the Ayrshare key? Easy-mode posting will stop until you add it again.')) return
-    setBusy(true)
-    try {
-      await fetch('/api/social/ayrshare', { method: 'DELETE' })
-      onChanged()
-    } catch {
-      setError('Failed to remove key.')
-    }
-    setBusy(false)
-  }
-
-  return (
-    <Card className="border-primary/30 bg-primary/5 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-primary" />
-          <div>
-            <p className="font-semibold text-foreground">Easy mode — one free login, no developer apps</p>
-            <p className="text-xs text-muted-foreground">
-              Connect Facebook, Instagram, X, TikTok &amp; Google Business through a single free
-              Ayrshare account. No API keys per platform, no developer consoles.
-            </p>
-          </div>
-        </div>
-        {status.configured ? (
-          <Badge variant="outline" className="gap-1 border-primary/40 text-[10px] text-primary">
-            <CheckCircle2 className="h-3 w-3" /> Active
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="gap-1 border-amber-400 text-[10px] text-amber-600">
-            Optional
-          </Badge>
-        )}
-      </div>
-
-      {status.configured ? (
-        <div className="mt-4 space-y-3">
-          {status.error ? (
-            <p className="text-sm text-destructive">{status.error}</p>
-          ) : status.linkedAccounts.length > 0 ? (
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-foreground">Linked &amp; ready to post:</p>
-              <div className="flex flex-wrap gap-1.5">
-                {status.linkedAccounts.map((p) => (
-                  <Badge key={p} className="gap-1 bg-primary/10 text-xs text-primary">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {AYRSHARE_PLATFORM_LABELS[p] ?? p}
-                  </Badge>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Posts and scheduled posts now publish through Ayrshare automatically.
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Key saved. Now link your social accounts on Ayrshare (one click each), then they&apos;ll
-              appear here.
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline">
-              <a href="https://app.ayrshare.com" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-3 w-3" /> Link / manage accounts on Ayrshare
-              </a>
-            </Button>
-            <Button size="sm" variant="outline" onClick={remove} disabled={busy} className="text-destructive">
-              {busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Trash2 className="mr-2 h-3 w-3" />}
-              Remove key
-            </Button>
-          </div>
-        </div>
-      ) : open ? (
-        <div className="mt-4 space-y-3">
-          <ol className="ml-4 list-decimal space-y-1 text-sm text-muted-foreground">
-            <li>
-              Create a free account at{' '}
-              <a href="https://www.ayrshare.com" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">
-                ayrshare.com
-              </a>{' '}
-              and link your social accounts (click-connect, no developer setup).
-            </li>
-            <li>In the Ayrshare dashboard, copy your API key.</li>
-            <li>Paste it below and save — that&apos;s the only key you&apos;ll ever enter.</li>
-          </ol>
-          <div className="space-y-1">
-            <Label className="text-xs">Ayrshare API key</Label>
-            <div className="flex gap-2">
-              <Input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Paste API key"
-                className="h-9 text-sm"
-                autoComplete="off"
-              />
-              <Button size="sm" className="h-9" onClick={save} disabled={busy}>
-                {busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Check className="mr-2 h-3 w-3" />}
-                Save
-              </Button>
-            </div>
-          </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
-      ) : (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => setOpen(true)}>
-            <Zap className="mr-2 h-4 w-4" /> Set up easy mode
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <a href="https://www.ayrshare.com" target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="mr-2 h-3 w-3" /> Create free Ayrshare account
-            </a>
-          </Button>
-        </div>
-      )}
-    </Card>
-  )
-}
-
 function SetupGuide({ config, onSaved }: { config: PlatformConfigStatus; onSaved: () => void }) {
   // Instagram has no keys of its own — it rides on the Facebook app.
   const sharesCreds = Boolean(config.sharesCredentialsWith)
@@ -436,7 +252,7 @@ function SetupGuide({ config, onSaved }: { config: PlatformConfigStatus; onSaved
   )
 }
 
-export function SocialAccounts({ accounts, platformConfig, ayrshare }: Props) {
+export function SocialAccounts({ accounts, platformConfig }: Props) {
   const router = useRouter()
   const [connecting, setConnecting] = useState<SocialMediaPlatform | null>(null)
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
@@ -496,9 +312,6 @@ export function SocialAccounts({ accounts, platformConfig, ayrshare }: Props) {
           </AlertDescription>
         </Alert>
       )}
-
-      {/* Easy mode (Ayrshare) — recommended free path with no developer apps */}
-      <AyrshareEasyMode status={ayrshare} onChanged={() => router.refresh()} />
 
       {/* Honest configuration summary */}
       <Card className="border-border p-4">

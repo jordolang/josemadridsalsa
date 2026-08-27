@@ -269,64 +269,6 @@ export async function getCollectionBySlug(slug: string) {
 }
 
 /**
- * Fetch an active bundle by slug with its component products (in bundle order).
- *
- * Every component is included, not just the active ones, so the page shows the real advertised set;
- * `available` is false when the bundle has no products or any component is inactive — exactly the
- * cases the checkout also rejects — so the page can offer the bundle for display but withhold the
- * add-to-cart action rather than let a purchase fail. `savings` is versus buying separately.
- */
-export async function getBundleBySlug(slug: string) {
-  try {
-    const bundle = await prisma.bundle.findFirst({
-      where: { slug, isActive: true },
-      include: {
-        products: {
-          orderBy: { sortOrder: 'asc' },
-          include: {
-            product: {
-              include: {
-                category: true,
-                productTags: { include: { tag: true } },
-              },
-            },
-          },
-        },
-      },
-    })
-
-    if (!bundle) return null
-
-    const components = bundle.products.map(({ product, quantity }) => ({
-      quantity,
-      product: {
-        ...product,
-        price: parseFloat(String(product.price)),
-        compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : null,
-        costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
-        weight: product.weight ? parseFloat(String(product.weight)) : null,
-      },
-    }))
-
-    const price = parseFloat(String(bundle.price))
-    const retailTotal = components.reduce((sum, c) => sum + c.product.price * c.quantity, 0)
-    const available = components.length > 0 && components.every((c) => c.product.isActive)
-    const savings = Math.max(0, Math.round((retailTotal - price) * 100) / 100)
-
-    return {
-      bundle: { ...bundle, price },
-      components,
-      available,
-      retailTotal: Math.round(retailTotal * 100) / 100,
-      savings,
-    }
-  } catch (error: unknown) {
-    console.error('Error fetching bundle:', error)
-    throw new Error(`Failed to fetch bundle: ${getErrorMessage(error)}`)
-  }
-}
-
-/**
  * Get total count of products matching filters (for pagination)
  */
 export async function getProductsCount(filters: Omit<ProductFilters, 'take' | 'skip' | 'sortOrder'> = {}) {

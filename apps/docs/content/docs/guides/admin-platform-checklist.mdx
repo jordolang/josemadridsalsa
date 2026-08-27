@@ -59,7 +59,7 @@ doing", `/admin/analytics` answers "how are we performing".
 - ❓ Variants — `ProductVariant` exists with admin routes, but zero rows in either database and
   nothing in checkout reads it
 - ❌ Collections
-- ✅ Bundles — fixed sets sold together at one set price ([Product Bundles](/docs/features/bundles)); priced/enforced server-side at checkout, expanded into component lines
+- ❌ Bundles
 - ❌ Subscriptions
 - ❌ Scheduled launches
 - ❌ Related products
@@ -156,7 +156,7 @@ and one resolver supplies the origin to quoting and buying alike.
 - ✅ Usage limits, ✅ start/end dates
 - ❌ Automatic discounts
 - ❌ Buy-X-get-Y
-- ✅ Bundles — fixed product sets at one set price ([Product Bundles](/docs/features/bundles))
+- ❌ Bundles
 - ❌ Customer-specific discounts
 - ❌ Campaign attribution
 
@@ -242,7 +242,7 @@ the shipping decision per return, and the breakdown is itemised on screen before
 ## Settings
 
 - ✅ Store identity, ✅ payments, ✅ shipping, ✅ email templates, ✅ integrations, ✅ API keys
-- ✅ Feature flags — GrowthBook
+- ✅ Feature flags — database `isActive` fields
 - ❓ Notification preferences — `OrderNotificationSetting` is live (`lib/notifications/order-notifications.ts`).
   `OrderNotificationRule` and `OrderNotificationEvent` are **schema with no code**: nothing in
   the repository reads or writes either, so there is no trigger→action rule engine behind them
@@ -291,7 +291,7 @@ the shipping decision per return, and the breakdown is itemised on screen before
 - ✅ **Security** — 2FA, RBAC, rate limiting, audit logs, encrypted credential vault, signed
   webhook verification, Zod validation on every input, no raw card data stored
 - ✅ **Observability** — Sentry, Amplitude, Vercel Analytics
-- ✅ **Feature flags** — GrowthBook
+- ✅ **Feature flags** — database `isActive` fields
 - ❓ **API-first** — ~50 route groups and `PartnerApiKey` exist; no versioning, no scoped keys,
   no public documentation
 - ❓ **Integration adapters** — payments and shipping are abstracted behind providers; tax, email,

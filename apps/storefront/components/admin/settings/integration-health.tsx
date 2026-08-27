@@ -8,16 +8,10 @@ import {
   MinusCircle,
   RefreshCw,
   Loader2,
-  Zap,
-  ExternalLink,
-  Trash2,
-  Check,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 type HealthStatus = 'healthy' | 'failing' | 'unchecked' | 'unconfigured'
 
@@ -29,12 +23,6 @@ type ServiceHealth = {
   status: HealthStatus
   detail: string
   checkedAt: string
-}
-
-type AyrshareStatus = {
-  configured: boolean
-  linkedAccounts: string[]
-  error?: string
 }
 
 const STATUS_UI: Record<
@@ -72,140 +60,6 @@ function StatusBadge({ status }: { status: HealthStatus }) {
       <ui.Icon className="h-3 w-3" />
       {ui.label}
     </span>
-  )
-}
-
-// Compact Ayrshare key entry so social media can be configured to the new
-// service from the Integrations panel too (mirrors Admin → Social → Easy mode).
-function AyrshareConfig({ onChanged }: { onChanged: () => void }) {
-  const [status, setStatus] = useState<AyrshareStatus | null>(null)
-  const [apiKey, setApiKey] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch('/api/social/ayrshare')
-      if (res.ok) {
-        setStatus(await res.json())
-      } else {
-        setStatus({ configured: false, linkedAccounts: [], error: 'You lack permission to manage social keys.' })
-      }
-    } catch {
-      setStatus({ configured: false, linkedAccounts: [] })
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const save = async () => {
-    setError(null)
-    if (!apiKey.trim()) {
-      setError('Paste your Ayrshare API key.')
-      return
-    }
-    setBusy(true)
-    try {
-      const res = await fetch('/api/social/ayrshare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: apiKey.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Failed to save key.')
-      } else {
-        setApiKey('')
-        setStatus(data)
-        onChanged()
-      }
-    } catch {
-      setError('Failed to save key.')
-    }
-    setBusy(false)
-  }
-
-  const remove = async () => {
-    if (!confirm('Remove the Ayrshare key? Easy-mode posting will stop until you add it again.')) return
-    setBusy(true)
-    try {
-      await fetch('/api/social/ayrshare', { method: 'DELETE' })
-      await load()
-      onChanged()
-    } catch {
-      setError('Failed to remove key.')
-    }
-    setBusy(false)
-  }
-
-  return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-      <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-primary" />
-        <p className="text-sm font-semibold text-foreground">Social media — Ayrshare (easy mode)</p>
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">
-        One free key connects Facebook, Instagram, X, TikTok &amp; Google Business — no per-platform
-        developer apps. The same key also powers Admin → Social.
-      </p>
-
-      {status?.configured ? (
-        <div className="mt-3 space-y-2">
-          {status.error ? (
-            <p className="text-sm text-destructive">{status.error}</p>
-          ) : status.linkedAccounts.length > 0 ? (
-            <p className="text-sm text-foreground">
-              Linked &amp; ready: <span className="font-medium">{status.linkedAccounts.join(', ')}</span>
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Key saved — now link your accounts on Ayrshare (one click each).
-            </p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline">
-              <a href="https://app.ayrshare.com" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-3 w-3" /> Manage accounts
-              </a>
-            </Button>
-            <Button size="sm" variant="outline" onClick={remove} disabled={busy} className="text-destructive">
-              {busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Trash2 className="mr-2 h-3 w-3" />}
-              Remove key
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-3 space-y-2">
-          <Label className="text-xs">Ayrshare API key</Label>
-          <div className="flex gap-2">
-            <Input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Paste API key"
-              className="h-9 text-sm"
-              autoComplete="off"
-            />
-            <Button size="sm" className="h-9" onClick={save} disabled={busy}>
-              {busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Check className="mr-2 h-3 w-3" />}
-              Save
-            </Button>
-          </div>
-          {status?.error && <p className="text-xs text-muted-foreground">{status.error}</p>}
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          <a
-            href="https://www.ayrshare.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary underline"
-          >
-            Create a free Ayrshare account <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -263,8 +117,6 @@ export function IntegrationHealth() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <AyrshareConfig onChanged={load} />
-
         {error ? (
           <p className="py-4 text-sm text-destructive">{error}</p>
         ) : loading && !services ? (

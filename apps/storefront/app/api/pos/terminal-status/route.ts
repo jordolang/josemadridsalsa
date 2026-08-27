@@ -3,7 +3,7 @@ import { SquareClient, SquareEnvironment } from 'square'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
-import { deductReservedInventoryInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { deductReservedInventoryInTx, releaseOrderReservation, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 type TerminalStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED' | 'FAILED'
@@ -187,18 +187,10 @@ export async function GET(request: NextRequest) {
 
     // If CANCELED or FAILED, release inventory if order is still PENDING
     if ((status === 'CANCELED' || status === 'FAILED') && order.paymentStatus === 'PENDING') {
-      for (const item of order.items) {
-        try {
-          await releaseInventory({
-            productId: item.productId,
-            quantity: item.quantity,
-            orderId: order.id,
-            notes: `POS terminal checkout ${status.toLowerCase()} for order ${order.id}`,
-          })
-        } catch (releaseError) {
-          console.error('[POS] Failed to release inventory:', releaseError)
-        }
-      }
+      await releaseOrderReservation(
+        order.id,
+        `POS terminal checkout ${status.toLowerCase()} for order ${order.id}`
+      )
 
       await prisma.order.update({
         where: { id: order.id },

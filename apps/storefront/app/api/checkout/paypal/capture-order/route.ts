@@ -3,7 +3,7 @@ import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getProvider } from '@/lib/payments'
 import { Prisma, PaymentStatus, OrderStatus } from '@prisma/client'
-import { deductReservedInventoryForItemsInTx, releaseInventory, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { deductReservedInventoryOnceInTx, releaseOrderReservation, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { createOrderAccessToken } from '@/lib/orders/access-token'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
@@ -107,19 +107,7 @@ export async function POST(request: NextRequest) {
 
     if (!captureResult.success || captureResult.status !== 'SUCCEEDED') {
       // Release reserved inventory since capture failed
-      for (const item of order.items) {
-        try {
-          await releaseInventory({
-            productId: item.productId,
-            quantity: item.quantity,
-            orderId: order.id,
-            userId: order.userId || undefined,
-            notes: `PayPal capture failed for order ${order.id}`,
-          })
-        } catch (releaseError) {
-          console.error('[PayPal Capture] Failed to release inventory:', releaseError)
-        }
-      }
+      await releaseOrderReservation(order.id, `PayPal capture failed for order ${order.id}`)
 
       return NextResponse.json(
         { error: captureResult.error || 'PayPal payment capture failed.' },
@@ -212,21 +200,30 @@ export async function POST(request: NextRequest) {
         // Award purchase loyalty points, idempotent on the order and safe to race the webhook.
         await creditPurchaseLoyaltyPoints(tx, order!.id)
 
-        // Deduct reserved inventory, aggregated per product. The payment webhook completes
-        // the same order in parallel and deducts the same items, so this skips any product it
-        // already recorded — deductReservedInventoryForItemsInTx is idempotent per
-        // (product, order). Without it a second deduction oversells (see the helper's docs).
-        itemDeductions.push(
-          ...(await deductReservedInventoryForItemsInTx(
-            order!.items,
+        // Deduct reserved inventory. The payment webhook completes the same order
+        // in parallel and deducts the same items, so skip any item it already
+        // recorded — deductReservedInventoryOnceInTx is idempotent per order item.
+        // Without it a second deduction oversells (see the helper's docs).
+        for (const item of order!.items) {
+          const result = await deductReservedInventoryOnceInTx(
             {
+              productId: item.productId,
+              quantity: item.quantity,
               orderId: order!.id,
               userId: order!.userId || undefined,
               notes: `PayPal payment completed for order ${order!.id}`,
             },
             tx
-          ))
-        )
+          )
+          if (!result) {
+            continue
+          }
+          itemDeductions.push({
+            productId: item.productId,
+            newInventory: result.newInventory,
+            lowStockThreshold: result.product.lowStockThreshold,
+          })
+        }
       },
       { isolationLevel: 'Serializable' }
     )
@@ -263,20 +260,8 @@ export async function POST(request: NextRequest) {
     console.error('[PayPal Capture] Error:', error)
 
     // Release reserved inventory if order exists and hasn't been paid
-    if (order && order.items && order.paymentStatus !== 'PAID') {
-      for (const item of order.items) {
-        try {
-          await releaseInventory({
-            productId: item.productId,
-            quantity: item.quantity,
-            orderId: order.id,
-            userId: order.userId || undefined,
-            notes: `Error during PayPal capture for order ${order.id}`,
-          })
-        } catch (releaseError) {
-          console.error('[PayPal Capture] Failed to release inventory:', releaseError)
-        }
-      }
+    if (order && order.paymentStatus !== 'PAID') {
+      await releaseOrderReservation(order.id, `Error during PayPal capture for order ${order.id}`)
     }
 
     return NextResponse.json(

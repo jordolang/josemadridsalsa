@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { NutritionFactsLabel } from './NutritionFactsLabel'
-import { formatIngredientStatement, toIngredientList } from '@/lib/ingredients'
 
 interface NutritionalInfoData {
   id: string
@@ -128,12 +127,12 @@ export function NutritionalInfo({
             {productIngredients && productIngredients.length > 0 ? (
               <p className="text-sm text-muted-foreground leading-relaxed">
                 <span className="font-semibold text-foreground">Ingredients: </span>
-                {formatIngredientStatement(toIngredientList(productIngredients))}
+                {formatIngredientStatement(productIngredients)}
               </p>
             ) : ingredients && ingredients.length > 0 ? (
               <p className="text-sm text-muted-foreground leading-relaxed">
                 <span className="font-semibold text-foreground">Ingredients: </span>
-                {formatIngredientStatement(ingredients)}
+                {ingredients.join(', ')}.
               </p>
             ) : null}
 
@@ -153,4 +152,31 @@ export function NutritionalInfo({
       </div>
     </div>
   )
+}
+
+/**
+ * Format product ingredients into an FDA-style ingredient statement.
+ * e.g. "Diced Tomatoes (Tomatoes, Citric Acid, Calcium Chloride), Water, Garlic, Lime Juice (From Concentrate) and Spices."
+ */
+function formatIngredientStatement(
+  productIngredients: ProductIngredientData[]
+): string {
+  const sorted = [...productIngredients].sort(
+    (a, b) => a.sortOrder - b.sortOrder
+  )
+  const parts = sorted.map((pi) => {
+    const name = pi.ingredient.name
+    if (pi.qualifier) {
+      return `${name} (${pi.qualifier})`
+    }
+    return name
+  })
+
+  if (parts.length === 0) return ''
+  if (parts.length === 1) return `${parts[0]}.`
+
+  // FDA style: comma-separated with "and" before last item
+  const allButLast = parts.slice(0, -1)
+  const last = parts[parts.length - 1]
+  return `${allButLast.join(', ')} and ${last}.`
 }

@@ -7,8 +7,8 @@ Images do not belong in git. The repo already carries 201 MB of committed images
 and git history is permanent — deleting them later reclaims nothing. Everything new goes to the
 `josemadridsalsa-blob` store instead.
 
-Three commands cover it: `images:sync` for new images, `images:labels` for the flat label scans,
-and `images:migrate` for the ones already in the repo.
+Two commands cover it: `images:sync` for new images, `images:migrate` for the ones already in the
+repo.
 
 ## Before anything works
 
@@ -51,34 +51,11 @@ deployment.
 1. **slug** — `mango-habanero.png` → the product with slug `mango-habanero`
 2. **SKU** — `JMS-MH-16.png`
 3. **product name** — `Mango Habanero.png`
-4. **any of those ignoring a trailing `salsa`** — `mango-mild.jpg` → `mango-mild-salsa`, because the
-   catalogue applies the suffix inconsistently
 
 `Mango Habanero (2).png` matches too; the `(2)` that macOS appends to a second copy is stripped.
 
-An **ambiguous** match links nothing and says so. Attaching a photo to the wrong product is worse
-than not attaching it.
-
-## Product labels
-
-The flat scans of the jar labels live in `apps/storefront/public/images/unused/new-products/labels`.
-They are photos of the product like any other, so they belong in the product gallery:
-
-```bash
-# dry run — shows which product each label would join
-npm run images:labels --workspace @jose-madrid/storefront
-
-# upload and attach
-npm run images:labels --workspace @jose-madrid/storefront -- --apply
-```
-
-Label mode differs from a plain sync in three ways: the blob prefix is `products/labels/`, a label is
-always **appended** to the gallery and never becomes the main product photo, and filenames get one
-extra chance to find their product through `lib/images/label-aliases.ts` — the scans were named from
-the jar artwork, before the catalogue slugs settled, so a handful need the mapping stated.
-
-A label whose filename reaches no product is reported and skipped. Add it to the alias map rather
-than renaming the scan, so the file still matches the jar it came off.
+An **ambiguous** name match links nothing and says so. Attaching a photo to the wrong product is
+worse than not attaching it.
 
 ## Migrating the images already in the repo
 

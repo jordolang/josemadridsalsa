@@ -101,7 +101,6 @@ An iOS native app lives under `apps/ios/**` (not an npm workspace; build artifac
 | Email | Resend **6** + Nodemailer **8** |
 | Validation | Zod **4** + React Hook Form |
 | Testing | Vitest **4** (jsdom, jest-dom, MSW), Playwright |
-| Feature flags | GrowthBook |
 | Monitoring | Sentry, Amplitude, Vercel Analytics |
 | AI | Anthropic (AI chat + RAG in `lib/ai-rag`, `app/api/ai-chat`) |
 | Uploads | UploadThing |
@@ -116,7 +115,7 @@ Prefer the latest, most capable Claude models when building AI features (`ANTHRO
 
 - **`app/`** route groups: `(public)`, `admin`, `auth`, `cart`, `order-confirmation`, `pos`, `fundraise`, `(fundraiser-portal)`, `(fundraiser-subdomain)`, `avatar`, `game-icons`, `s` (short links), plus `api`.
 - **`app/api/`** (~50 groups): `checkout`, `payment(s)`, `orders`, `cart`, `products`, `salsas`, `recipes`, `reviews`, `recommendations`, `gift-certificates`, `loyalty`, `fundraiser(s)` + `fundraiser-portal` + `fundraiser-signups` + `participants`, `social`, `integrations`, `developer`, `admin`, `account`, `ai-chat`, `chat-handoff`, `heat-index`, `newsletter`/`unsubscribe`/`send-email`, `locations`/`places`, `calendar`, `feeds`, `forms`, `live`, `pos`, `track`, `cron`, `uploadthing`, and **`webhooks/`** (`stripe`, `paypal`, `square`, `easypost`, `resend`).
-- **`lib/`** domain modules (~60): `payments`, `stripe`, `quickbooks`, `orders`, `financials`, `fundraising`/`fundraisers`, `arena`, `events`, `email`, `social`, `merchandise`, `gift-certificates`, `loyalty` (`loyalty.ts`), `inventory` (`inventory-manager.ts`, `inventory-alerts.ts`), `shipping` (`shipping-calculator.ts`, `shipping-api.ts`, `shipping-carriers.ts`), `tax-calculator.ts`, `recommendations.ts`, `discounts.ts`, `blog`, `seo`, `ai-rag`, `chat`, `forms`, `locations`, `analytics`, `tracking`, `notifications`, `training-data`, `customers`, `users`, `feeds`, `growthbook`, `rate-limit`, `supabase`, plus core helpers: `prisma.ts`, `rbac.ts`, `admin-auth.ts`, `fundraiser-auth.ts`, `crypto.ts`, `validation(s)`, `logger.ts`, `errors.ts`, `csv.ts`.
+- **`lib/`** domain modules (~60): `payments`, `stripe`, `quickbooks`, `orders`, `financials`, `fundraising`/`fundraisers`, `arena`, `events`, `email`, `social`, `merchandise`, `gift-certificates`, `loyalty` (`loyalty.ts`), `inventory` (`inventory-manager.ts`, `inventory-alerts.ts`), `shipping` (`shipping-calculator.ts`, `shipping-api.ts`, `shipping-carriers.ts`), `tax-calculator.ts`, `recommendations.ts`, `discounts.ts`, `blog`, `seo`, `ai-rag`, `chat`, `forms`, `locations`, `analytics`, `tracking`, `notifications`, `training-data`, `customers`, `users`, `feeds`, `rate-limit`, plus core helpers: `prisma.ts`, `rbac.ts`, `admin-auth.ts`, `fundraiser-auth.ts`, `crypto.ts`, `validation(s)`, `logger.ts`, `errors.ts`, `csv.ts`.
 - **`components/`**: `ui` (Shadcn primitives), `store`, `admin`, `account`, `cart`, `checkout`, `products`, `reviews`, `fundraiser`/`fundraiser-portal`/`fundraising`, `arena`, `chat`, `messaging`, `dashboard`, `heat-index`, `social`, `seo`, `analytics`, `forms`, `providers`.
 - **`prisma/`**: `schema.prisma` (+ migrations, seeds).
 - **`emails/`**: transactional/marketing email templates.
@@ -140,7 +139,7 @@ Prefer the latest, most capable Claude models when building AI features (`ANTHRO
 - **QuickBooks** — `QuickBooksAppCredential`, `QuickBooksConnection`, `QuickBooksSyncRecord`, `QuickBooksEntityMap`, `QuickBooksSettings`.
 - **Events / shows** — `FeaturedEvent`, `EventStaff`/`EventContact`, `EventManifest`/`EventManifestItem`.
 - **Content & SEO** — `BlogPost`/`BlogSeries`/`BlogCategory` (the "Heat Index" editorial section), `Recipe`, `Media`, `TrainingDocument`, `DeveloperBlogPost`/`DeveloperPageContent`, `SeoConfiguration`/`StructuredData`.
-- **Ops** — `AuditLog`, `Notification`, `WebhookEvent`, `ShippingProvider`/`Carrier`/`Label`, `ThirdPartyIntegration`, `ContactSubmission`.
+- **Ops** — `AuditLog`, `Notification`, `WebhookEvent`, `ShippingCarrier`/`ShippingLabel`, `ThirdPartyIntegration`, `ContactSubmission`.
 
 ---
 
@@ -168,10 +167,10 @@ Configured by env vars (Part 10); most are optional and degrade gracefully when 
 
 - **QuickBooks Online** (`intuit-oauth`, `lib/quickbooks`) — OAuth connect + sync of paid orders, refunds (as RefundReceipts), and live P&L / expenses / bills / vendor balances into the financials dashboard. **QuickBooks Online is the source of truth for accounting** (see the QuickBooks integration plan in project memory).
 - **Google** — Maps, Places (store locator), Calendar (events), Analytics reporting, Merchant Center / Shopping feeds, service-account auth.
-- **Social commerce** — Facebook/Meta, TikTok Shop, Twitter/X, Amazon SP-API, Ayrshare; verified OAuth session flow with explicit destination-account selection.
+- **Social commerce** — Facebook/Meta, TikTok Shop, Twitter/X, Amazon SP-API; verified OAuth session flow with explicit destination-account selection.
 - **Scraping / research** — BrightData, SerpAPI, Browserless (`lib/scraper`).
 - **AI** — Anthropic-powered chat + RAG (`lib/ai-rag`, `app/api/ai-chat`).
-- **Uploads** — UploadThing. **Feature flags** — GrowthBook. **Monitoring** — Sentry / Amplitude / Vercel Analytics.
+- **Uploads** — UploadThing. **Feature flags** — database `isActive` fields. **Monitoring** — Sentry / Amplitude / Vercel Analytics.
 
 ---
 

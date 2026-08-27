@@ -475,49 +475,40 @@ The confirmation email includes:
 
 ## Abandoned Cart Recovery
 
-### Send Reminder Email
+Two separate things happen when a customer walks away from checkout: they get an email, and
+the stock they were holding goes back on the shelf. Different crons, different timing.
 
-A cron job runs every 2 hours to find unpaid orders older than 1 hour:
+### Reminder email — `api/cron/abandoned-cart`
 
-```typescript
-// api/cron/abandoned-cart
-export async function GET(req: Request) {
-  // Verify cron secret
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+Runs hourly over `AbandonedCart` rows (not orders), staged so a customer receives a sequence
+rather than the same message repeatedly. The predicate lives in
+`lib/checkout/abandoned-cart.ts` so the cron and the admin views cannot disagree about what
+counts as abandoned, and unsubscribes are honoured per recipient.
 
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+### Reservation expiry — `api/cron/expire-pending-orders`
 
-  const unpaidOrders = await db.order.findMany({
-    where: {
-      status: 'pending_payment',
-      createdAt: { lt: oneHourAgo }
-    },
-    include: { lineItems: true }
-  })
+Checkout reserves inventory *before* it asks for money, so an order exists and its items are
+held from the moment the customer reaches the payment step. Every server-side failure
+releases that hold on its own, but the final step of a card payment happens in the browser:
+`confirmCardPayment` runs there, and if it errors — or the customer just closes the tab — the
+server is never told. Nothing failed server-side, so nothing noticed, and the order sat
+`PENDING` with its stock reserved indefinitely.
 
-  for (const order of unpaidOrders) {
-    await sendAbandonedCartEmail(order)
-  }
+This sweep runs every two hours and takes back reservations from unpaid `PENDING` orders
+older than `PENDING_ORDER_EXPIRY_HOURS` (2), cancelling each one as it goes.
 
-  return Response.json({ sent: unpaidOrders.length })
-}
-```
+<Callout type="info">
+Cancelling is part of the fix, not tidying up afterwards. `api/checkout/retry-payment`
+refuses cancelled orders, and that refusal is what stops a customer completing payment for
+stock that has already been handed back to someone else.
+</Callout>
 
-### Scheduled in vercel.json
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/abandoned-cart",
-      "schedule": "0 */2 * * *"
-    }
-  ]
-}
-```
+Releasing twice is the danger this design guards against: reservations are taken before the
+order row exists, so the `InventoryTransaction` rows carry no `orderId` and "has this order
+already been released?" cannot be derived from them. A second release would silently
+under-count `Product.stockReserved` and oversell. Every release path therefore goes through
+`releaseOrderReservation()`, which claims `Order.inventoryReleasedAt` with a conditional
+update first and only proceeds if the claim was its own.
 
 ## Error Handling
 

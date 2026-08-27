@@ -2,11 +2,6 @@ import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { z } from 'zod';
 import { getErrorMessage } from '@/lib/errors';
-import {
-  UNBALANCED_INGREDIENTS_MESSAGE,
-  hasBalancedParentheses,
-  parseIngredientStatement,
-} from '@/lib/ingredients';
 
 // Product import schema for validation
 export const ProductImportSchema = z.object({
@@ -20,10 +15,7 @@ export const ProductImportSchema = z.object({
   inventory: z.coerce.number().int().min(0).default(0),
   lowStockThreshold: z.coerce.number().int().min(0).default(5),
   heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT']),
-  ingredients: z
-    .string()
-    .optional()
-    .refine((value) => !value || hasBalancedParentheses(value), UNBALANCED_INGREDIENTS_MESSAGE), // Split into an array once valid
+  ingredients: z.string().optional(), // Will be split into array
   categoryId: z.string().optional(),
   categoryName: z.string().optional(), // Alternative to categoryId
   barcode: z.string().optional().nullable(),
@@ -237,11 +229,12 @@ export function validateProducts(
       // Parse and validate with Zod
       const parsed = ProductImportSchema.parse(row);
 
-      // Handle ingredients (convert string to array). Parsed as a written statement so a
-      // sub-ingredient list like "Tomatoes (Water, Citric Acid)" survives, and a pasted label
-      // does not leave "and Spices." as the final ingredient.
+      // Handle ingredients (convert string to array)
       const ingredients = parsed.ingredients
-        ? parseIngredientStatement(parsed.ingredients)
+        ? parsed.ingredients
+            .split(',')
+            .map(i => i.trim())
+            .filter(i => i.length > 0)
         : [];
 
       // Handle images (convert string to array)

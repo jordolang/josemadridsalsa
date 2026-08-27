@@ -339,42 +339,19 @@ async function reserveInventorySingleTransaction(
 }
 
 /**
- * Collapse reservations to one entry per product, summing quantities. `reserveMultipleProducts`
- * validates each entry against the same pre-reservation snapshot, so two entries for the same product
- * (e.g. a product bought standalone *and* as a bundle component) would each pass validation against
- * the full available stock and then over-reserve. Aggregating first makes the validation see the
- * combined demand. Product-level metadata (userId/orderId/notes) is taken from the first entry.
- */
-export function aggregateReservations(reservations: InventoryReservation[]): InventoryReservation[] {
-  const byProduct = new Map<string, InventoryReservation>();
-  for (const r of reservations) {
-    const existing = byProduct.get(r.productId);
-    if (existing) {
-      existing.quantity += r.quantity;
-    } else {
-      byProduct.set(r.productId, { ...r });
-    }
-  }
-  return [...byProduct.values()];
-}
-
-/**
  * Reserve inventory for multiple products (bulk operation).
  * Uses a single Serializable transaction for atomic all-or-nothing behavior.
  * If any product has insufficient stock, the entire reservation fails and rolls back.
  * Retries up to 3 times on serialization conflicts (P2034).
  */
 export async function reserveMultipleProducts(reservations: InventoryReservation[]) {
-  // Collapse duplicate products first: validation below reads the same snapshot per entry, so two
-  // entries for one product would each pass against full stock and then over-reserve.
-  const aggregated = aggregateReservations(reservations);
   return withSerializableRetry(() =>
     prisma.$transaction(
       async (tx) => {
         const results = [];
 
         // Step 1: Validate all products have sufficient stock BEFORE reserving anything
-        for (const reservation of aggregated) {
+        for (const reservation of reservations) {
           const product = await tx.product.findUnique({
             where: { id: reservation.productId },
             select: {
@@ -400,7 +377,7 @@ export async function reserveMultipleProducts(reservations: InventoryReservation
         }
 
         // Step 2: If ALL validations pass, reserve inventory for ALL products atomically
-        for (const reservation of aggregated) {
+        for (const reservation of reservations) {
           const result = await reserveInventorySingleTransaction(reservation, tx);
           results.push({ success: true, ...result });
         }
@@ -666,52 +643,6 @@ export async function deductReservedInventoryOnceInTx(
   }
 
   return deductReservedInventoryInTx(reservation, tx);
-}
-
-/**
- * Deduct reserved inventory for a completed order's items, aggregating by product first.
- *
- * An order can carry more than one line for the same product — a product bought standalone *and* as
- * a bundle component, or one appearing in two bundles. The per-item idempotency guard in
- * {@link deductReservedInventoryOnceInTx} keys only on `(productId, orderId)`, so deducting line by
- * line would record the first line's quantity and then skip every later line for that product,
- * leaving the remaining reservation stuck forever. Summing per product and deducting once matches the
- * guard exactly. Returns the per-product results (skips already-deducted products) so the caller can
- * fire inventory alerts after the transaction commits.
- */
-export async function deductReservedInventoryForItemsInTx(
-  items: Array<{ productId: string; quantity: number }>,
-  context: { orderId: string; userId?: string; notes: string },
-  tx: Prisma.TransactionClient
-): Promise<Array<{ productId: string; newInventory: number; lowStockThreshold: number }>> {
-  const quantityByProduct = new Map<string, number>();
-  for (const item of items) {
-    quantityByProduct.set(
-      item.productId,
-      (quantityByProduct.get(item.productId) ?? 0) + item.quantity
-    );
-  }
-
-  const results: Array<{ productId: string; newInventory: number; lowStockThreshold: number }> = [];
-  for (const [productId, quantity] of quantityByProduct) {
-    const result = await deductReservedInventoryOnceInTx(
-      {
-        productId,
-        quantity,
-        orderId: context.orderId,
-        userId: context.userId,
-        notes: context.notes,
-      },
-      tx
-    );
-    if (!result) continue;
-    results.push({
-      productId,
-      newInventory: result.newInventory,
-      lowStockThreshold: result.product.lowStockThreshold,
-    });
-  }
-  return results;
 }
 
 /**
@@ -1275,4 +1206,70 @@ export async function dismissAlert(alertId: string, userId?: string, notes?: str
       resolutionNotes: notes,
     },
   });
+}
+
+/**
+ * Hand an order's inventory reservation back, exactly once.
+ *
+ * Several paths can be the one that discovers an order will never be paid — the payment
+ * confirmation coming back unsuccessful, a provider capture failing, the customer closing
+ * the tab and the expire-pending-orders sweep finding it later — and more than one of them
+ * can run for the same order. `releaseInventory` is not idempotent: reservations are taken
+ * before the order row exists, so the RESERVATION rows carry no `orderId` and there is
+ * nothing to compare a second release against. Releasing twice would quietly under-count
+ * `Product.stockReserved` and oversell the product.
+ *
+ * So the claim happens first and in the database: a conditional update on
+ * `inventoryReleasedAt` that only matches while the field is still null. Whoever wins the
+ * update owns the release; everyone else returns `released: false` and does nothing. The
+ * per-item releases run after the claim, and a failure on one item is logged rather than
+ * thrown so the remaining items still come back.
+ *
+ * @returns `released: false` when another path already released this order.
+ */
+export async function releaseOrderReservation(
+  orderId: string,
+  notes: string,
+): Promise<{ released: boolean; itemsReleased: number; failures: number }> {
+  // Claim the release. `count === 0` means the field was already set, so another path
+  // got here first and the stock is already back.
+  const claim = await prisma.order.updateMany({
+    where: { id: orderId, inventoryReleasedAt: null },
+    data: { inventoryReleasedAt: new Date() },
+  });
+
+  if (claim.count === 0) {
+    return { released: false, itemsReleased: 0, failures: 0 };
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { userId: true, items: { select: { productId: true, quantity: true } } },
+  });
+
+  if (!order) {
+    return { released: true, itemsReleased: 0, failures: 0 };
+  }
+
+  const results = await Promise.allSettled(
+    order.items.map((item) =>
+      releaseInventory({
+        productId: item.productId,
+        quantity: item.quantity,
+        orderId,
+        userId: order.userId || undefined,
+        notes,
+      })
+    )
+  );
+
+  let failures = 0;
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      failures += 1;
+      console.error(`[Inventory] Failed to release reservation for order ${orderId}:`, result.reason);
+    }
+  }
+
+  return { released: true, itemsReleased: results.length - failures, failures };
 }
