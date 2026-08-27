@@ -7,7 +7,6 @@ set -euo pipefail
 
 SCRIPT_DIR=${0:A:h}
 APP_NAME="Jose Madrid Salsa Admin"
-BUILD_DIR="$SCRIPT_DIR/.build/release"
 APP_DIR="$SCRIPT_DIR/dist/$APP_NAME.app"
 ICONSET_DIR="$SCRIPT_DIR/.build/AppIcon.iconset"
 
@@ -16,6 +15,11 @@ ICONSET_DIR="$SCRIPT_DIR/.build/AppIcon.iconset"
 VERSION=$(node -p "require('$SCRIPT_DIR/../../package.json').version" 2>/dev/null || echo "0.1.0")
 
 cd "$SCRIPT_DIR"
+
+# .build is gitignored, so it does not exist on a fresh checkout and swiftc has
+# nowhere to write the checker. `swift build` would create it, but that runs
+# after this step by design.
+mkdir -p .build
 
 # Endpoint and navigation policy decide where the app may point and what it lets
 # out to the browser. Check them before building anything else.
@@ -26,6 +30,21 @@ swiftc Sources/JoseMadridAdmin/AdminEndpoint.swift \
 .build/endpoint-check
 
 swift build -c release --arch arm64
+
+# Where the binary lands depends on the toolchain: older SwiftPM writes to
+# .build/release, the Xcode-backed build system to .build/out/Products/Release.
+# Ask SwiftPM rather than hardcode one, and fail loudly rather than bundle an
+# .app with no executable inside it.
+BUILD_DIR=$(swift build -c release --arch arm64 --show-bin-path 2>/dev/null || true)
+if [ -z "$BUILD_DIR" ] || [ ! -x "$BUILD_DIR/JoseMadridAdmin" ]; then
+  FOUND=$(find "$SCRIPT_DIR/.build" -type f -name JoseMadridAdmin -perm -111 -print -quit 2>/dev/null || true)
+  BUILD_DIR=${FOUND:+$(dirname "$FOUND")}
+fi
+if [ -z "$BUILD_DIR" ] || [ ! -x "$BUILD_DIR/JoseMadridAdmin" ]; then
+  echo "build-app.sh: could not find the built JoseMadridAdmin binary under .build" >&2
+  exit 1
+fi
+echo "Built binary: $BUILD_DIR/JoseMadridAdmin"
 
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 cp "$BUILD_DIR/JoseMadridAdmin" "$APP_DIR/Contents/MacOS/JoseMadridAdmin"
