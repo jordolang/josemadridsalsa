@@ -14,6 +14,22 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **A guarded SQL console at `/admin/developer/database`**, behind the new `developer:database`
+  permission, for direct data work that has no admin screen. Credentials never leave the server:
+  statements are posted to `POST /api/developer/admin/sql` and run through Prisma. Because this
+  is the one place that bypasses Zod schemas and model side effects, the guards make the
+  dangerous cases loud rather than convenient. Comments and string literals are stripped before
+  parsing, so `'; DROP TABLE orders; --'` inside a value cannot smuggle a second statement past
+  the one-statement rule. Reads run inside a `READ ONLY` transaction with a statement timeout and
+  a row cap, and export to CSV. Writes are executed against real data for a true affected-row
+  count and then rolled back, so the console can report what a statement *would* change — saying
+  so loudly when an `UPDATE` or `DELETE` has no `WHERE` clause — and commit only against a
+  confirmation signed for that exact statement and user, valid five minutes. A data-modifying
+  CTE counts as a write despite reading like a `SELECT`. Schema and permission changes are
+  refused by name, because they belong in a migration; the classifier keys off the leading
+  command rather than scanning for keywords, since every `UPDATE ... SET` would otherwise look
+  like a session `SET`. Reads, previews, commits, refusals and errors all land in the audit trail
+  as `developer.sql.*`.
 - **The documentation site now deploys as its own Vercel project from this repository.**
   `apps/docs` has always been the Fumadocs source of truth, but it had no deployment
   configuration of its own — the standalone `salsadocs` repository was the thing being
