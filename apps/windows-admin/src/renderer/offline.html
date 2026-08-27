@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self';" />
+    <title>Cannot reach Jose Madrid Salsa</title>
+    <link rel="stylesheet" href="shell.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Cannot reach the admin panel</h1>
+      <p>The app could not load the server. Check your connection, then try again.</p>
+      <div class="detail">
+        <div class="hint">Address</div>
+        <code id="target"></code>
+        <div class="hint" style="margin-top: 10px">Reason</div>
+        <code id="reason"></code>
+      </div>
+      <div class="actions">
+        <button class="primary" id="retry" type="button">Try again</button>
+        <button id="settings" type="button">Server settings…</button>
+      </div>
+    </main>
+    <script src="offline.js"></script>
+  </body>
+</html>

@@ -1,20 +1,35 @@
 #!/bin/zsh
 set -euo pipefail
 
+# Builds the macOS admin app bundle. Requires a full Xcode toolchain: the
+# SwiftUI macro plugins that @State and friends expand through are not shipped
+# with the standalone Command Line Tools, and the compile fails without them.
+
 SCRIPT_DIR=${0:A:h}
 APP_NAME="Jose Madrid Salsa Admin"
 BUILD_DIR="$SCRIPT_DIR/.build/release"
 APP_DIR="$SCRIPT_DIR/dist/$APP_NAME.app"
 ICONSET_DIR="$SCRIPT_DIR/.build/AppIcon.iconset"
 
+# The whole platform carries one version number; keep the bundle in step with it
+# rather than maintaining a second one here.
+VERSION=$(node -p "require('$SCRIPT_DIR/../../package.json').version" 2>/dev/null || echo "0.1.0")
+
 cd "$SCRIPT_DIR"
-swiftc Sources/JoseMadridAdmin/AdminEndpoint.swift Tests/main.swift -o .build/endpoint-check
+
+# Endpoint and navigation policy decide where the app may point and what it lets
+# out to the browser. Check them before building anything else.
+swiftc Sources/JoseMadridAdmin/AdminEndpoint.swift \
+  Sources/JoseMadridAdmin/AdminSections.swift \
+  Tests/main.swift \
+  -o .build/endpoint-check
 .build/endpoint-check
+
 swift build -c release --arch arm64
 
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 cp "$BUILD_DIR/JoseMadridAdmin" "$APP_DIR/Contents/MacOS/JoseMadridAdmin"
-LOGO="$SCRIPT_DIR/../storefront/public/images/shared/jose-madrid-salsa-logo.png"
+LOGO="$SCRIPT_DIR/../storefront/public/images/shared/jose_madrid_logo_profile640x640.png"
 mkdir -p "$ICONSET_DIR"
 for size in 16 32 128 256 512; do
   sips -z "$size" "$size" "$LOGO" --out "$ICONSET_DIR/icon_${size}x${size}.png" >/dev/null
@@ -29,12 +44,17 @@ iconutil -c icns "$ICONSET_DIR" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
 /usr/libexec/PlistBuddy -c "Add :CFBundleName string $APP_NAME" "$APP_DIR/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $APP_NAME" "$APP_DIR/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundlePackageType string APPL" "$APP_DIR/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 0.1.0" "$APP_DIR/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 1" "$APP_DIR/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION" "$APP_DIR/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $VERSION" "$APP_DIR/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP_DIR/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string 14.0" "$APP_DIR/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :LSArchitecturePriority array" "$APP_DIR/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :LSArchitecturePriority:0 string arm64" "$APP_DIR/Contents/Info.plist"
+# Downloads and printing both write outside the bundle, and the app talks to the
+# admin server over the network.
+/usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string Copyright © Jose Madrid Salsa" "$APP_DIR/Contents/Info.plist"
 
+# Ad-hoc signature. Replace with a Developer ID identity to ship without the
+# right-click-to-open prompt on a machine that did not build the app.
 codesign --force --deep --sign - "$APP_DIR"
 echo "$APP_DIR"

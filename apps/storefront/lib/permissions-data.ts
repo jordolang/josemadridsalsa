@@ -108,6 +108,7 @@ export const permissionDefinitions: PermissionDefinition[] = [
   { name: 'developer:blob', description: 'Browse, upload, and delete files in the josemadridsalsa-blob store', category: 'DEVELOPER' },
   { name: 'developer:blog', description: 'Manage developer blog posts', category: 'DEVELOPER' },
   { name: 'developer:content', description: 'Edit the public developer page content', category: 'DEVELOPER' },
+  { name: 'developer:database', description: 'Run guarded SQL statements from the database console', category: 'DEVELOPER' },
   { name: 'developer:salsadocs', description: 'Manage Salsadocs documentation', category: 'DEVELOPER' },
   { name: 'developer:system', description: 'View system status and platform controls', category: 'DEVELOPER' },
 ] as const
