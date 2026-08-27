@@ -213,3 +213,14 @@ apps/storefront/jms-images/
 apps/storefront/public/images/compositions/
 apps/storefront/public/images/lightroom/
 apps/storefront/public/images/salsa-images/
+
+# Database dumps and local database backups. A dump belongs in the backup system,
+# not in git: it goes stale immediately, and the next one may not be empty of
+# customer data the way the header-only dump removed here was.
+apps/storefront/data/backups/
+
+# A one-off dump of the old standalone docs repo, kept while its content was folded
+# into apps/docs/content/docs. That migration is done and the copies had drifted —
+# they still documented the Shopify integration after it was removed. The Fumadocs
+# site under apps/docs/content/docs is the source of truth.
+apps/docs/imported/

@@ -1,8 +1,0 @@
-name: josemadridsalsa
-icon: google-debug.png
-
-bees:
-  Dev:
-    command: "npm run dev"
-    auto_start: true
-
