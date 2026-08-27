@@ -735,7 +735,7 @@ The Jose Madrid Salsa e-commerce application has **robust import infrastructure*
 
 Compared to similar e-commerce platforms:
 
-| Feature | Shopify | WooCommerce | BigCommerce | Jose Madrid Salsa (Current) | Jose Madrid Salsa (Post-Phase 1) |
+| Feature | WooCommerce | BigCommerce | Jose Madrid Salsa (Current) | Jose Madrid Salsa (Post-Phase 1) |
 |---------|---------|-------------|-------------|------------------------------|----------------------------------|
 | Product Import | ✅ CSV/Excel | ✅ CSV/Excel | ✅ CSV/Excel | ✅ JSON/CSV/Excel | ✅ JSON/CSV/Excel |
 | Order Import | ✅ CSV | ✅ CSV | ✅ CSV | ✅ CSV/Excel | ✅ CSV/Excel |

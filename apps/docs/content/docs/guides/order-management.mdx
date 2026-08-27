@@ -198,16 +198,6 @@ const orders = await prisma.order.findMany({
 })
 ```
 
-## Shopify Sync
-
-After order creation, a Shopify sync is automatically queued:
-
-```typescript
-queueShopifySync(order.id)
-```
-
-This creates a corresponding order in Shopify for fulfillment tracking across platforms.
-
 <Callout type="warn" title="Rate Limiting">
 The orders API is protected by rate limiting at 100 requests per minute per IP address. Both GET and POST handlers use `withRateLimit(handler, RATE_LIMITS.API_GENERAL)`.
 </Callout>

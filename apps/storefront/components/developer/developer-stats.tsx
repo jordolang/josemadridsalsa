@@ -121,7 +121,7 @@ const costTiers: readonly CostTier[] = [
     low: 1500,
     high: 5000,
     description:
-      'A themed Shopify or BigCommerce store with paid apps and someone to configure it — what a business this size would realistically buy instead.',
+      'A themed hosted storefront with paid apps and someone to configure it — what a business this size would realistically buy instead.',
     accent: 'from-verde-500 to-verde-700',
   },
   {

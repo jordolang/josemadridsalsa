@@ -81,7 +81,7 @@ DELIVERED · RETURNED`), `Order.fulfillmentStatus`, `OrderItem.quantityFulfilled
 
 The important part is `lib/orders/fulfillment.ts`. Six places in the codebase advance an order
 to shipped or delivered — `admin/orders/[id]/update-status`, `admin/orders/bulk-status`,
-`admin/orders/[id]/tracking`, `admin/orders/[id]/shipping-label`, `webhooks/shopify`, and
+`admin/orders/[id]/tracking`, `admin/orders/[id]/shipping-label`, and
 `lib/tracking/webhook-handlers.ts` (EasyPost). Rather than editing six routes to each set two
 fields, `buildFulfillmentUpdate()` returns status, fulfillment status and timestamps as one
 object and all six call it. Nothing outside that module assigns `fulfillmentStatus` directly,
@@ -137,7 +137,7 @@ Still to instrument: the Square, PayPal and `checkout/complete` payment paths (a
 
 The spec asks for `Website / POS / Festival / Wholesale / Manual / Marketplace / Phone`.
 Today an order's origin is inferable from `paymentChannel` (`ONLINE | POS` only),
-`importSource`, `fundraiserId`, `participantId`, and `shopifyOrderId` — none of which are
+`importSource`, `fundraiserId`, and `participantId` — none of which are
 mutually exclusive or enumerated.
 
 This is a consolidation job, not a greenfield one: the data mostly exists.

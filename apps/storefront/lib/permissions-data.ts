@@ -14,7 +14,6 @@ export const permissionDefinitions: PermissionDefinition[] = [
   { name: 'orders:import', description: 'Import orders from CSV/Excel', category: 'ORDERS' },
   { name: 'orders:modify', description: 'Modify existing orders', category: 'ORDERS' },
   { name: 'orders:print-labels', description: 'Print shipping labels', category: 'ORDERS' },
-  { name: 'orders:sync-shopify', description: 'Sync orders with Shopify', category: 'ORDERS' },
 
   // Products
   { name: 'products:read', description: 'View products', category: 'PRODUCTS' },

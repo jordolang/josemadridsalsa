@@ -13,6 +13,28 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Removed
+- **The Shopify integration, in full.** The Shopify store this synced to has been shut down and
+  the platform is not migrating to or from it, but the dead integration was still wired into all
+  three order-creating paths — `queueShopifySync()` fired on every checkout, every direct order,
+  and every gift-certificate purchase.
+
+  Gone: `app/api/shopify/` (order sync and cancel), `app/api/webhooks/shopify/`, `lib/shopify/`
+  (client, sync, webhook), the `shopify:test-webhook` script, the `orders:sync-shopify`
+  permission, the "View in Shopify" button on the admin order page, the MSW Admin-API mocks, and
+  both docs-site integration pages. Migration `20260826230000_remove_shopify_integration` drops
+  the six `orders.shopify*` columns and their unique index, and rebuilds `ShippingProviderType`
+  without its `SHOPIFY` value. No order ever synced successfully, so those columns held nothing
+  but the failure strings the dead integration wrote.
+
+  `deriveSalesChannel()` no longer infers `MARKETPLACE` from a Shopify order id. The channel is
+  still there and still reachable — a marketplace sale is now entered with an explicit channel
+  rather than derived from a sync that no longer runs.
+
+  `scripts/test-production-webhook.sh` went with it. It carried a hardcoded Shopify webhook
+  secret, which is in the git history and should be treated as burned regardless of the store
+  being dead.
+
 ### Added
 - **Contact form in the Picante chat.** The chat's opening message now carries an
   "Or fill out a contact form by clicking here" button beneath it, for visitors who would rather

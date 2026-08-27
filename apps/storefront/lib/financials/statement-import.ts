@@ -252,7 +252,7 @@ const CATEGORY_RULES: Array<{ category: LedgerCategory; patterns: RegExp[] }> = 
 ]
 
 /** Descriptions that mean "this is a processor paying out money the ledger already recorded". */
-const PROCESSOR_PAYOUT = [/stripe/i, /paypal/i, /square/i, /shopify ?payments/i, /merchant deposit/i]
+const PROCESSOR_PAYOUT = [/stripe/i, /paypal/i, /square/i, /merchant deposit/i]
 
 /**
  * A conservative category suggestion for a statement line.

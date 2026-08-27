@@ -879,8 +879,6 @@ The following secrets must be configured for the CI/CD pipeline to function:
 
 ### Third-Party Integration Secrets
 
-- `SHOPIFY_ADMIN_API_TOKEN`: Shopify Admin API access token
-- `SHOPIFY_STORE_DOMAIN`: Shopify store domain
 - `GOOGLE_MAPS_API_KEY`: Google Maps JavaScript API key
 - `GOOGLE_CALENDAR_API_KEY`: Google Calendar API key
 

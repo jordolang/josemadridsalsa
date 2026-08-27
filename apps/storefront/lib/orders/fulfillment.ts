@@ -264,7 +264,7 @@ export async function fulfillOrderItems(
 /**
  * Treat an order as entirely shipped: bring every item up to its ordered quantity and
  * derive. This is what an order-level "mark shipped" signal means — the admin status
- * dropdown, bulk status, the Shopify webhook, EasyPost tracking — so that the order enum
+ * dropdown, bulk status, EasyPost tracking — so that the order enum
  * and the item quantities cannot disagree about how much went out.
  *
  * A `Fulfillment` row is created for whatever was outstanding, because the invariant

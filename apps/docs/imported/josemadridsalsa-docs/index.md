@@ -99,8 +99,6 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application.
 | [GOOGLE_REVIEWS_SETUP.md](GOOGLE_REVIEWS_SETUP.md) | Google Reviews setup |
 | [GOOGLE_CALENDAR_SETUP.md](GOOGLE_CALENDAR_SETUP.md) | Google Calendar integration |
 | [GITHUB_INTEGRATION.md](GITHUB_INTEGRATION.md) | GitHub Actions / CI setup |
-| [SHOPIFY_INTEGRATION.md](SHOPIFY_INTEGRATION.md) | Shopify data migration |
-| [SHOPIFY_WEBHOOK_SETUP.md](SHOPIFY_WEBHOOK_SETUP.md) | Shopify webhook configuration |
 
 ### Features & Modules
 

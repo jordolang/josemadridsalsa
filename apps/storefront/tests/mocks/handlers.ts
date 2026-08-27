@@ -5,16 +5,9 @@ import { http, HttpResponse } from 'msw'
  *
  * These handlers mock external services called by the application:
  * - Stripe API (payment processing, tax calculation)
- * - Shopify Admin API (order sync)
  * - Google Places API (location data)
  * - Google Maps API (geocoding, images)
  */
-
-// Helper to get Shopify domain from request
-const getShopifyDomain = (url: URL) => {
-  const match = url.hostname.match(/^(.+?)\.myshopify\.com$/)
-  return match ? match[1] : 'test-store'
-}
 
 export const handlers = [
   // ============================================================
@@ -119,68 +112,6 @@ export const handlers = [
       status: 'succeeded',
       created: Math.floor(Date.now() / 1000),
       reason: null,
-    })
-  }),
-
-  // ============================================================
-  // Shopify Admin API Handlers
-  // ============================================================
-
-  // Create Order
-  http.post('https://:domain.myshopify.com/admin/api/:version/orders.json', async ({ request, params }) => {
-    const body = await request.json()
-    const domain = getShopifyDomain(new URL(request.url))
-
-    return HttpResponse.json({
-      order: {
-        id: Math.floor(Math.random() * 1000000000),
-        name: `#${Math.floor(Math.random() * 10000)}`,
-        order_number: Math.floor(Math.random() * 10000),
-        admin_graphql_api_id: `gid://shopify/Order/${Math.floor(Math.random() * 1000000000)}`,
-        email: (body as any)?.order?.email || 'test@example.com',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        financial_status: (body as any)?.order?.financial_status || 'paid',
-        fulfillment_status: null,
-        cancelled_at: null,
-        closed_at: null,
-        currency: 'USD',
-        total_price: '20.00',
-        subtotal_price: '18.00',
-        total_tax: '2.00',
-        tags: (body as any)?.order?.tags || '',
-        note: (body as any)?.order?.note || null,
-        note_attributes: (body as any)?.order?.note_attributes || [],
-        line_items: (body as any)?.order?.line_items || [],
-      },
-    })
-  }),
-
-  // Cancel Order
-  http.post('https://:domain.myshopify.com/admin/api/:version/orders/:id/cancel.json', ({ params }) => {
-    return HttpResponse.json({
-      order: {
-        id: params.id,
-        cancelled_at: new Date().toISOString(),
-        financial_status: 'voided',
-      },
-    })
-  }),
-
-  // Get Order
-  http.get('https://:domain.myshopify.com/admin/api/:version/orders/:id.json', ({ params }) => {
-    return HttpResponse.json({
-      order: {
-        id: params.id,
-        name: '#1001',
-        order_number: 1001,
-        admin_graphql_api_id: `gid://shopify/Order/${params.id}`,
-        financial_status: 'paid',
-        fulfillment_status: null,
-        cancelled_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
     })
   }),
 

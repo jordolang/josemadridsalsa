@@ -63,7 +63,6 @@ EMAIL_DENY_DOMAINS = {
     "usps.com",
     "easypost.com",
     "faire.com",
-    "shopify.com",
     "mailchimp.com",
     "resend.com",
     "wixpress.com",
