@@ -1,0 +1,100 @@
+---
+title: Webhooks
+description: The five inbound webhook endpoints, how each verifies its sender, and what it changes.
+---
+
+# Webhooks
+
+Five providers post events to the storefront. **Webhooks are what finalise an
+order** — the browser returning from a payment page is a hint, not a fact. Every
+endpoint lives under `app/api/webhooks/`.
+
+| Endpoint | Provider | Verified with |
+|---|---|---|
+| `/api/webhooks/stripe` | Stripe | `stripe-signature` header, `STRIPE_WEBHOOK_SECRET` |
+| `/api/webhooks/paypal` | PayPal | PayPal's `verify-webhook-signature` API, `PAYPAL_WEBHOOK_ID` |
+| `/api/webhooks/square` | Square | Square adapter signature check |
+| `/api/webhooks/easypost` | EasyPost | `EASYPOST_WEBHOOK_SECRET` |
+| `/api/webhooks/resend` | Resend | Resend SDK / Svix headers, `RESEND_WEBHOOK_SECRET` |
+
+<Callout type="warn">
+Every endpoint rejects an unverified request. A missing secret is a failure, not a
+bypass — if `PAYPAL_WEBHOOK_ID` is unset the route logs `CRITICAL` and refuses.
+</Callout>
+
+## Stripe
+
+Handled events:
+
+| Event | Effect |
+|---|---|
+| `payment_intent.succeeded` | Mark `Payment` SUCCEEDED, `Order` PROCESSING, decrement inventory |
+| `payment_intent.payment_failed` | Mark the payment failed |
+| `payment_intent.canceled` | Cancel the payment, release held inventory |
+| `charge.refunded` | Record a `Refund` |
+| `checkout.session.completed` | Finalise a Checkout Session order |
+| `invoice.payment_succeeded` | Invoice settlement |
+
+Anything else is logged as unhandled and acknowledged — returning an error for an
+event you do not care about makes Stripe retry it forever.
+
+## PayPal
+
+| Event | Effect |
+|---|---|
+| `PAYMENT.CAPTURE.COMPLETED` | Mark paid, move the order to PROCESSING |
+| `PAYMENT.CAPTURE.REFUNDED` | Record a refund |
+
+Verification is a round-trip to PayPal's own API rather than a local HMAC, so the
+handler is only as fast as that call.
+
+## Square
+
+| Event | Effect |
+|---|---|
+| `payment.completed` | Mark paid — covers both online and [POS](/docs/features/pos) takings |
+| `refund.created`, `refund.updated` | Record or update a refund |
+
+## EasyPost
+
+Switches on `event.description`:
+
+| Event | Effect |
+|---|---|
+| `tracker.created`, `tracker.updated` | Update shipment tracking status |
+
+## Resend
+
+| Event | Effect |
+|---|---|
+| `email.bounced` | Write `EmailBounce`, add to `EmailSuppression` |
+| `email.complained` | Suppress the address |
+| `email.delivered` | Log delivery |
+| `email.opened` | Record an open |
+| `email.clicked` | Record a click |
+
+Suppressions are honoured by the campaign sender — see
+[Email Marketing](/docs/features/email-marketing).
+
+## Idempotency
+
+`WebhookEvent` records each event by `providerEventId` (and `stripeEventId` for
+Stripe), with a `processed` flag. Providers retry, and the same event will arrive
+more than once; the record is what makes a replay a no-op rather than a second
+inventory decrement.
+
+## Testing locally
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+
+The other providers need a public tunnel. Point the provider's dashboard at the
+tunnel URL and use **its own secret** — a webhook signed for production will not
+verify against a development secret, which is the intended behaviour.
+
+## Related
+
+- [Payment Architecture](/docs/features/payment-architecture)
+- [Order Lifecycle](/docs/features/order-lifecycle)
+- [Scheduled Jobs](/docs/configuration/cron-jobs)

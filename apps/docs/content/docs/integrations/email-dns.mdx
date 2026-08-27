@@ -1,0 +1,69 @@
+---
+title: Email DNS Setup
+description: SPF, DKIM and DMARC records that let Resend deliver mail as josemadrid.net.
+---
+
+# Email DNS Setup
+
+Transactional and marketing email is sent through **Resend** (see
+[Email Integration](/docs/integrations/email)). Delivery only works reliably once
+the sending domain is authenticated — otherwise mail lands in spam or is rejected
+outright, and the sender has no way to tell.
+
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `RESEND_API_KEY` | Resend API key |
+| `FROM_EMAIL` | The verified sender address — must be on a verified domain |
+| `RESEND_WEBHOOK_SECRET` | Verifies inbound delivery events |
+| `UNSUBSCRIBE_SECRET` | Signs one-click unsubscribe links |
+
+## Records to add
+
+Resend generates the exact values when the domain is added in its dashboard
+(Domains → Add Domain). Add every record it shows before marking the domain
+verified. There are three kinds:
+
+| Type | Purpose |
+|---|---|
+| **SPF** (`TXT`) | Authorises Resend's servers to send as the domain |
+| **DKIM** (`TXT`, on a Resend-provided selector) | Signs each message so the recipient can verify it was not altered |
+| **DMARC** (`TXT` at `_dmarc`) | Tells receivers what to do when SPF/DKIM fail, and where to send reports |
+
+<Callout type="warn">
+A domain can only have **one** SPF record. If one already exists, merge Resend's
+`include:` into it rather than adding a second `TXT` — two SPF records is a hard
+failure, not a merge.
+</Callout>
+
+Start DMARC at `p=none` with a reporting address, read the reports for a couple of
+weeks, and only then tighten to `quarantine` or `reject`. Going straight to `reject`
+before SPF and DKIM are both passing will silently drop legitimate mail.
+
+## Verifying
+
+1. Add every record Resend lists, exactly as shown.
+2. Wait for propagation — usually minutes, occasionally up to a few hours.
+3. Click **Verify** in the Resend dashboard. All records must show green.
+4. Send a real test to an address on a different provider (Gmail, Outlook) and use
+   "Show original" / message headers to confirm `spf=pass` and `dkim=pass`.
+
+<Callout type="info">
+Do not test deliverability by triggering the production senders. Production has been
+pre-traffic — an errant campaign send is not recoverable. Verify with a single
+manual send to your own address instead.
+</Callout>
+
+## Delivery events
+
+Resend posts bounces, complaints and deliveries to `/api/webhooks/resend`, verified
+with `RESEND_WEBHOOK_SECRET` via the Resend SDK (Svix signature headers). Those
+events populate `EmailBounce` and `EmailSuppression`, which the campaign sender
+respects. See [Email Marketing](/docs/features/email-marketing).
+
+## Related
+
+- [Email Integration](/docs/integrations/email)
+- [SMTP Configuration](/docs/configuration/smtp)
+- [Webhooks](/docs/api/webhooks)

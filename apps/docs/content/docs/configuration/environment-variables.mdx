@@ -63,6 +63,48 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 | `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side (`pk_test_...`) |
 | `STRIPE_WEBHOOK_SECRET` | Yes | Webhook signing secret (`whsec_...`) |
 
+## PayPal
+
+| Variable | Required | Description |
+|---|---|---|
+| `PAYPAL_CLIENT_ID` | For PayPal | PayPal REST app client id |
+| `PAYPAL_CLIENT_SECRET` | For PayPal | PayPal REST app secret |
+| `PAYPAL_SANDBOX` | No | `true` uses the sandbox API host |
+| `PAYPAL_WEBHOOK_ID` | For PayPal | Webhook id used to verify inbound events. **Missing means every webhook is rejected** — the route logs `CRITICAL` rather than trusting the payload. |
+| `PAYPAL_RETURN_URL` | No | Where PayPal returns the buyer after approval |
+| `PAYPAL_CANCEL_URL` | No | Where PayPal returns the buyer on cancel |
+
+## Square
+
+| Variable | Required | Description |
+|---|---|---|
+| `SQUARE_ACCESS_TOKEN` | For Square | Square access token |
+| `SQUARE_LOCATION_ID` | For Square | Square location the charge belongs to |
+| `SQUARE_SANDBOX` | No | `true` uses the Square sandbox |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | For Square | Verifies inbound webhooks |
+| `SQUARE_WEBHOOK_URL` | For Square | The notification URL the signature is computed against |
+| `SQUARE_TERMINAL_DEVICE_ID` | For [POS](/docs/features/pos) | The Square Terminal to send an in-person charge to |
+
+## Webhook Secrets
+
+Every inbound webhook is verified. A missing secret is a refusal, not a bypass — see
+[Webhooks](/docs/api/webhooks).
+
+| Variable | Required | Description |
+|---|---|---|
+| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe signature secret (also listed above) |
+| `PAYPAL_WEBHOOK_ID` | For PayPal | Verified via PayPal's own API |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | For Square | HMAC signature key |
+| `EASYPOST_WEBHOOK_SECRET` | For shipping | Verifies EasyPost tracking events |
+| `RESEND_WEBHOOK_SECRET` | For email events | Verifies Resend delivery/bounce events (Svix headers) |
+
+## Scheduled Jobs
+
+| Variable | Required | Description |
+|---|---|---|
+| `CRON_SECRET` | **Yes in production** | Bearer token Vercel Cron sends to `/api/cron/*`. Outside production a missing value is allowed; in production a missing value makes every cron route **refuse**, rather than leaving them world-callable. See [Scheduled Jobs](/docs/configuration/cron-jobs). |
+| `UNSUBSCRIBE_SECRET` | For marketing email | Signs one-click unsubscribe links |
+
 ## Email (Resend)
 
 | Variable | Required | Description |
@@ -162,7 +204,12 @@ with nothing in the response to indicate it.
 
 | Variable | Required | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | For AI chat | Anthropic API key for Claude |
+| `ANTHROPIC_API_KEY` | For AI chat | Anthropic API key. Powers the Picante chat assistant and the form-capture extractor. |
+| `ANTHROPIC_MODEL` | No | Model used by the Picante chat assistant. Defaults to `claude-opus-5`; `claude-haiku-4-5` is the cheaper option. |
+| `AI_CHAT_PROVIDER` | No | Backend for `/api/ai-chat`: `anthropic` (default), `openai`, or `smileyface`. |
+| `NEXT_PUBLIC_AI_CHAT_PROVIDER` | No | Browser-visible copy of the same choice, used only for the "Powered by" label in the chat widget. |
+| `OPENAI_API_KEY` | For `AI_CHAT_PROVIDER=openai` | OpenAI API key. Only read when the provider is set to `openai`. |
+| `OPENAI_MODEL` | No | Model used when the provider is `openai`. Defaults to `gpt-4o-mini`. |
 
 ## Internal
 

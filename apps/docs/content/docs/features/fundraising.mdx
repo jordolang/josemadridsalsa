@@ -1,0 +1,153 @@
+---
+title: Fundraising
+description: How a group runs a salsa fundraiser — campaigns, participants, pricing, commission, and the portal they manage it from.
+---
+
+# Fundraising
+
+A fundraiser is a group — a school, a team, a church — selling salsa for a period of
+time and keeping a share of what they raise. It is a first-class part of the
+platform, not a bolt-on: campaigns have their own pages, their own participants,
+their own checkout path, and their own portal.
+
+## The shape of a campaign
+
+`Fundraiser` is the campaign. It carries the organisation, the coordinator's contact
+details, a `startDate`/`endDate` window, an optional `goal`, and a `commissionRate`.
+
+| Status | Meaning |
+|---|---|
+| `DRAFT` | Being set up; not public |
+| `ACTIVE` | Live and selling |
+| `ENDED` | Past its end date |
+| `CANCELLED` | Called off |
+
+Each campaign gets a `slug` (`/fundraise/[slug]`) and may also get a `subdomain` for
+its own branded entry point. `pageConfig`, `logoUrl`, `coverPhotoUrl`,
+`missionStatement` and `bio` drive the campaign page, which the coordinator edits
+themselves in the portal.
+
+Rollups — `totalOrders`, `totalRevenue`, `totalCommission` — are maintained on the
+campaign rather than recomputed per request.
+
+## Participants
+
+`FundraiserParticipant` is one seller within a campaign. Each gets a unique
+`referralCode`; an order attributed to that code counts toward both the
+participant's and the campaign's totals.
+
+`lastMilestoneNotified` records the highest sales milestone a participant has
+already been congratulated for. It is a marker rather than a derived value, because
+domain events are delivered at least once — without it, a replayed
+`payment.completed` sends a second "you reached 25 sales" email, and a burst of
+orders sends one message per threshold crossed instead of one message.
+
+Participants can be grouped into `FundraiserTeam`s, and campaigns can belong to a
+`FundraiserSeason`.
+
+## Pricing
+
+<Callout type="warn">
+**A fundraiser sells *above* retail.** The group's share comes out of the gap
+between the fundraiser price and the catalogue price — not out of the margin on the
+jar. Roughly: a jar sells for $10 on a fundraiser page and the split is 50/50.
+</Callout>
+
+`FundraiserProduct.price` carries the override and falls back to the catalogue price
+when a campaign has not set one. Every caller — both public fundraiser pages, the
+portal product block, and all three checkout routes — must resolve price through
+`fundraiserUnitPrice()` in `lib/fundraising/pricing.ts`.
+
+The rule is deliberately `??` and not a truthiness check: an override of **zero** is
+a campaign giving something away, and falling through to the catalogue price would
+charge for it.
+
+## Commission
+
+`lib/fundraising/commission.ts` is the live implementation. The rate is stored as a
+**percentage** on `Fundraiser.commissionRate` (`50.00`, not `0.50`).
+
+```
+commissionBase = max(0, subtotal − discountAmount)
+commission     = round(commissionBase × rate / 100, 2)
+```
+
+Two things the base deliberately excludes:
+
+- **Shipping and tax.** Shipping is money owed to a carrier and tax is money owed to
+  a state. Paying a share of either comes straight out of the gap that funds the
+  group's share in the first place. This used to be computed from `order.total`; on
+  a 50% campaign, a $10 jar shipped for $6 with tax paid out about $8 to the group
+  instead of $5.
+- **Gift certificates.** A certificate is a means of payment, not a lower price, so
+  it does not reduce the base. Discount codes *do*, because a promo genuinely
+  reduces what was earned on the goods.
+
+<Callout type="warn">
+A campaign's **"goal" and "raised" figures mean gross sales, not commission.** This
+reads backwards the first time you see it and it is not a bug — do not "fix" it.
+</Callout>
+
+`lib/fundraising/calculate-commission.ts` implements the opposite (fractional)
+convention and has **no callers**. Do not import it.
+
+## Lifecycle emails
+
+`lib/fundraising/lifecycle.ts` runs from `/api/cron/fundraiser-lifecycle` (daily,
+13:00 UTC) and handles the two moments nobody was previously told about:
+
+- **Launch** — the coordinator is told their campaign is live.
+- **Closing summary** — the coordinator gets the totals, which is the one thing they
+  need in order to hand money to a school.
+
+This is a sweep rather than an event consumer because a campaign *ending* has no
+actor: it is simply a date passing. No route runs and no event would ever be
+emitted. `launchEmailSentAt` and `summaryEmailSentAt` are sent-markers — status can
+move back and forth while an admin edits, and the coordinator should not be
+re-announced each time.
+
+A 30-day window guards the summary. `vercel-build` wraps `prisma migrate deploy` in
+a warning rather than a failure, so a deploy where the backfill did not apply would
+otherwise mail a closing summary to *every* coordinator whose campaign ever
+finished. A window cannot be silently skipped; a data backfill can.
+
+## The fundraiser portal
+
+Coordinators sign in to `/fundraiser-portal`:
+
+| Page | Purpose |
+|---|---|
+| `dashboard` | Totals, recent orders, progress against goal |
+| `team` | Participants, referral codes, per-seller totals |
+| `page-editor` | Edit the public campaign page |
+| `advanced-profile` | Mission statement, bio, branding |
+| `assets` | Logos and cover photos |
+| `analytics` | Traffic and conversion for the campaign |
+| `character` | The arena avatar (see below) |
+| `settings` | Contact details and preferences |
+| `pending` | Holding page before access is approved |
+
+Access is governed by `FundraiserAccount`, `FundraiserProfile` and
+`FundraiserAccess`, checked through `lib/fundraiser-auth.ts` — a separate boundary
+from admin RBAC. The `FUNDRAISER` role carries only four permissions:
+`fundraiser:view-dashboard`, `fundraiser:edit-page`, `fundraiser:upload-assets`,
+`fundraiser:view-analytics`.
+
+## Signup
+
+`/fundraise/signup` is the public application form. Submissions land as
+`FundraiserSignup` records for an admin to review in
+`/admin/fundraisers`, which is also where campaigns are created and edited.
+
+## Gamification and the arena
+
+Campaigns can opt into social features (`enableSocialFeatures`). Sales become
+`FundraiserSaleEvent`s that participants can react and reply to, with shields,
+share events and championships layered on top. That is documented separately in
+[Battle Arena](/docs/features/battle-arena).
+
+## Related
+
+- [Battle Arena](/docs/features/battle-arena)
+- [Fundraiser Contacts](/docs/features/fundraiser-contacts) — the CRM built from the archive
+- [Bookkeeping Ledger](/docs/features/bookkeeping-ledger) — where commission lands in the books

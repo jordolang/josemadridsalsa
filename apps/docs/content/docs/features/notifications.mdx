@@ -1,0 +1,75 @@
+---
+title: Notifications & Audit Log
+description: Operator alerts that do not flood, and the immutable record of who changed what.
+---
+
+# Notifications & Audit Log
+
+Two operational records that are easy to conflate: **notifications** tell an operator
+something needs attention; the **audit log** records what was done.
+
+## Notifications
+
+`Notification` is per-user and surfaces at `/admin/notifications`.
+
+| Type | Raised when |
+|---|---|
+| `ORDER_NEW` | A new order arrives |
+| `ORDER_STATUS_CHANGE` | An order moves state |
+| `ORDER_HIGH_VALUE` | An unusually large order |
+| `ORDER_MODIFIED` | An order is edited after the fact |
+| `ORDER_UNFULFILLED_STALE` | An order has sat unfulfilled too long |
+| `PAYMENT_FAILED` | A payment did not go through |
+| `INVENTORY_LOW` | Stock crossed the low threshold |
+| `INVENTORY_OUT_OF_STOCK` | Stock hit zero |
+| `RETURN_REQUESTED` | A customer asked to return something |
+| `RETURN_AGING` | A return has been open too long |
+| `INTEGRATION_FAILED` | A third-party sync broke |
+| `SYSTEM` | Everything else |
+
+Each carries a `severity` (`INFO` by default), a `title` and `message`, an optional
+`entityType`/`entityId`, and a `link` for where clicking should take the operator.
+
+### Why they do not flood
+
+`dedupeKey` is a stable identifier for the *underlying fact*, unique per user:
+
+```prisma
+@@unique([userId, dedupeKey])
+```
+
+Re-observing the same condition **updates the existing row** rather than creating
+another. Without it, a check that runs every two hours would post "inventory low on
+Mild" twelve times a day until someone restocked. Give every recurring check a
+dedupe key derived from the condition, not from the moment.
+
+`isRead` / `readAt` track acknowledgement; indexes on `(userId, isRead)` and
+`createdAt` serve the unread badge and the list.
+
+## Audit log
+
+`AuditLog` is the append-only record of consequential actions:
+
+| Field | Notes |
+|---|---|
+| `userId` | Nullable — a system action has no actor |
+| `action` | What happened |
+| `entityType`, `entityId` | What it happened to |
+| `changes` | JSON before/after |
+| `ipAddress`, `userAgent` | Where it came from |
+
+Indexed on `userId`, `action`, `(entityType, entityId)` and `createdAt` — the four
+ways anyone actually asks the question. Browse it at `/admin/audit-logs`.
+
+Helpers live in `lib/audit.ts`.
+
+<Callout type="warn">
+Audit rows are evidence. Write them; never update or delete them. If a record is
+wrong, append a corrective entry rather than editing the original.
+</Callout>
+
+## Related
+
+- [Admin Dashboard](/docs/features/admin-dashboard)
+- [Inventory Management](/docs/features/inventory)
+- [Staff & Permissions](/docs/features/staff-and-permissions)

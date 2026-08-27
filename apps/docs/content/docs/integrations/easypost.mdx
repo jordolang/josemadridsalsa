@@ -1,0 +1,74 @@
+---
+title: EasyPost
+description: The shipping-rate and label provider — configuration, origin address, and the unit convention that matters.
+---
+
+# EasyPost
+
+Shipping rates, labels and tracking come from **EasyPost**. It is selected by
+environment variable rather than by a database row, and the code lives in:
+
+| File | Responsibility |
+|---|---|
+| `lib/shipping-api.ts` | EasyPost client, rate shopping, label purchase |
+| `lib/shipping-calculator.ts` | Turning a cart into a parcel and a quote |
+| `lib/shipping-carriers.ts` | Carrier/service resolution |
+
+## Configuration
+
+| Variable | Purpose |
+|---|---|
+| `SHIPPING_PROVIDER` | Defaults to `easypost` |
+| `SHIPPING_API_KEY` | EasyPost API key (test or production) |
+| `SHIPPING_TEST_MODE` | `true` uses EasyPost test behaviour |
+| `SHIPPING_ORIGIN_ADDRESS` | Ship-from street |
+| `SHIPPING_ORIGIN_CITY` | Ship-from city |
+| `SHIPPING_ORIGIN_STATE` | Ship-from state |
+| `SHIPPING_ORIGIN_ZIP` | Ship-from postal code |
+| `SHIPPING_ORIGIN_COUNTRY` | Ship-from country |
+
+<Callout type="warn">
+The origin-address variables have a built-in fallback that is **not** the Zanesville
+facility. If they are unset, quotes are calculated from the wrong city and every
+rate is wrong in a way that looks plausible. Set all five in every environment that
+quotes shipping.
+</Callout>
+
+## Units
+
+`Product.weight` is in **ounces**. A jar is `16` — sixteen ounces, not sixteen
+pounds.
+
+<Callout type="warn">
+This is the single most expensive convention in the shipping code. The calculator
+once read the column as pounds, which quoted every parcel at sixteen times its real
+weight. If a rate looks absurd, check the unit conversion before checking EasyPost.
+</Callout>
+
+## Flat-rate presets
+
+Not every order needs a live rate. The admin can configure flat-rate shipping
+presets under Settings → Shipping (`/admin/settings/shipping`), which short-circuit
+the EasyPost call for the cases they cover. See
+[Shipping](/docs/features/shipping) for how the two interact.
+
+## Labels
+
+`ShippingLabel` records a purchased label; `ShippingCarrier` holds the carrier rows
+the admin shipping-label endpoint resolves against.
+
+<Callout type="info">
+The `ShippingProvider` table and enum were dropped — nothing read them and they were
+empty. Provider selection is environment-driven. `ShippingCarrier` stays.
+</Callout>
+
+## Webhook
+
+`/api/webhooks/easypost` receives tracking updates, verified against
+`EASYPOST_WEBHOOK_SECRET`. See [Webhooks](/docs/api/webhooks).
+
+## Related
+
+- [Shipping](/docs/features/shipping) — customer-facing behaviour
+- [Shipping Guide](/docs/features/shipping-guide) — operational walkthrough
+- [Pirate Ship](/docs/guides/pirate-ship) — the manual label alternative

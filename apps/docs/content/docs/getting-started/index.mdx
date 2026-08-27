@@ -4,7 +4,9 @@ description: Set up your Jose Madrid Salsa development environment
 ---
 
 <Callout title="Prerequisites">
-Before you begin, make sure you have **Node.js 24 LTS**, **npm**, **PostgreSQL**, and **Git** installed on your machine.
+Before you begin, make sure you have **Node.js 20** (see `.nvmrc`), **npm 11**, **PostgreSQL**, and **Git** installed on your machine.
+
+This is a Turborepo monorepo using **npm workspaces**. Install from the repository root — npm only honours the root `overrides` block from there, and a per-app install produces a different dependency tree.
 </Callout>
 
 <PageInlineTOC>On this page</PageInlineTOC>
@@ -20,7 +22,9 @@ Before you begin, make sure you have **Node.js 24 LTS**, **npm**, **PostgreSQL**
   <Step>
     ### Database Setup
 
-    Initialize your PostgreSQL database using the [Database Guide](/docs/getting-started/database-setup). The platform uses **Prisma** as the ORM with **Neon** serverless Postgres.
+    Initialize your PostgreSQL database using the [Database Guide](/docs/getting-started/database-setup). The platform uses **Prisma 6**. Development runs against Neon; production runs on Supabase — both are plain Postgres reached through Prisma.
+
+    Two connection strings are needed: `DATABASE_URL` (pooled, used at runtime) and `DATABASE_URL_UNPOOLED` (direct, used by migrations).
 
     ```bash title="Database setup"
     npx prisma migrate dev
@@ -30,22 +34,22 @@ Before you begin, make sure you have **Node.js 24 LTS**, **npm**, **PostgreSQL**
   <Step>
     ### Install & Run
 
-    <Tabs items={['npm', 'pnpm']}>
-      <Tab value="npm">
-        ```bash title="Terminal"
-        npm install
-        npm run dev
-        ```
-      </Tab>
-      <Tab value="pnpm">
-        ```bash title="Terminal"
-        pnpm install
-        pnpm dev
-        ```
-      </Tab>
-    </Tabs>
+    ```bash title="Terminal (repository root)"
+    npm install --legacy-peer-deps
+    npm run dev
+    ```
 
-    The application will be available at [http://localhost:3000](http://localhost:3000).
+    The storefront will be available at [http://localhost:3000](http://localhost:3000).
+
+    Other apps run on their own ports:
+
+    | Command | App | URL |
+    |---|---|---|
+    | `npm run dev` | storefront | http://localhost:3000 |
+    | `npm run dev:fundraising` | fundraising | http://localhost:3001 |
+    | `npm run dev:docs` | documentation | http://localhost:3002 |
+    | `npm run dev:admin` | admin | http://localhost:3003 |
+    | `npm run dev:all` | everything, via Turbo | — |
   </Step>
 </Steps>
 
@@ -103,5 +107,9 @@ Before you begin, make sure you have **Node.js 24 LTS**, **npm**, **PostgreSQL**
 </Cards>
 
 <Callout type="warn" title="Authentication Providers">
-The platform supports Google, GitHub, Facebook, and Apple OAuth in addition to email/password credentials. You'll need to configure OAuth app credentials for each provider you want to enable. See the [OAuth Setup Guide](https://github.com/jordolang/josemadridsalsa/blob/main/docs/OAUTH-SETUP-GUIDE.md) for details.
+The platform supports Google, GitHub, Facebook, and Apple OAuth in addition to email/password credentials. You'll need to configure OAuth app credentials for each provider you want to enable — see [OAuth Configuration](/docs/configuration/oauth).
+</Callout>
+
+<Callout type="info" title="Minimum to boot">
+`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` and `MASTER_KEY` are required before the app will start. Everything else degrades gracefully when unset. Copy `.env.example` to `.env.local` and fill those four first — see [Environment Variables](/docs/configuration/environment-variables).
 </Callout>

@@ -1,0 +1,66 @@
+---
+title: Reviews
+description: Product reviews and site reviews — collection, moderation, and the Google forwarding path.
+---
+
+# Reviews
+
+Two separate things share the word "review": a **product review** attached to a
+catalogue item by a signed-in customer, and a **site review** about the business as a
+whole. Both are moderated before they appear.
+
+## Product reviews
+
+`Review` links a `User` to a `Product`:
+
+| Field | Notes |
+|---|---|
+| `rating` | Integer star rating |
+| `title`, `comment` | Optional |
+| `isVerified` | Set when the reviewer actually bought the product |
+| `status` | `PENDING` → `APPROVED` / `REJECTED` |
+| `moderatedAt`, `moderatedBy` | Moderation trail |
+
+Unique on `(userId, productId)` — **one review per customer per product**. A second
+submission updates the first rather than stacking.
+
+Reviews cascade-delete with their product and their user, so removing either does
+not leave orphans.
+
+## Site reviews
+
+`SiteReview` is about the business, not a product, and does **not** require an
+account:
+
+| Field | Notes |
+|---|---|
+| `name`, `email` | Optional, supplied by the reviewer |
+| `source` | Where it came from |
+| `forwardedToGoogle` | Whether the reviewer was passed on to leave a Google review |
+| `ipAddress`, `userAgent` | Kept for spam triage |
+| `status` | Same `PENDING`/`APPROVED`/`REJECTED` flow |
+
+Because it is unauthenticated, it is the surface that attracts spam — hence the
+request metadata and the mandatory moderation step.
+
+## Moderating
+
+`/admin/reviews` lists both queues. Approving is what makes a review public;
+`PENDING` reviews are never rendered on the storefront.
+
+## Asking for reviews
+
+`/api/cron/review-requests` runs daily at 10:00 UTC and emails recent buyers. Writing
+a review earns 50 [loyalty](/docs/features/loyalty) points.
+
+## Google reviews
+
+Aggregated Google reviews shown on the site are a separate, read-only integration —
+see [Google Reviews](/docs/integrations/google-reviews). `forwardedToGoogle` on a
+site review records that a happy reviewer was pointed at Google to leave one there.
+
+## Related
+
+- [Products](/docs/features/products)
+- [Loyalty Program](/docs/features/loyalty)
+- [Scheduled Jobs](/docs/configuration/cron-jobs)

@@ -1,0 +1,57 @@
+---
+title: Discount Codes
+description: Promo codes — types, limits, and how they are validated at checkout.
+---
+
+# Discount Codes
+
+Promotional codes are managed at `/admin/settings/discount-codes` and validated by
+`lib/discounts.ts`.
+
+## The code
+
+`DiscountCode` carries:
+
+| Field | Meaning |
+|---|---|
+| `code` | Unique, matched **case-insensitively** (stored and compared uppercase) |
+| `type` | `PERCENTAGE` or `FIXED_AMOUNT` |
+| `value` | The percentage, or the dollar amount |
+| `minPurchase` | Minimum pre-discount cart total |
+| `maxUses` / `usedCount` | Global usage cap |
+| `maxUsesPerUser` | Per-customer cap, counted through `DiscountUsage` |
+| `startsAt` / `expiresAt` | Validity window |
+| `isActive` | Master switch |
+
+`DiscountUsage` records each redemption, which is what makes the per-user cap
+enforceable.
+
+## Validation
+
+`validateDiscountCode(code, cartTotal, userId?)` returns a
+`DiscountValidationResult` — never throws for a bad code. It checks, in order, that
+the code exists and is active, that now falls inside the validity window, that the
+cart clears `minPurchase`, and that neither the global nor the per-user usage limit
+has been reached. On success it returns the computed `discountAmount` and the code's
+metadata.
+
+Passing `userId` is what enables the per-user check; without it only the global cap
+is enforced.
+
+## Interaction with other money
+
+- **Fundraiser commission** — a discount *does* reduce the commission base, because
+  it genuinely reduces what was earned on the goods. See
+  [Fundraising](/docs/features/fundraising).
+- **Gift certificates** — a means of payment, not a discount. They do not reduce the
+  commission base and are not validated here. See
+  [Gift Certificates](/docs/features/gift-certificates).
+- **Loyalty tiers** — a standing percentage from
+  [the loyalty program](/docs/features/loyalty), applied independently of a code.
+- **QuickBooks** — checkout discounts are booked against `discountAccountId`. See
+  [QuickBooks Online](/docs/integrations/quickbooks).
+
+## Related
+
+- [Checkout Flow](/docs/features/checkout-flow)
+- [Store Settings](/docs/features/store-settings)

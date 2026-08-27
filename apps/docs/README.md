@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# @jose-madrid/docs
 
-## Getting Started
+The Jose Madrid Salsa documentation site — a [Fumadocs](https://fumadocs.dev) (MDX)
+app that is the **canonical home for all project documentation**.
 
-First, run the development server:
+This workspace was previously a standalone repository (`salsadocs`). It now lives in
+the monorepo alongside the apps it documents, so a change to a feature and the doc
+that describes it land in the same commit.
+
+## Running it
+
+From the repo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev:docs      # http://localhost:3002
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Or from this directory: `npm run dev`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Where content lives
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All pages are MDX under `content/docs`, organised into the sections registered in
+`content/docs/meta.json`:
 
-## Learn More
+| Section | Purpose |
+|---|---|
+| `getting-started/` | First-run setup: environment, database |
+| `guides/` | Task-oriented walkthroughs for humans |
+| `features/` | What each product surface does and where its code lives |
+| `configuration/` | Settings, env vars, framework config |
+| `integrations/` | Third-party services and how they are wired |
+| `deployment/` | Vercel, monitoring, security, operations |
+| `api/` | REST API reference |
 
-To learn more about Next.js, take a look at the following resources:
+Conventions (also in the root `CLAUDE.md`, Part 14):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Filenames are `kebab-case.mdx`.
+- Every page needs `title` and `description` frontmatter.
+- Each section has an `index.mdx` that links its pages — add new pages there or
+  they are unreachable from the sidebar.
+- Never put real secret values in a page.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+The docs site is its **own Vercel project**, deployed from this monorepo with
+**Root Directory = `apps/docs`**. `vercel.json` here restricts deployments to the
+`main` branch and uses `turbo-ignore` so a commit that does not touch `apps/docs`
+skips the docs build entirely — the storefront and the docs site deploy
+independently even though they share a repository.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [Monorepo Deployment](content/docs/deployment/monorepo.mdx) for the full
+per-project setup.

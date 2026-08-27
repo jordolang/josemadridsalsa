@@ -18,7 +18,8 @@ Everything you need to understand, build upon, and deploy the Jose Madrid Salsa 
 <Cards>
   <Card title="Getting Started" href="/docs/getting-started" description="Set up your dev environment and run the project locally" />
   <Card title="API Reference" href="/docs/api" description="REST API endpoints, authentication, and request schemas" />
-  <Card title="Features" href="/docs/features" description="Checkout, payments, shipping, battle arena, and more" />
+  <Card title="Features" href="/docs/features" description="Storefront, checkout, fundraising, back office, and more" />
+  <Card title="Guides" href="/docs/guides" description="Task-oriented walkthroughs for operators and developers" />
   <Card title="Integrations" href="/docs/integrations" description="Stripe, PayPal, Square, Google Maps, and email services" />
   <Card title="Deployment" href="/docs/deployment" description="Deploy to Vercel, manage environments, and CI/CD" />
   <Card title="Configuration" href="/docs/configuration" description="Environment variables, database, and service setup" />
@@ -31,18 +32,21 @@ Jose Madrid Salsa is a full-featured e-commerce platform built with **Next.js 16
 <Tabs items={['Core Features', 'Tech Stack', 'Integrations']}>
   <Tab value="Core Features">
     - **E-commerce** — Product catalog, shopping cart, checkout, and order management
-    - **Payment Processing** — Stripe, PayPal, and Square for flexible payments
-    - **Shipping & Fulfillment** — Calculated rates, label generation, tracking
-    - **Admin Dashboard** — Full management suite for products, orders, and users
-    - **Fundraiser Battle Arena** — Gamified fundraising system with leaderboards
+    - **Payment Processing** — Stripe, PayPal, Square, and an in-person POS register
+    - **Shipping & Fulfillment** — EasyPost rates, label generation, tracking
+    - **Fundraising** — Campaigns, participants, commission, and the gamified battle arena
+    - **Admin Dashboard** — Orders, products, customers, staff, and role-based access
+    - **Financials** — A bookkeeping ledger synced into QuickBooks Online
     - **Email Marketing** — Automated campaigns, templates, and engagement tracking
+    - **Social Commerce** — Scheduled posts and marketplace product listings
   </Tab>
   <Tab value="Tech Stack">
     - **Framework:** Next.js 16 (App Router, Server Components)
-    - **Database:** PostgreSQL via Prisma ORM (Neon serverless)
+    - **Monorepo:** Turborepo with npm workspaces, Node 20
+    - **Database:** PostgreSQL via Prisma 6 — Neon in development, Supabase in production
     - **Auth:** NextAuth.js with Google, GitHub, Facebook, Apple OAuth
-    - **Styling:** Tailwind CSS with custom design system
-    - **Deployment:** Vercel with Fluid Compute
+    - **Styling:** Tailwind CSS 4 with Shadcn UI / Radix primitives
+    - **Deployment:** Vercel — one project per app, all from this repository
     - **Monitoring:** Sentry error tracking, Vercel Analytics
   </Tab>
   <Tab value="Integrations">
@@ -50,46 +54,54 @@ Jose Madrid Salsa is a full-featured e-commerce platform built with **Next.js 16
     - **Email:** Nodemailer, Resend, React Email templates
     - **Maps:** Google Maps Platform (Places, Geocoding)
     - **Storage:** Vercel Blob, UploadThing
-    - **Analytics:** Google Analytics, Amplitude, PostHog
-    - **AI:** Anthropic Claude API for content generation
+    - **Analytics:** Google Analytics, Amplitude (with session replay), Vercel Analytics
+    - **AI:** Anthropic Claude API — the Picante chat assistant and RAG
+    - **Accounting:** QuickBooks Online (the source of truth for the books)
   </Tab>
 </Tabs>
 
 ## Project Structure
 
 <Files>
-  <Folder name="app" defaultOpen>
-    <Folder name="(public)">
-      <File name="products/page.tsx" />
-      <File name="recipes/page.tsx" />
-      <File name="checkout/page.tsx" />
-    </Folder>
-    <Folder name="admin">
-      <File name="layout.tsx" />
-      <File name="orders/page.tsx" />
-      <File name="products/page.tsx" />
-    </Folder>
-    <Folder name="api">
-      <Folder name="auth">
-        <File name="[...nextauth]/route.ts" />
+  <Folder name="apps" defaultOpen>
+    <Folder name="storefront" defaultOpen>
+      <Folder name="app">
+        <File name="(public)/" />
+        <File name="admin/" />
+        <File name="api/" />
+        <File name="pos/" />
+        <File name="(fundraiser-portal)/" />
       </Folder>
+      <Folder name="lib">
+        <File name="prisma.ts" />
+        <File name="rbac.ts" />
+        <File name="quickbooks/" />
+      </Folder>
+      <Folder name="prisma">
+        <File name="schema.prisma" />
+      </Folder>
+      <File name="vercel.json" />
     </Folder>
+    <Folder name="docs">
+      <File name="content/docs/" />
+    </Folder>
+    <File name="fundraising/" />
+    <File name="admin/" />
+    <File name="macos-admin/" />
   </Folder>
-  <Folder name="components">
-    <File name="store/navigation.tsx" />
-    <File name="ui/button.tsx" />
-  </Folder>
-  <Folder name="lib">
-    <File name="auth.ts" />
-    <File name="prisma.ts" />
-    <File name="stripe.ts" />
-  </Folder>
-  <Folder name="prisma">
-    <File name="schema.prisma" />
+  <Folder name="packages">
+    <File name="shared-types/" />
+    <File name="shared-utils/" />
   </Folder>
   <File name="package.json" />
-  <File name="next.config.mjs" />
+  <File name="turbo.json" />
 </Files>
+
+<Callout type="info">
+Essentially all product code lives in `apps/storefront` — the storefront, the admin
+console, the fundraiser portal, the register and **every API route**. There is no
+`apps/backend`. See [Monorepo Deployment](/docs/deployment/monorepo).
+</Callout>
 
 ## Getting Started
 
@@ -105,8 +117,10 @@ Jose Madrid Salsa is a full-featured e-commerce platform built with **Next.js 16
   <Step>
     ### Install Dependencies
 
+    From the repository root — npm only honours the root `overrides` block from there:
+
     ```bash title="Terminal"
-    npm install
+    npm install --legacy-peer-deps
     ```
   </Step>
   <Step>
@@ -132,7 +146,7 @@ Jose Madrid Salsa is a full-featured e-commerce platform built with **Next.js 16
 </Steps>
 
 <Callout type="warn" title="Database Required">
-You'll need a PostgreSQL database to run the project. We recommend [Neon](https://neon.tech) for serverless Postgres. See the [Database Setup](/docs/getting-started/database-setup) guide.
+You'll need a PostgreSQL database to run the project. Development uses [Neon](https://neon.tech); production runs on Supabase. Both need two connection strings — `DATABASE_URL` (pooled, runtime) and `DATABASE_URL_UNPOOLED` (direct, migrations). See the [Database Setup](/docs/getting-started/database-setup) guide.
 </Callout>
 
 ## Documentation Map

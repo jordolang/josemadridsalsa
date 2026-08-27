@@ -1,0 +1,99 @@
+---
+title: JSDoc Conventions
+description: How to comment code in this repository — what to document, what to leave out, and why.
+---
+
+# JSDoc Conventions
+
+The codebase is TypeScript, so **types are not the job of a comment**. A JSDoc block
+that restates the signature costs a reader time and goes stale the first time the
+signature changes. What a comment is for is the part the code cannot say: why this
+rule, why this shape, what breaks if you change it.
+
+## What to document
+
+- **Every exported function in `lib/`** — a one-line description of what it does.
+- **Any non-obvious rule**, especially where the obvious implementation is wrong.
+  Most of the highest-value comments in this repo are of this kind:
+  *"Deliberately `??` and not a truthiness check: an override of zero is a fundraiser
+  giving something away."*
+- **Prisma models and fields** whose meaning is not their name — use `///` doc
+  comments, which Prisma preserves.
+- **Constants** whose value is a decision rather than a fact (`SUMMARY_WINDOW_DAYS`,
+  `SWEEP_LIMIT`).
+- **Modules** whose reason for existing is not obvious from their contents — a short
+  block at the top of the file.
+
+## What to leave out
+
+- `@param` / `@returns` that only repeat TypeScript types. If the parameter name and
+  type say everything, the tag is noise.
+- `@type` on a typed constant.
+- Comments that narrate the next line (`// loop over the items`).
+- Any comment addressed to the person who wrote it rather than the person reading it.
+
+## Shape
+
+```ts
+/**
+ * What the group earns from an order.
+ *
+ * The rate is stored as a percentage (`50.00`, not `0.50`), which is the convention
+ * every live path uses.
+ */
+export function calculateFundraiserCommission(
+  order: CommissionOrder,
+  ratePercent: number
+): number {
+```
+
+One-line summary, blank line, then the part that matters. Use `@param` only where a
+parameter carries a constraint the type does not express (a unit, a range, a
+convention), and `@throws` where a caller genuinely has to handle it.
+
+Units deserve a comment every time. `Product.weight` is in **ounces**; the shipping
+calculator once read it as pounds and quoted every parcel at sixteen times its
+weight. A three-word comment would have prevented it.
+
+## Prisma
+
+Use `///` (triple slash) in `schema.prisma` — Prisma carries those through to the
+generated client, so they surface in editor hover:
+
+```prisma
+/// Highest sales milestone this participant has already been congratulated for.
+///
+/// A marker rather than a derived value because domain events are delivered
+/// at-least-once: without it a replayed `payment.completed` would send a second
+/// "you reached 25 sales" email.
+lastMilestoneNotified Int @default(0)
+```
+
+<Callout type="warn">
+Never run `prisma format`. It reformats unrelated models and turns a one-field change
+into an unreviewable diff. Hand-edit the schema and run `prisma validate`.
+</Callout>
+
+## Dead code
+
+A comment is the right place to say a thing exists but must not be used:
+
+> `lib/fundraising/calculate-commission.ts` implements the opposite convention and
+> has no callers; it is not used here.
+
+That sentence is worth more than the function it describes.
+
+## Verifying
+
+```bash
+npm run lint && npm run type-check
+```
+
+Neither checks comment quality. That is a review concern — the question to ask is
+whether a reader who has never seen the file would make the same mistake the comment
+is trying to prevent.
+
+## Related
+
+- [Code Quality](/docs/guides/code-quality)
+- [Adding Features](/docs/guides/adding-features)

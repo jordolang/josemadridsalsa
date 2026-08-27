@@ -1,0 +1,77 @@
+---
+title: Store Locations
+description: The retail-location database behind the store locator — managing it, importing it, and keeping coordinates and photos current.
+---
+
+# Store Locations
+
+Every shop, market and restaurant that carries the salsa lives in
+`RetailLocation`. It is the data behind the public store locator and the
+"find us locally" pages.
+
+| Field | Notes |
+|---|---|
+| `businessName`, `address`, `city`, `state`, `zipCode` | Unique on `(businessName, address)` |
+| `phone`, `website` | Optional contact details |
+| `latitude`, `longitude` | `Decimal(10,7)` — set by geocoding, not by hand |
+| `googlePlacesId` | Links the row to a Google Places record |
+| `photoUrl` + `LocationPhoto[]` | A primary photo plus a gallery |
+| `county` | Used for regional grouping |
+| `isActive` | Hides a location without deleting it |
+| `sortOrder` | Manual ordering within a city |
+
+Indexed on `city`, `state`, `(state, city)` and `isActive` — the locator's query
+shapes.
+
+## Managing them
+
+| Route | Purpose |
+|---|---|
+| `/admin/locations` | List, search, activate/deactivate |
+| `/admin/locations/new` | Add one |
+| `/admin/locations/[id]/edit` | Edit one |
+
+Access is gated by the `LOCATIONS` permission category (`locations:read` is part of
+the default `STAFF` set; writing is not).
+
+## Bulk tooling
+
+Run from the storefront workspace:
+
+```bash
+npm run locations:import         --workspace @jose-madrid/storefront  # from a markdown source list
+npm run locations:geocode        --workspace @jose-madrid/storefront  # backfill lat/long
+npm run locations:photos         --workspace @jose-madrid/storefront  # generate photos
+npm run locations:update-photos  --workspace @jose-madrid/storefront  # refresh existing photos
+npm run locations:verify         --workspace @jose-madrid/storefront  # sanity-check the set
+```
+
+Prefer these over ad-hoc scripts — they handle the unique constraint and the
+coordinate precision correctly.
+
+Query helpers live in `lib/locations/` (`query.ts`, `db-query.ts`, `shared.ts`,
+`import.ts`).
+
+## Google dependencies
+
+Geocoding and photos come from Google. See
+[Google Places](/docs/integrations/google-places) and
+[Google Maps](/docs/integrations/google-maps) for the API keys and which APIs must
+be enabled.
+
+<Callout type="warn">
+A location with no `latitude`/`longitude` will not appear on the map even though it
+shows in list views. After importing, run the geocode backfill and then
+`locations:verify`.
+</Callout>
+
+## Search indexing
+
+Location pages are public URLs and belong in the sitemap. `app/sitemap.ts` builds
+them from Prisma, and `SeoConfiguration.locationTitleTemplate` /
+`locationDescTemplate` supply their metadata. See [SEO](/docs/features/seo).
+
+## Related
+
+- [Location Map](/docs/features/location-map) — the homepage map component
+- [Store Locator](/docs/integrations/store-locator)

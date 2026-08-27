@@ -1,0 +1,87 @@
+---
+title: Scheduled Jobs
+description: The ten cron routes, what each does, and the single guard that protects them all.
+---
+
+# Scheduled Jobs
+
+Scheduled work runs as Vercel Cron hitting HTTP routes under
+`apps/storefront/app/api/cron/`. Schedules are declared in
+`apps/storefront/vercel.json`.
+
+<Callout type="info">
+The Vercel account is on the **Pro** plan, so sub-daily schedules are available.
+Earlier notes describing cron-job.org as the scheduler are out of date — that
+workaround existed because the Hobby plan capped crons at daily.
+</Callout>
+
+## The schedule
+
+| Path | Cron | What it does |
+|---|---|---|
+| `/api/cron/email-automation` | `*/5 * * * *` | Advances automation enrolments to their next step |
+| `/api/cron/email-campaigns` | `*/5 * * * *` | Sends queued campaign batches |
+| `/api/cron/social-publish` | `*/5 * * * *` | Publishes scheduled social posts |
+| `/api/cron/abandoned-cart` | `0 * * * *` | Staged abandoned-cart recovery email |
+| `/api/cron/quickbooks-sync` | `15 * * * *` | Drains the QuickBooks push queue |
+| `/api/cron/operations-sweep` | `0 */2 * * *` | General operations housekeeping |
+| `/api/cron/expire-pending-orders` | `20 */2 * * *` | Cancels unpaid pending orders and returns their held inventory |
+| `/api/cron/processor-fees` | `30 */2 * * *` | Pulls processor fees into the ledger |
+| `/api/cron/review-requests` | `0 10 * * *` | Asks recent buyers for a review |
+| `/api/cron/fundraiser-lifecycle` | `0 13 * * *` | Campaign launch announcements and closing summaries |
+
+All schedules are **UTC**.
+
+## Authentication
+
+Every route calls `isAuthorizedCronRequest()` from `lib/cron/auth.ts`. Vercel Cron
+sends `Authorization: Bearer $CRON_SECRET` automatically whenever that variable is
+set on the project, so a route needs nothing beyond this check.
+
+```ts
+export function isAuthorizedCronRequest(request: Request): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return process.env.NODE_ENV !== 'production'
+  return request.headers.get('authorization') === `Bearer ${secret}`
+}
+```
+
+<Callout type="warn">
+Outside production a missing `CRON_SECRET` is allowed — local runs and `vercel dev`
+have no reason to carry one. **In production a missing secret is a refusal, not a
+pass.** These routes send customer email and move money-adjacent state; failing open
+would leave them world-callable if the variable were ever dropped. Older per-route
+copies of this check failed open unconditionally; this guard replaces them.
+</Callout>
+
+## Running one by hand
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  https://www.josemadrid.net/api/cron/quickbooks-sync
+```
+
+<Callout type="warn">
+Do not invoke a sender against production to "test" it. Production has been
+pre-traffic; an accidental campaign or lifecycle send is not recoverable. Verify on
+development, where the guard lets an unauthenticated call through.
+</Callout>
+
+## Adding a job
+
+1. Create `app/api/cron/<name>/route.ts` and guard it with
+   `isAuthorizedCronRequest()` as the first thing it does.
+2. Add the path and schedule to the `crons` array in
+   `apps/storefront/vercel.json`.
+3. Make the handler **idempotent and bounded**. Every sweep in this codebase caps
+   how much one tick will process (`SWEEP_LIMIT`) so a backlog cannot stall the
+   cron, and uses a sent-marker column rather than a status check so a re-run does
+   not re-notify.
+4. Add the row to the table above.
+
+## Related
+
+- [Monorepo Deployment](/docs/deployment/monorepo)
+- [Email Marketing](/docs/features/email-marketing)
+- [QuickBooks Online](/docs/integrations/quickbooks)
+- [Fundraising](/docs/features/fundraising)
