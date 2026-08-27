@@ -49,7 +49,7 @@ Here is where I have to correct myself, because I used to put a much bigger numb
 
 So the honest way to size it is replacement cost — what this business would actually pay to have the same thing stood up by someone else:
 
-- **A themed Shopify or BigCommerce store with paid apps**: $1,500–$5,000, and it would do a fraction of what this does.
+- **A themed hosted storefront with paid apps**: $1,500–$5,000, and it would do a fraction of what this does.
 - **An independent developer rebuilding this feature set to spec**: $8,000–$18,000, working from a finished reference rather than an open-ended discovery phase.
 - **All of it at once — storefront, fundraising, admin, iOS app — as one fixed-price project**: $20,000–$30,000, and that is a ceiling, not a quote.
 

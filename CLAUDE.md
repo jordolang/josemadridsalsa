@@ -155,7 +155,7 @@ Prefer the latest, most capable Claude models when building AI features (`ANTHRO
 ## Part 8 — Payments, Checkout, Shipping, Tax
 
 - **Providers:** Stripe (Checkout Sessions + Elements), PayPal (create/capture order), Square, and in-person POS (`app/pos`, `app/api/pos`). Provider/channel are modeled by `PaymentProvider`/`PaymentChannel`; default is `STRIPE`.
-- **Webhooks** finalize orders: `app/api/webhooks/{stripe,paypal,square}` mark `Payment` SUCCEEDED / `Order` PROCESSING; `easypost` for shipping, `resend` for email events.
+- **Webhooks** finalize orders: `app/api/webhooks/{stripe,paypal,square}` mark `Payment` SUCCEEDED / `Order` PROCESSING; `easypost` for shipping, and `resend` for email events.
 - **Tax:** Stripe Tax via `lib/tax-calculator.ts`. **Shipping:** EasyPost via `lib/shipping-*` (`SHIPPING_PROVIDER`, origin address env vars, `SHIPPING_TEST_MODE`).
 - **Inventory** is decremented transactionally on successful payment (`lib/inventory-manager.ts`), firing `InventoryAlert`s when low.
 
