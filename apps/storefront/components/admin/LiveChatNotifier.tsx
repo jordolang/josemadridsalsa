@@ -49,8 +49,6 @@ export function LiveChatNotifier() {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const seenWaitingIds = useRef<Set<string>>(new Set())
   const initialLoad = useRef(true)
-  // The tab is only a fixed vertical pill on phones; on desktop it stays the
-  // bottom-right pill the stylesheet already places.
   const isMobile = useIsMobile()
   const dock = useLiveChatDock(isMobile)
 
@@ -138,8 +136,6 @@ export function LiveChatNotifier() {
         ref={dock.ref}
         type="button"
         onClick={() => {
-          // A press that turned into a drag repositions the tab; it must not
-          // also open the queue.
           if (dock.consumeDrag()) return
           setOpenPanel(true)
           void requestBrowserPermission()
@@ -151,11 +147,7 @@ export function LiveChatNotifier() {
         data-dragging={dock.dragging ? 'true' : undefined}
         className="fixed bottom-6 right-6 z-40 flex h-12 items-center gap-2 rounded-full bg-salsa-600 px-4 text-white shadow-lg transition hover:bg-salsa-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-salsa-300"
         aria-label="Open live chat queue"
-        title={
-          isMobile
-            ? 'Open live chat queue — drag to move it, or use the arrow keys'
-            : 'Open live chat queue'
-        }
+        title="Live chats — drag to move along the edge"
       >
         <Headphones className="h-5 w-5" />
         <span className="text-sm font-medium">Live chats</span>
