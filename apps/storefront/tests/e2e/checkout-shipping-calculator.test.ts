@@ -1,6 +1,17 @@
 import { it, expect, beforeAll } from 'vitest'
 import { describeIfE2E, e2eBaseUrl } from '../helpers/e2e'
+import { HANDLING_FEE } from '@/lib/shipping/handling-fee'
 import prisma from '@/lib/prisma'
+
+/**
+ * The carriage half of a quoted shipping cost — what the state multiplier actually scales.
+ *
+ * A quote is `rate × stateMultiplier + packagingFee`. The fee is flat by design (a box costs the
+ * same to Anchorage as to San Francisco), so dividing two all-in quotes understates the multiplier:
+ * $14.48 / $10.99 is 1.32, not the 1.5 the config specifies. Netting the fee off both sides pins
+ * the multiplier itself rather than widening the tolerance until the arithmetic happens to fit.
+ */
+const carriage = (shippingCost: number): number => shippingCost - HANDLING_FEE
 
 /**
  * E2E Test: Shipping Calculator Integration
@@ -283,7 +294,8 @@ describeIfE2E('E2E: Shipping Calculator Integration', () => {
       // Alaska should cost more
       expect(akData.shippingCost).toBeGreaterThan(caData.shippingCost)
 
-      const surchargeRatio = akData.shippingCost / caData.shippingCost
+      // Ratio of carriage, not of the all-in price: the packaging fee is flat and does not scale.
+      const surchargeRatio = carriage(akData.shippingCost) / carriage(caData.shippingCost)
       console.log(`  Surcharge ratio: ${surchargeRatio.toFixed(2)}x`)
 
       // Expect approximately 1.5x surcharge
@@ -341,7 +353,8 @@ describeIfE2E('E2E: Shipping Calculator Integration', () => {
       // Hawaii should cost more
       expect(hiData.shippingCost).toBeGreaterThan(caData.shippingCost)
 
-      const surchargeRatio = hiData.shippingCost / caData.shippingCost
+      // Ratio of carriage, not of the all-in price: the packaging fee is flat and does not scale.
+      const surchargeRatio = carriage(hiData.shippingCost) / carriage(caData.shippingCost)
       console.log(`  Surcharge ratio: ${surchargeRatio.toFixed(2)}x`)
 
       // Expect approximately 1.5x surcharge

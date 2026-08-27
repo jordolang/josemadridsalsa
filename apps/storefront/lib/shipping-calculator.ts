@@ -12,6 +12,7 @@ import {
 import { prisma } from './prisma'
 import { describeMissingOrigin, getShippingOrigin } from './shipping/origin'
 import { packJars } from './shipping/jar-packing'
+import { withHandlingFee } from './shipping/handling-fee'
 import {
   DEFAULT_RATE_CONFIG,
   estimateDomesticCost,
@@ -63,7 +64,11 @@ export interface ShippingCalculationInput {
 }
 
 export interface ShippingCalculationResult {
-  /** Shipping cost in dollars */
+  /**
+   * Shipping cost in dollars, **including** the packaging-and-materials fee — see
+   * `lib/shipping/handling-fee.ts`. Every cost this module returns, here and in
+   * `availableOptions`, is the amount to charge the customer, never the bare carrier rate.
+   */
   shippingCost: number
   /** Shipping method selected */
   shippingMethod: string
@@ -377,7 +382,7 @@ function calculateEstimateRates(
   // International shipping
   if (shippingAddress.country !== 'US') {
     return {
-      shippingCost: internationalCost(config),
+      shippingCost: withHandlingFee(internationalCost(config)),
       shippingMethod: 'International Shipping',
       estimatedDelivery: ESTIMATED_DAYS.international,
       fallback: markAsFallback,
@@ -394,11 +399,15 @@ function calculateEstimateRates(
 
   // Flat rate, bumped to the weight-based price over the threshold, then scaled by the state
   // multiplier — all driven by the admin-configurable rate config.
-  const finalCost = estimateDomesticCost({
-    pounds: totalPounds,
-    state: shippingAddress.state,
-    config,
-  })
+  // Packaging is added on top of the carriage price, not scaled with it: the state multiplier
+  // prices the distance, and a box costs the same wherever it goes.
+  const finalCost = withHandlingFee(
+    estimateDomesticCost({
+      pounds: totalPounds,
+      state: shippingAddress.state,
+      config,
+    })
+  )
 
   // Build the single available option based on address type.
   // Standard shipping is the only method offered.
@@ -430,6 +439,12 @@ function calculateEstimateRates(
  *
  * **There is no free-shipping path.** Shipping is charged on every order, without exception —
  * a threshold that zeroed the cost was removed because the business does not offer free shipping.
+ *
+ * Every price returned carries the packaging-and-materials fee on top of the rate, whichever path
+ * produced it (`lib/shipping/handling-fee.ts`). Adding it here, at the one place a customer-facing
+ * quote leaves this module, is what stops a caller quoting a bare carrier rate by accident — the
+ * admin label routes call `getShippingRates` directly and are unaffected, which is correct: buying
+ * postage is a cost, not a quote.
  *
  * Follows error handling pattern from lib/tax-calculator.ts
  */
@@ -507,10 +522,14 @@ export async function calculateShipping(
       // cheapest carrier rate. Expedited/express services are never surfaced.
       const cheapestRate = sortedRates[0]
 
+      // The carrier's price plus what it costs to pack the parcel. The rate alone covers the
+      // movement and none of the materials.
+      const cost = withHandlingFee(cheapestRate.rate)
+
       const availableOptions = [
         {
           method: `${cheapestRate.carrier} ${cheapestRate.service}`,
-          cost: cheapestRate.rate,
+          cost,
           estimatedDays: cheapestRate.deliveryDays
             ? `${cheapestRate.deliveryDays} business days`
             : '3-5 business days',
@@ -519,7 +538,7 @@ export async function calculateShipping(
       ]
 
       return {
-        shippingCost: cheapestRate.rate,
+        shippingCost: cost,
         shippingMethod: `${cheapestRate.carrier} ${cheapestRate.service}`,
         estimatedDelivery: cheapestRate.deliveryDays
           ? `${cheapestRate.deliveryDays} business days`
@@ -555,7 +574,10 @@ export async function calculateShipping(
 }
 
 /**
- * Get shipping estimate for frontend preview
+ * Get shipping estimate for frontend preview.
+ *
+ * Includes the packaging fee, like every other quote — a preview that undercuts the checkout total
+ * is worse than no preview.
  */
 export async function getShippingEstimate(params: {
   subtotal: number
@@ -565,10 +587,10 @@ export async function getShippingEstimate(params: {
   const config = await getShippingRateConfig()
 
   if (params.country && params.country !== 'US') {
-    return internationalCost(config)
+    return withHandlingFee(internationalCost(config))
   }
 
-  return flatEstimateCost(params.state, config)
+  return withHandlingFee(flatEstimateCost(params.state, config))
 }
 
 /**

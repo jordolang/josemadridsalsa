@@ -52,6 +52,18 @@ the root `package.json` is canonical.
   command rather than scanning for keywords, since every `UPDATE ... SET` would otherwise look
   like a session `SET`. Reads, previews, commits, refusals and errors all land in the audit trail
   as `developer.sql.*`.
+- **A $4.00 packaging-and-materials fee on every shipping quote.** Shipping was quoted as the
+  carrier's price for moving the parcel and nothing else, so the box, the dividers that keep glass
+  jars from knocking together, the tape and the label all came out of margin on every order. The
+  fee is added in `lib/shipping-calculator.ts` at the one point a customer-facing quote leaves the
+  module, so it lands on a live EasyPost rate, the domestic estimate, the international flat rate
+  and the frontend preview alike — including the endpoint's own last-resort fallback, which now
+  quotes $10.99 rather than $6.99. It is charged once per order and is deliberately not scaled by
+  the state multiplier or the weight surcharge: those price carriage, and a box costs the same to
+  Alaska as it does to Ohio. The admin label routes call `getShippingRates` directly and are
+  untouched — buying postage is a cost, not a quote. The amount lives in
+  `lib/shipping/handling-fee.ts`.
+
 - **The documentation site now deploys as its own Vercel project from this repository.**
   `apps/docs` has always been the Fumadocs source of truth, but it had no deployment
   configuration of its own — the standalone `salsadocs` repository was the thing being

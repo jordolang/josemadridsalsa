@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { buildShippingItems, calculateShipping } from '@/lib/shipping-calculator'
+import { withHandlingFee } from '@/lib/shipping/handling-fee'
+import { DEFAULT_RATE_CONFIG } from '@/lib/shipping/rate-config'
 import prisma from '@/lib/prisma'
 
 /**
  * Shipping Calculation API - Real-time shipping estimates for checkout
  * José Madrid Salsa E-commerce Platform
  */
+
+/**
+ * The quote of last resort, for when even `calculateShipping`'s own fallback path threw.
+ *
+ * The built-in flat rate plus the packaging fee, derived rather than typed out, so a price quoted
+ * from here is the same price every other path charges — a hardcoded figure here silently drifts
+ * from the calculator the first time either number moves.
+ */
+const FALLBACK_SHIPPING_COST = withHandlingFee(DEFAULT_RATE_CONFIG.flatRateCents / 100)
 
 /**
  * In-memory cache for shipping rate calculations.
@@ -211,13 +222,13 @@ export async function POST(request: Request) {
         error: 'Unable to calculate exact shipping cost',
         message: errorMessage,
         // Return estimate rates as fallback
-        shippingCost: 6.99, // Standard flat rate
+        shippingCost: FALLBACK_SHIPPING_COST,
         shippingMethod: 'Standard Shipping (Estimate)',
         estimatedDelivery: '3-5 business days',
         availableOptions: [
           {
             method: 'Standard Shipping (Estimate)',
-            cost: 6.99,
+            cost: FALLBACK_SHIPPING_COST,
             estimatedDays: '3-5 business days',
           },
         ],
