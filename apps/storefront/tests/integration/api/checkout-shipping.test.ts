@@ -535,7 +535,7 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(false)
       expect(data.fallback).toBe(true)
-      expect(data.shippingCost).toBe(6.99) // Fallback flat rate
+      expect(data.shippingCost).toBe(10.99) // Fallback flat rate + $4 packaging
       expect(data.shippingMethod).toContain('Estimate')
       expect(data.error).toBe('Unable to calculate exact shipping cost')
     })
@@ -561,7 +561,7 @@ describe('Checkout Shipping Calculation API Integration Tests', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(false)
       expect(data.fallback).toBe(true)
-      expect(data.shippingCost).toBe(6.99)
+      expect(data.shippingCost).toBe(10.99)
     })
 
     it('should handle malformed JSON request', async () => {

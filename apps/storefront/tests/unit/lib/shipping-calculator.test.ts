@@ -11,6 +11,7 @@ import {
   getShippingEstimate,
   validateShippingAddress,
 } from '@/lib/shipping-calculator'
+import { HANDLING_FEE } from '@/lib/shipping/handling-fee'
 
 /**
  * Written when `ShippingItem.weight` meant **pounds**. The field is now `weightOz` in ounces —
@@ -26,6 +27,10 @@ import {
  * weight now includes the physical packaging — glass, lid, dividers, box — and `JAR_TARE_OZ` is
  * explicitly a number to correct against a real scale. Hardcoding the total would mean a truer tare
  * breaks the suite.
+ *
+ * Includes the packaging fee, because every quote does. The dollar figures asserted directly
+ * elsewhere in this file are written out in full (rate + fee) rather than derived, so that a
+ * change to either number has to be stated here deliberately instead of following along.
  */
 function expectedEstimateCost(
   items: Parameters<typeof calculateOrderParcel>[0],
@@ -39,7 +44,7 @@ function expectedEstimateCost(
   const pounds = calculateOrderParcel(items).weight / OUNCES_PER_POUND
   const base =
     pounds > THRESHOLD_LB ? Math.max(FLAT, BASE + (pounds - THRESHOLD_LB) * PER_LB) : FLAT
-  return parseFloat((base * stateMultiplier).toFixed(2))
+  return parseFloat((base * stateMultiplier + HANDLING_FEE).toFixed(2))
 }
 
 describe('Shipping Calculator', () => {
@@ -72,8 +77,9 @@ describe('Shipping Calculator', () => {
         subtotal: 25.0,
       })
 
+      // $6.99 flat + $4.00 packaging
       expect(result).toMatchObject({
-        shippingCost: 6.99,
+        shippingCost: 10.99,
         shippingMethod: 'Standard Shipping',
         estimatedDelivery: '3-5 business days',
       })
@@ -92,8 +98,9 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
+      // $24.99 international + $4.00 packaging
       expect(result).toMatchObject({
-        shippingCost: 24.99,
+        shippingCost: 28.99,
         shippingMethod: 'International Shipping',
         estimatedDelivery: '7-14 business days',
       })
@@ -113,7 +120,7 @@ describe('Shipping Calculator', () => {
       // Total weightOz: 160 lbs
       // Weight-based: $4.99 + (10 - 5) * $0.50 = $4.99 + $2.50 = $7.49
       // Flat rate: $6.99
-      // Should use max: $7.49
+      // Should use max: $7.49, plus $4.00 packaging
       expect(result.shippingCost).toBe(expectedEstimateCost([{ quantity: 1, weightOz: 160 }]))
       expect(result.shippingMethod).toBe('Standard Shipping')
     })
@@ -130,7 +137,7 @@ describe('Shipping Calculator', () => {
       })
 
       // Total weightOz: 48 items * 1 lb = 3 lbs (below 5 lb threshold)
-      expect(result.shippingCost).toBe(6.99)
+      expect(result.shippingCost).toBe(10.99)
     })
 
     it('should apply state multiplier for Alaska', async () => {
@@ -144,9 +151,10 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      // Flat rate $6.99 * 1.5 = $10.485 rounded to $10.48
-      expect(result.shippingCost).toBe(10.48)
-      expect(result.availableOptions?.[0].cost).toBe(10.48)
+      // Flat rate $6.99 * 1.5 = $10.485 rounded to $10.48, plus $4.00 packaging.
+      // The multiplier prices the carriage only — the box costs the same to Alaska.
+      expect(result.shippingCost).toBe(14.48)
+      expect(result.availableOptions?.[0].cost).toBe(14.48)
     })
 
     it('should apply state multiplier for Hawaii', async () => {
@@ -160,8 +168,8 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      // Flat rate $6.99 * 1.5 = $10.485 rounded to $10.48
-      expect(result.shippingCost).toBe(10.48)
+      // Flat rate $6.99 * 1.5 = $10.485 rounded to $10.48, plus $4.00 packaging
+      expect(result.shippingCost).toBe(14.48)
     })
 
     it('should apply state multiplier for Puerto Rico', async () => {
@@ -175,8 +183,8 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      // Flat rate $6.99 * 2.0 = $13.98
-      expect(result.shippingCost).toBe(13.98)
+      // Flat rate $6.99 * 2.0 = $13.98, plus $4.00 packaging
+      expect(result.shippingCost).toBe(17.98)
     })
 
     it('should handle lowercase state codes', async () => {
@@ -190,7 +198,7 @@ describe('Shipping Calculator', () => {
         subtotal: 30.0,
       })
 
-      expect(result.shippingCost).toBe(10.48)
+      expect(result.shippingCost).toBe(14.48)
     })
 
     it('should return standard shipping as the only available option', async () => {
@@ -207,7 +215,7 @@ describe('Shipping Calculator', () => {
       expect(result.availableOptions).toHaveLength(1)
       expect(result.availableOptions?.[0]).toMatchObject({
         method: 'Standard Shipping',
-        cost: 6.99,
+        cost: 10.99,
         estimatedDays: '3-5 business days',
       })
     })
@@ -249,8 +257,8 @@ describe('Shipping Calculator', () => {
       // Total weightOz: 96 lbs
       // Weight-based: $4.99 + (6 - 5) * $0.50 = $5.49
       // Flat rate: $6.99
-      // Should use max: $6.99
-      expect(result.shippingCost).toBe(6.99)
+      // Should use max: $6.99, plus $4.00 packaging
+      expect(result.shippingCost).toBe(10.99)
     })
   })
 
@@ -267,7 +275,8 @@ describe('Shipping Calculator', () => {
         country: 'CA',
       })
 
-      expect(estimate).toBe(24.99)
+      // $24.99 international + $4.00 packaging
+      expect(estimate).toBe(28.99)
     })
 
     it('should return flat rate for standard US states', async () => {
@@ -277,7 +286,8 @@ describe('Shipping Calculator', () => {
         country: 'US',
       })
 
-      expect(estimate).toBe(6.99)
+      // $6.99 flat + $4.00 packaging
+      expect(estimate).toBe(10.99)
     })
 
     it('should apply state multiplier for Alaska', async () => {
@@ -287,7 +297,7 @@ describe('Shipping Calculator', () => {
         country: 'US',
       })
 
-      expect(estimate).toBe(10.48)
+      expect(estimate).toBe(14.48)
     })
 
     it('should apply state multiplier for Hawaii', async () => {
@@ -297,7 +307,7 @@ describe('Shipping Calculator', () => {
         country: 'US',
       })
 
-      expect(estimate).toBe(10.48)
+      expect(estimate).toBe(14.48)
     })
 
     it('should apply state multiplier for Puerto Rico', async () => {
@@ -307,7 +317,7 @@ describe('Shipping Calculator', () => {
         country: 'US',
       })
 
-      expect(estimate).toBe(13.98)
+      expect(estimate).toBe(17.98)
     })
 
     it('should default to US when country is not specified', async () => {
@@ -316,7 +326,7 @@ describe('Shipping Calculator', () => {
         state: 'NY',
       })
 
-      expect(estimate).toBe(6.99)
+      expect(estimate).toBe(10.99)
     })
 
     it('should handle lowercase state codes', async () => {
@@ -326,7 +336,7 @@ describe('Shipping Calculator', () => {
         country: 'US',
       })
 
-      expect(estimate).toBe(10.48)
+      expect(estimate).toBe(14.48)
     })
   })
 
@@ -546,7 +556,7 @@ describe('Shipping Calculator', () => {
 
         // Should use default weight of 1 lb per item
         expect(result).toBeDefined()
-        expect(result.shippingCost).toBe(6.99)
+        expect(result.shippingCost).toBe(10.99)
       })
 
       it('should handle zero quantity items', async () => {
@@ -562,7 +572,7 @@ describe('Shipping Calculator', () => {
 
         // Zero quantity means zero weight
         expect(result).toBeDefined()
-        expect(result.shippingCost).toBe(6.99) // Flat rate
+        expect(result.shippingCost).toBe(10.99) // Flat rate plus packaging
       })
     })
 
@@ -722,8 +732,8 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // At exactly 5 lbs, no weight-based surcharge
-        expect(result.shippingCost).toBe(6.99)
+        // At exactly 5 lbs, no weight-based surcharge — $6.99 flat + $4.00 packaging
+        expect(result.shippingCost).toBe(10.99)
       })
 
       it('should handle weight just over 5 lbs threshold (5.01 lbs)', async () => {
@@ -739,8 +749,8 @@ describe('Shipping Calculator', () => {
 
         // Weight-based: $4.99 + (5.01 - 5) * $0.50 = $4.99 + $0.005 = $4.995
         // Flat rate: $6.99
-        // Should use max: $6.99
-        expect(result.shippingCost).toBe(6.99)
+        // Should use max: $6.99, plus $4.00 packaging
+        expect(result.shippingCost).toBe(10.99)
       })
 
       it('should handle weight just under 5 lbs threshold (4.99 lbs)', async () => {
@@ -754,8 +764,8 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // Below threshold, use flat rate
-        expect(result.shippingCost).toBe(6.99)
+        // Below threshold, use flat rate — plus $4.00 packaging
+        expect(result.shippingCost).toBe(10.99)
       })
     })
 
@@ -802,8 +812,8 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // Flat rate $6.99 * 1.5 = $10.485, should round to $10.48
-        expect(result.shippingCost).toBe(10.48)
+        // Flat rate $6.99 * 1.5 = $10.485, should round to $10.48, plus $4.00 packaging
+        expect(result.shippingCost).toBe(14.48)
       })
 
       it('should round PR multiplier calculation correctly', async () => {
@@ -817,8 +827,8 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // Flat rate $6.99 * 2.0 = $13.98
-        expect(result.shippingCost).toBe(13.98)
+        // Flat rate $6.99 * 2.0 = $13.98, plus $4.00 packaging
+        expect(result.shippingCost).toBe(17.98)
       })
     })
 
@@ -885,8 +895,8 @@ describe('Shipping Calculator', () => {
           subtotal: 30.0,
         })
 
-        // International flat rate regardless of weight
-        expect(result.shippingCost).toBe(24.99)
+        // International flat rate regardless of weight, plus $4.00 packaging
+        expect(result.shippingCost).toBe(28.99)
         expect(result.shippingMethod).toBe('International Shipping')
       })
 

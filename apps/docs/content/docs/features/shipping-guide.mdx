@@ -197,6 +197,10 @@ Used when the carrier API is unavailable or returns no rates.
 | Standard domestic (flat rate) | $6.99 |
 | Weight > 5 lbs | $4.99 base + $0.50/lb over 5 lbs |
 
+All rates above are carriage only. A flat **$4.00 packaging-and-materials fee**
+(`lib/shipping/handling-fee.ts`) is added once per order to every quote the calculator returns —
+live carrier rates included — so the domestic flat rate reaches the customer as $10.99.
+
 #### State Multipliers
 
 Remote states have a cost multiplier applied:
@@ -231,7 +235,7 @@ The system has multiple fallback layers to ensure checkout is never blocked:
 2. **Carrier API returns no rates** - Use estimate-based rates with `fallback: true`
 3. **Carrier API errors** - Log error, use estimate-based rates with `fallback: true`
 4. **API key missing** - `getShippingClient()` throws; caught by `getShippingRates()`, returns empty rates; calculator falls back to estimates
-5. **Calculate-shipping endpoint fails entirely** - Returns HTTP 200 with flat-rate estimate ($6.99) rather than HTTP 500
+5. **Calculate-shipping endpoint fails entirely** - Returns HTTP 200 with the flat-rate estimate plus the packaging fee ($10.99) rather than HTTP 500
 6. **Origin address missing or incomplete** - Falls back to flat-rate estimates and logs which fields are absent
 
 ---
