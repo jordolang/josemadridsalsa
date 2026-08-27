@@ -21,6 +21,21 @@ interface Viewport {
   height: number
 }
 
+/**
+ * Reading `window.localStorage` throws SecurityError where the browser denies
+ * storage (sandboxed or opaque origins, privacy modes that disable it), so the
+ * property access itself has to be guarded — the persistence helpers' own
+ * try/catch is too late, the throw happens while evaluating their argument.
+ */
+function safeLocalStorage(): Storage | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+
 export interface LiveChatDock {
   ref: (node: HTMLElement | null) => void
   position: DockPosition
@@ -56,7 +71,7 @@ export function useLiveChatDock(enabled: boolean): LiveChatDock {
 
   // Read the saved spot after mount so server and client render identically.
   useEffect(() => {
-    setPosition(readDockPosition(typeof window === 'undefined' ? null : window.localStorage))
+    setPosition(readDockPosition(safeLocalStorage()))
     setHydrated(true)
   }, [])
 
@@ -74,17 +89,25 @@ export function useLiveChatDock(enabled: boolean): LiveChatDock {
 
   useEffect(() => {
     if (!node) return
-    setTabHeight(node.offsetHeight)
+    const measureTab = () => setTabHeight(node.offsetHeight)
+    measureTab()
+    // The waiting-count badge appears and disappears with the queue poll, which
+    // changes the pill's height without any of this effect's deps changing.
+    // Observe the element so the reserved bottom gap stays accurate.
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measureTab)
+    observer.observe(node)
+    return () => observer.disconnect()
   }, [node, enabled, viewport.height])
 
   const commit = useCallback((next: DockPosition) => {
     setPosition(next)
-    writeDockPosition(typeof window === 'undefined' ? null : window.localStorage, next)
+    writeDockPosition(safeLocalStorage(), next)
   }, [])
 
   const reset = useCallback(() => {
     setPosition(DEFAULT_DOCK_POSITION)
-    clearDockPosition(typeof window === 'undefined' ? null : window.localStorage)
+    clearDockPosition(safeLocalStorage())
   }, [])
 
   const onPointerDown = useCallback(
