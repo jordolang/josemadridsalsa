@@ -31,6 +31,12 @@ const PACKAGE_FILES = [
   'apps/storefront/package.json',
   'apps/fundraising/package.json',
   'apps/admin/package.json',
+  // electron-builder stamps the installer and `latest.yml` from this workspace's
+  // version, and the installed app compares its own version against that feed to
+  // decide whether an update exists. Leaving it behind ships a Windows build
+  // that never offers the release it belongs to. The macOS app reads the root
+  // version (see apps/macos-admin/build-app.sh), so the two platforms disagreed.
+  'apps/windows-admin/package.json',
   'packages/shared-types/package.json',
   'packages/shared-utils/package.json',
 ]
