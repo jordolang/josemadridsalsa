@@ -8,8 +8,8 @@ import Foundation
 
 precondition(
   AdminEndpoint.validated("https://www.josemadrid.net")?.absoluteString ==
-    "https://www.josemadrid.net/admin",
-  "a bare origin should resolve to the admin panel"
+    "https://www.josemadrid.net/admin-desktop",
+  "a bare origin should resolve to the desktop shell"
 )
 precondition(
   AdminEndpoint.validated("https://www.josemadrid.net/admin/orders")?.absoluteString ==
@@ -18,7 +18,7 @@ precondition(
 )
 precondition(
   AdminEndpoint.validated("http://localhost:3000")?.absoluteString ==
-    "http://localhost:3000/admin",
+    "http://localhost:3000/admin-desktop",
   "http should be allowed for a local development server"
 )
 precondition(
@@ -30,6 +30,30 @@ precondition(AdminEndpoint.validated("http://example.com/admin") == nil, "plain 
 precondition(AdminEndpoint.validated("javascript:alert(1)") == nil, "non-web scheme")
 precondition(AdminEndpoint.validated("file:///etc/passwd") == nil, "file scheme")
 precondition(AdminEndpoint.validated("   ") == nil, "blank input")
+
+// MARK: legacy default migration
+
+// The app may have the pre-shell default saved in @AppStorage, which would
+// otherwise pin it to the old web panel forever.
+precondition(
+  AdminEndpoint.migratingLegacyDefault("https://www.josemadrid.net/admin") ==
+    AdminEndpoint.production.absoluteString,
+  "an install that predates the shell should move onto the new default"
+)
+precondition(
+  AdminEndpoint.migratingLegacyDefault("http://localhost:3000/admin") == "http://localhost:3000/admin",
+  "a local development endpoint should be left alone"
+)
+precondition(
+  AdminEndpoint.migratingLegacyDefault("https://www.josemadrid.net/admin/orders") ==
+    "https://www.josemadrid.net/admin/orders",
+  "a deliberately chosen admin page should be left alone"
+)
+precondition(
+  AdminEndpoint.migratingLegacyDefault(AdminEndpoint.production.absoluteString) ==
+    AdminEndpoint.production.absoluteString,
+  "migrating twice should change nothing"
+)
 
 // MARK: navigation policy
 
