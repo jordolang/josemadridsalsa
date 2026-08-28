@@ -10,17 +10,75 @@ There are two desktop applications for running the business away from a browser 
 | Windows 11 | `apps/windows-admin` | Electron 44 + TypeScript | `JoseMadridSalsaAdmin-Setup-<version>.exe` (NSIS) |
 | macOS (Apple silicon) | `apps/macos-admin` | SwiftUI + WKWebView | `JoseMadridSalsaAdmin-<version>.dmg` |
 
-Both are hardened windows onto the real admin panel at `https://www.josemadrid.net/admin`. That
-is a deliberate choice, not a shortcut: the admin panel is 163 pages and 352 API routes, and
-rebuilding it natively per platform would mean writing every future admin feature three times.
-Because the apps load the real thing, **everything the admin panel can do, they can do** —
-orders, products, inventory, customers, financials, fundraisers, events and shows, email
-marketing, social publishing, media and documents, analytics, settings — on the day the feature
-ships, with no desktop release required.
+Both open on the **desktop shell** at `https://www.josemadrid.net/admin-desktop` — the same
+database, drawn as a dense keyboard-driven window instead of the web panel's page chrome — and
+both can reach every other page of the admin panel from there.
+
+That split is deliberate. The admin panel is 163 pages and 352 API routes, and rebuilding it
+natively per platform would mean writing every future admin feature three times. Because the
+apps load the real thing, **everything the admin panel can do, they can do** — orders, products,
+inventory, customers, financials, fundraisers, events and shows, email marketing, social
+publishing, media and documents, analytics, settings — on the day the feature ships, with no
+desktop release required. The shell sits on top of that as the fast path for the work done every
+day, and hands off to the web page for everything else.
 
 What the desktop apps add over a browser tab is the native layer: their own menus and keyboard
 shortcuts, a save dialog for every export, real printing, a persistent signed-in session, an
 offline screen that explains itself, and — on Windows — automatic updates.
+
+## The desktop shell
+
+`/admin-desktop` is a single full-window view: a 44px title bar the window itself drags by, a
+232px sidebar grouping every section under **Operations**, **Programs**, **Money**,
+**Marketing** and **System**, one content pane, a detail inspector on the right, and a status
+bar of keyboard hints. It follows the system's light or dark appearance, and the appearance
+button in the title bar cycles light → dark → follow-system for that machine.
+
+Both windows are frameless so the shell's own title bar runs to the top edge: macOS floats its
+traffic lights over the left of it, Windows paints its minimise/maximise/close buttons over the
+right.
+
+These sections read live data in the shell:
+
+| Section | What it shows |
+|---|---|
+| Dashboard | Today's orders and revenue, live fundraisers, jars on hand, SKUs at or below reorder, the next shows |
+| Orders | The latest 250 orders with jar counts, channel, status and totals |
+| Products | Catalogue with retail, unit cost and the margin between them |
+| Inventory | On hand, reserved, available and reorder point, flagged against the reorder threshold |
+| Customers | Ranked by lifetime value, with order counts and source |
+| Fundraisers | Participants across every campaign, with sales and the share going to the group |
+| Events & Shows | A month calendar plus every show on record, with booth fees and takings |
+| Financials | The general ledger — debit, credit, category, source and QuickBooks export state |
+| Analytics | Twelve months of revenue against the year before, channel mix, top products, retention by first-order quarter |
+| Settings | Live store, payment, shipping, QuickBooks and integration state (read only) |
+| Audit Logs | Who did what, most recent first |
+| Database Console | Row counts for the core tables |
+
+Every other section — Purchase Orders, Invoices, Wholesale, Email Marketing, Social, Content,
+Lead Generation, Reviews, Media, Messages, Users & Roles — keeps its place in the sidebar, its
+shortcut and its command palette entry, and opens the matching web admin page in the same window.
+
+Some columns differ from the design they were drawn to, because the schema does not carry the
+field: Products shows unit cost rather than a wholesale price, Customers shows acquisition source
+rather than a mailing address, Fundraisers counts orders rather than jars, and the Database
+Console reports row counts only — on-disk size and index counts need `pg_catalog` queries, and
+this codebase goes through Prisma rather than raw SQL.
+
+### Working in the shell
+
+| Key | Does |
+|---|---|
+| `J` / `K` or `↑` / `↓` | Move the selection |
+| `↵` | Open the selected row in the web admin |
+| `/` | Focus the filter box |
+| `F` | Cycle the filter chips |
+| `I` | Show or hide the inspector |
+| `Ctrl/⌘ K` | Command palette — jump to a section or a row, or run a command |
+| letters or digits | Type-ahead: jump to the first row starting with what you typed |
+
+The shell is read-only. Editing still happens on the admin pages it opens — the header buttons
+and `↵` are how you get there.
 
 ## Installing
 
@@ -61,8 +119,10 @@ Both apps share one section list, so the shortcuts match:
 | `Ctrl/⌘ 4` | Inventory | | `Ctrl/⌘ 9` | Email Marketing |
 | `Ctrl/⌘ 5` | Customers | | `Ctrl/⌘ P` | Print the current page |
 
-The rest of the sections — Analytics, Media & Documents, Social, Wholesale, Messages, Audit
-Logs, Settings, Developer Console, Database Console — are in the **Go** menu.
+The rest of the sections — Purchase Orders, Invoices, Wholesale, Social, Content & Blog, Lead
+Generation, Reviews, Analytics, Media & Documents, Messages, Users & Roles, Audit Logs, Settings,
+Developer Console, Database Console — are in the **Go** menu, grouped the same way the shell's
+sidebar groups them.
 
 ### Downloads and printing
 
@@ -74,7 +134,9 @@ showing.
 ### Which server the app talks to
 
 **File → Server Settings…** on Windows, **Settings** on macOS. HTTPS is required except for a
-`localhost` development server, which is how you point either app at `npm run dev`.
+`localhost` development server, which is how you point either app at `npm run dev`. A bare origin
+is treated as `/admin-desktop`; any other path on the same origin is accepted as typed, so
+`https://www.josemadrid.net/admin` still opens the web panel directly.
 
 ### Links and sign-in
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_ENDPOINT,
+  DESKTOP_PATH,
+  migrateLegacyDefault,
   isAuthUrl,
   isInternalUrl,
   isLocalHost,
@@ -18,9 +20,9 @@ describe('validateEndpoint', () => {
     expect(validateEndpoint(DEFAULT_ENDPOINT)).toEqual({ url: DEFAULT_ENDPOINT })
   })
 
-  it('fills in /admin when only an origin is given', () => {
+  it('fills in the desktop shell when only an origin is given', () => {
     expect(validateEndpoint('https://www.josemadrid.net')).toEqual({
-      url: 'https://www.josemadrid.net/admin',
+      url: DEFAULT_ENDPOINT,
     })
   })
 
@@ -31,7 +33,9 @@ describe('validateEndpoint', () => {
   })
 
   it('allows http only for local development servers', () => {
-    expect(validateEndpoint('http://localhost:3000')).toEqual({ url: 'http://localhost:3000/admin' })
+    expect(validateEndpoint('http://localhost:3000')).toEqual({
+      url: `http://localhost:3000${DESKTOP_PATH}`,
+    })
     expect(validateEndpoint('http://127.0.0.1:3000/admin')).toEqual({
       url: 'http://127.0.0.1:3000/admin',
     })
@@ -61,8 +65,30 @@ describe('validateEndpoint', () => {
 
   it('trims surrounding whitespace', () => {
     expect(validateEndpoint('  https://www.josemadrid.net/admin  ')).toEqual({
-      url: DEFAULT_ENDPOINT,
+      url: 'https://www.josemadrid.net/admin',
     })
+  })
+})
+
+describe('migrateLegacyDefault', () => {
+  it('moves an install that predates the shell onto the new default', () => {
+    // The app rewrites its settings file on every close, so the old default is
+    // saved as though it were a deliberate choice.
+    expect(migrateLegacyDefault('https://www.josemadrid.net/admin')).toBe(DEFAULT_ENDPOINT)
+  })
+
+  it('leaves a deliberately chosen endpoint alone', () => {
+    expect(migrateLegacyDefault('http://localhost:3000/admin')).toBe('http://localhost:3000/admin')
+    expect(migrateLegacyDefault('https://www.josemadrid.net/admin/orders')).toBe(
+      'https://www.josemadrid.net/admin/orders',
+    )
+    expect(migrateLegacyDefault('https://staging.example.com/admin')).toBe(
+      'https://staging.example.com/admin',
+    )
+  })
+
+  it('is a no-op once already migrated', () => {
+    expect(migrateLegacyDefault(DEFAULT_ENDPOINT)).toBe(DEFAULT_ENDPOINT)
   })
 })
 

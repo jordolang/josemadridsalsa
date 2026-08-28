@@ -6,7 +6,24 @@ import Foundation
 /// trusts is the most important thing it stores: navigation policy, external
 /// link handling and the session cookies themselves are all scoped to it.
 enum AdminEndpoint {
-  static let production = URL(string: "https://www.josemadrid.net/admin")!
+  /// The desktop shell — the admin data drawn as a native-feeling window rather
+  /// than the web panel's page chrome. It lives outside `/admin` because that
+  /// route group supplies a sidebar and top bar this window draws itself.
+  static let desktopPath = "/admin-desktop"
+
+  static let production = URL(string: "https://www.josemadrid.net\(desktopPath)")!
+
+  /// What the default used to be, before the desktop shell existed.
+  ///
+  /// An install that predates the shell may have saved the old default in
+  /// `@AppStorage` and would never see the new one. `migratingLegacyDefault`
+  /// moves exactly that value forward and leaves anything else — a localhost
+  /// server, a hand-picked admin page — alone.
+  private static let legacyProduction = "https://www.josemadrid.net/admin"
+
+  static func migratingLegacyDefault(_ endpoint: String) -> String {
+    endpoint == legacyProduction ? production.absoluteString : endpoint
+  }
 
   private static let localHosts: Set<String> = ["localhost", "127.0.0.1", "::1"]
 
@@ -37,7 +54,7 @@ enum AdminEndpoint {
     else { return nil }
 
     if components.path.isEmpty || components.path == "/" {
-      components.path = "/admin"
+      components.path = desktopPath
     }
 
     components.query = nil
