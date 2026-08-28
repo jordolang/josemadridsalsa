@@ -38,7 +38,7 @@ Both windows are frameless so the shell's own title bar runs to the top edge: ma
 traffic lights over the left of it, Windows paints its minimise/maximise/close buttons over the
 right.
 
-These sections read live data in the shell:
+All 23 sections read live data in the shell:
 
 | Section | What it shows |
 |---|---|
@@ -47,23 +47,60 @@ These sections read live data in the shell:
 | Products | Catalogue with retail, unit cost and the margin between them |
 | Inventory | On hand, reserved, available and reorder point, flagged against the reorder threshold |
 | Customers | Ranked by lifetime value, with order counts and source |
+| Purchase Orders | Inbound supply by supplier, with goods, freight and what is still outstanding |
+| Invoices | Accounts receivable, with what is open and what has run past its due date |
 | Fundraisers | Participants across every campaign, with sales and the share going to the group |
 | Events & Shows | A month calendar plus every show on record, with booth fees and takings |
+| Wholesale | Trade accounts with their discount, minimum, terms and approval state |
 | Financials | The general ledger — debit, credit, category, source and QuickBooks export state |
+| Email Marketing | Campaigns with audience, recipients, open and click rates |
+| Social | Scheduled and published posts with reach, engagement and clicks |
+| Content & Blog | Blog posts with their URL, status and SEO character budgets |
+| Lead Generation | The prospecting pipeline with the Google rating and review count behind each lead |
+| Reviews | Customer feedback awaiting moderation, with the average rating |
 | Analytics | Twelve months of revenue against the year before, channel mix, top products, retention by first-order quarter |
-| Settings | Live store, payment, shipping, QuickBooks and integration state (read only) |
+| Media & Docs | The library by kind and size, flagging images with no alt text |
+| Messages | One inbox merging support conversations, the contact form and live chat |
+| Users & Roles | Staff accounts with role, two-factor state and last sign-in |
 | Audit Logs | Who did what, most recent first |
+| Settings | Live store, payment, shipping, QuickBooks and integration state (read only) |
 | Database Console | Row counts for the core tables |
-
-Every other section — Purchase Orders, Invoices, Wholesale, Email Marketing, Social, Content,
-Lead Generation, Reviews, Media, Messages, Users & Roles — keeps its place in the sidebar, its
-shortcut and its command palette entry, and opens the matching web admin page in the same window.
 
 Some columns differ from the design they were drawn to, because the schema does not carry the
 field: Products shows unit cost rather than a wholesale price, Customers shows acquisition source
-rather than a mailing address, Fundraisers counts orders rather than jars, and the Database
-Console reports row counts only — on-disk size and index counts need `pg_catalog` queries, and
-this codebase goes through Prisma rather than raw SQL.
+rather than a mailing address, Fundraisers counts orders rather than jars, Wholesale shows the
+account's own discount and minimum rather than a price tier, Lead Generation shows the stored
+Google rating rather than a computed score, and the Database Console reports row counts only —
+on-disk size and index counts need `pg_catalog` queries, and this codebase goes through Prisma
+rather than raw SQL.
+
+Content & Blog lists the blog. Pages, banners, FAQs and redirects are edited through
+`/admin/content` but are not one queryable list, so they are reachable from the command palette
+rather than drawn as a table.
+
+### What each section needs to open
+
+The shell is a second door onto the same data, so it refuses exactly what the web panel refuses.
+Each section is gated on the permission its `/admin` page checks, and the sidebar is built from
+the sections the signed-in account may actually load — nothing is offered that would then be
+denied. Requesting a gated section directly returns `403` from
+`/api/admin/desktop/[section]`.
+
+| Permission | Sections it opens |
+|---|---|
+| `orders:read` | Orders, Fundraisers |
+| `products:read` | Products, Inventory |
+| `inventory:read` | Purchase Orders |
+| `financials:read` | Invoices, Financials |
+| `users:read` | Customers, Wholesale, Users & Roles, Audit Logs |
+| `content:read` | Email Marketing, Content & Blog |
+| `content:write` | Reviews, Media & Docs |
+| `social_media:compose` | Social |
+| `messaging:read` | Messages |
+| `analytics:read` | Analytics |
+| `settings:read` | Settings |
+| `developer:database` | Database Console |
+| — | Dashboard, Events & Shows, Lead Generation (staff, matching their pages) |
 
 ### Working in the shell
 
@@ -77,8 +114,28 @@ this codebase goes through Prisma rather than raw SQL.
 | `Ctrl/⌘ K` | Command palette — jump to a section or a row, or run a command |
 | letters or digits | Type-ahead: jump to the first row starting with what you typed |
 
-The shell is read-only. Editing still happens on the admin pages it opens — the header buttons
-and `↵` are how you get there.
+Selecting a row fills the inspector on the right, and the buttons at its foot are the jobs you
+can do with that row — each opens the admin page that performs it, on the key its label shows.
+A label ending in `…` is the promise that a page opens rather than something happening in place.
+
+Those keys are checked against the native menus: a combination either window's menu bar already
+owns (`⌘R` reload, `⌘P` print, `⌘A`, `⌘V`, `⌘M` and the rest) is never advertised, because the
+menu handles it before the page ever sees the key.
+
+The shell is read-only. Editing still happens on the admin pages it opens — the header buttons,
+the inspector actions and `↵` are how you get there.
+
+### Opening a section directly
+
+`/admin-desktop?section=<id>` opens the window at a section — `?section=invoices`,
+`?section=ledger`, and so on, using the ids in
+`apps/storefront/lib/admin-desktop/sections.ts`. Both menu bars navigate this way, so choosing
+**Orders** from the menu stays in the shell instead of leaving it for the web page, and the
+shell keeps the query in step as you move so a reload comes back to the same section. The one
+exception is **Developer Console**, which has no view in the shell and opens the web page.
+
+A section id that is unknown, or one the account may not open, falls back to the first section
+it can see rather than erroring — a menu item or an old bookmark should not be a dead end.
 
 ## Installing
 

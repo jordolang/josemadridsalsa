@@ -15,6 +15,7 @@ const prismaMock = {
   blogPost: { findMany: vi.fn() },
   chatThread: { findMany: vi.fn() },
   contactSubmission: { findMany: vi.fn() },
+  conversation: { findMany: vi.fn() },
   customer: { count: vi.fn(), findMany: vi.fn() },
   emailCampaign: { count: vi.fn(), findMany: vi.fn() },
   featuredEvent: { count: vi.fn(), findMany: vi.fn() },
@@ -611,7 +612,7 @@ describe('invoices', () => {
 })
 
 describe('messages', () => {
-  it('merges the contact form and live chat into one list, newest first', async () => {
+  it('merges conversations, the contact form and live chat into one list, newest first', async () => {
     prismaMock.contactSubmission.findMany.mockResolvedValue([
       {
         id: 'c1',
@@ -621,6 +622,20 @@ describe('messages', () => {
         message: 'We carry salsa in three stores.',
         ip: null,
         createdAt: new Date('2026-09-14T13:04:00Z'),
+      },
+    ])
+    prismaMock.conversation.findMany.mockResolvedValue([
+      {
+        id: 'cv1',
+        subject: 'Where is my order?',
+        userId: 'u9',
+        email: null,
+        status: 'OPEN',
+        createdAt: new Date('2026-09-16T09:00:00Z'),
+        updatedAt: new Date('2026-09-16T10:00:00Z'),
+        user: { name: 'Greg Sturtz', email: 'gsturtz@example.com' },
+        messages: [{ senderType: 'USER', body: 'Any update?', createdAt: new Date('2026-09-16T10:00:00Z') }],
+        _count: { messages: 3 },
       },
     ])
     prismaMock.chatThread.findMany.mockResolvedValue([
@@ -641,16 +656,49 @@ describe('messages', () => {
     const payload = await loadSection('messages')
     if (payload.body.view !== 'table') throw new Error('expected a table payload')
 
+    // The support inbox is the canonical one and must not be missing: the web
+    // panel at /admin/messages reads Conversation, so the shell has to too.
     expect(payload.body.rows.map((row) => row.cells[0].text)).toEqual([
+      'Greg Sturtz',
       'Tom Girard',
       'Cardinal Fine Foods',
     ])
-    expect(payload.body.rows[0].cells[2].text).toBe('Live chat')
-    expect(payload.body.rows[1].cells[2].text).toBe('Web form')
-    // Chip 3 is "Open"; only the waiting chat thread is.
-    expect(payload.filters[3]).toBe('Open')
-    expect(payload.body.rows[0].buckets).toContain(3)
-    expect(payload.body.rows[1].buckets).not.toContain(3)
+    expect(payload.body.rows.map((row) => row.cells[2].text)).toEqual([
+      'Conversation',
+      'Live chat',
+      'Web form',
+    ])
+
+    // Chip 4 is "Open" — the open conversation and the waiting chat thread.
+    expect(payload.filters[4]).toBe('Open')
+    expect(payload.body.rows[0].buckets).toContain(4)
+    expect(payload.body.rows[1].buckets).toContain(4)
+    expect(payload.body.rows[2].buckets).not.toContain(4)
+    expect(payload.body.totals[4].text).toBe('2 open')
+  })
+
+  it('opens a live chat on the live thread route, not the conversation one', async () => {
+    // /admin/messages/<id> loads a Conversation; a ChatThread id there is a 404.
+    prismaMock.chatThread.findMany.mockResolvedValue([
+      {
+        id: 't9',
+        status: 'ACTIVE',
+        source: 'storefront',
+        customerName: 'Iris Pham',
+        customerEmail: null,
+        assignedAdminId: null,
+        startedAt: new Date('2026-09-15T13:00:00Z'),
+        lastMessageAt: new Date('2026-09-15T13:30:00Z'),
+        closedAt: null,
+        _count: { messages: 2 },
+      },
+    ])
+
+    const payload = await loadSection('messages')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    expect(payload.body.rows[0].href).toBe('/admin/messages/live/t9')
+    expect(payload.body.rows[0].inspector.actions?.[0].href).toBe('/admin/messages/live/t9')
   })
 })
 

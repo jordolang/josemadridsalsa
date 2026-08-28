@@ -34,6 +34,9 @@ declare global {
   }
 }
 
+/** Thrown for a 403 so the shell can say why rather than blaming the network. */
+class SectionDeniedError extends Error {}
+
 const APPEARANCE_KEY = 'jms-desktop-appearance'
 const APPEARANCE_ORDER: Appearance[] = ['', 'light', 'dark']
 
@@ -50,10 +53,17 @@ export function DesktopShell({
   initialSection,
   badges,
   operator,
+  visibleSections,
 }: {
   initialSection: SectionPayload
   badges: DesktopBadges
   operator: { name: string; email: string }
+  /**
+   * The sections this account may load, resolved on the server from the same
+   * permissions the web panel checks. Anything absent is left out of the
+   * sidebar and the palette rather than offered and then refused.
+   */
+  visibleSections?: DesktopSectionId[]
 }) {
   const [section, setSection] = useState<SectionPayload>(initialSection)
   const [loading, setLoading] = useState(false)
@@ -76,10 +86,28 @@ export function DesktopShell({
   /** The request that owns the current render, so a slow section cannot land after a fast one. */
   const requestId = useRef(0)
 
-  const sections = useMemo(() => DESKTOP_SECTION_GROUPS.flatMap((group) => group.items), [])
+  // Undefined means "no list was supplied" — every section shows, which is what
+  // an older server render or a test fixture expects. An empty array is a real
+  // answer and hides everything.
+  const permitted = useMemo(
+    () => (visibleSections ? new Set<DesktopSectionId>(visibleSections) : null),
+    [visibleSections],
+  )
+
+  const groups = useMemo(
+    () =>
+      DESKTOP_SECTION_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !permitted || permitted.has(item.id)),
+      })).filter((group) => group.items.length > 0),
+    [permitted],
+  )
+
+  const sections = useMemo(() => groups.flatMap((group) => group.items), [groups])
+  const allSections = useMemo(() => DESKTOP_SECTION_GROUPS.flatMap((group) => group.items), [])
   const currentSection = useMemo(
-    () => sections.find((item) => item.id === section.id) ?? sections[0],
-    [sections, section.id],
+    () => allSections.find((item) => item.id === section.id) ?? allSections[0],
+    [allSections, section.id],
   )
 
   useEffect(() => {
@@ -118,6 +146,7 @@ export function DesktopShell({
 
       try {
         const response = await fetch(`/api/admin/desktop/${id}`, { credentials: 'same-origin' })
+        if (response.status === 403) throw new SectionDeniedError()
         if (!response.ok) throw new Error(`Request failed with ${response.status}`)
         const payload = (await response.json()) as SectionPayload
         if (ticket !== requestId.current) return
@@ -136,9 +165,13 @@ export function DesktopShell({
         } catch {
           // A window that will not let us rewrite its URL still navigated fine.
         }
-      } catch {
+      } catch (error) {
         if (ticket !== requestId.current) return
-        setError('Could not load that section. Check the connection and try again.')
+        setError(
+          error instanceof SectionDeniedError
+            ? 'Your account does not have permission to open that section.'
+            : 'Could not load that section. Check the connection and try again.',
+        )
       } finally {
         if (ticket === requestId.current) setLoading(false)
       }
@@ -494,7 +527,7 @@ export function DesktopShell({
           </div>
 
           <div className="jmsd-nav">
-            {DESKTOP_SECTION_GROUPS.map((group) => (
+            {groups.map((group) => (
               <div key={group.label} className="jmsd-nav-group">
                 <div className="jmsd-nav-group-label">{group.label}</div>
                 {group.items.map((item) => {

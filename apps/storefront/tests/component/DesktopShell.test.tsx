@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { DesktopShell } from '@/components/admin-desktop/desktop-shell'
 import type { Row, SectionPayload } from '@/lib/admin-desktop/types'
+import type { DesktopSectionId } from '@/lib/admin-desktop/sections'
 
 /**
  * The shell is the whole desktop window, so these cover the parts a screenshot
@@ -54,12 +55,13 @@ const payload: SectionPayload = {
   loadedAt: '2026-09-14T12:41:00.000Z',
 }
 
-function renderShell() {
+function renderShell(visibleSections?: DesktopSectionId[]) {
   return render(
     <DesktopShell
       initialSection={payload}
       badges={{ orders: 6 }}
       operator={{ name: 'Mike Madrid', email: 'mike@josemadrid.net' }}
+      visibleSections={visibleSections}
     />,
   )
 }
@@ -156,5 +158,28 @@ describe('DesktopShell', () => {
     expect(within(palette).getByText('Inventory')).toBeInTheDocument()
     // Sub-pages the shell does not draw itself are still reachable here.
     expect(within(palette).getByText('Content & Blog · Redirects')).toBeInTheDocument()
+  })
+
+  it('leaves out sections the account may not see', () => {
+    // The server resolves this from the same permissions /admin checks, so a
+    // section missing here is one the API would refuse anyway. Offering it and
+    // then failing the fetch would be worse than not offering it.
+    renderShell(['orders', 'products'])
+
+    const sidebar = screen.getByRole('navigation')
+    expect(within(sidebar).getByText('Orders')).toBeInTheDocument()
+    expect(within(sidebar).queryByText('Financials')).not.toBeInTheDocument()
+    expect(within(sidebar).queryByText('Database Console')).not.toBeInTheDocument()
+
+    // And the palette agrees, so ⌘K is not a way around the sidebar.
+    fireEvent.keyDown(document, { key: 'k', metaKey: true })
+    const palette = screen.getByRole('dialog', { name: 'Command palette' })
+    expect(within(palette).getByText('Products')).toBeInTheDocument()
+    expect(within(palette).queryByText('Database Console')).not.toBeInTheDocument()
+  })
+
+  it('shows every section when the server supplies no list', () => {
+    renderShell()
+    expect(within(screen.getByRole('navigation')).getByText('Database Console')).toBeInTheDocument()
   })
 })

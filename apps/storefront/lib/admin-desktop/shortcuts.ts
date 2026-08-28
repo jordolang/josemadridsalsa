@@ -16,8 +16,42 @@ export interface ShortcutEvent {
   shiftKey: boolean
 }
 
-/** Combinations the shell itself owns. An action may not quietly steal one. */
-const RESERVED = new Set(['⌘K', ...Array.from({ length: 9 }, (_, index) => `⌘${index + 1}`)])
+/**
+ * Combinations an inspector action may not take.
+ *
+ * Two groups, and the second is the one that bites. The shell owns `⌘K` and the
+ * section digits, so binding those here would be dead code. But the packaged
+ * windows put a native menu in front of the page: Electron's menu and SwiftUI's
+ * `CommandGroup` both handle their accelerators *before* the web view sees a
+ * `keydown`, so an action on `⌘R` would reload the window rather than run, and
+ * would do it while the button still advertised the key. Those are listed from
+ * `apps/windows-admin/src/main/menu.ts` and `JoseMadridAdminApp.swift`, plus the
+ * macOS system-wide ones no application menu can take back.
+ */
+const RESERVED = new Set([
+  // The shell's own.
+  '⌘K',
+  ...Array.from({ length: 9 }, (_, index) => `⌘${index + 1}`),
+  // Both native menus.
+  '⌘R', // Reload
+  '⌘⇧R', // Force reload
+  '⌘P', // Print
+  '⌘,', // Settings
+  '⌘Z', // Undo
+  '⌘⇧Z', // Redo
+  '⌘X', // Cut
+  '⌘C', // Copy
+  '⌘V', // Paste
+  '⌘A', // Select all
+  '⌘M', // Minimise
+  '⌘W', // Close window
+  '⌘Q', // Quit
+  '⌘0', // Reset zoom
+  // macOS only, but reserved on both so one label works in both windows.
+  '⌘H', // Hide application
+  '⌘[', // Back
+  '⌘]', // Forward
+])
 
 /** Glyphs the design uses for keys that `KeyboardEvent.key` spells out. */
 const NAMED: Record<string, string> = {

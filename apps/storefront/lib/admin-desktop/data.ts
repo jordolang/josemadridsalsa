@@ -183,6 +183,13 @@ async function loadOrders(): Promise<TablePayload> {
             ],
           },
         ],
+      
+        actions: [
+          { label: 'Open order…', href: `/admin/orders/${order.id}`, shortcut: '⌘⏎' },
+          { label: 'Packing slip…', href: `/admin/orders/${order.id}/packing-slip`, shortcut: '⌘S' },
+          { label: 'Invoice…', href: `/admin/orders/${order.id}/invoice`, shortcut: '⌘I' },
+          { label: 'All customers…', href: '/admin/customers', shortcut: '⌘U' },
+        ],
       },
     }
   })
@@ -311,6 +318,13 @@ async function loadProducts(): Promise<TablePayload> {
             ],
           },
         ],
+      
+        actions: [
+          { label: 'Edit product…', href: `/admin/products/${product.id}/edit`, shortcut: '⌘⏎' },
+          { label: 'Open product…', href: `/admin/products/${product.id}`, shortcut: '⌘O' },
+          { label: 'Inventory…', href: '/admin/inventory', shortcut: '⌘I' },
+          { label: 'Categories…', href: '/admin/categories', shortcut: '⌘G' },
+        ],
       },
     }
   })
@@ -427,6 +441,13 @@ async function loadInventory(): Promise<TablePayload> {
               { label: 'Stock at retail', value: money(toNumber(product.price) * product.inventory), mono: true },
             ],
           },
+        ],
+      
+        actions: [
+          { label: 'Open product…', href: `/admin/products/${product.id}`, shortcut: '⌘⏎' },
+          { label: 'Purchase orders…', href: '/admin/purchase-orders', shortcut: '⌘U' },
+          { label: 'Inventory analytics…', href: '/admin/analytics/inventory', shortcut: '⌘N' },
+          { label: 'Turnover…', href: '/admin/analytics/inventory-turnover', shortcut: '⌘T' },
         ],
       },
     }
@@ -547,6 +568,12 @@ async function loadCustomers(): Promise<TablePayload> {
             ? [{ label: 'NOTES', fields: [{ label: 'Note', value: customer.notes, wrap: true }] }]
             : []),
         ],
+      
+        actions: [
+          { label: 'All customers…', href: '/admin/customers', shortcut: '⌘⏎' },
+          { label: 'Import customers…', href: '/admin/customers/import', shortcut: '⌘I' },
+          { label: 'Orders…', href: '/admin/orders', shortcut: '⌘O' },
+        ],
       },
     }
   })
@@ -582,6 +609,7 @@ async function loadFundraisers(): Promise<TablePayload> {
         include: {
           fundraiser: {
             select: {
+              id: true,
               name: true,
               organizationName: true,
               status: true,
@@ -664,6 +692,13 @@ async function loadFundraisers(): Promise<TablePayload> {
               { label: 'To org', value: money(payout), mono: true, strong: true },
             ],
           },
+        ],
+      
+        actions: [
+          { label: 'Open fundraiser…', href: `/admin/fundraisers/${participant.fundraiser.id}`, shortcut: '⌘⏎' },
+          { label: 'Participants…', href: `/admin/fundraisers/${participant.fundraiser.id}/participants`, shortcut: '⌘U' },
+          { label: 'Battle arena…', href: '/admin/fundraisers/battle-arena', shortcut: '⌘B' },
+          { label: 'Fundraiser analytics…', href: '/admin/analytics/fundraisers', shortcut: '⌘N' },
         ],
       },
     }
@@ -827,6 +862,13 @@ async function loadEvents(): Promise<EventsPayload> {
             ],
           },
         ],
+      
+        actions: [
+          { label: 'Edit show…', href: `/admin/events/${event.id}/edit`, shortcut: '⌘⏎' },
+          { label: 'Manifest…', href: `/admin/events/${event.id}/manifest`, shortcut: '⌘F' },
+          { label: 'Show financials…', href: `/admin/events/${event.id}/financials`, shortcut: '⌘N' },
+          { label: 'Calendar…', href: '/admin/events/calendar', shortcut: '⌘D' },
+        ],
       },
     }
   })
@@ -941,6 +983,13 @@ async function loadLedger(): Promise<TablePayload> {
           },
           ...(entry.memo ? [{ label: 'MEMO', fields: [{ label: 'Note', value: entry.memo, wrap: true }] }] : []),
         ],
+      
+        actions: [
+          { label: 'Reconciliation…', href: '/admin/financials/reconciliation', shortcut: '⌘⏎' },
+          { label: 'Expenses…', href: '/admin/financials/expenses', shortcut: '⌘E' },
+          { label: 'Import ledger…', href: '/admin/financials/ledger/import', shortcut: '⌘I' },
+          { label: 'Taxes…', href: '/admin/financials/taxes', shortcut: '⌘T' },
+        ],
       },
     }
   })
@@ -1034,6 +1083,11 @@ async function loadDatabase(): Promise<TablePayload> {
             { label: 'Where', value: 'Open the Database Console', wrap: true },
           ],
         },
+      ],
+    
+      actions: [
+        { label: 'Database console…', href: '/admin/developer/database', shortcut: '⌘⏎' },
+        { label: 'Developer console…', href: '/admin/developer', shortcut: '⌘D' },
       ],
     },
   }))
@@ -1192,6 +1246,12 @@ async function loadDashboard(): Promise<DashboardPayload> {
             { label: 'Active products', value: count(products.length) },
           ],
         },
+      ],
+    
+      actions: [
+        { label: 'New order…', href: '/admin/orders/new', shortcut: '⌘⏎' },
+        { label: 'Inventory…', href: '/admin/inventory', shortcut: '⌘I' },
+        { label: 'Financials…', href: '/admin/financials', shortcut: '⌘F' },
       ],
     },
   }
@@ -1398,6 +1458,13 @@ async function loadAnalytics(): Promise<AnalyticsPayload> {
           lines: channels.map((channel) => ({ name: channel.name, qty: channel.pct, amount: channel.amount })),
         },
       ],
+    
+      actions: [
+        { label: 'Report builder…', href: '/admin/data', shortcut: '⌘⏎' },
+        { label: 'Retention…', href: '/admin/analytics/retention', shortcut: '⌘E' },
+        { label: 'Margin…', href: '/admin/analytics/margin', shortcut: '⌘G' },
+        { label: 'Attribution…', href: '/admin/analytics/attribution', shortcut: '⌘T' },
+      ],
     },
   }
 }
@@ -1487,6 +1554,13 @@ async function loadSettings(): Promise<SettingsPayload> {
           ],
         },
       ],
+    
+      actions: [
+        { label: 'Store settings…', href: '/admin/settings/store', shortcut: '⌘⏎' },
+        { label: 'Payments…', href: '/admin/settings/payments', shortcut: '⌘Y' },
+        { label: 'Shipping…', href: '/admin/settings/shipping', shortcut: '⌘S' },
+        { label: 'Integrations…', href: '/admin/settings/integrations', shortcut: '⌘G' },
+      ],
     },
   }
 }
@@ -1549,6 +1623,11 @@ async function loadAudit(): Promise<TablePayload> {
               { label: 'Agent', value: log.userAgent ?? '—', wrap: true },
             ],
           },
+        ],
+      
+        actions: [
+          { label: 'All activity…', href: '/admin/audit-logs', shortcut: '⌘⏎' },
+          { label: 'Users & roles…', href: '/admin/users', shortcut: '⌘U' },
         ],
       },
     }
@@ -1680,8 +1759,7 @@ async function loadPurchase(): Promise<TablePayload> {
           },
         ],
         actions: [
-          { label: 'Open purchase order…', href: `/admin/purchase-orders/${order.id}`, shortcut: '⌘⏎' },
-          { label: 'Receive into stock…', href: `/admin/purchase-orders/${order.id}`, shortcut: '⌘R' },
+          { label: 'Receive into stock…', href: `/admin/purchase-orders/${order.id}`, shortcut: '⌘⏎' },
           { label: 'Suppliers…', href: '/admin/purchase-orders/suppliers', shortcut: '⌘U' },
           { label: 'Inventory…', href: '/admin/inventory', shortcut: '⌘I' },
         ],
@@ -1720,11 +1798,28 @@ const INVOICE_TONE: Record<string, Tone> = {
   CANCELLED: 'muted',
 }
 
-/** An invoice's `lines` column is free-form JSON; read it defensively. */
+/**
+ * An invoice's `lines` column is free-form JSON; read it defensively.
+ *
+ * Some rows store the array, others a JSON-encoded string of it. Both admin
+ * invoice pages accept either (`parseLineCount`, `parseInvoiceLines`), so this
+ * has to as well — treating a string as "no lines" would quietly show an
+ * invoice with a total and nothing that adds up to it.
+ */
 function invoiceLines(value: Prisma.JsonValue | null | undefined): InspectorLine[] {
-  if (!Array.isArray(value)) return []
+  let parsed: unknown = value
 
-  return value.flatMap((entry) => {
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed)
+    } catch {
+      return []
+    }
+  }
+
+  if (!Array.isArray(parsed)) return []
+
+  return parsed.flatMap((entry) => {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return []
     const line = entry as Record<string, unknown>
     const name = typeof line.description === 'string' ? line.description : line.name
@@ -1782,9 +1877,11 @@ async function loadInvoices(): Promise<TablePayload> {
     if (!settled) outstanding += total
 
     const customer = invoice.customerId ? (byId.get(invoice.customerId) ?? '—') : '—'
-    // An unpaid invoice past its due date reads as overdue even if a nightly
-    // job has not moved the stored status along yet.
-    const lapsed = !settled && invoice.dueDate.getTime() < now
+    // A sent invoice past its due date reads as overdue even if a nightly job
+    // has not moved the stored status along yet. A DRAFT is not late: it was
+    // never issued, and the invoice pages still show it as a draft.
+    const lapsed =
+      (invoice.status === 'SENT' || invoice.status === 'OVERDUE') && invoice.dueDate.getTime() < now
     const label = lapsed && invoice.status !== 'OVERDUE' ? 'Overdue' : humanise(invoice.status)
     const tone = lapsed ? 'bad' : (INVOICE_TONE[invoice.status] ?? 'muted')
 
@@ -1936,7 +2033,7 @@ async function loadWholesale(): Promise<TablePayload> {
         actions: [
           { label: 'Wholesale accounts…', href: '/admin/wholesale', shortcut: '⌘⏎' },
           { label: 'Store locator…', href: '/admin/locations', shortcut: '⌘L' },
-          { label: 'Merchandise…', href: '/admin/merchandise', shortcut: '⌘M' },
+          { label: 'Merchandise…', href: '/admin/merchandise', shortcut: '⌘⇧M' },
         ],
       },
     }
@@ -2065,7 +2162,7 @@ async function loadEmail(): Promise<TablePayload> {
         actions: [
           { label: 'Open campaign…', href: `/admin/email-campaigns/${campaign.id}`, shortcut: '⌘⏎' },
           { label: 'Send log…', href: '/admin/email-marketing/logs', shortcut: '⌘L' },
-          { label: 'Automations…', href: '/admin/email-marketing/automations', shortcut: '⌘A' },
+          { label: 'Automations…', href: '/admin/email-marketing/automations', shortcut: '⌘⇧A' },
           { label: 'Lists & subscribers…', href: '/admin/communications/lists', shortcut: '⌘U' },
         ],
       },
@@ -2202,7 +2299,7 @@ async function loadSocial(): Promise<TablePayload> {
         ],
         actions: [
           { label: 'Scheduled posts…', href: '/admin/social', shortcut: '⌘⏎' },
-          { label: 'Social analytics…', href: '/admin/analytics/social', shortcut: '⌘A' },
+          { label: 'Social analytics…', href: '/admin/analytics/social', shortcut: '⌘⇧A' },
           { label: 'Product feeds…', href: '/admin/feeds', shortcut: '⌘F' },
         ],
       },
@@ -2337,7 +2434,7 @@ async function loadContent(): Promise<TablePayload> {
         actions: [
           { label: 'Edit post…', href: `/admin/blog/posts/${post.slug}`, shortcut: '⌘⏎' },
           { label: 'View on storefront…', href: url, shortcut: '⌘O' },
-          { label: 'Pages…', href: '/admin/content/pages', shortcut: '⌘P' },
+          { label: 'Pages…', href: '/admin/content/pages', shortcut: '⌘⇧P' },
           { label: 'SEO…', href: '/admin/seo', shortcut: '⌘S' },
         ],
       },
@@ -2706,7 +2803,7 @@ async function loadMedia(): Promise<TablePayload> {
 // Messages
 // ---------------------------------------------------------------------------
 
-const MESSAGE_FILTERS = ['All', 'Web form', 'Live chat', 'Open']
+const MESSAGE_FILTERS = ['All', 'Conversations', 'Web form', 'Live chat', 'Open']
 
 const CHAT_TONE: Record<string, Tone> = {
   WAITING: 'warn',
@@ -2716,10 +2813,25 @@ const CHAT_TONE: Record<string, Tone> = {
 }
 
 async function loadMessages(): Promise<TablePayload> {
-  // Two tables feed one inbox: the contact form and the live-chat handoff. They
-  // are merged here and sorted together so the operator reads one list rather
-  // than switching between two.
-  const [submissions, threads] = await Promise.all([
+  // Three tables feed one inbox. `Conversation` is the support inbox the web
+  // panel at /admin/messages shows; `ContactSubmission` is the marketing site's
+  // contact form; `ChatThread` is the live-chat handoff. They are separate
+  // tables but one job, so they are merged and sorted together rather than
+  // leaving the operator to switch between three lists.
+  const [conversations, submissions, threads] = await Promise.all([
+    safe(
+      () =>
+        prisma.conversation.findMany({
+          orderBy: { updatedAt: 'desc' },
+          take: ROW_LIMIT,
+          include: {
+            user: { select: { name: true, email: true } },
+            messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+            _count: { select: { messages: true } },
+          },
+        }),
+      [],
+    ),
     safe(
       () => prisma.contactSubmission.findMany({ orderBy: { createdAt: 'desc' }, take: ROW_LIMIT }),
       [],
@@ -2743,12 +2855,70 @@ async function loadMessages(): Promise<TablePayload> {
     { label: 'Status', width: '112px' },
   ]
 
+  const conversationRows: (Row & { at: Date })[] = conversations.map((conversation) => {
+    const who = personName({
+      name: conversation.user?.name,
+      email: conversation.user?.email ?? conversation.email,
+    })
+    const open = conversation.status === 'OPEN'
+    const latest = conversation.messages[0]
+
+    return {
+      at: conversation.updatedAt,
+      id: `conversation-${conversation.id}`,
+      href: `/admin/messages/${conversation.id}`,
+      search: `${who} ${conversation.email ?? ''} ${conversation.subject ?? ''}`,
+      buckets: [0, 1, ...(open ? [4] : [])],
+      cells: [
+        text(who, { strong: true }),
+        text(excerpt(conversation.subject ?? latest?.body, 80), { dim: true }),
+        text('Conversation', { dim: true, dot: true, tone: 'warn' }),
+        text(stamp(conversation.updatedAt), { mono: true, dim: true }),
+        statusCell(humanise(conversation.status), open ? 'warn' : 'muted'),
+      ],
+      inspector: {
+        title: who,
+        tag: humanise(conversation.status),
+        tagTone: open ? 'warn' : 'muted',
+        groups: [
+          {
+            label: 'CONVERSATION',
+            fields: [
+              { label: 'From', value: who },
+              { label: 'Email', value: conversation.user?.email ?? conversation.email ?? '—', mono: true, wrap: true },
+              { label: 'Subject', value: conversation.subject ?? '—', wrap: true },
+              { label: 'Messages', value: count(conversation._count.messages), mono: true },
+              { label: 'Opened', value: stamp(conversation.createdAt), mono: true },
+              { label: 'Last activity', value: stamp(conversation.updatedAt), mono: true },
+              { label: 'Account', value: conversation.userId ? 'Registered' : 'Guest' },
+            ],
+          },
+          ...(latest
+            ? [
+                {
+                  label: 'LATEST MESSAGE',
+                  fields: [
+                    { label: humanise(latest.senderType), value: excerpt(latest.body, 400), wrap: true },
+                  ],
+                },
+              ]
+            : []),
+        ],
+        actions: [
+          { label: 'Open conversation…', href: `/admin/messages/${conversation.id}`, shortcut: '⌘⏎' },
+          { label: 'Inbox…', href: '/admin/messages', shortcut: '⌘L' },
+          { label: 'Notifications…', href: '/admin/notifications', shortcut: '⌘N' },
+        ],
+      },
+    }
+  })
+
   const formRows: (Row & { at: Date })[] = submissions.map((entry) => ({
     at: entry.createdAt,
     id: `contact-${entry.id}`,
     href: '/admin/messages',
     search: `${entry.name} ${entry.email} ${entry.subject} ${entry.message}`,
-    buckets: [0, 1],
+    buckets: [0, 2],
     cells: [
       text(entry.name, { strong: true }),
       text(excerpt(entry.subject, 80), { dim: true }),
@@ -2786,9 +2956,9 @@ async function loadMessages(): Promise<TablePayload> {
     return {
       at: thread.lastMessageAt,
       id: `chat-${thread.id}`,
-      href: `/admin/messages/${thread.id}`,
+      href: `/admin/messages/live/${thread.id}`,
       search: `${who} ${thread.customerEmail ?? ''} live chat`,
-      buckets: [0, 2, ...(open ? [3] : [])],
+      buckets: [0, 3, ...(open ? [4] : [])],
       cells: [
         text(who, { strong: true }),
         text(`${count(thread._count.messages)} messages · ${thread.source ?? 'live chat'}`, { dim: true }),
@@ -2816,7 +2986,7 @@ async function loadMessages(): Promise<TablePayload> {
           },
         ],
         actions: [
-          { label: 'Open thread…', href: `/admin/messages/${thread.id}`, shortcut: '⌘⏎' },
+          { label: 'Open thread…', href: `/admin/messages/live/${thread.id}`, shortcut: '⌘⏎' },
           { label: 'Live chat…', href: '/admin/messages/live', shortcut: '⌘L' },
           { label: 'Notifications…', href: '/admin/notifications', shortcut: '⌘N' },
         ],
@@ -2824,11 +2994,11 @@ async function loadMessages(): Promise<TablePayload> {
     }
   })
 
-  const merged = [...formRows, ...chatRows]
+  const merged = [...conversationRows, ...formRows, ...chatRows]
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, ROW_LIMIT)
 
-  const open = merged.filter((row) => row.buckets.includes(3)).length
+  const open = merged.filter((row) => row.buckets.includes(4)).length
   const rows: Row[] = merged.map(({ at: _at, ...row }) => row)
 
   return {
@@ -2944,7 +3114,7 @@ async function loadUsers(): Promise<TablePayload> {
         actions: [
           { label: 'Edit user…', href: `/admin/users/${user.id}/edit`, shortcut: '⌘⏎' },
           { label: 'Open user…', href: `/admin/users/${user.id}`, shortcut: '⌘O' },
-          { label: 'Credential vault…', href: '/admin/credentials', shortcut: '⌘V' },
+          { label: 'Credential vault…', href: '/admin/credentials', shortcut: '⌘⇧V' },
         ],
       },
     }
