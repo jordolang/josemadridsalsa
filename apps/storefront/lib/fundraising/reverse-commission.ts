@@ -65,7 +65,9 @@ export async function reverseFundraiserCommission(
 
   const order = refund?.payment?.order
 
-  if (!refund || !order?.participantId || !order.fundraiserId || order.fundraiserCommission === null) {
+  // Mirrors `credit-commission.ts`: the fundraiser makes it a campaign sale, the participant
+  // is optional. A credit taken without a participant has to be reversible without one too.
+  if (!refund || !order?.fundraiserId || order.fundraiserCommission === null) {
     return { reversed: false, amount: 0, reason: 'not-a-fundraiser-order' }
   }
 
@@ -125,13 +127,15 @@ export async function reverseFundraiserCommission(
 
   // Revenue comes down by what was refunded; the order itself still happened, so the order
   // count is deliberately left alone.
-  await tx.fundraiserParticipant.update({
-    where: { id: order.participantId },
-    data: {
-      totalRevenue: { decrement: revenue },
-      totalCommission: { decrement: commission },
-    },
-  })
+  if (order.participantId) {
+    await tx.fundraiserParticipant.update({
+      where: { id: order.participantId },
+      data: {
+        totalRevenue: { decrement: revenue },
+        totalCommission: { decrement: commission },
+      },
+    })
+  }
 
   await tx.fundraiser.update({
     where: { id: order.fundraiserId },

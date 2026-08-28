@@ -75,6 +75,7 @@ interface FundraiserData {
   endDate: string
   goal: string | number | null
   commissionRate: string | number
+  defaultUnitPrice: string | number
   status: FundraiserStatus
   isActive: boolean
   totalOrders: number
@@ -373,7 +374,7 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Product Selection</h3>
-          <p className="text-sm text-muted-foreground">{includedCount} of {allProducts.length} products included in this fundraiser</p>
+          <p className="text-sm text-muted-foreground">{includedCount} of {allProducts.length} products included in this fundraiser. Including none sells the whole catalogue at the store price.</p>
         </div>
         <div className="flex items-center gap-3">
           <Input
@@ -413,7 +414,7 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{product.name}</p>
-                  <p className="text-sm text-muted-foreground">SKU: {product.sku} · Base price: ${fmt(product.price)}</p>
+                  <p className="text-sm text-muted-foreground">SKU: {product.sku} · Retail: ${fmt(product.price)} · This store: ${fmt(fundraiser.defaultUnitPrice)}</p>
                 </div>
 
                 {/* Include toggle */}
@@ -439,7 +440,7 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
                         step="0.01"
                         value={sel.price}
                         onChange={e => setPrice(product.id, e.target.value)}
-                        placeholder={fmt(product.price)}
+                        placeholder={fmt(fundraiser.defaultUnitPrice)}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -467,6 +468,9 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
 
 function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; allProducts: AllProduct[] }) {
   const [commissionRate, setCommissionRate] = useState(String(Number(fundraiser.commissionRate)))
+  const [defaultUnitPrice, setDefaultUnitPrice] = useState(
+    String(Number(fundraiser.defaultUnitPrice))
+  )
   const [markupPct, setMarkupPct] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -475,17 +479,21 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
   const [error, setError] = useState<string | null>(null)
 
   const rate = Number(commissionRate) || 0
-  const sampleRevenue = 1000
-  const sampleCommission = (sampleRevenue * rate) / 100
+  const unitPrice = Number(defaultUnitPrice) || 0
+  // Stated per jar, because that is the number the coordinator quotes their sellers.
+  const perJarToGroup = Math.round(unitPrice * (rate / 100) * 100) / 100
 
   const handleSaveCommission = async () => {
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch(`/api/admin/fundraisers/${fundraiser.id}/commission`, {
-        method: 'PUT',
+      const res = await fetch(`/api/admin/fundraisers/${fundraiser.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commissionRate: Number(commissionRate) }),
+        body: JSON.stringify({
+          commissionRate: Number(commissionRate),
+          defaultUnitPrice: Number(defaultUnitPrice),
+        }),
       })
       if (!res.ok) {
         const j = await res.json()
@@ -541,10 +549,31 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
         {/* Commission Rate */}
         <Card>
           <CardHeader>
-            <CardTitle>Commission Rate</CardTitle>
-            <CardDescription>Percentage of revenue earned by the fundraiser organization</CardDescription>
+            <CardTitle>Store Price &amp; Split</CardTitle>
+            <CardDescription>
+              What this fundraiser&apos;s own store charges per jar, and the share of it the
+              organization keeps. Shipping and tax are never split — they are paid out in full
+              to the carrier and the state.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="defaultUnitPrice">Store Price per Jar ($)</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  id="defaultUnitPrice"
+                  type="number"
+                  min="0"
+                  step="0.25"
+                  value={defaultUnitPrice}
+                  onChange={e => setDefaultUnitPrice(e.target.value)}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">
+                  used unless a product below sets its own price
+                </span>
+              </div>
+            </div>
             <div>
               <Label htmlFor="commissionRate">Commission Rate (%)</Label>
               <div className="flex items-center gap-2 mt-1">
@@ -564,15 +593,19 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
 
             {/* Preview */}
             <div className="rounded-lg bg-muted p-4 space-y-2">
-              <p className="text-sm font-medium">Commission Preview</p>
+              <p className="text-sm font-medium">Per-Jar Split</p>
               <div className="text-sm text-muted-foreground space-y-1">
                 <div className="flex justify-between">
-                  <span>Sample revenue</span>
-                  <span>${sampleRevenue.toFixed(2)}</span>
+                  <span>Supporter pays</span>
+                  <span>${unitPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Commission ({rate}%)</span>
-                  <span className="font-semibold text-primary">${sampleCommission.toFixed(2)}</span>
+                  <span>To the organization ({rate}%)</span>
+                  <span className="font-semibold text-primary">${perJarToGroup.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>To Jose Madrid Salsa</span>
+                  <span>${(unitPrice - perJarToGroup).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Current total commission earned</span>
@@ -586,7 +619,7 @@ function CommissionTab({ fundraiser, allProducts }: { fundraiser: FundraiserData
             <div className="flex items-center gap-3">
               <Button onClick={handleSaveCommission} disabled={saving}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Save Commission Rate
+                Save Price &amp; Split
               </Button>
               {saved && <span className="flex items-center gap-1 text-sm text-primary"><CheckCircle className="h-4 w-4" />Saved!</span>}
             </div>

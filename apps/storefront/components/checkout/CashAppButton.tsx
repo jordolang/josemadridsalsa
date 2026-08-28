@@ -27,12 +27,14 @@ interface CashAppButtonProps {
   notes?: string
   shippingMethod?: string
   referralCode?: string
+  /** Which fundraiser's store the cart was filled in, if any. */
+  fundraiserSlug?: string
   onSuccess: (orderId: string, orderAccessToken: string) => void
   onError: (message: string) => void
   disabled?: boolean
 }
 
-export function CashAppButton({ items, customer, shipping, total, notes, shippingMethod, referralCode, onSuccess, onError, disabled }: CashAppButtonProps) {
+export function CashAppButton({ items, customer, shipping, total, notes, shippingMethod, referralCode, fundraiserSlug, onSuccess, onError, disabled }: CashAppButtonProps) {
   if (!SQUARE_APP_ID || !SQUARE_LOCATION_ID) {
     return null
   }
@@ -50,6 +52,7 @@ export function CashAppButton({ items, customer, shipping, total, notes, shippin
           notes,
           shippingMethod,
           referralCode,
+          fundraiserSlug,
         }),
       })
 

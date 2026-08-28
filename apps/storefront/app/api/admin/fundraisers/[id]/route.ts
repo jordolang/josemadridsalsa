@@ -21,6 +21,13 @@ const FundraiserUpdateSchema = z.object({
   bio: z.string().nullable().optional(),
   pageConfig: z.record(z.string(), z.unknown()).nullable().optional(),
   commissionRate: z.number().min(0).max(100).optional(),
+  // What this fundraiser's store charges per jar absent a per-product price.
+  defaultUnitPrice: z.number().min(0).optional(),
+  thankYouHeadline: z.string().max(120).nullable().optional(),
+  thankYouMessage: z.string().max(2000).nullable().optional(),
+  thankYouImageUrl: z.string().nullable().optional(),
+  thankYouCtaLabel: z.string().max(60).nullable().optional(),
+  thankYouCtaUrl: z.string().nullable().optional(),
 })
 
 /**
@@ -140,6 +147,17 @@ export async function PUT(
     if (data.missionStatement !== undefined) updateData.missionStatement = data.missionStatement
     if (data.bio !== undefined) updateData.bio = data.bio
     if (data.pageConfig !== undefined) updateData.pageConfig = data.pageConfig
+    if (data.defaultUnitPrice !== undefined) updateData.defaultUnitPrice = data.defaultUnitPrice
+    for (const field of [
+      'thankYouHeadline',
+      'thankYouMessage',
+      'thankYouImageUrl',
+      'thankYouCtaLabel',
+      'thankYouCtaUrl',
+    ] as const) {
+      // Blank means "use the standard wording" — see `lib/fundraising/thank-you.ts`.
+      if (data[field] !== undefined) updateData[field] = data[field] || null
+    }
 
     // Subdomain uniqueness check
     if (data.subdomain && data.subdomain !== existing.subdomain) {

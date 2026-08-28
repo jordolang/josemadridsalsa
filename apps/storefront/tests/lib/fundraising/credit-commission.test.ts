@@ -67,6 +67,20 @@ describe('creditFundraiserCommission', () => {
     expect(data.totalOrders).toEqual({ increment: 1 })
   })
 
+  it('credits the group for a sale made on the campaign page itself', async () => {
+    // No referral code, so no student to attribute it to. The school is still owed its half:
+    // requiring a participant is what used to leave these sales uncredited entirely.
+    const { tx, participantUpdate, fundraiserUpdate } = fakeTx({
+      order: { ...fundraiserOrder, participantId: null },
+    })
+
+    const result = await creditFundraiserCommission(tx, 'order-1')
+
+    expect(result).toEqual({ credited: true, amount: 30 })
+    expect(participantUpdate).not.toHaveBeenCalled()
+    expect(fundraiserUpdate).toHaveBeenCalledOnce()
+  })
+
   it('does nothing for an order that is not a fundraiser sale', async () => {
     const { tx, participantUpdate, fundraiserUpdate } = fakeTx({
       order: { ...fundraiserOrder, participantId: null, fundraiserId: null },

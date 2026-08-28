@@ -1009,7 +1009,24 @@ model Fundraiser {
   startDate            DateTime
   endDate              DateTime
   goal                 Decimal?                @db.Decimal(10, 2)
-  commissionRate       Decimal                 @db.Decimal(5, 2)
+  /// The group's share of the merchandise subtotal, as a percentage (`50.00`, not `0.50`).
+  /// Half by default: the fundraiser price is set above retail so the group's half comes out
+  /// of that gap rather than out of the margin on the jar. Shipping and tax are excluded from
+  /// the base — see `lib/fundraising/commission.ts`.
+  commissionRate       Decimal                 @default(50.00) @db.Decimal(5, 2)
+  /// What this fundraiser's own store charges per jar when the product carries no override
+  /// of its own. Every fundraiser is a separate store selling the same catalogue at its own
+  /// price, so the price a supporter is quoted comes from here, never from `Product.price`.
+  defaultUnitPrice     Decimal                 @default(10.00) @db.Decimal(10, 2)
+  /// Thank-you page shown after checkout on this fundraiser's store. Every field is
+  /// optional: `lib/fundraising/thank-you.ts` fills the blanks with copy built from the
+  /// organization's own name, so a fundraiser that customises nothing still gets a page of
+  /// its own rather than the generic store confirmation.
+  thankYouHeadline     String?
+  thankYouMessage      String?
+  thankYouImageUrl     String?
+  thankYouCtaLabel     String?
+  thankYouCtaUrl       String?
   status               FundraiserStatus        @default(DRAFT)
   isActive             Boolean                 @default(false)
   /// When the coordinator was told the campaign is live. Null means not yet sent.

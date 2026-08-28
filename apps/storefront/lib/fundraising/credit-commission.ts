@@ -44,7 +44,10 @@ export async function creditFundraiserCommission(
     },
   })
 
-  if (!order?.participantId || !order.fundraiserId) {
+  // The fundraiser is what makes this a campaign sale. A participant is optional: a supporter
+  // who bought from the school's own store rather than through one student's link still owes
+  // the school its half, and requiring both is what used to leave those sales uncredited.
+  if (!order?.fundraiserId) {
     return { credited: false, amount: 0, reason: 'not-a-fundraiser-order' }
   }
 
@@ -91,14 +94,16 @@ export async function creditFundraiserCommission(
   const revenue = new Prisma.Decimal(Number(order.total).toFixed(2))
   const commission = new Prisma.Decimal(amount.toFixed(2))
 
-  await tx.fundraiserParticipant.update({
-    where: { id: order.participantId },
-    data: {
-      totalOrders: { increment: 1 },
-      totalRevenue: { increment: revenue },
-      totalCommission: { increment: commission },
-    },
-  })
+  if (order.participantId) {
+    await tx.fundraiserParticipant.update({
+      where: { id: order.participantId },
+      data: {
+        totalOrders: { increment: 1 },
+        totalRevenue: { increment: revenue },
+        totalCommission: { increment: commission },
+      },
+    })
+  }
 
   // The fundraiser's own rollups were read in a dozen places — including the public progress
   // bar — and written by nothing, so every one of them reported zero.

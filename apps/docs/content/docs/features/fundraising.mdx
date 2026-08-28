@@ -13,7 +13,9 @@ their own checkout path, and their own portal.
 ## The shape of a campaign
 
 `Fundraiser` is the campaign. It carries the organisation, the coordinator's contact
-details, a `startDate`/`endDate` window, an optional `goal`, and a `commissionRate`.
+details, a `startDate`/`endDate` window, an optional `goal`, a `commissionRate`
+(percentage, `50.00` by default) and a `defaultUnitPrice` (`10.00` by default) —
+the last two are what make each campaign its own store.
 
 | Status | Meaning |
 |---|---|
@@ -45,22 +47,55 @@ orders sends one message per threshold crossed instead of one message.
 Participants can be grouped into `FundraiserTeam`s, and campaigns can belong to a
 `FundraiserSeason`.
 
+## Each campaign is its own store
+
+A fundraiser is a self-contained shop. It sells the same salsa the retail storefront
+does, but at its own price, from its own shelf, and it keeps its own share. Several
+campaigns run at once, each selling the same jar at a different price with the
+proceeds split a different way.
+
+`lib/fundraising/store.server.ts` is the single place a store is resolved.
+`resolveFundraiserStore({ fundraiserSlug, referralCode })` returns the campaign's
+prices, catalogue, commission rate and (when a participant link was used) the
+participant to credit. Every fundraiser page and all three checkout routes go
+through it, so what the supporter is quoted is what they are charged.
+
+The slug is what identifies the store, **not** the participant referral code. That
+was the bug: attribution used to hang off the code alone, so a supporter who shopped
+from the campaign page itself carried none — their cart was priced from the retail
+catalogue and the sale was recorded against nobody.
+
+A cart holds one store's goods at a time. `cartStoreContext()` in
+`lib/store/cart.ts` reads the store off the lines and `addItem()` refuses to mix
+them; the customer is offered a fresh cart instead. A mixed cart has no single price
+list, no single group to credit, and no single thank-you page to land on.
+
 ## Pricing
 
 <Callout type="warn">
 **A fundraiser sells *above* retail.** The group's share comes out of the gap
 between the fundraiser price and the catalogue price — not out of the margin on the
-jar. Roughly: a jar sells for $10 on a fundraiser page and the split is 50/50.
+jar. By default a jar sells for **$10** and the split is **50/50**.
 </Callout>
 
-`FundraiserProduct.price` carries the override and falls back to the catalogue price
-when a campaign has not set one. Every caller — both public fundraiser pages, the
-portal product block, and all three checkout routes — must resolve price through
-`fundraiserUnitPrice()` in `lib/fundraising/pricing.ts`.
+Two prices can apply, in this order:
+
+1. `FundraiserProduct.price` — this campaign's price for this one product.
+2. `Fundraiser.defaultUnitPrice` — the campaign's store price. Defaults to `10.00`.
+
+The retail catalogue price is deliberately **not** a third fallback. A campaign that
+has set neither still sells at its store price; falling through to `Product.price`
+is what used to put a jar quoted at ten dollars into the cart at nine.
+
+Resolve price through `fundraiserUnitPrice()` in `lib/fundraising/pricing.ts` — and
+server-side, through `priceInStore()`, which also refuses a product the campaign
+does not carry rather than quietly charging retail for it.
 
 The rule is deliberately `??` and not a truthiness check: an override of **zero** is
-a campaign giving something away, and falling through to the catalogue price would
-charge for it.
+a campaign giving something away, and falling through would charge for it.
+
+A campaign that has curated no `FundraiserProduct` rows sells the **whole** active
+catalogue at its store price. An empty catalogue is not an empty shop.
 
 ## Commission
 
@@ -90,6 +125,24 @@ reads backwards the first time you see it and it is not a bug — do not "fix" i
 
 `lib/fundraising/calculate-commission.ts` implements the opposite (fractional)
 convention and has **no callers**. Do not import it.
+
+`creditFundraiserCommission()` needs an order's `fundraiserId`; `participantId` is
+optional. A supporter who bought from the campaign page rather than through one
+seller's link still earns the group its share — the participant rollups are simply
+skipped. `reverseFundraiserCommission()` mirrors this, so a credit taken without a
+participant can be given back without one.
+
+## The thank-you page
+
+A campaign sale confirms on the group's own thank-you page rather than on the
+generic store confirmation. `Fundraiser.thankYouHeadline`, `thankYouMessage`,
+`thankYouImageUrl`, `thankYouCtaLabel` and `thankYouCtaUrl` are all optional;
+`lib/fundraising/thank-you.ts` fills every blank with copy built from the
+organisation's own name, so a campaign that customises nothing still gets a page of
+its own. An emptied field means "go back to the standard wording", and is stored as
+null.
+
+Coordinators edit it themselves under **Settings → Thank-You Page** in the portal.
 
 ## Lifecycle emails
 
@@ -124,7 +177,7 @@ Coordinators sign in to `/fundraiser-portal`:
 | `assets` | Logos and cover photos |
 | `analytics` | Traffic and conversion for the campaign |
 | `character` | The arena avatar (see below) |
-| `settings` | Contact details and preferences |
+| `settings` | Contact details, subdomain, and the thank-you page |
 | `pending` | Holding page before access is approved |
 
 Access is governed by `FundraiserAccount`, `FundraiserProfile` and

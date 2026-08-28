@@ -35,6 +35,19 @@ interface OrderItem {
   } | null
 }
 
+interface FundraiserThankYouPanel {
+  slug: string
+  name: string
+  organizationName: string
+  thankYou: {
+    headline: string
+    message: string
+    imageUrl: string | null
+    ctaLabel: string | null
+    ctaUrl: string | null
+  }
+}
+
 interface Order {
   id: string
   orderNumber: string
@@ -62,6 +75,8 @@ interface Order {
     email: string
     name: string | null
   } | null
+  /** Set on campaign sales — the group's own thank-you page, shown in place of ours. */
+  fundraiser: FundraiserThankYouPanel | null
 }
 
 function OrderConfirmationContent() {
@@ -204,16 +219,42 @@ function OrderConfirmationContent() {
         />
       )}
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* Success Header */}
+        {/* Success Header. A campaign sale confirms on the group's own thank-you page —
+            their headline, their words, their logo — rather than on the generic store one. */}
         <Card>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle2 className="h-16 w-16 text-green-600" />
+              {order.fundraiser?.thankYou.imageUrl ? (
+                <div className="relative h-20 w-20 overflow-hidden rounded-full bg-muted">
+                  <Image
+                    src={order.fundraiser.thankYou.imageUrl}
+                    alt={order.fundraiser.organizationName}
+                    fill
+                    sizes="80px"
+                    className="object-contain p-1"
+                  />
+                </div>
+              ) : (
+                <CheckCircle2 className="h-16 w-16 text-green-600" />
+              )}
             </div>
-            <CardTitle className="text-3xl">Order Confirmed!</CardTitle>
+            <CardTitle className="text-3xl">
+              {order.fundraiser?.thankYou.headline ?? 'Order Confirmed!'}
+            </CardTitle>
             <CardDescription className="text-lg">
-              Thank you for your order. We&apos;ll send you a confirmation email shortly.
+              {order.fundraiser
+                ? order.fundraiser.thankYou.message
+                : "Thank you for your order. We'll send you a confirmation email shortly."}
             </CardDescription>
+            {order.fundraiser?.thankYou.ctaUrl && order.fundraiser.thankYou.ctaLabel && (
+              <div className="pt-4">
+                <Button asChild>
+                  <Link href={order.fundraiser.thankYou.ctaUrl}>
+                    {order.fundraiser.thankYou.ctaLabel}
+                  </Link>
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-center">

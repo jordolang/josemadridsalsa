@@ -150,6 +150,30 @@ the root `package.json` is canonical.
 
 ### Fixed
 
+- **A jar bought on a fundraiser's page is charged the fundraiser's price and credited to that
+  fundraiser.** Every campaign is now a self-contained store: its own `defaultUnitPrice` ($10 by
+  default), its own catalogue, its own share of the proceeds (`commissionRate`, 50% by default),
+  and its own thank-you page. Previously the campaign pages linked out to the retail product
+  pages, so a jar advertised at $10 on a school's page went into the cart at the $9 catalogue
+  price; and attribution hung entirely off a participant's referral code, so a supporter who
+  shopped from the campaign page itself — carrying no code — had their cart priced from the
+  retail catalogue and their order recorded against nobody. `lib/fundraising/store.server.ts` is
+  now the one place a store is resolved, from the campaign slug (with the referral code naming
+  only the seller within it), and every fundraiser page and all three checkout routes price
+  through it, so what a supporter is quoted is what they are charged. The retail catalogue price
+  is no longer a fallback in a fundraiser store, a curated store refuses a product it does not
+  carry rather than charging retail for it, and a campaign that has curated nothing sells the
+  whole active catalogue at its store price — replacing the shelf that used to warn supporters
+  their purchase benefited nobody. Cart lines carry the store they were picked from and a cart
+  holds one store's goods at a time; adding across stores offers a fresh cart instead of silently
+  mixing price lists. `creditFundraiserCommission()` now needs only a `fundraiserId`, so a sale
+  made on the campaign page earns the group its half with no seller attached, and
+  `reverseFundraiserCommission()` mirrors it. Shipping and tax stay out of the split, as before.
+  Coordinators write their own thank-you page under **Settings → Thank-You Page**; anything left
+  blank falls back to copy built from their organisation's name, so every campaign gets a page of
+  its own. Admins set the store price and the split together, per campaign, under
+  **Manage → Commission**.
+
 - **Opening a customer or a show from the desktop shell no longer lands on a 404.** Pressing `⏎`
   on a row in `/admin-desktop` sets `window.location.href` directly, so an href that matches no
   page is a dead end with no way back. Customers pointed at `/admin/customers/{id}` and shows at
