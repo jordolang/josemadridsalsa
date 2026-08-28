@@ -10,6 +10,10 @@ import Foundation
 /// (`apps/storefront/lib/admin-desktop/sections.ts`) and the Windows app's
 /// `src/shared/sections.ts`, so ⌘4 means Inventory in the window, in the menu
 /// bar, and on both platforms.
+///
+/// Each path opens the shell at that section rather than the web admin page
+/// behind it, so a menu choice stays in the window the operator is already in.
+/// Developer Console is the exception: the shell has no view for it.
 struct AdminSection: Identifiable, Hashable {
   let label: String
   let path: String
@@ -41,37 +45,37 @@ enum AdminSections {
   static let groups: [AdminSectionGroup] = [
     AdminSectionGroup("Operations", [
       AdminSection("Dashboard", AdminEndpoint.desktopPath, "1"),
-      AdminSection("Orders", "/admin/orders", "2"),
-      AdminSection("Products", "/admin/products", "3"),
-      AdminSection("Inventory", "/admin/inventory", "4"),
-      AdminSection("Customers", "/admin/customers", "5"),
-      AdminSection("Purchase Orders", "/admin/purchase-orders"),
-      AdminSection("Invoices", "/admin/invoices"),
+      AdminSection("Orders", "/admin-desktop?section=orders", "2"),
+      AdminSection("Products", "/admin-desktop?section=products", "3"),
+      AdminSection("Inventory", "/admin-desktop?section=inventory", "4"),
+      AdminSection("Customers", "/admin-desktop?section=customers", "5"),
+      AdminSection("Purchase Orders", "/admin-desktop?section=purchase"),
+      AdminSection("Invoices", "/admin-desktop?section=invoices"),
     ]),
     AdminSectionGroup("Programs", [
-      AdminSection("Fundraisers", "/admin/fundraisers", "7"),
-      AdminSection("Events & Shows", "/admin/events", "8"),
-      AdminSection("Wholesale", "/admin/wholesale"),
+      AdminSection("Fundraisers", "/admin-desktop?section=fundraisers", "7"),
+      AdminSection("Events & Shows", "/admin-desktop?section=events", "8"),
+      AdminSection("Wholesale", "/admin-desktop?section=wholesale"),
     ]),
     AdminSectionGroup("Money", [
-      AdminSection("Financials", "/admin/financials/ledger", "6"),
+      AdminSection("Financials", "/admin-desktop?section=ledger", "6"),
     ]),
     AdminSectionGroup("Marketing", [
-      AdminSection("Email Marketing", "/admin/email-marketing", "9"),
-      AdminSection("Social", "/admin/social"),
-      AdminSection("Content & Blog", "/admin/content"),
-      AdminSection("Lead Generation", "/admin/lead-generation"),
-      AdminSection("Reviews", "/admin/reviews"),
+      AdminSection("Email Marketing", "/admin-desktop?section=email", "9"),
+      AdminSection("Social", "/admin-desktop?section=social"),
+      AdminSection("Content & Blog", "/admin-desktop?section=content"),
+      AdminSection("Lead Generation", "/admin-desktop?section=leads"),
+      AdminSection("Reviews", "/admin-desktop?section=reviews"),
     ]),
     AdminSectionGroup("System", [
-      AdminSection("Analytics", "/admin/analytics"),
-      AdminSection("Media & Documents", "/admin/media"),
-      AdminSection("Messages", "/admin/messages"),
-      AdminSection("Users & Roles", "/admin/users"),
-      AdminSection("Audit Logs", "/admin/audit-logs"),
-      AdminSection("Settings", "/admin/settings"),
+      AdminSection("Analytics", "/admin-desktop?section=analytics"),
+      AdminSection("Media & Documents", "/admin-desktop?section=media"),
+      AdminSection("Messages", "/admin-desktop?section=messages"),
+      AdminSection("Users & Roles", "/admin-desktop?section=users"),
+      AdminSection("Audit Logs", "/admin-desktop?section=audit"),
+      AdminSection("Settings", "/admin-desktop?section=settings"),
       AdminSection("Developer Console", "/admin/developer"),
-      AdminSection("Database Console", "/admin/developer/database"),
+      AdminSection("Database Console", "/admin-desktop?section=database"),
     ]),
   ]
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DESKTOP_SECTION_GROUPS, type DesktopSection, type DesktopSectionId } from '@/lib/admin-desktop/sections'
 import type { DesktopBadges, Inspector as InspectorData, Row, SectionPayload } from '@/lib/admin-desktop/types'
+import { matchesShortcut } from '@/lib/admin-desktop/shortcuts'
 import { Icon, IconSprite } from './icons'
 import {
   AnalyticsView,
@@ -33,6 +34,9 @@ declare global {
   }
 }
 
+/** Thrown for a 403 so the shell can say why rather than blaming the network. */
+class SectionDeniedError extends Error {}
+
 const APPEARANCE_KEY = 'jms-desktop-appearance'
 const APPEARANCE_ORDER: Appearance[] = ['', 'light', 'dark']
 
@@ -49,10 +53,17 @@ export function DesktopShell({
   initialSection,
   badges,
   operator,
+  visibleSections,
 }: {
   initialSection: SectionPayload
   badges: DesktopBadges
   operator: { name: string; email: string }
+  /**
+   * The sections this account may load, resolved on the server from the same
+   * permissions the web panel checks. Anything absent is left out of the
+   * sidebar and the palette rather than offered and then refused.
+   */
+  visibleSections?: DesktopSectionId[]
 }) {
   const [section, setSection] = useState<SectionPayload>(initialSection)
   const [loading, setLoading] = useState(false)
@@ -75,10 +86,28 @@ export function DesktopShell({
   /** The request that owns the current render, so a slow section cannot land after a fast one. */
   const requestId = useRef(0)
 
-  const sections = useMemo(() => DESKTOP_SECTION_GROUPS.flatMap((group) => group.items), [])
+  // Undefined means "no list was supplied" — every section shows, which is what
+  // an older server render or a test fixture expects. An empty array is a real
+  // answer and hides everything.
+  const permitted = useMemo(
+    () => (visibleSections ? new Set<DesktopSectionId>(visibleSections) : null),
+    [visibleSections],
+  )
+
+  const groups = useMemo(
+    () =>
+      DESKTOP_SECTION_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !permitted || permitted.has(item.id)),
+      })).filter((group) => group.items.length > 0),
+    [permitted],
+  )
+
+  const sections = useMemo(() => groups.flatMap((group) => group.items), [groups])
+  const allSections = useMemo(() => DESKTOP_SECTION_GROUPS.flatMap((group) => group.items), [])
   const currentSection = useMemo(
-    () => sections.find((item) => item.id === section.id) ?? sections[0],
-    [sections, section.id],
+    () => allSections.find((item) => item.id === section.id) ?? allSections[0],
+    [allSections, section.id],
   )
 
   useEffect(() => {
@@ -117,6 +146,7 @@ export function DesktopShell({
 
       try {
         const response = await fetch(`/api/admin/desktop/${id}`, { credentials: 'same-origin' })
+        if (response.status === 403) throw new SectionDeniedError()
         if (!response.ok) throw new Error(`Request failed with ${response.status}`)
         const payload = (await response.json()) as SectionPayload
         if (ticket !== requestId.current) return
@@ -124,9 +154,24 @@ export function DesktopShell({
         setSelected(0)
         setQuery('')
         setFilter(0)
-      } catch {
+
+        // Keep `?section=` in step so a reload, and the macOS and Windows menu
+        // bars, all agree on where the window is. Replace rather than push:
+        // switching sections is not a page the back button should walk through.
+        try {
+          const url = new URL(window.location.href)
+          url.searchParams.set('section', id)
+          window.history.replaceState(null, '', url)
+        } catch {
+          // A window that will not let us rewrite its URL still navigated fine.
+        }
+      } catch (error) {
         if (ticket !== requestId.current) return
-        setError('Could not load that section. Check the connection and try again.')
+        setError(
+          error instanceof SectionDeniedError
+            ? 'Your account does not have permission to open that section.'
+            : 'Could not load that section. Check the connection and try again.',
+        )
       } finally {
         if (ticket === requestId.current) setLoading(false)
       }
@@ -208,6 +253,18 @@ export function DesktopShell({
       })
     }
 
+    for (const item of sections) {
+      for (const view of item.views ?? []) {
+        items.push({
+          key: `view:${item.id}:${view.path}`,
+          label: `${item.label} · ${view.label}`,
+          hint: view.path,
+          icon: item.icon,
+          run: () => openPath(view.path),
+        })
+      }
+    }
+
     items.push({
       key: 'command:appearance',
       label: 'Toggle appearance',
@@ -240,7 +297,9 @@ export function DesktopShell({
     const needle = paletteQuery.trim().toLowerCase()
     return items
       .filter((item) => !needle || `${item.label} ${item.hint}`.toLowerCase().includes(needle))
-      .slice(0, 40)
+      // Filtering happens first, so anything is reachable by typing; the cap
+      // only bounds how long the unfiltered browse list gets.
+      .slice(0, 80)
   }, [sections, allRows, rows, currentSection, paletteQuery, goToSection, cycleAppearance, openPath, flash])
 
   // ------------------------------------------------------------ keyboard
@@ -297,6 +356,20 @@ export function DesktopShell({
         return
       }
 
+      // The inspector's own buttons, on the keys their labels advertise. These
+      // are checked before the plain-key handlers below because they carry a
+      // modifier, which the table's type-ahead deliberately ignores.
+      if (!typing && inspectorOpen && inspectorData?.actions?.length) {
+        const hit = inspectorData.actions.find(
+          (action) => action.shortcut && matchesShortcut(action.shortcut, event),
+        )
+        if (hit) {
+          event.preventDefault()
+          openPath(hit.href)
+          return
+        }
+      }
+
       if (typing || accel || event.altKey) return
 
       if (event.key === 'j' || event.key === 'ArrowDown') {
@@ -348,7 +421,21 @@ export function DesktopShell({
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [paletteOpen, paletteItems, paletteIndex, rows, activeRow, sections, section.filters.length, quickFind, goToSection, openRow])
+  }, [
+    paletteOpen,
+    paletteItems,
+    paletteIndex,
+    rows,
+    activeRow,
+    sections,
+    section.filters.length,
+    quickFind,
+    goToSection,
+    openRow,
+    inspectorOpen,
+    inspectorData,
+    openPath,
+  ])
 
   useEffect(() => {
     return () => {
@@ -440,7 +527,7 @@ export function DesktopShell({
           </div>
 
           <div className="jmsd-nav">
-            {DESKTOP_SECTION_GROUPS.map((group) => (
+            {groups.map((group) => (
               <div key={group.label} className="jmsd-nav-group">
                 <div className="jmsd-nav-group-label">{group.label}</div>
                 {group.items.map((item) => {
@@ -558,7 +645,7 @@ export function DesktopShell({
           </div>
         </main>
 
-        {inspectorOpen ? <Inspector data={inspectorData} /> : null}
+        {inspectorOpen ? <Inspector data={inspectorData} onOpen={openPath} /> : null}
       </div>
 
       <footer className="jmsd-statusbar">

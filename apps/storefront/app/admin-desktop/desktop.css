@@ -1068,6 +1068,54 @@
   font-size: 11.5px;
 }
 
+/*
+ * What you can do with the selected row. Every one of these opens the web admin
+ * page that performs the job, so they are styled as buttons but are really
+ * links — the trailing ellipsis in the label is the promise that a page opens.
+ */
+.jmsd-inspector-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.jmsd-inspector-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.jmsd-inspector-action:hover {
+  border-color: var(--gold);
+  background: var(--sel);
+}
+
+.jmsd-inspector-action > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jmsd-inspector-action-key {
+  margin-left: auto;
+  flex: none;
+  color: var(--faint);
+  font-family: var(--font-roboto-mono), 'Roboto Mono', Menlo, monospace;
+  font-size: 10px;
+}
+
 /* ------------------------------------------------------------- status bar */
 
 .jmsd-statusbar {

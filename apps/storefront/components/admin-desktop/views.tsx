@@ -486,7 +486,13 @@ export function LinkView({
 
 // ------------------------------------------------------------------ inspector
 
-export function Inspector({ data }: { data: InspectorData | null }) {
+export function Inspector({
+  data,
+  onOpen,
+}: {
+  data: InspectorData | null
+  onOpen: (href: string) => void
+}) {
   return (
     <aside className="jmsd-inspector">
       <div className="jmsd-inspector-head">
@@ -542,6 +548,24 @@ export function Inspector({ data }: { data: InspectorData | null }) {
         ) : (
           <div className="jmsd-empty">Nothing selected.</div>
         )}
+
+        {data?.actions?.length ? (
+          <div className="jmsd-inspector-actions">
+            {data.actions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                className="jmsd-inspector-action"
+                onClick={() => onOpen(action.href)}
+              >
+                <span>{action.label}</span>
+                {action.shortcut ? (
+                  <span className="jmsd-inspector-action-key">{action.shortcut}</span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </aside>
   )

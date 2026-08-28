@@ -17,10 +17,12 @@ import prisma from '@/lib/prisma'
 import { isMissingTableError } from '@/lib/prisma-errors'
 import { findSection, type DesktopSection, type DesktopSectionId } from './sections'
 import {
+  bytes,
   centsToMoney,
   channelLabel,
   channelTone,
   count,
+  excerpt,
   heatTone,
   humanise,
   money,
@@ -31,6 +33,7 @@ import {
   place,
   shortDate,
   stamp,
+  stars,
   STORE_TIME_ZONE,
   toNumber,
 } from './format'
@@ -42,6 +45,7 @@ import type {
   DesktopBadges,
   EventsPayload,
   Inspector,
+  InspectorLine,
   LinkPayload,
   Row,
   SectionPayload,
@@ -179,6 +183,13 @@ async function loadOrders(): Promise<TablePayload> {
             ],
           },
         ],
+      
+        actions: [
+          { label: 'Open order…', href: `/admin/orders/${order.id}`, shortcut: '⌘⏎' },
+          { label: 'Packing slip…', href: `/admin/orders/${order.id}/packing-slip`, shortcut: '⌘S' },
+          { label: 'Invoice…', href: `/admin/orders/${order.id}/invoice`, shortcut: '⌘I' },
+          { label: 'All customers…', href: '/admin/customers', shortcut: '⌘U' },
+        ],
       },
     }
   })
@@ -307,6 +318,13 @@ async function loadProducts(): Promise<TablePayload> {
             ],
           },
         ],
+      
+        actions: [
+          { label: 'Edit product…', href: `/admin/products/${product.id}/edit`, shortcut: '⌘⏎' },
+          { label: 'Open product…', href: `/admin/products/${product.id}`, shortcut: '⌘O' },
+          { label: 'Inventory…', href: '/admin/inventory', shortcut: '⌘I' },
+          { label: 'Categories…', href: '/admin/categories', shortcut: '⌘G' },
+        ],
       },
     }
   })
@@ -423,6 +441,13 @@ async function loadInventory(): Promise<TablePayload> {
               { label: 'Stock at retail', value: money(toNumber(product.price) * product.inventory), mono: true },
             ],
           },
+        ],
+      
+        actions: [
+          { label: 'Open product…', href: `/admin/products/${product.id}`, shortcut: '⌘⏎' },
+          { label: 'Purchase orders…', href: '/admin/purchase-orders', shortcut: '⌘U' },
+          { label: 'Inventory analytics…', href: '/admin/analytics/inventory', shortcut: '⌘N' },
+          { label: 'Turnover…', href: '/admin/analytics/inventory-turnover', shortcut: '⌘T' },
         ],
       },
     }
@@ -543,6 +568,12 @@ async function loadCustomers(): Promise<TablePayload> {
             ? [{ label: 'NOTES', fields: [{ label: 'Note', value: customer.notes, wrap: true }] }]
             : []),
         ],
+      
+        actions: [
+          { label: 'All customers…', href: '/admin/customers', shortcut: '⌘⏎' },
+          { label: 'Import customers…', href: '/admin/customers/import', shortcut: '⌘I' },
+          { label: 'Orders…', href: '/admin/orders', shortcut: '⌘O' },
+        ],
       },
     }
   })
@@ -578,6 +609,7 @@ async function loadFundraisers(): Promise<TablePayload> {
         include: {
           fundraiser: {
             select: {
+              id: true,
               name: true,
               organizationName: true,
               status: true,
@@ -660,6 +692,13 @@ async function loadFundraisers(): Promise<TablePayload> {
               { label: 'To org', value: money(payout), mono: true, strong: true },
             ],
           },
+        ],
+      
+        actions: [
+          { label: 'Open fundraiser…', href: `/admin/fundraisers/${participant.fundraiser.id}`, shortcut: '⌘⏎' },
+          { label: 'Participants…', href: `/admin/fundraisers/${participant.fundraiser.id}/participants`, shortcut: '⌘U' },
+          { label: 'Battle arena…', href: '/admin/fundraisers/battle-arena', shortcut: '⌘B' },
+          { label: 'Fundraiser analytics…', href: '/admin/analytics/fundraisers', shortcut: '⌘N' },
         ],
       },
     }
@@ -823,6 +862,13 @@ async function loadEvents(): Promise<EventsPayload> {
             ],
           },
         ],
+      
+        actions: [
+          { label: 'Edit show…', href: `/admin/events/${event.id}/edit`, shortcut: '⌘⏎' },
+          { label: 'Manifest…', href: `/admin/events/${event.id}/manifest`, shortcut: '⌘F' },
+          { label: 'Show financials…', href: `/admin/events/${event.id}/financials`, shortcut: '⌘N' },
+          { label: 'Calendar…', href: '/admin/events/calendar', shortcut: '⌘D' },
+        ],
       },
     }
   })
@@ -937,6 +983,13 @@ async function loadLedger(): Promise<TablePayload> {
           },
           ...(entry.memo ? [{ label: 'MEMO', fields: [{ label: 'Note', value: entry.memo, wrap: true }] }] : []),
         ],
+      
+        actions: [
+          { label: 'Reconciliation…', href: '/admin/financials/reconciliation', shortcut: '⌘⏎' },
+          { label: 'Expenses…', href: '/admin/financials/expenses', shortcut: '⌘E' },
+          { label: 'Import ledger…', href: '/admin/financials/ledger/import', shortcut: '⌘I' },
+          { label: 'Taxes…', href: '/admin/financials/taxes', shortcut: '⌘T' },
+        ],
       },
     }
   })
@@ -1030,6 +1083,11 @@ async function loadDatabase(): Promise<TablePayload> {
             { label: 'Where', value: 'Open the Database Console', wrap: true },
           ],
         },
+      ],
+    
+      actions: [
+        { label: 'Database console…', href: '/admin/developer/database', shortcut: '⌘⏎' },
+        { label: 'Developer console…', href: '/admin/developer', shortcut: '⌘D' },
       ],
     },
   }))
@@ -1188,6 +1246,12 @@ async function loadDashboard(): Promise<DashboardPayload> {
             { label: 'Active products', value: count(products.length) },
           ],
         },
+      ],
+    
+      actions: [
+        { label: 'New order…', href: '/admin/orders/new', shortcut: '⌘⏎' },
+        { label: 'Inventory…', href: '/admin/inventory', shortcut: '⌘I' },
+        { label: 'Financials…', href: '/admin/financials', shortcut: '⌘F' },
       ],
     },
   }
@@ -1394,6 +1458,13 @@ async function loadAnalytics(): Promise<AnalyticsPayload> {
           lines: channels.map((channel) => ({ name: channel.name, qty: channel.pct, amount: channel.amount })),
         },
       ],
+    
+      actions: [
+        { label: 'Report builder…', href: '/admin/data', shortcut: '⌘⏎' },
+        { label: 'Retention…', href: '/admin/analytics/retention', shortcut: '⌘E' },
+        { label: 'Margin…', href: '/admin/analytics/margin', shortcut: '⌘G' },
+        { label: 'Attribution…', href: '/admin/analytics/attribution', shortcut: '⌘T' },
+      ],
     },
   }
 }
@@ -1483,6 +1554,13 @@ async function loadSettings(): Promise<SettingsPayload> {
           ],
         },
       ],
+    
+      actions: [
+        { label: 'Store settings…', href: '/admin/settings/store', shortcut: '⌘⏎' },
+        { label: 'Payments…', href: '/admin/settings/payments', shortcut: '⌘Y' },
+        { label: 'Shipping…', href: '/admin/settings/shipping', shortcut: '⌘S' },
+        { label: 'Integrations…', href: '/admin/settings/integrations', shortcut: '⌘G' },
+      ],
     },
   }
 }
@@ -1546,6 +1624,11 @@ async function loadAudit(): Promise<TablePayload> {
             ],
           },
         ],
+      
+        actions: [
+          { label: 'All activity…', href: '/admin/audit-logs', shortcut: '⌘⏎' },
+          { label: 'Users & roles…', href: '/admin/users', shortcut: '⌘U' },
+        ],
       },
     }
   })
@@ -1560,6 +1643,1496 @@ async function loadAudit(): Promise<TablePayload> {
       text(''),
       text(''),
       text(rows.length === ROW_LIMIT ? `latest ${ROW_LIMIT}` : '', { dim: true }),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Purchase orders
+// ---------------------------------------------------------------------------
+
+const PURCHASE_FILTERS = ['All POs', 'Submitted', 'Partially received', 'Received']
+const PURCHASE_FILTER_STATUSES = ['', 'SUBMITTED', 'PARTIALLY_RECEIVED', 'RECEIVED']
+
+const PURCHASE_TONE: Record<string, Tone> = {
+  DRAFT: 'muted',
+  SUBMITTED: 'warn',
+  PARTIALLY_RECEIVED: 'warn',
+  RECEIVED: 'good',
+  CANCELLED: 'muted',
+}
+
+async function loadPurchase(): Promise<TablePayload> {
+  const orders = await safe(
+    () =>
+      prisma.purchaseOrder.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: ROW_LIMIT,
+        include: {
+          supplier: { select: { name: true, city: true, state: true, email: true } },
+          createdBy: { select: { name: true, email: true } },
+          items: { include: { product: { select: { name: true, sku: true } } } },
+        },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'PO', width: '108px' },
+    { label: 'Supplier', width: 'minmax(0,1.2fr)' },
+    { label: 'Items', width: 'minmax(0,1.6fr)' },
+    { label: 'Jars', width: '64px', right: true },
+    { label: 'Cost', width: '104px', right: true },
+    { label: 'Expected', width: '96px' },
+    { label: 'Status', width: '150px' },
+  ]
+
+  let jars = 0
+  let value = 0
+
+  const rows: Row[] = orders.map((order) => {
+    const ordered = order.items.reduce((sum, item) => sum + item.quantityOrdered, 0)
+    const lineTotal = order.items.reduce(
+      (sum, item) => sum + toNumber(item.unitCost) * item.quantityOrdered,
+      0,
+    )
+    const cost = lineTotal + toNumber(order.shippingCost)
+    jars += ordered
+    value += cost
+
+    const first = order.items[0]
+    const summary = first
+      ? `${count(first.quantityOrdered)} × ${first.product.name}${
+          order.items.length > 1 ? ` +${order.items.length - 1} more` : ''
+        }`
+      : 'No lines'
+    const received = order.items.reduce((sum, item) => sum + item.quantityReceived, 0)
+
+    return {
+      id: order.id,
+      href: `/admin/purchase-orders/${order.id}`,
+      search: `${order.poNumber} ${order.supplier.name} ${summary}`,
+      buckets: bucketsFor(PURCHASE_FILTER_STATUSES, order.status),
+      cells: [
+        text(order.poNumber, { mono: true, dim: true }),
+        text(order.supplier.name, { strong: true }),
+        text(summary, { dim: true }),
+        text(count(ordered), { mono: true, right: true }),
+        text(money(cost), { mono: true, right: true, strong: true }),
+        text(shortDate(order.expectedAt), { mono: true, dim: true }),
+        statusCell(humanise(order.status), PURCHASE_TONE[order.status] ?? 'muted'),
+      ],
+      inspector: {
+        title: order.poNumber,
+        tag: humanise(order.status),
+        tagTone: PURCHASE_TONE[order.status] ?? 'muted',
+        groups: [
+          {
+            label: 'ORDER',
+            fields: [
+              { label: 'Supplier', value: order.supplier.name },
+              { label: 'From', value: place(order.supplier) },
+              { label: 'Goods', value: money(lineTotal), mono: true },
+              { label: 'Freight', value: money(order.shippingCost), mono: true },
+              { label: 'Cost', value: money(cost), mono: true, strong: true },
+              { label: 'Raised by', value: order.createdBy ? personName(order.createdBy) : '—' },
+            ],
+          },
+          {
+            label: 'RECEIVING',
+            fields: [
+              { label: 'Ordered', value: count(ordered), mono: true },
+              { label: 'Received', value: count(received), mono: true },
+              { label: 'Outstanding', value: count(Math.max(ordered - received, 0)), mono: true },
+              { label: 'Expected', value: shortDate(order.expectedAt), mono: true },
+              { label: 'Submitted', value: shortDate(order.submittedAt), mono: true },
+              { label: 'Closed', value: shortDate(order.receivedAt ?? order.cancelledAt), mono: true },
+            ],
+          },
+          {
+            label: 'LINES',
+            lines: order.items.map((item) => ({
+              name: item.product.name,
+              qty: count(item.quantityOrdered),
+              amount: money(toNumber(item.unitCost) * item.quantityOrdered),
+            })),
+          },
+        ],
+        actions: [
+          { label: 'Receive into stock…', href: `/admin/purchase-orders/${order.id}`, shortcut: '⌘⏎' },
+          { label: 'Suppliers…', href: '/admin/purchase-orders/suppliers', shortcut: '⌘U' },
+          { label: 'Inventory…', href: '/admin/inventory', shortcut: '⌘I' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} purchase orders`),
+      text(''),
+      text(''),
+      text(count(jars), { right: true }),
+      text(money(value), { right: true, strong: true }),
+      text(''),
+      text(rows.length === ROW_LIMIT ? `latest ${ROW_LIMIT}` : '', { dim: true }),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Invoices
+// ---------------------------------------------------------------------------
+
+const INVOICE_FILTERS = ['All invoices', 'Sent', 'Overdue', 'Paid']
+const INVOICE_FILTER_STATUSES = ['', 'SENT', 'OVERDUE', 'PAID']
+
+const INVOICE_TONE: Record<string, Tone> = {
+  DRAFT: 'muted',
+  SENT: 'warn',
+  PAID: 'good',
+  OVERDUE: 'bad',
+  CANCELLED: 'muted',
+}
+
+/**
+ * An invoice's `lines` column is free-form JSON; read it defensively.
+ *
+ * Some rows store the array, others a JSON-encoded string of it. Both admin
+ * invoice pages accept either (`parseLineCount`, `parseInvoiceLines`), so this
+ * has to as well — treating a string as "no lines" would quietly show an
+ * invoice with a total and nothing that adds up to it.
+ */
+function invoiceLines(value: Prisma.JsonValue | null | undefined): InspectorLine[] {
+  let parsed: unknown = value
+
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed)
+    } catch {
+      return []
+    }
+  }
+
+  if (!Array.isArray(parsed)) return []
+
+  return parsed.flatMap((entry) => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return []
+    const line = entry as Record<string, unknown>
+    const name = typeof line.description === 'string' ? line.description : line.name
+    if (typeof name !== 'string' || !name.trim()) return []
+
+    const qty = typeof line.quantity === 'number' ? line.quantity : line.qty
+    const amount = typeof line.amount === 'number' ? line.amount : line.total
+
+    return [
+      {
+        name: name.trim(),
+        qty: typeof qty === 'number' ? count(qty) : '—',
+        amount: typeof amount === 'number' ? money(amount) : '—',
+      },
+    ]
+  })
+}
+
+async function loadInvoices(): Promise<TablePayload> {
+  const invoices = await safe(
+    () => prisma.invoice.findMany({ orderBy: { createdAt: 'desc' }, take: ROW_LIMIT }),
+    [],
+  )
+
+  // `Invoice.customerId` is an id without a relation, so the names come from a
+  // second read rather than an include.
+  const customerIds = [...new Set(invoices.map((invoice) => invoice.customerId).filter((id): id is string => Boolean(id)))]
+  const customers = await safe(
+    () =>
+      prisma.customer.findMany({
+        where: { id: { in: customerIds } },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      }),
+    [],
+  )
+  const byId = new Map(customers.map((customer) => [customer.id, personName(customer)]))
+
+  const columns: Column[] = [
+    { label: 'Invoice', width: '112px' },
+    { label: 'Customer', width: 'minmax(0,1.6fr)' },
+    { label: 'Issued', width: '92px' },
+    { label: 'Due', width: '92px' },
+    { label: 'Amount', width: '104px', right: true },
+    { label: 'Status', width: '116px' },
+  ]
+
+  const now = Date.now()
+  let billed = 0
+  let outstanding = 0
+
+  const rows: Row[] = invoices.map((invoice) => {
+    const total = toNumber(invoice.total)
+    const settled = invoice.status === 'PAID' || invoice.status === 'CANCELLED'
+    billed += total
+    if (!settled) outstanding += total
+
+    const customer = invoice.customerId ? (byId.get(invoice.customerId) ?? '—') : '—'
+    // A sent invoice past its due date reads as overdue even if a nightly job
+    // has not moved the stored status along yet. A DRAFT is not late: it was
+    // never issued, and the invoice pages still show it as a draft.
+    const lapsed =
+      (invoice.status === 'SENT' || invoice.status === 'OVERDUE') && invoice.dueDate.getTime() < now
+    const label = lapsed && invoice.status !== 'OVERDUE' ? 'Overdue' : humanise(invoice.status)
+    const tone = lapsed ? 'bad' : (INVOICE_TONE[invoice.status] ?? 'muted')
+
+    return {
+      id: invoice.id,
+      href: `/admin/invoices/${invoice.id}`,
+      search: `${invoice.number} ${customer} ${invoice.status}`,
+      buckets: bucketsFor(INVOICE_FILTER_STATUSES, lapsed ? 'OVERDUE' : invoice.status),
+      cells: [
+        text(invoice.number, { mono: true, dim: true }),
+        text(customer, { strong: true }),
+        text(shortDate(invoice.createdAt), { mono: true, dim: true }),
+        text(shortDate(invoice.dueDate), { mono: true, dim: true, tone: lapsed ? 'bad' : undefined }),
+        text(money(total), { mono: true, right: true, strong: true }),
+        statusCell(label, tone),
+      ],
+      inspector: {
+        title: invoice.number,
+        tag: label,
+        tagTone: tone,
+        groups: [
+          {
+            label: 'INVOICE',
+            fields: [
+              { label: 'Customer', value: customer },
+              { label: 'Issued', value: shortDate(invoice.createdAt), mono: true },
+              { label: 'Due', value: shortDate(invoice.dueDate), mono: true },
+              { label: 'Amount', value: money(total), mono: true, strong: true },
+              { label: 'Sent', value: stamp(invoice.sentAt), mono: true },
+              { label: 'Paid', value: stamp(invoice.paidAt), mono: true },
+              { label: 'Order', value: invoice.orderId ?? '—', mono: true },
+            ],
+          },
+          { label: 'LINES', lines: invoiceLines(invoice.lines) },
+          ...(invoice.notes ? [{ label: 'NOTES', fields: [{ label: 'Note', value: invoice.notes, wrap: true }] }] : []),
+        ],
+        actions: [
+          { label: 'Open invoice…', href: `/admin/invoices/${invoice.id}`, shortcut: '⌘⏎' },
+          ...(invoice.orderId
+            ? [{ label: 'Open order…', href: `/admin/orders/${invoice.orderId}`, shortcut: '⌘O' }]
+            : []),
+          { label: 'All invoices…', href: '/admin/invoices', shortcut: '⌘L' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} invoices`),
+      text(''),
+      text(''),
+      text(outstanding > 0 ? `${money(outstanding)} open` : '', { tone: 'warn' }),
+      text(money(billed), { right: true, strong: true }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Wholesale
+// ---------------------------------------------------------------------------
+
+const WHOLESALE_FILTERS = ['All accounts', 'Approved', 'Pending', 'Suspended']
+const WHOLESALE_FILTER_STATUSES = ['', 'APPROVED', 'PENDING', 'SUSPENDED']
+
+const WHOLESALE_TONE: Record<string, Tone> = {
+  PENDING: 'warn',
+  APPROVED: 'good',
+  REJECTED: 'bad',
+  SUSPENDED: 'bad',
+}
+
+async function loadWholesale(): Promise<TablePayload> {
+  // The design's price tier and year-to-date columns have no schema behind
+  // them; the account's own discount, minimum and self-reported volume are the
+  // nearest things that are actually true.
+  const accounts = await safe(
+    () =>
+      prisma.wholesaleAccount.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: ROW_LIMIT,
+        include: { user: { select: { name: true, email: true } } },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Account', width: 'minmax(0,1.5fr)' },
+    { label: 'Contact', width: 'minmax(0,1.2fr)' },
+    { label: 'Type', width: '128px' },
+    { label: 'Discount', width: '84px', right: true },
+    { label: 'Minimum', width: '96px', right: true },
+    { label: 'Status', width: '116px' },
+    { label: 'Since', width: '88px' },
+  ]
+
+  let approved = 0
+
+  const rows: Row[] = accounts.map((account) => {
+    if (account.status === 'APPROVED') approved += 1
+    const discount = toNumber(account.discountRate)
+
+    return {
+      id: account.id,
+      href: '/admin/wholesale',
+      search: `${account.businessName} ${account.contactName} ${account.user.email} ${account.businessType}`,
+      buckets: bucketsFor(WHOLESALE_FILTER_STATUSES, account.status),
+      cells: [
+        text(account.businessName, { strong: true }),
+        text(account.contactName, { dim: true }),
+        text(humanise(account.businessType), { dim: true }),
+        text(discount > 0 ? percent(discount, 0) : '—', { mono: true, right: true }),
+        text(account.minimumOrder ? money(account.minimumOrder) : '—', { mono: true, right: true }),
+        statusCell(humanise(account.status), WHOLESALE_TONE[account.status] ?? 'muted'),
+        text(shortDate(account.createdAt), { mono: true, dim: true }),
+      ],
+      inspector: {
+        title: account.businessName,
+        tag: humanise(account.status),
+        tagTone: WHOLESALE_TONE[account.status] ?? 'muted',
+        groups: [
+          {
+            label: 'ACCOUNT',
+            fields: [
+              { label: 'Contact', value: account.contactName },
+              { label: 'Email', value: account.user.email, mono: true },
+              { label: 'Type', value: humanise(account.businessType) },
+              { label: 'Website', value: account.website ?? '—', wrap: true },
+              { label: 'Years trading', value: account.yearsInBusiness ? count(account.yearsInBusiness) : '—' },
+              { label: 'Applied', value: shortDate(account.createdAt), mono: true },
+              { label: 'Approved', value: shortDate(account.approvedAt), mono: true },
+            ],
+          },
+          {
+            label: 'TERMS',
+            fields: [
+              { label: 'Discount', value: discount > 0 ? percent(discount, 2) : '—', mono: true },
+              { label: 'Minimum order', value: account.minimumOrder ? money(account.minimumOrder) : '—', mono: true },
+              { label: 'Estimated volume', value: account.estimatedVolume ?? '—' },
+              { label: 'Tax id', value: account.taxId ? 'On file' : '—' },
+              { label: 'Resale number', value: account.resaleNumber ? 'On file' : '—' },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Wholesale accounts…', href: '/admin/wholesale', shortcut: '⌘⏎' },
+          { label: 'Store locator…', href: '/admin/locations', shortcut: '⌘L' },
+          { label: 'Merchandise…', href: '/admin/merchandise', shortcut: '⌘⇧M' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} accounts`),
+      text(''),
+      text(''),
+      text(''),
+      text(''),
+      text(approved ? `${count(approved)} approved` : '', { tone: 'good' }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Email marketing
+// ---------------------------------------------------------------------------
+
+const EMAIL_FILTERS = ['All', 'Sent', 'Scheduled', 'Drafts']
+const EMAIL_FILTER_STATUSES = ['', 'SENT', 'SCHEDULED', 'DRAFT']
+
+const EMAIL_TONE: Record<string, Tone> = {
+  DRAFT: 'muted',
+  SCHEDULED: 'warn',
+  SENDING: 'warn',
+  SENT: 'good',
+  PAUSED: 'warn',
+  CANCELLED: 'muted',
+  FAILED: 'bad',
+}
+
+async function loadEmail(): Promise<TablePayload> {
+  const campaigns = await safe(
+    () =>
+      prisma.emailCampaign.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: ROW_LIMIT,
+        include: {
+          stats: true,
+          list: { select: { name: true } },
+          template: { select: { name: true } },
+        },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Campaign', width: 'minmax(0,1.7fr)' },
+    { label: 'Audience', width: 'minmax(0,1fr)' },
+    { label: 'Sent', width: '112px' },
+    { label: 'Recipients', width: '86px', right: true },
+    { label: 'Open', width: '70px', right: true },
+    { label: 'Click', width: '70px', right: true },
+    { label: 'Status', width: '110px' },
+  ]
+
+  let recipients = 0
+
+  const rows: Row[] = campaigns.map((campaign) => {
+    recipients += campaign.totalRecipients
+    const audience = campaign.list?.name ?? 'All subscribers'
+    const sentAt = campaign.completedAt ?? campaign.startedAt ?? campaign.scheduledAt
+    const open = campaign.stats?.openRate ?? 0
+    const click = campaign.stats?.clickRate ?? 0
+    const measured = campaign.sentCount > 0
+
+    return {
+      id: campaign.id,
+      href: `/admin/email-campaigns/${campaign.id}`,
+      search: `${campaign.name} ${campaign.subject} ${audience}`,
+      buckets: bucketsFor(EMAIL_FILTER_STATUSES, campaign.status),
+      cells: [
+        text(campaign.name, { strong: true }),
+        text(audience, { dim: true }),
+        text(sentAt ? stamp(sentAt) : '—', { mono: true, dim: true }),
+        text(count(campaign.totalRecipients), { mono: true, right: true }),
+        text(measured ? percent(open) : '—', { mono: true, right: true, tone: open >= 40 ? 'good' : undefined }),
+        text(measured ? percent(click) : '—', { mono: true, right: true, tone: click >= 10 ? 'good' : undefined }),
+        statusCell(humanise(campaign.status), EMAIL_TONE[campaign.status] ?? 'muted'),
+      ],
+      inspector: {
+        title: campaign.name,
+        tag: humanise(campaign.status),
+        tagTone: EMAIL_TONE[campaign.status] ?? 'muted',
+        groups: [
+          {
+            label: 'CAMPAIGN',
+            fields: [
+              { label: 'Subject', value: campaign.subject, wrap: true },
+              { label: 'Audience', value: audience },
+              { label: 'Template', value: campaign.template.name },
+              { label: 'From', value: campaign.fromEmail ?? '—', mono: true },
+              { label: 'Scheduled', value: stamp(campaign.scheduledAt), mono: true },
+              { label: 'Completed', value: stamp(campaign.completedAt), mono: true },
+              { label: 'A/B test', value: campaign.isAbTest ? 'Yes' : 'No' },
+            ],
+          },
+          {
+            label: 'DELIVERY',
+            fields: [
+              { label: 'Recipients', value: count(campaign.totalRecipients), mono: true },
+              { label: 'Sent', value: count(campaign.sentCount), mono: true },
+              { label: 'Failed', value: count(campaign.failedCount), mono: true },
+              { label: 'Bounced', value: count(campaign.bouncedCount), mono: true },
+            ],
+          },
+          {
+            label: 'PERFORMANCE',
+            fields: [
+              { label: 'Opens', value: measured ? percent(open) : '—', mono: true, strong: true },
+              { label: 'Clicks', value: measured ? percent(click) : '—', mono: true },
+              { label: 'Unsubscribes', value: measured ? percent(campaign.stats?.unsubscribeRate ?? 0) : '—', mono: true },
+              { label: 'Bounces', value: measured ? percent(campaign.stats?.bounceRate ?? 0) : '—', mono: true },
+              { label: 'Spam', value: measured ? percent(campaign.stats?.spamRate ?? 0) : '—', mono: true },
+              { label: 'Measured', value: stamp(campaign.stats?.lastCalculatedAt), mono: true },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Open campaign…', href: `/admin/email-campaigns/${campaign.id}`, shortcut: '⌘⏎' },
+          { label: 'Send log…', href: '/admin/email-marketing/logs', shortcut: '⌘L' },
+          { label: 'Automations…', href: '/admin/email-marketing/automations', shortcut: '⌘⇧A' },
+          { label: 'Lists & subscribers…', href: '/admin/communications/lists', shortcut: '⌘U' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} campaigns`),
+      text(''),
+      text(''),
+      text(count(recipients), { right: true, strong: true }),
+      text(''),
+      text(''),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Social
+// ---------------------------------------------------------------------------
+
+const SOCIAL_FILTERS = ['All posts', 'Scheduled', 'Published', 'Drafts']
+const SOCIAL_FILTER_STATUSES = ['', 'SCHEDULED', 'PUBLISHED', 'DRAFT']
+
+const SOCIAL_TONE: Record<string, Tone> = {
+  DRAFT: 'muted',
+  SCHEDULED: 'warn',
+  PUBLISHED: 'good',
+  FAILED: 'bad',
+}
+
+async function loadSocial(): Promise<TablePayload> {
+  const posts = await safe(
+    () =>
+      prisma.socialMediaPost.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: ROW_LIMIT,
+        include: {
+          media: { select: { id: true } },
+          publishes: { include: { account: { select: { accountName: true, platform: true } } } },
+        },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Post', width: 'minmax(0,1.9fr)' },
+    { label: 'Channel', width: 'minmax(0,1fr)' },
+    { label: 'Scheduled', width: '124px' },
+    { label: 'Reach', width: '80px', right: true },
+    { label: 'Eng.', width: '68px', right: true },
+    { label: 'Clicks', width: '68px', right: true },
+    { label: 'Status', width: '108px' },
+  ]
+
+  let reachTotal = 0
+  let clickTotal = 0
+
+  const rows: Row[] = posts.map((post) => {
+    const reach = post.publishes.reduce((sum, entry) => sum + entry.reach, 0)
+    const clicks = post.publishes.reduce((sum, entry) => sum + entry.clicks, 0)
+    const interactions = post.publishes.reduce(
+      (sum, entry) => sum + entry.likes + entry.comments + entry.shares,
+      0,
+    )
+    reachTotal += reach
+    clickTotal += clicks
+
+    const engagement = reach > 0 ? (interactions / reach) * 100 : 0
+    const channels = post.platforms.map(humanise).join(', ') || '—'
+    const when = post.publishedAt ?? post.scheduledAt
+    const headline = excerpt(post.content, 70)
+
+    return {
+      id: post.id,
+      href: '/admin/social',
+      search: `${post.content} ${channels} ${post.status}`,
+      buckets: bucketsFor(SOCIAL_FILTER_STATUSES, post.status),
+      cells: [
+        text(headline, { strong: true }),
+        text(channels, { dim: true }),
+        text(when ? stamp(when) : '—', { mono: true, dim: true }),
+        text(reach ? count(reach) : '—', { mono: true, right: true }),
+        text(reach ? percent(engagement) : '—', { mono: true, right: true, tone: engagement >= 5 ? 'good' : undefined }),
+        text(clicks ? count(clicks) : '—', { mono: true, right: true }),
+        statusCell(humanise(post.status), SOCIAL_TONE[post.status] ?? 'muted'),
+      ],
+      inspector: {
+        title: headline,
+        tag: humanise(post.status),
+        tagTone: SOCIAL_TONE[post.status] ?? 'muted',
+        groups: [
+          {
+            label: 'POST',
+            fields: [
+              { label: 'Channels', value: channels },
+              { label: 'Scheduled', value: stamp(post.scheduledAt), mono: true },
+              { label: 'Published', value: stamp(post.publishedAt), mono: true },
+              { label: 'Link', value: post.linkUrl ?? '—', wrap: true },
+              { label: 'Media', value: post.media.length ? `${count(post.media.length)} attached` : 'None' },
+              { label: 'Hashtags', value: post.hashtags.join(' ') || '—', wrap: true },
+            ],
+          },
+          {
+            label: 'PERFORMANCE',
+            fields: [
+              { label: 'Reach', value: reach ? count(reach) : '—', mono: true, strong: true },
+              { label: 'Interactions', value: interactions ? count(interactions) : '—', mono: true },
+              { label: 'Engagement', value: reach ? percent(engagement) : '—', mono: true },
+              { label: 'Clicks', value: clicks ? count(clicks) : '—', mono: true },
+            ],
+          },
+          {
+            label: 'BODY',
+            fields: [{ label: 'Text', value: excerpt(post.content, 400), wrap: true }],
+          },
+          ...(post.publishes.length
+            ? [
+                {
+                  label: 'ACCOUNTS',
+                  lines: post.publishes.map((entry) => ({
+                    name: entry.account.accountName,
+                    qty: humanise(entry.status),
+                    amount: entry.reach ? count(entry.reach) : '—',
+                  })),
+                },
+              ]
+            : []),
+        ],
+        actions: [
+          { label: 'Scheduled posts…', href: '/admin/social', shortcut: '⌘⏎' },
+          { label: 'Social analytics…', href: '/admin/analytics/social', shortcut: '⌘⇧A' },
+          { label: 'Product feeds…', href: '/admin/feeds', shortcut: '⌘F' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} posts`),
+      text(''),
+      text(''),
+      text(reachTotal ? count(reachTotal) : '', { right: true, strong: true }),
+      text(''),
+      text(clickTotal ? count(clickTotal) : '', { right: true }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Content & blog
+// ---------------------------------------------------------------------------
+
+const CONTENT_FILTERS = ['Everything', 'Published', 'Scheduled', 'Drafts']
+const CONTENT_FILTER_STATUSES = ['', 'PUBLISHED', 'SCHEDULED', 'DRAFT']
+
+const CONTENT_TONE: Record<string, Tone> = {
+  DRAFT: 'muted',
+  SCHEDULED: 'warn',
+  PUBLISHED: 'good',
+  ARCHIVED: 'muted',
+}
+
+/** The character budgets `lib/blog/schemas.ts` enforces, restated for the readout. */
+const SEO_TITLE_MAX = 60
+const SEO_DESCRIPTION_MAX = 160
+
+async function loadContent(): Promise<TablePayload> {
+  // Pages, banners and FAQs are edited through `/admin/content` but are not one
+  // queryable list, so this table is the blog — the content the schema models as
+  // rows. The other views stay one ⌘K away.
+  const posts = await safe(
+    () =>
+      prisma.blogPost.findMany({
+        orderBy: { updatedAt: 'desc' },
+        take: ROW_LIMIT,
+        include: {
+          author: { select: { name: true, email: true } },
+          category: { select: { name: true } },
+          series: { select: { name: true } },
+          crosspost: { select: { id: true } },
+        },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Title', width: 'minmax(0,1.9fr)' },
+    { label: 'Category', width: 'minmax(0,0.9fr)' },
+    { label: 'URL', width: 'minmax(0,1.2fr)' },
+    { label: 'Author', width: 'minmax(0,0.9fr)' },
+    { label: 'Status', width: '108px' },
+    { label: 'Updated', width: '92px' },
+  ]
+
+  let published = 0
+
+  const rows: Row[] = posts.map((post) => {
+    if (post.status === 'PUBLISHED') published += 1
+
+    // The storefront's blog is the Heat Index; `/blog` is not a route.
+    const url = `/heat-index/${post.slug}`
+    const seoTitle = post.seoTitle ?? post.title
+    const seoDescription = post.seoDescription ?? post.excerpt
+
+    return {
+      id: post.id,
+      href: `/admin/blog/posts/${post.slug}`,
+      search: `${post.title} ${post.slug} ${post.category?.name ?? ''} ${post.tags.join(' ')}`,
+      buckets: bucketsFor(CONTENT_FILTER_STATUSES, post.status),
+      cells: [
+        text(post.title, { strong: true }),
+        text(post.category?.name ?? '—', { dim: true }),
+        text(url, { mono: true, dim: true }),
+        text(post.author ? personName(post.author) : '—', { dim: true }),
+        statusCell(humanise(post.status), CONTENT_TONE[post.status] ?? 'muted'),
+        text(shortDate(post.updatedAt), { mono: true, dim: true }),
+      ],
+      inspector: {
+        title: post.title,
+        tag: humanise(post.status),
+        tagTone: CONTENT_TONE[post.status] ?? 'muted',
+        groups: [
+          {
+            label: 'CONTENT',
+            fields: [
+              { label: 'URL', value: url, mono: true, wrap: true },
+              { label: 'Category', value: post.category?.name ?? '—' },
+              { label: 'Series', value: post.series?.name ?? '—' },
+              { label: 'Author', value: post.author ? personName(post.author) : '—' },
+              { label: 'Reading time', value: `${count(post.readingMinutes)} min` },
+              { label: 'Featured', value: post.featured ? 'Yes' : 'No' },
+              { label: 'Published', value: stamp(post.publishedAt), mono: true },
+              { label: 'Scheduled', value: stamp(post.scheduledFor), mono: true },
+            ],
+          },
+          {
+            // Length is what the blog schema rejects a save over, so it is the
+            // number worth showing rather than the text itself.
+            label: 'SEO',
+            fields: [
+              {
+                label: 'Title tag',
+                value: `${count(seoTitle.length)} / ${SEO_TITLE_MAX} chars`,
+                mono: true,
+              },
+              {
+                label: 'Meta description',
+                value: `${count(seoDescription.length)} / ${SEO_DESCRIPTION_MAX} chars`,
+                mono: true,
+              },
+              { label: 'Tags', value: post.tags.join(', ') || '—', wrap: true },
+              { label: 'Cover image', value: post.coverImage ? 'Set' : '—' },
+              { label: 'Cross-posted', value: post.crosspost ? 'Yes' : 'No' },
+            ],
+          },
+          { label: 'EXCERPT', fields: [{ label: 'Text', value: excerpt(post.excerpt, 400), wrap: true }] },
+        ],
+        actions: [
+          { label: 'Edit post…', href: `/admin/blog/posts/${post.slug}`, shortcut: '⌘⏎' },
+          { label: 'View on storefront…', href: url, shortcut: '⌘O' },
+          { label: 'Pages…', href: '/admin/content/pages', shortcut: '⌘⇧P' },
+          { label: 'SEO…', href: '/admin/seo', shortcut: '⌘S' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} items`),
+      text(''),
+      text(''),
+      text(''),
+      text(published ? `${count(published)} published` : '', { tone: 'good' }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lead generation
+// ---------------------------------------------------------------------------
+
+const LEAD_FILTERS = ['All leads', 'Scraped', 'Contact found', 'Emailed']
+const LEAD_FILTER_STATUSES = ['', 'SCRAPED', 'CONTACT_FOUND', 'EMAIL_SENT']
+
+const LEAD_TONE: Record<string, Tone> = {
+  SCRAPED: 'muted',
+  CONTACT_FOUND: 'warn',
+  EMAIL_SENT: 'good',
+  EMAIL_FAILED: 'bad',
+}
+
+async function loadLeads(): Promise<TablePayload> {
+  const leads = await safe(
+    () =>
+      prisma.lead.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: ROW_LIMIT,
+        include: { campaign: { select: { id: true, name: true, leadType: true } } },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Business', width: 'minmax(0,1.6fr)' },
+    { label: 'Location', width: 'minmax(0,1fr)' },
+    { label: 'Category', width: 'minmax(0,1fr)' },
+    { label: 'Rating', width: '84px', right: true },
+    { label: 'Campaign', width: 'minmax(0,1fr)' },
+    { label: 'Status', width: '126px' },
+  ]
+
+  let withEmail = 0
+
+  const rows: Row[] = leads.map((lead) => {
+    if (lead.email) withEmail += 1
+
+    const business = lead.businessName ?? lead.schoolName
+    const category = lead.businessCategory ?? lead.sport ?? humanise(lead.campaign.leadType)
+    const location = place(lead)
+
+    return {
+      id: lead.id,
+      href: `/admin/lead-generation/${lead.campaign.id}`,
+      search: `${business} ${location} ${category} ${lead.email ?? ''} ${lead.campaign.name}`,
+      buckets: bucketsFor(LEAD_FILTER_STATUSES, lead.status),
+      cells: [
+        text(business, { strong: true }),
+        text(location, { dim: true }),
+        text(category, { dim: true }),
+        text(lead.rating ? lead.rating.toFixed(1) : '—', { mono: true, right: true }),
+        text(lead.campaign.name, { dim: true }),
+        statusCell(humanise(lead.status), LEAD_TONE[lead.status] ?? 'muted'),
+      ],
+      inspector: {
+        title: business,
+        tag: humanise(lead.status),
+        tagTone: LEAD_TONE[lead.status] ?? 'muted',
+        groups: [
+          {
+            label: 'LEAD',
+            fields: [
+              { label: 'Location', value: location },
+              { label: 'Category', value: category },
+              { label: 'Contact', value: lead.contactName ?? '—' },
+              { label: 'Title', value: lead.title ?? '—' },
+              { label: 'Email', value: lead.email ?? '—', mono: true, wrap: true },
+              { label: 'Phone', value: lead.phone ?? '—', mono: true },
+              { label: 'Website', value: lead.website ?? lead.schoolUrl ?? '—', wrap: true },
+              { label: 'Address', value: lead.address ?? '—', wrap: true },
+            ],
+          },
+          {
+            label: 'SIGNALS',
+            fields: [
+              { label: 'Google rating', value: lead.rating ? `${lead.rating.toFixed(1)} / 5` : '—', mono: true },
+              { label: 'Reviews', value: lead.reviewCount ? count(lead.reviewCount) : '—', mono: true },
+              { label: 'District', value: lead.district ?? '—' },
+              { label: 'Found', value: shortDate(lead.createdAt), mono: true },
+              { label: 'Emailed', value: stamp(lead.sentAt), mono: true },
+              ...(lead.errorMessage ? [{ label: 'Error', value: lead.errorMessage, wrap: true }] : []),
+            ],
+          },
+          {
+            label: 'CAMPAIGN',
+            fields: [
+              { label: 'Name', value: lead.campaign.name },
+              { label: 'Type', value: humanise(lead.campaign.leadType) },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Open campaign…', href: `/admin/lead-generation/${lead.campaign.id}`, shortcut: '⌘⏎' },
+          ...(lead.googleMapsUrl
+            ? [{ label: 'Open in Google Maps…', href: lead.googleMapsUrl, shortcut: '⌘O' }]
+            : []),
+          { label: 'All campaigns…', href: '/admin/lead-generation', shortcut: '⌘L' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} leads`),
+      text(''),
+      text(''),
+      text(''),
+      text(withEmail ? `${count(withEmail)} with an email` : '', { tone: 'good' }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reviews
+// ---------------------------------------------------------------------------
+
+const REVIEW_FILTERS = ['All reviews', 'Pending', 'Approved', 'Rejected']
+const REVIEW_FILTER_STATUSES = ['', 'PENDING', 'APPROVED', 'REJECTED']
+
+const REVIEW_TONE: Record<string, Tone> = {
+  PENDING: 'warn',
+  APPROVED: 'good',
+  REJECTED: 'bad',
+}
+
+async function loadReviews(): Promise<TablePayload> {
+  const reviews = await safe(
+    () =>
+      prisma.review.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: ROW_LIMIT,
+        include: {
+          product: { select: { id: true, name: true } },
+          user: { select: { name: true, email: true } },
+        },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Product', width: 'minmax(0,1.2fr)' },
+    { label: 'Author', width: 'minmax(0,1fr)' },
+    { label: 'Rating', width: '96px' },
+    { label: 'Excerpt', width: 'minmax(0,1.9fr)' },
+    { label: 'Date', width: '92px' },
+    { label: 'Status', width: '108px' },
+  ]
+
+  let ratingSum = 0
+  let pending = 0
+
+  const rows: Row[] = reviews.map((review) => {
+    ratingSum += review.rating
+    if (review.status === 'PENDING') pending += 1
+
+    const author = personName(review.user)
+    const body = review.comment ?? review.title ?? ''
+
+    return {
+      id: review.id,
+      href: '/admin/reviews',
+      search: `${review.product.name} ${author} ${body}`,
+      buckets: bucketsFor(REVIEW_FILTER_STATUSES, review.status),
+      cells: [
+        text(review.product.name, { strong: true }),
+        text(author, { dim: true }),
+        text(stars(review.rating), { tone: review.rating >= 4 ? 'accent' : 'bad' }),
+        text(excerpt(body, 80), { dim: true }),
+        text(shortDate(review.createdAt), { mono: true, dim: true }),
+        statusCell(humanise(review.status), REVIEW_TONE[review.status] ?? 'muted'),
+      ],
+      inspector: {
+        title: `${review.product.name} — ${author}`,
+        tag: `${review.rating} / 5`,
+        tagTone: review.rating >= 4 ? 'good' : 'bad',
+        groups: [
+          {
+            label: 'REVIEW',
+            fields: [
+              { label: 'Product', value: review.product.name },
+              { label: 'Author', value: author },
+              { label: 'Email', value: review.user.email, mono: true, wrap: true },
+              { label: 'Rating', value: `${review.rating} / 5`, mono: true, strong: true },
+              { label: 'Verified buyer', value: review.isVerified ? 'Yes' : 'No' },
+              { label: 'Submitted', value: stamp(review.createdAt), mono: true },
+              { label: 'Moderated', value: stamp(review.moderatedAt), mono: true },
+            ],
+          },
+          {
+            label: 'BODY',
+            fields: [
+              ...(review.title ? [{ label: 'Title', value: review.title, wrap: true }] : []),
+              { label: 'Text', value: excerpt(review.comment, 500), wrap: true },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Moderate reviews…', href: '/admin/reviews', shortcut: '⌘⏎' },
+          { label: 'Open product…', href: `/admin/products/${review.product.id}`, shortcut: '⌘O' },
+          { label: 'Review forms…', href: '/admin/forms', shortcut: '⌘F' },
+        ],
+      },
+    }
+  })
+
+  const average = rows.length ? ratingSum / rows.length : 0
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} reviews`),
+      text(''),
+      text(rows.length ? `${average.toFixed(2)} avg` : ''),
+      text(''),
+      text(''),
+      text(pending ? `${count(pending)} pending` : '', { tone: 'warn' }),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Media & docs
+// ---------------------------------------------------------------------------
+
+const MEDIA_FILTERS = ['Everything', 'Photos', 'Documents', 'Other']
+
+/** Which filter chip a file belongs to, from its MIME type. */
+function mediaBucket(mimeType: string): { kind: string; bucket: number } {
+  if (mimeType.startsWith('image/')) return { kind: 'Photo', bucket: 1 }
+  if (mimeType === 'application/pdf') return { kind: 'PDF', bucket: 2 }
+  if (mimeType.startsWith('text/') || mimeType.includes('spreadsheet') || mimeType.includes('document')) {
+    return { kind: 'Document', bucket: 2 }
+  }
+  if (mimeType.startsWith('video/')) return { kind: 'Video', bucket: 3 }
+  return { kind: humanise(mimeType.split('/').pop() ?? 'File'), bucket: 3 }
+}
+
+async function loadMedia(): Promise<TablePayload> {
+  const files = await safe(
+    () =>
+      prisma.media.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: ROW_LIMIT,
+        include: { _count: { select: { socialMediaPosts: true, mediaTags: true } } },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'File', width: 'minmax(0,2fr)' },
+    { label: 'Kind', width: '108px' },
+    { label: 'Size', width: '88px', right: true },
+    { label: 'Dimensions', width: '116px', right: true },
+    { label: 'Alt text', width: '92px' },
+    { label: 'Added', width: '92px' },
+  ]
+
+  let stored = 0
+  let missingAlt = 0
+
+  const rows: Row[] = files.map((file) => {
+    stored += file.fileSize
+    const { kind, bucket } = mediaBucket(file.mimeType)
+    const isImage = file.mimeType.startsWith('image/')
+    // Alt text only matters for images; a PDF has nothing to describe.
+    if (isImage && !file.alt) missingAlt += 1
+
+    const dimensions = file.width && file.height ? `${file.width}×${file.height}` : '—'
+
+    return {
+      id: file.id,
+      href: '/admin/media',
+      search: `${file.filename} ${kind} ${file.alt ?? ''}`,
+      buckets: [0, bucket],
+      cells: [
+        text(file.filename, { mono: true, strong: true }),
+        text(kind, { dim: true }),
+        text(bytes(file.fileSize), { mono: true, right: true }),
+        text(dimensions, { mono: true, right: true, dim: true }),
+        isImage
+          ? statusCell(file.alt ? 'Set' : 'Missing', file.alt ? 'good' : 'warn')
+          : text('—', { dim: true }),
+        text(shortDate(file.createdAt), { mono: true, dim: true }),
+      ],
+      inspector: {
+        title: file.filename,
+        tag: kind,
+        tagTone: 'accent',
+        groups: [
+          {
+            label: 'FILE',
+            fields: [
+              { label: 'Kind', value: kind },
+              { label: 'MIME type', value: file.mimeType, mono: true },
+              { label: 'Size', value: bytes(file.fileSize), mono: true },
+              { label: 'Dimensions', value: dimensions, mono: true },
+              { label: 'Added', value: stamp(file.createdAt), mono: true },
+            ],
+          },
+          {
+            label: 'USAGE',
+            fields: [
+              { label: 'Social posts', value: count(file._count.socialMediaPosts), mono: true },
+              { label: 'Tags', value: count(file._count.mediaTags), mono: true },
+              { label: 'Alt text', value: file.alt ?? '—', wrap: true },
+              { label: 'Caption', value: file.caption ?? '—', wrap: true },
+              { label: 'URL', value: file.url, mono: true, wrap: true },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Media library…', href: '/admin/media', shortcut: '⌘⏎' },
+          { label: 'Open file…', href: file.url, shortcut: '⌘O' },
+          { label: 'Documents archive…', href: '/admin/archive/documents', shortcut: '⌘D' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} files`),
+      text(''),
+      text(bytes(stored), { right: true, strong: true }),
+      text(''),
+      text(missingAlt ? `${count(missingAlt)} need alt text` : '', { tone: 'warn' }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Messages
+// ---------------------------------------------------------------------------
+
+const MESSAGE_FILTERS = ['All', 'Conversations', 'Web form', 'Live chat', 'Open']
+
+const CHAT_TONE: Record<string, Tone> = {
+  WAITING: 'warn',
+  ACTIVE: 'good',
+  CLOSED: 'muted',
+  OFFLINE: 'muted',
+}
+
+async function loadMessages(): Promise<TablePayload> {
+  // Three tables feed one inbox. `Conversation` is the support inbox the web
+  // panel at /admin/messages shows; `ContactSubmission` is the marketing site's
+  // contact form; `ChatThread` is the live-chat handoff. They are separate
+  // tables but one job, so they are merged and sorted together rather than
+  // leaving the operator to switch between three lists.
+  const [conversations, submissions, threads] = await Promise.all([
+    safe(
+      () =>
+        prisma.conversation.findMany({
+          orderBy: { updatedAt: 'desc' },
+          take: ROW_LIMIT,
+          include: {
+            user: { select: { name: true, email: true } },
+            messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+            _count: { select: { messages: true } },
+          },
+        }),
+      [],
+    ),
+    safe(
+      () => prisma.contactSubmission.findMany({ orderBy: { createdAt: 'desc' }, take: ROW_LIMIT }),
+      [],
+    ),
+    safe(
+      () =>
+        prisma.chatThread.findMany({
+          orderBy: { lastMessageAt: 'desc' },
+          take: ROW_LIMIT,
+          include: { _count: { select: { messages: true } } },
+        }),
+      [],
+    ),
+  ])
+
+  const columns: Column[] = [
+    { label: 'From', width: 'minmax(0,1.2fr)' },
+    { label: 'Subject', width: 'minmax(0,2fr)' },
+    { label: 'Channel', width: '112px' },
+    { label: 'Received', width: '132px' },
+    { label: 'Status', width: '112px' },
+  ]
+
+  const conversationRows: (Row & { at: Date })[] = conversations.map((conversation) => {
+    const who = personName({
+      name: conversation.user?.name,
+      email: conversation.user?.email ?? conversation.email,
+    })
+    const open = conversation.status === 'OPEN'
+    const latest = conversation.messages[0]
+
+    return {
+      at: conversation.updatedAt,
+      id: `conversation-${conversation.id}`,
+      href: `/admin/messages/${conversation.id}`,
+      search: `${who} ${conversation.email ?? ''} ${conversation.subject ?? ''}`,
+      buckets: [0, 1, ...(open ? [4] : [])],
+      cells: [
+        text(who, { strong: true }),
+        text(excerpt(conversation.subject ?? latest?.body, 80), { dim: true }),
+        text('Conversation', { dim: true, dot: true, tone: 'warn' }),
+        text(stamp(conversation.updatedAt), { mono: true, dim: true }),
+        statusCell(humanise(conversation.status), open ? 'warn' : 'muted'),
+      ],
+      inspector: {
+        title: who,
+        tag: humanise(conversation.status),
+        tagTone: open ? 'warn' : 'muted',
+        groups: [
+          {
+            label: 'CONVERSATION',
+            fields: [
+              { label: 'From', value: who },
+              { label: 'Email', value: conversation.user?.email ?? conversation.email ?? '—', mono: true, wrap: true },
+              { label: 'Subject', value: conversation.subject ?? '—', wrap: true },
+              { label: 'Messages', value: count(conversation._count.messages), mono: true },
+              { label: 'Opened', value: stamp(conversation.createdAt), mono: true },
+              { label: 'Last activity', value: stamp(conversation.updatedAt), mono: true },
+              { label: 'Account', value: conversation.userId ? 'Registered' : 'Guest' },
+            ],
+          },
+          ...(latest
+            ? [
+                {
+                  label: 'LATEST MESSAGE',
+                  fields: [
+                    { label: humanise(latest.senderType), value: excerpt(latest.body, 400), wrap: true },
+                  ],
+                },
+              ]
+            : []),
+        ],
+        actions: [
+          { label: 'Open conversation…', href: `/admin/messages/${conversation.id}`, shortcut: '⌘⏎' },
+          { label: 'Inbox…', href: '/admin/messages', shortcut: '⌘L' },
+          { label: 'Notifications…', href: '/admin/notifications', shortcut: '⌘N' },
+        ],
+      },
+    }
+  })
+
+  const formRows: (Row & { at: Date })[] = submissions.map((entry) => ({
+    at: entry.createdAt,
+    id: `contact-${entry.id}`,
+    href: '/admin/messages',
+    search: `${entry.name} ${entry.email} ${entry.subject} ${entry.message}`,
+    buckets: [0, 2],
+    cells: [
+      text(entry.name, { strong: true }),
+      text(excerpt(entry.subject, 80), { dim: true }),
+      text('Web form', { dim: true, dot: true, tone: 'accent' }),
+      text(stamp(entry.createdAt), { mono: true, dim: true }),
+      statusCell('Received', 'good'),
+    ],
+    inspector: {
+      title: entry.name,
+      tag: 'Web form',
+      tagTone: 'accent',
+      groups: [
+        {
+          label: 'MESSAGE',
+          fields: [
+            { label: 'From', value: entry.name },
+            { label: 'Email', value: entry.email, mono: true, wrap: true },
+            { label: 'Subject', value: entry.subject, wrap: true },
+            { label: 'Received', value: stamp(entry.createdAt), mono: true },
+          ],
+        },
+        { label: 'BODY', fields: [{ label: 'Text', value: excerpt(entry.message, 500), wrap: true }] },
+      ],
+      actions: [
+        { label: 'Inbox…', href: '/admin/messages', shortcut: '⌘⏎' },
+        { label: 'Notifications…', href: '/admin/notifications', shortcut: '⌘N' },
+      ],
+    },
+  }))
+
+  const chatRows: (Row & { at: Date })[] = threads.map((thread) => {
+    const who = thread.customerName ?? thread.customerEmail ?? 'Anonymous'
+    const open = thread.status === 'WAITING' || thread.status === 'ACTIVE'
+
+    return {
+      at: thread.lastMessageAt,
+      id: `chat-${thread.id}`,
+      href: `/admin/messages/live/${thread.id}`,
+      search: `${who} ${thread.customerEmail ?? ''} live chat`,
+      buckets: [0, 3, ...(open ? [4] : [])],
+      cells: [
+        text(who, { strong: true }),
+        text(`${count(thread._count.messages)} messages · ${thread.source ?? 'live chat'}`, { dim: true }),
+        text('Live chat', { dim: true, dot: true, tone: 'good' }),
+        text(stamp(thread.lastMessageAt), { mono: true, dim: true }),
+        statusCell(humanise(thread.status), CHAT_TONE[thread.status] ?? 'muted'),
+      ],
+      inspector: {
+        title: who,
+        tag: humanise(thread.status),
+        tagTone: CHAT_TONE[thread.status] ?? 'muted',
+        groups: [
+          {
+            label: 'THREAD',
+            fields: [
+              { label: 'From', value: who },
+              { label: 'Email', value: thread.customerEmail ?? '—', mono: true, wrap: true },
+              { label: 'Source', value: thread.source ?? 'Live chat' },
+              { label: 'Messages', value: count(thread._count.messages), mono: true },
+              { label: 'Started', value: stamp(thread.startedAt), mono: true },
+              { label: 'Last message', value: stamp(thread.lastMessageAt), mono: true },
+              { label: 'Assigned', value: thread.assignedAdminId ? 'Yes' : 'Unassigned' },
+              { label: 'Closed', value: stamp(thread.closedAt), mono: true },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Open thread…', href: `/admin/messages/live/${thread.id}`, shortcut: '⌘⏎' },
+          { label: 'Live chat…', href: '/admin/messages/live', shortcut: '⌘L' },
+          { label: 'Notifications…', href: '/admin/notifications', shortcut: '⌘N' },
+        ],
+      },
+    }
+  })
+
+  const merged = [...conversationRows, ...formRows, ...chatRows]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, ROW_LIMIT)
+
+  const open = merged.filter((row) => row.buckets.includes(4)).length
+  const rows: Row[] = merged.map(({ at: _at, ...row }) => row)
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} messages`),
+      text(''),
+      text(''),
+      text(''),
+      text(open ? `${count(open)} open` : '', { tone: 'warn' }),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Users & roles
+// ---------------------------------------------------------------------------
+
+const USER_FILTERS = ['All users', 'Developers', 'Admins', 'Staff']
+const USER_FILTER_ROLES = ['', 'DEVELOPER', 'ADMIN', 'STAFF']
+
+/** The roles that can reach `/admin`. Portal roles are customers, not staff. */
+const STAFF_ROLES = ['DEVELOPER', 'ADMIN', 'STAFF'] as const
+
+const ROLE_TONE: Record<string, Tone> = {
+  DEVELOPER: 'accent',
+  ADMIN: 'warn',
+  STAFF: 'muted',
+}
+
+async function loadUsers(): Promise<TablePayload> {
+  const users = await safe(
+    () =>
+      prisma.user.findMany({
+        where: { role: { in: [...STAFF_ROLES] } },
+        orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+        take: ROW_LIMIT,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isEmailVerified: true,
+          twoFactorEnabledAt: true,
+          lastLoginAt: true,
+          createdAt: true,
+        },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Name', width: 'minmax(0,1.2fr)' },
+    { label: 'Email', width: 'minmax(0,1.6fr)' },
+    { label: 'Role', width: '124px' },
+    { label: 'Two-factor', width: '116px' },
+    { label: 'Last sign-in', width: '132px' },
+    { label: 'Created', width: '92px' },
+  ]
+
+  let withTwoFactor = 0
+
+  const rows: Row[] = users.map((user) => {
+    const secured = Boolean(user.twoFactorEnabledAt)
+    if (secured) withTwoFactor += 1
+
+    return {
+      id: user.id,
+      href: `/admin/users/${user.id}`,
+      search: `${personName(user)} ${user.email} ${user.role}`,
+      buckets: bucketsFor(USER_FILTER_ROLES, user.role),
+      cells: [
+        text(personName(user), { strong: true }),
+        text(user.email, { mono: true, dim: true }),
+        { text: humanise(user.role), dot: true, tone: ROLE_TONE[user.role] ?? 'muted' },
+        text(secured ? 'Enabled' : 'Disabled', { tone: secured ? 'good' : 'bad' }),
+        text(user.lastLoginAt ? stamp(user.lastLoginAt) : 'Never', {
+          mono: true,
+          dim: true,
+          tone: user.lastLoginAt ? undefined : 'muted',
+        }),
+        text(shortDate(user.createdAt), { mono: true, dim: true }),
+      ],
+      inspector: {
+        title: personName(user),
+        tag: humanise(user.role),
+        tagTone: ROLE_TONE[user.role] ?? 'muted',
+        groups: [
+          {
+            label: 'ACCOUNT',
+            fields: [
+              { label: 'Email', value: user.email, mono: true, wrap: true },
+              { label: 'Role', value: humanise(user.role) },
+              { label: 'Email verified', value: user.isEmailVerified ? 'Yes' : 'No' },
+              { label: 'Created', value: shortDate(user.createdAt), mono: true },
+              { label: 'Last sign-in', value: user.lastLoginAt ? stamp(user.lastLoginAt) : 'Never', mono: true },
+            ],
+          },
+          {
+            label: 'SECURITY',
+            fields: [
+              { label: 'Two-factor', value: secured ? 'Enabled' : 'Disabled' },
+              { label: 'Enrolled', value: stamp(user.twoFactorEnabledAt), mono: true },
+              {
+                label: 'Admin access',
+                value: user.role === 'DEVELOPER' ? 'Full — developer' : 'Staff panel',
+              },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Edit user…', href: `/admin/users/${user.id}/edit`, shortcut: '⌘⏎' },
+          { label: 'Open user…', href: `/admin/users/${user.id}`, shortcut: '⌘O' },
+          { label: 'Credential vault…', href: '/admin/credentials', shortcut: '⌘⇧V' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} accounts`),
+      text(''),
+      text(''),
+      text(rows.length ? `${count(withTwoFactor)} with 2FA` : '', {
+        tone: withTwoFactor === rows.length ? 'good' : 'warn',
+      }),
+      text(''),
+      text(''),
     ],
   }
 }
@@ -1648,6 +3221,92 @@ function meta(section: DesktopSection): SectionMeta {
         filters: DATABASE_FILTERS,
         actions: [{ label: 'Database Console', icon: 'i-database', href: '/admin/developer/database', primary: true }],
       }
+    case 'purchase':
+      return {
+        eyebrow: 'INBOUND SUPPLY',
+        filters: PURCHASE_FILTERS,
+        actions: [
+          { label: 'New PO', icon: 'i-plus', href: '/admin/purchase-orders/new', primary: true },
+          { label: 'Suppliers', icon: 'i-truck', href: '/admin/purchase-orders/suppliers' },
+          open,
+        ],
+      }
+    case 'invoices':
+      return {
+        eyebrow: 'ACCOUNTS RECEIVABLE',
+        filters: INVOICE_FILTERS,
+        actions: [{ label: 'Returns & RMAs', icon: 'i-file', href: '/admin/returns' }, open],
+      }
+    case 'wholesale':
+      return {
+        eyebrow: 'TRADE ACCOUNTS',
+        filters: WHOLESALE_FILTERS,
+        actions: [{ label: 'Store locator', icon: 'i-pin', href: '/admin/locations' }, open],
+      }
+    case 'email':
+      return {
+        eyebrow: 'CAMPAIGNS & AUTOMATIONS',
+        filters: EMAIL_FILTERS,
+        actions: [
+          { label: 'New campaign', icon: 'i-plus', href: '/admin/email-campaigns/new', primary: true },
+          { label: 'Automations', icon: 'i-mail', href: '/admin/email-marketing/automations' },
+          open,
+        ],
+      }
+    case 'social':
+      return {
+        eyebrow: 'SCHEDULED & PUBLISHED',
+        filters: SOCIAL_FILTERS,
+        actions: [{ label: 'Social analytics', icon: 'i-chart', href: '/admin/analytics/social' }, open],
+      }
+    case 'content':
+      return {
+        eyebrow: 'PAGES, POSTS & BANNERS',
+        filters: CONTENT_FILTERS,
+        actions: [
+          { label: 'New post', icon: 'i-plus', href: '/admin/blog/posts/new', primary: true },
+          { label: 'SEO', icon: 'i-target', href: '/admin/seo' },
+          open,
+        ],
+      }
+    case 'leads':
+      return {
+        eyebrow: 'PROSPECTING PIPELINE',
+        filters: LEAD_FILTERS,
+        actions: [{ label: 'Campaigns', icon: 'i-target', href: '/admin/lead-generation', primary: true }],
+      }
+    case 'reviews':
+      return {
+        eyebrow: 'CUSTOMER FEEDBACK',
+        filters: REVIEW_FILTERS,
+        actions: [{ label: 'Review forms', icon: 'i-file', href: '/admin/forms' }, open],
+      }
+    case 'media':
+      return {
+        eyebrow: 'LIBRARY & ARCHIVE',
+        filters: MEDIA_FILTERS,
+        actions: [{ label: 'Documents archive', icon: 'i-file', href: '/admin/archive/documents' }, open],
+      }
+    case 'messages':
+      return {
+        eyebrow: 'INBOX',
+        filters: MESSAGE_FILTERS,
+        actions: [
+          { label: 'Live chat', icon: 'i-message', href: '/admin/messages/live', primary: true },
+          { label: 'Notifications', icon: 'i-alert', href: '/admin/notifications' },
+          open,
+        ],
+      }
+    case 'users':
+      return {
+        eyebrow: 'STAFF ACCOUNTS',
+        filters: USER_FILTERS,
+        actions: [
+          { label: 'New user', icon: 'i-plus', href: '/admin/users/new', primary: true },
+          { label: 'Credentials', icon: 'i-shield', href: '/admin/credentials' },
+          open,
+        ],
+      }
     default:
       return { eyebrow: section.label.toUpperCase(), filters: ['Overview'], actions: [open] }
   }
@@ -1679,6 +3338,28 @@ async function loadBody(section: DesktopSection): Promise<SectionPayload['body']
       return loadAudit()
     case 'database':
       return loadDatabase()
+    case 'purchase':
+      return loadPurchase()
+    case 'invoices':
+      return loadInvoices()
+    case 'wholesale':
+      return loadWholesale()
+    case 'email':
+      return loadEmail()
+    case 'social':
+      return loadSocial()
+    case 'content':
+      return loadContent()
+    case 'leads':
+      return loadLeads()
+    case 'reviews':
+      return loadReviews()
+    case 'media':
+      return loadMedia()
+    case 'messages':
+      return loadMessages()
+    case 'users':
+      return loadUsers()
     default:
       return {
         view: 'link',

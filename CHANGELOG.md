@@ -21,15 +21,27 @@ the root `package.json` is canonical.
   pane, a detail inspector, a `⌘K` command palette and a status bar of key hints, in light or
   dark. It is built as a route in the storefront rather than natively in each app, so one
   implementation serves both platforms, the existing NextAuth session and staff RBAC gate it
-  unchanged, and no database credential ever reaches a client machine. Dashboard, Orders,
-  Products, Inventory, Customers, Fundraisers, Events & Shows, Financials, Analytics, Settings,
-  Audit Logs and the Database Console read live data through Prisma; every other section keeps
-  its sidebar slot, its shortcut and its palette entry and opens the matching admin page in the
-  same window. Where the design asked for a column the schema does not carry, the nearest true
-  field is shown instead of a plausible number — unit cost rather than a wholesale price on
-  Products, acquisition source rather than a mailing address on Customers, orders rather than
-  jars on fundraiser participants, and row counts only in the Database Console, since size and
-  index counts need `pg_catalog` queries and this codebase goes through Prisma. Both windows are
+  unchanged, and no database credential ever reaches a client machine. All 23 sections read live
+  data through Prisma — Dashboard, Orders, Products, Inventory, Customers, Purchase Orders,
+  Invoices, Fundraisers, Events & Shows, Wholesale, Financials, Email Marketing, Social,
+  Content & Blog, Lead Generation, Reviews, Analytics, Media & Docs, Messages, Users & Roles,
+  Audit Logs, Settings and the Database Console — so the window is the admin panel rather than a
+  launcher for it. Selecting a row fills the inspector, and the buttons at its foot open the
+  admin page that performs that job, on the keys their labels advertise (`⌘⏎`, `⌘E`, `F2`);
+  the shell itself never writes, so a button cannot disagree with what `/admin` would do. Those
+  keys are checked against the native menus, so an action is never advertised on a combination
+  the Electron or SwiftUI menu bar handles first. Each section is gated on the permission its
+  `/admin` page checks — the shell is a second door onto the same data, not a way around those
+  checks — and the sidebar is built from the sections the account may actually load.
+  `/admin-desktop?section=<id>` opens the window straight at a section, which is how both menu
+  bars navigate, what a reload comes back to, and what sign-in returns to. Where the design asked for a column the schema
+  does not carry, the nearest true field is shown instead of a plausible number — unit cost
+  rather than a wholesale price on Products, acquisition source rather than a mailing address on
+  Customers, orders rather than jars on fundraiser participants, an account's own discount and
+  minimum rather than a price tier on Wholesale, and row counts only in the Database Console,
+  since size and index counts need `pg_catalog` queries and this codebase goes through Prisma.
+  Messages merges the support inbox, the contact form and the live-chat handoff into one list,
+  because they are three tables but one job. Both windows are
   now frameless so the shell's title bar runs to the top edge: macOS floats its traffic lights
   over the left of it, Windows paints its window buttons over the right. The shell is read-only —
   editing still happens on the admin pages it opens. `/admin-desktop` is disallowed in

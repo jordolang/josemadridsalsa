@@ -52,11 +52,27 @@ export interface InspectorGroup {
   lines?: InspectorLine[]
 }
 
+/**
+ * A button at the foot of the inspector.
+ *
+ * Every action is a navigation: it opens the web admin page where that job is
+ * actually done. The shell reads and never writes, so a button here cannot
+ * drift out of step with what `/admin` would have done — and a label that
+ * ends in `…` says out loud that it opens a page rather than acting in place.
+ */
+export interface InspectorAction {
+  label: string
+  href: string
+  /** Shown right-aligned, and bound while this row is selected. `⌘E`, `F2`, `⌘⏎`. */
+  shortcut?: string
+}
+
 export interface Inspector {
   title: string
   tag?: string
   tagTone?: Tone
   groups: InspectorGroup[]
+  actions?: InspectorAction[]
 }
 
 export interface Row {
