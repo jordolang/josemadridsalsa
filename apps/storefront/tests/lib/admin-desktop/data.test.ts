@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Prisma } from '@prisma/client'
 
+import { DESKTOP_SECTIONS } from '@/lib/admin-desktop/sections'
+import { ADMIN_ROUTES, isRealAdminRoute } from '../../helpers/admin-routes'
+
 /**
  * The loaders are exercised against a stubbed Prisma client. The point is not to
  * re-test Prisma but to pin the two things that would silently produce wrong
@@ -22,6 +25,11 @@ const prismaMock = {
   emailCampaign: { count: vi.fn() },
   auditLog: { findMany: vi.fn(), count: vi.fn() },
   notification: { count: vi.fn() },
+  seoConfiguration: { findFirst: vi.fn() },
+  quickBooksConnection: { findFirst: vi.fn() },
+  paymentProviderConfig: { findMany: vi.fn() },
+  shippingCarrier: { findMany: vi.fn() },
+  thirdPartyIntegration: { findMany: vi.fn() },
 }
 
 vi.mock('@/lib/prisma', () => ({
@@ -31,6 +39,86 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 const { loadSection } = await import('@/lib/admin-desktop/data')
+
+/** Shared row fixtures — the sections whose rows carry an href. */
+
+const orderFixture = {
+  id: 'o1',
+  orderNumber: 'JMS-24817',
+  total: 71.4,
+  subtotal: 65,
+  shippingCost: 4,
+  tax: 2.4,
+  discountAmount: 0,
+  status: 'SHIPPED',
+  paymentStatus: 'PAID',
+  fulfillmentStatus: 'FULFILLED',
+  salesChannel: 'WEBSITE',
+  createdAt: new Date('2026-09-14T12:12:00Z'),
+  shippingMethod: 'USPS Priority',
+  trackingNumber: null,
+  guestEmail: null,
+  user: { name: 'Karen Wolfe', email: 'karen@example.com' },
+  shippingAddress: { firstName: 'Karen', lastName: 'Wolfe', city: 'Granville', state: 'OH' },
+  items: [{ quantity: 4 }, { quantity: 2 }],
+}
+
+const productFixture = {
+  id: 'p3',
+  name: 'Peach',
+  sku: 'JMS-PCH-16',
+  heatLevel: 'FRUIT',
+  price: 11.95,
+  compareAtPrice: null,
+  costPrice: null,
+  inventory: 100,
+  stockReserved: 0,
+  lowStockThreshold: 12,
+  unitsPerCase: 12,
+  stockStatus: 'IN_STOCK',
+  isActive: true,
+  updatedAt: new Date('2026-09-10T12:00:00Z'),
+  category: { name: 'Fruit' },
+}
+
+const customerFixture = {
+  id: 'c1',
+  firstName: 'Vera',
+  lastName: 'Ortiz',
+  // The + and @ have to survive into the query string intact.
+  email: 'vera+shows@example.com',
+  phone: null,
+  accountType: 'STANDARD',
+  source: 'BIGCOMMERCE',
+  sourceName: null,
+  emailStatus: null,
+  notes: null,
+  totalOrders: 3,
+  totalSpent: 128.4,
+  lastOrderAt: new Date('2026-09-01T12:00:00Z'),
+}
+
+const eventFixture = {
+  id: 'e1',
+  title: 'Zanesville Harvest Festival',
+  bookingStatus: 'CONFIRMED',
+  startDate: new Date('2026-09-20T12:00:00Z'),
+  endDate: new Date('2026-09-21T12:00:00Z'),
+  venue: 'Secrest Auditorium',
+  location: null,
+  city: 'Zanesville',
+  state: 'OH',
+  eventTimes: null,
+  driveTime: null,
+  boothFee: 120,
+  costOfFuel: null,
+  lodging: null,
+  meals: null,
+  otherExpenses: null,
+  cashSales: 410,
+  cardSales: 260,
+  attendance: null,
+}
 
 function missingTable(table: string) {
   return new Prisma.PrismaClientKnownRequestError(`The table \`${table}\` does not exist`, {
@@ -46,6 +134,7 @@ beforeEach(() => {
     for (const [name, fn] of Object.entries(model)) {
       if (name === 'count') fn.mockResolvedValue(0)
       else if (name === 'aggregate') fn.mockResolvedValue({ _sum: { total: null }, _count: { _all: 0 } })
+      else if (name === 'findFirst') fn.mockResolvedValue(null)
       else fn.mockResolvedValue([])
     }
   }
@@ -271,5 +360,91 @@ describe('database console', () => {
     expect(products?.cells[2].text).toBe('28')
     // Sorted by row count, so the biggest table is first.
     expect(payload.body.rows[0].id).toBe('products')
+  })
+})
+
+describe('customers', () => {
+  it('opens a row on a page that exists, filtered to that one customer', async () => {
+    // There is no /admin/customers/[id] page, so a row has to hand off to the
+    // list pre-filtered by the customer's (unique) email instead of 404ing.
+    prismaMock.customer.findMany.mockResolvedValue([customerFixture])
+
+    const payload = await loadSection('customers')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    const [row] = payload.body.rows
+    expect(row.href).toBe('/admin/customers?search=vera%2Bshows%40example.com')
+    expect(isRealAdminRoute(row.href!)).toBe(true)
+  })
+})
+
+describe('events', () => {
+  it('opens a show on its edit page rather than a bare id that has no page', async () => {
+    prismaMock.featuredEvent.findMany.mockResolvedValue([eventFixture])
+
+    const payload = await loadSection('events')
+    if (payload.body.view !== 'events') throw new Error('expected an events payload')
+
+    const [row] = payload.body.rows
+    expect(row.href).toBe('/admin/events/e1/edit')
+    expect(isRealAdminRoute(row.href!)).toBe(true)
+  })
+})
+
+describe('every link the desktop shell can follow', () => {
+  // Pressing ⏎ on a row sets window.location.href directly, so an href that
+  // matches no App Router page is a dead end with no way back.
+  it('has a route table to check against', () => {
+    expect(ADMIN_ROUTES).toContain('/admin/customers')
+    expect(ADMIN_ROUTES).toContain('/admin/events/[id]/edit')
+    // The two routes these hrefs used to point at genuinely do not exist.
+    expect(ADMIN_ROUTES).not.toContain('/admin/customers/[id]')
+    expect(ADMIN_ROUTES).not.toContain('/admin/events/[id]')
+  })
+
+  it('resolves every header action, section path and sub-view in every section', async () => {
+    const dead: string[] = []
+
+    for (const section of DESKTOP_SECTIONS) {
+      const payload = await loadSection(section.id)
+
+      for (const action of payload.actions) {
+        if (!isRealAdminRoute(action.href)) dead.push(`${section.id}: action "${action.label}" → ${action.href}`)
+      }
+      if (!isRealAdminRoute(payload.path)) dead.push(`${section.id}: section path → ${payload.path}`)
+      if (payload.body.view === 'link') {
+        for (const view of payload.body.views) {
+          if (!isRealAdminRoute(view.path)) dead.push(`${section.id}: view "${view.label}" → ${view.path}`)
+        }
+      }
+    }
+
+    expect(dead).toEqual([])
+  })
+
+  it('resolves every row href a populated section produces', async () => {
+    prismaMock.order.findMany.mockResolvedValue([orderFixture])
+    prismaMock.product.findMany.mockResolvedValue([productFixture])
+    prismaMock.customer.findMany.mockResolvedValue([customerFixture])
+    prismaMock.featuredEvent.findMany.mockResolvedValue([eventFixture])
+
+    const dead: string[] = []
+
+    for (const section of DESKTOP_SECTIONS) {
+      const payload = await loadSection(section.id)
+      const rows = payload.body.view === 'table' || payload.body.view === 'events' ? payload.body.rows : []
+
+      for (const row of rows) {
+        if (row.href && !isRealAdminRoute(row.href)) dead.push(`${section.id}: row ${row.id} → ${row.href}`)
+      }
+
+      if (payload.body.view === 'dashboard') {
+        for (const order of payload.body.todayOrders) {
+          if (!isRealAdminRoute(order.href)) dead.push(`dashboard: order ${order.id} → ${order.href}`)
+        }
+      }
+    }
+
+    expect(dead).toEqual([])
   })
 })
