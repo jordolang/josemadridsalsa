@@ -138,6 +138,17 @@ the root `package.json` is canonical.
 
 ### Fixed
 
+- **Opening a customer or a show from the desktop shell no longer lands on a 404.** Pressing `⏎`
+  on a row in `/admin-desktop` sets `window.location.href` directly, so an href that matches no
+  page is a dead end with no way back. Customers pointed at `/admin/customers/{id}` and shows at
+  `/admin/events/{id}`, neither of which is a registered route — the only customer pages are the
+  list and its CSV import, and shows only have `edit`, `financials` and `manifest` under an id.
+  Customers now open the list filtered to that one person by their (unique) email, and shows open
+  their edit page. Both predate the work that put live data behind all 23 sections. A test now
+  walks every section and asserts that every row href, header action, section path and sub-view
+  resolves against the App Router route table read off disk, so a page that is renamed or removed
+  fails the suite rather than shipping another dead link.
+
 - **The report builder opens instead of failing with a minified React error.** `/admin/data/new`
   passed `datasetsFor(...)` — full `DatasetDef` objects — from a Server Component straight into
   `ReportBuilder`, which is `'use client'`. Every measure on a definition carries a `read`

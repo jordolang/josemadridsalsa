@@ -490,7 +490,8 @@ async function loadCustomers(): Promise<TablePayload> {
 
     return {
       id: customer.id,
-      href: `/admin/customers/${customer.id}`,
+      // No /admin/customers/[id] page exists; the list filters to one row by email.
+      href: `/admin/customers?search=${encodeURIComponent(customer.email)}`,
       search: `${name} ${customer.email} ${customer.sourceName ?? ''}`,
       buckets: [
         ...bucketsFor(CUSTOMER_FILTER_TYPES, customer.accountType),
@@ -768,7 +769,8 @@ async function loadEvents(): Promise<EventsPayload> {
 
     return {
       id: event.id,
-      href: `/admin/events/${event.id}`,
+      // No /admin/events/[id] index page exists; edit is the detail view.
+      href: `/admin/events/${event.id}/edit`,
       search: `${event.title} ${where} ${event.venue ?? ''}`,
       buckets: [
         ...(upcoming ? [0] : [3]),
