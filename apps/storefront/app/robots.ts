@@ -57,7 +57,10 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin/', '/api/'],
+        // `/admin-desktop` is the desktop app's window onto the same data. It
+        // sits outside `/admin/` so it can escape that layout, so it needs its
+        // own line here rather than being covered by the prefix above.
+        disallow: ['/admin/', '/admin-desktop', '/api/'],
       },
     ],
     sitemap: `${seoConfig?.siteUrl || 'https://www.josemadrid.net'}/sitemap.xml`,

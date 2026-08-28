@@ -7,7 +7,7 @@ struct JoseMadridAdminApp: App {
   @StateObject private var browser = BrowserController()
 
   private var adminURL: URL {
-    AdminEndpoint.validated(endpoint) ?? AdminEndpoint.production
+    AdminEndpoint.validated(AdminEndpoint.migratingLegacyDefault(endpoint)) ?? AdminEndpoint.production
   }
 
   var body: some Scene {
@@ -15,8 +15,9 @@ struct JoseMadridAdminApp: App {
       AdminWorkspace(adminURL: adminURL, browser: browser)
         .frame(minWidth: 1100, minHeight: 720)
     }
+    // The shell paints its own 44px title bar, so the window keeps only the
+    // traffic lights and lets the page run to the top edge.
     .windowStyle(.hiddenTitleBar)
-    .windowToolbarStyle(.unifiedCompact)
     .commands {
       AdminCommands(browser: browser, adminURL: adminURL)
     }
@@ -54,12 +55,16 @@ private struct AdminCommands: Commands {
     }
 
     CommandMenu("Go") {
-      ForEach(AdminSections.all) { section in
-        let button = Button(section.label) { browser.navigate(to: section.path) }
-        if let shortcut = section.shortcut {
-          button.keyboardShortcut(KeyEquivalent(shortcut), modifiers: .command)
-        } else {
-          button
+      ForEach(AdminSections.groups) { group in
+        Section(group.label) {
+          ForEach(group.sections) { section in
+            let button = Button(section.label) { browser.navigate(to: section.path) }
+            if let shortcut = section.shortcut {
+              button.keyboardShortcut(KeyEquivalent(shortcut), modifiers: .command)
+            } else {
+              button
+            }
+          }
         }
       }
 
@@ -105,47 +110,8 @@ private struct AdminWorkspace: View {
           .background(Color(nsColor: .windowBackgroundColor))
         }
       }
-      .toolbar {
-        ToolbarItemGroup(placement: .navigation) {
-          Button(action: browser.goBack) { Label("Back", systemImage: "chevron.left") }
-            .disabled(!browser.canGoBack)
-          Button(action: browser.goForward) { Label("Forward", systemImage: "chevron.right") }
-            .disabled(!browser.canGoForward)
-          Button(action: browser.reload) { Label("Reload", systemImage: "arrow.clockwise") }
-          Button("Command Center") { browser.navigate(to: "/admin") }
-          Button("Operations") { browser.navigate(to: "/admin/orders") }
-          Button("Growth & Field") { browser.navigate(to: "/admin/events") }
-        }
-
-        ToolbarItemGroup(placement: .primaryAction) {
-          if browser.isLoading {
-            ProgressView().controlSize(.small)
-          }
-          connectionLabel
-          Button(action: openInBrowser) {
-            Label("Open in Browser", systemImage: "safari")
-          }
-        }
-      }
-  }
-
-  @ViewBuilder
-  private var connectionLabel: some View {
-    switch browser.connectionState {
-    case .connecting:
-      Label("Connecting", systemImage: "circle.dotted")
-        .foregroundStyle(.secondary)
-    case .connected:
-      Label("Production Connected", systemImage: "circle.fill")
-        .foregroundStyle(.green)
-    case .offline:
-      Label("Offline", systemImage: "exclamationmark.circle.fill")
-        .foregroundStyle(.red)
-    }
-  }
-
-  private func openInBrowser() {
-    NSWorkspace.shared.open(browser.currentURL ?? adminURL)
+      // The shell runs edge to edge; the traffic lights float over its own bar.
+      .ignoresSafeArea()
   }
 }
 
@@ -176,7 +142,9 @@ private struct ConnectionSettings: View {
     }
     .padding(24)
     .frame(width: 500)
-    .onAppear { draft = endpoint }
+    // Show what the app is actually pointed at, which may have been migrated
+    // forward from the pre-shell default.
+    .onAppear { draft = AdminEndpoint.migratingLegacyDefault(endpoint) }
   }
 
   private func save() {

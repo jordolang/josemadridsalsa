@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { DEFAULT_ENDPOINT, validateEndpoint } from '../shared/endpoint'
+import { DEFAULT_ENDPOINT, migrateLegacyDefault, validateEndpoint } from '../shared/endpoint'
 
 export interface DesktopSettings {
   endpoint: string
@@ -34,7 +34,7 @@ export function readSettings(): DesktopSettings {
         : DEFAULTS.zoomFactor
 
     return {
-      endpoint: 'url' in endpoint ? endpoint.url : DEFAULTS.endpoint,
+      endpoint: 'url' in endpoint ? migrateLegacyDefault(endpoint.url) : DEFAULTS.endpoint,
       zoomFactor,
     }
   } catch {

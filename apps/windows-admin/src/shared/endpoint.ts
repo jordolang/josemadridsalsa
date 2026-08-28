@@ -7,7 +7,29 @@
  */
 
 export const PRODUCTION_ORIGIN = 'https://www.josemadrid.net'
-export const DEFAULT_ENDPOINT = `${PRODUCTION_ORIGIN}/admin`
+
+/**
+ * The desktop shell — the admin data drawn as a native-feeling window rather
+ * than the web panel's page chrome. It lives outside `/admin` because that
+ * route group supplies a sidebar and top bar this window draws itself.
+ */
+export const DESKTOP_PATH = '/admin-desktop'
+export const DEFAULT_ENDPOINT = `${PRODUCTION_ORIGIN}${DESKTOP_PATH}`
+
+/**
+ * What the default used to be, before the desktop shell existed.
+ *
+ * The app writes its settings file on every close, so an install that predates
+ * the shell has the old default saved as if it were a deliberate choice and
+ * would never see the new one. `migrateLegacyDefault` moves exactly that value
+ * forward and leaves anything else — a localhost server, a hand-picked admin
+ * page — alone.
+ */
+const LEGACY_DEFAULT_ENDPOINT = `${PRODUCTION_ORIGIN}/admin`
+
+export function migrateLegacyDefault(endpoint: string): string {
+  return endpoint === LEGACY_DEFAULT_ENDPOINT ? DEFAULT_ENDPOINT : endpoint
+}
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
 
@@ -39,9 +61,9 @@ export function validateEndpoint(value: string): { url: string } | { error: stri
     return { error: 'HTTPS is required except for localhost development servers.' }
   }
 
-  // A bare origin means "the admin panel", which is the only thing this app shows.
+  // A bare origin means "the desktop shell", which is what this app opens on.
   if (parsed.pathname === '' || parsed.pathname === '/') {
-    parsed.pathname = '/admin'
+    parsed.pathname = DESKTOP_PATH
   }
 
   parsed.hash = ''

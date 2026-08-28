@@ -1,6 +1,6 @@
 import { Menu, app, shell } from 'electron'
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
-import { ADMIN_SECTIONS } from '../shared/sections'
+import { ADMIN_SECTION_GROUPS } from '../shared/sections'
 import { sectionUrl } from '../shared/endpoint'
 import { checkForUpdatesInteractively } from './updates'
 
@@ -15,11 +15,16 @@ export interface MenuActions {
 const DOCS_URL = 'https://github.com/jordolang/josemadridsalsa'
 
 export function buildApplicationMenu(window: BrowserWindow, actions: MenuActions): Menu {
-  const go: MenuItemConstructorOptions[] = ADMIN_SECTIONS.map((section) => ({
-    label: section.label,
-    accelerator: section.accelerator,
-    click: () => actions.navigate(sectionUrl(actions.currentEndpoint(), section.path)),
-  }))
+  // Separators between the sidebar's own groups, so the menu reads the same way
+  // the window does.
+  const go: MenuItemConstructorOptions[] = ADMIN_SECTION_GROUPS.flatMap((group, index) => [
+    ...(index > 0 ? [{ type: 'separator' } as MenuItemConstructorOptions] : []),
+    ...group.sections.map((section) => ({
+      label: section.label,
+      accelerator: section.accelerator,
+      click: () => actions.navigate(sectionUrl(actions.currentEndpoint(), section.path)),
+    })),
+  ])
 
   const template: MenuItemConstructorOptions[] = [
     {

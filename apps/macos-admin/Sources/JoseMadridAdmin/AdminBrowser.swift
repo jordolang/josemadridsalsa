@@ -79,6 +79,19 @@ struct AdminBrowser: NSViewRepresentable {
     Coordinator(controller: controller)
   }
 
+  /// Tells the desktop shell which frame it is running inside.
+  ///
+  /// The window has no title bar of its own, so the real traffic lights float
+  /// over the top-left of the page and the shell has to leave that corner clear
+  /// rather than drawing its own. This says nothing else about the machine, so
+  /// it is safe for any page on the origin to read.
+  private static let frameMarker = """
+  Object.defineProperty(window, 'jmsDesktop', {
+    value: Object.freeze({ platform: 'darwin', chrome: 'traffic-lights' }),
+    writable: false, configurable: false
+  });
+  """
+
   func makeNSView(context: Context) -> WKWebView {
     let configuration = WKWebViewConfiguration()
     configuration.websiteDataStore = .default()
@@ -87,8 +100,20 @@ struct AdminBrowser: NSViewRepresentable {
     // embedded webview, and WKWebView's default user agent omits the Safari
     // tokens they look for. Present as the Safari build underneath.
     configuration.applicationNameForUserAgent = "Version/18.0 Safari/605.1.15"
+    configuration.userContentController.addUserScript(
+      WKUserScript(source: Self.frameMarker, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    )
 
     let webView = WKWebView(frame: .zero, configuration: configuration)
+    // Matches the shell's window colour so a reload does not flash white.
+    webView.underPageBackgroundColor = NSColor(
+      name: nil,
+      dynamicProvider: { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+          ? NSColor(srgbRed: 0.125, green: 0.114, blue: 0.106, alpha: 1)  // #201d1b
+          : NSColor(srgbRed: 0.945, green: 0.929, blue: 0.914, alpha: 1)  // #f1ede9
+      }
+    )
     webView.navigationDelegate = context.coordinator
     webView.uiDelegate = context.coordinator
     webView.allowsMagnification = true

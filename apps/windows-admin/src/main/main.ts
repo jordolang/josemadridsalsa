@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, app, ipcMain, session, shell } from 'electron'
+import { BrowserWindow, Menu, app, ipcMain, nativeTheme, session, shell } from 'electron'
 import { join } from 'node:path'
 import { isSafeExternalUrl, shouldOpenInApp, validateEndpoint } from '../shared/endpoint'
 import { stripAppTokens } from '../shared/user-agent'
@@ -33,6 +33,24 @@ function showOfflinePage(window: BrowserWindow, description: string, url: string
   })
 }
 
+/**
+ * The desktop shell paints its own 44px title bar, so the window is frameless
+ * and Windows draws only the minimise/maximise/close buttons over the top-right
+ * of the page. The colours have to match the shell's own bar or the buttons sit
+ * on a visible patch of the wrong shade, which is why they track the system
+ * theme the same way the page does.
+ */
+const TITLE_BAR_HEIGHT = 44
+
+function titleBarOverlay() {
+  const dark = nativeTheme.shouldUseDarkColors
+  return {
+    color: dark ? '#171210' : '#e7e1db',
+    symbolColor: dark ? '#a89e96' : '#6d6158',
+    height: TITLE_BAR_HEIGHT,
+  }
+}
+
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1440,
@@ -40,9 +58,11 @@ function createMainWindow(): BrowserWindow {
     minWidth: 1024,
     minHeight: 700,
     show: false,
-    backgroundColor: '#0b0b0c',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#201d1b' : '#f1ede9',
     title: 'Jose Madrid Salsa Admin',
     icon: join(__dirname, '../../build/icon.png'),
+    titleBarStyle: 'hidden',
+    titleBarOverlay: titleBarOverlay(),
     webPreferences: {
       preload: PRELOAD,
       contextIsolation: true,
@@ -56,6 +76,14 @@ function createMainWindow(): BrowserWindow {
     window.webContents.setZoomFactor(settings.zoomFactor)
     window.show()
   })
+
+  const repaintTitleBar = () => {
+    if (window.isDestroyed()) return
+    window.setTitleBarOverlay(titleBarOverlay())
+    window.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#201d1b' : '#f1ede9')
+  }
+  nativeTheme.on('updated', repaintTitleBar)
+  window.on('closed', () => nativeTheme.off('updated', repaintTitleBar))
 
   // Keep the app on its own origin and its sign-in providers. Anything else
   // opens in the default browser, so a Stripe dashboard link or a customer's

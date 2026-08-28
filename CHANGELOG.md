@@ -14,6 +14,27 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **A desktop shell at `/admin-desktop`, and both desktop apps now open on it.** The Windows and
+  macOS apps were hardened windows onto the web admin panel; they still are, but the window they
+  open is a dense, keyboard-driven view of the same database rather than a web page in a frame:
+  a 44px title bar the window drags by, a 232px sidebar grouping all 23 sections, one content
+  pane, a detail inspector, a `⌘K` command palette and a status bar of key hints, in light or
+  dark. It is built as a route in the storefront rather than natively in each app, so one
+  implementation serves both platforms, the existing NextAuth session and staff RBAC gate it
+  unchanged, and no database credential ever reaches a client machine. Dashboard, Orders,
+  Products, Inventory, Customers, Fundraisers, Events & Shows, Financials, Analytics, Settings,
+  Audit Logs and the Database Console read live data through Prisma; every other section keeps
+  its sidebar slot, its shortcut and its palette entry and opens the matching admin page in the
+  same window. Where the design asked for a column the schema does not carry, the nearest true
+  field is shown instead of a plausible number — unit cost rather than a wholesale price on
+  Products, acquisition source rather than a mailing address on Customers, orders rather than
+  jars on fundraiser participants, and row counts only in the Database Console, since size and
+  index counts need `pg_catalog` queries and this codebase goes through Prisma. Both windows are
+  now frameless so the shell's title bar runs to the top edge: macOS floats its traffic lights
+  over the left of it, Windows paints its window buttons over the right. The shell is read-only —
+  editing still happens on the admin pages it opens. `/admin-desktop` is disallowed in
+  `robots.txt` and carries `noindex`, since it is a staff tool rather than a page.
+
 - **Desktop admin apps for Windows 11 and macOS, and the guarded database console they carry.**
   Both apps are hardened windows onto the real admin panel rather than reimplementations of it:
   at 163 admin pages and 352 API routes, a native rewrite would mean building every future admin
