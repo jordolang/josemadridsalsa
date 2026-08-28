@@ -11,25 +11,34 @@ import { ADMIN_ROUTES, isRealAdminRoute } from '../../helpers/admin-routes'
  */
 
 const prismaMock = {
-  order: { findMany: vi.fn(), count: vi.fn(), aggregate: vi.fn() },
-  orderItem: { count: vi.fn(), groupBy: vi.fn() },
-  product: { findMany: vi.fn(), count: vi.fn() },
-  customer: { findMany: vi.fn(), count: vi.fn() },
-  user: { findMany: vi.fn(), count: vi.fn() },
-  payment: { count: vi.fn() },
-  fundraiser: { findMany: vi.fn(), count: vi.fn() },
-  fundraiserParticipant: { findMany: vi.fn(), count: vi.fn() },
-  ledgerEntry: { findMany: vi.fn(), count: vi.fn() },
-  featuredEvent: { findMany: vi.fn(), count: vi.fn() },
-  review: { count: vi.fn() },
-  emailCampaign: { count: vi.fn() },
-  auditLog: { findMany: vi.fn(), count: vi.fn() },
+  auditLog: { count: vi.fn(), findMany: vi.fn() },
+  blogPost: { findMany: vi.fn() },
+  chatThread: { findMany: vi.fn() },
+  contactSubmission: { findMany: vi.fn() },
+  customer: { count: vi.fn(), findMany: vi.fn() },
+  emailCampaign: { count: vi.fn(), findMany: vi.fn() },
+  featuredEvent: { count: vi.fn(), findMany: vi.fn() },
+  fundraiser: { count: vi.fn(), findMany: vi.fn() },
+  fundraiserParticipant: { count: vi.fn(), findMany: vi.fn() },
+  invoice: { findMany: vi.fn() },
+  lead: { findMany: vi.fn() },
+  ledgerEntry: { count: vi.fn(), findMany: vi.fn() },
+  media: { findMany: vi.fn() },
   notification: { count: vi.fn() },
-  seoConfiguration: { findFirst: vi.fn() },
-  quickBooksConnection: { findFirst: vi.fn() },
+  order: { aggregate: vi.fn(), count: vi.fn(), findMany: vi.fn() },
+  orderItem: { count: vi.fn(), groupBy: vi.fn() },
+  payment: { count: vi.fn() },
   paymentProviderConfig: { findMany: vi.fn() },
+  product: { count: vi.fn(), findMany: vi.fn() },
+  purchaseOrder: { findMany: vi.fn() },
+  quickBooksConnection: { findFirst: vi.fn() },
+  review: { count: vi.fn(), findMany: vi.fn() },
+  seoConfiguration: { findFirst: vi.fn() },
   shippingCarrier: { findMany: vi.fn() },
+  socialMediaPost: { findMany: vi.fn() },
   thirdPartyIntegration: { findMany: vi.fn() },
+  user: { count: vi.fn(), findMany: vi.fn() },
+  wholesaleAccount: { findMany: vi.fn() },
 }
 
 vi.mock('@/lib/prisma', () => ({
@@ -39,6 +48,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 const { loadSection } = await import('@/lib/admin-desktop/data')
+const { isBindableShortcut } = await import('@/lib/admin-desktop/shortcuts')
 
 /** Shared row fixtures — the sections whose rows carry an href. */
 
@@ -140,15 +150,52 @@ beforeEach(() => {
   }
 })
 
-describe('link sections', () => {
-  it('hands off to the web admin without touching the database', async () => {
-    const payload = await loadSection('wholesale')
+describe('every section', () => {
+  it('draws its own data rather than handing off to the web admin', async () => {
+    // The desktop window is the whole admin, not a launcher for it: a section
+    // that fell back to a link card would be a hole in that promise.
+    for (const section of DESKTOP_SECTIONS) {
+      const payload = await loadSection(section.id)
+      expect(payload.body.view).not.toBe('link')
+      expect(payload.kind).toBe(section.kind)
+    }
+  })
 
-    expect(payload.kind).toBe('link')
-    expect(payload.body.view).toBe('link')
-    if (payload.body.view !== 'link') throw new Error('expected a link payload')
-    expect(payload.body.views.length).toBeGreaterThan(0)
-    expect(prismaMock.order.findMany).not.toHaveBeenCalled()
+  it('gives every section filter chips and a first chip that filters nothing', async () => {
+    for (const section of DESKTOP_SECTIONS) {
+      const payload = await loadSection(section.id)
+      expect(payload.filters.length).toBeGreaterThan(0)
+
+      if (payload.body.view === 'table') {
+        // Chip 0 is the unfiltered view, so every row must be in bucket 0 or
+        // the default view would hide rows the totals still count.
+        for (const row of payload.body.rows) expect(row.buckets).toContain(0)
+      }
+    }
+  })
+
+  it('matches each table totals row to its column count', async () => {
+    // A short totals row silently slides every figure under the wrong heading.
+    for (const section of DESKTOP_SECTIONS) {
+      const payload = await loadSection(section.id)
+      if (payload.body.view !== 'table') continue
+      expect(payload.body.totals).toHaveLength(payload.body.columns.length)
+    }
+  })
+
+  it('keeps every inspector action pointed somewhere real', async () => {
+    for (const section of DESKTOP_SECTIONS) {
+      const payload = await loadSection(section.id)
+      if (payload.body.view !== 'table') continue
+
+      for (const row of payload.body.rows) {
+        for (const action of row.inspector.actions ?? []) {
+          expect(action.href).toMatch(/^(\/|https?:)/)
+          // A shortcut the shell already owns would never reach the button.
+          if (action.shortcut) expect(isBindableShortcut(action.shortcut)).toBe(true)
+        }
+      }
+    }
   })
 })
 
@@ -446,5 +493,329 @@ describe('every link the desktop shell can follow', () => {
     }
 
     expect(dead).toEqual([])
+  })
+})
+
+describe('purchase orders', () => {
+  it('adds freight to the line total rather than reporting goods alone', async () => {
+    prismaMock.purchaseOrder.findMany.mockResolvedValue([
+      {
+        id: 'po1',
+        poNumber: 'PO-1184',
+        status: 'SUBMITTED',
+        expectedAt: new Date('2026-09-18T12:00:00Z'),
+        submittedAt: new Date('2026-09-11T12:00:00Z'),
+        receivedAt: null,
+        cancelledAt: null,
+        shippingCost: 100,
+        supplier: { name: 'Ohio Pepper Co', city: 'Columbus', state: 'OH', email: null },
+        createdBy: null,
+        items: [
+          { quantityOrdered: 400, quantityReceived: 0, unitCost: 3.21, product: { name: 'Jalapeño', sku: 'JAL' } },
+          { quantityOrdered: 220, quantityReceived: 20, unitCost: 4, product: { name: 'Habanero', sku: 'HAB' } },
+        ],
+      },
+    ])
+
+    const payload = await loadSection('purchase')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    const [row] = payload.body.rows
+    expect(row.cells[3].text).toBe('620') // jars ordered
+    // 400 × 3.21 + 220 × 4 = 2,164, plus 100 freight.
+    expect(row.cells[4].text).toBe('$2,264.00')
+    expect(row.cells[2].text).toBe('400 × Jalapeño +1 more')
+  })
+})
+
+describe('invoices', () => {
+  it('reads an unpaid invoice past its due date as overdue whatever the stored status says', async () => {
+    // A nightly job moves SENT to OVERDUE; until it runs, the date is the truth.
+    prismaMock.invoice.findMany.mockResolvedValue([
+      {
+        id: 'i1',
+        number: 'INV-3066',
+        customerId: null,
+        orderId: null,
+        status: 'SENT',
+        dueDate: new Date('2020-01-01T12:00:00Z'),
+        total: 940,
+        lines: [],
+        notes: null,
+        sentAt: null,
+        paidAt: null,
+        createdAt: new Date('2019-12-01T12:00:00Z'),
+      },
+    ])
+
+    const payload = await loadSection('invoices')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    const [row] = payload.body.rows
+    expect(row.cells[5].text).toBe('Overdue')
+    expect(row.cells[5].tone).toBe('bad')
+    // Chip 2 is "Overdue", so the chip agrees with the cell.
+    expect(payload.filters[2]).toBe('Overdue')
+    expect(row.buckets).toContain(2)
+  })
+
+  it('leaves a paid invoice out of the outstanding total', async () => {
+    prismaMock.invoice.findMany.mockResolvedValue([
+      {
+        id: 'i2',
+        number: 'INV-3070',
+        customerId: null,
+        orderId: null,
+        status: 'PAID',
+        dueDate: new Date('2020-01-01T12:00:00Z'),
+        total: 798,
+        lines: null,
+        notes: null,
+        sentAt: null,
+        paidAt: new Date('2019-12-20T12:00:00Z'),
+        createdAt: new Date('2019-12-01T12:00:00Z'),
+      },
+    ])
+
+    const payload = await loadSection('invoices')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    expect(payload.body.rows[0].cells[5].text).toBe('Paid')
+    expect(payload.body.totals[3].text).toBe('')
+  })
+
+  it('survives a lines column that is not the shape it expects', async () => {
+    prismaMock.invoice.findMany.mockResolvedValue([
+      {
+        id: 'i3',
+        number: 'INV-3081',
+        customerId: null,
+        orderId: null,
+        status: 'DRAFT',
+        dueDate: new Date('2030-01-01T12:00:00Z'),
+        total: 10,
+        lines: { not: 'an array' },
+        notes: null,
+        sentAt: null,
+        paidAt: null,
+        createdAt: new Date('2029-12-01T12:00:00Z'),
+      },
+    ])
+
+    const payload = await loadSection('invoices')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    const lines = payload.body.rows[0].inspector.groups.find((group) => group.label === 'LINES')
+    expect(lines?.lines).toEqual([])
+  })
+})
+
+describe('messages', () => {
+  it('merges the contact form and live chat into one list, newest first', async () => {
+    prismaMock.contactSubmission.findMany.mockResolvedValue([
+      {
+        id: 'c1',
+        name: 'Cardinal Fine Foods',
+        email: 'ap@cardinal.example',
+        subject: 'Wholesale application',
+        message: 'We carry salsa in three stores.',
+        ip: null,
+        createdAt: new Date('2026-09-14T13:04:00Z'),
+      },
+    ])
+    prismaMock.chatThread.findMany.mockResolvedValue([
+      {
+        id: 't1',
+        status: 'WAITING',
+        source: 'storefront',
+        customerName: 'Tom Girard',
+        customerEmail: 'tom@example.com',
+        assignedAdminId: null,
+        startedAt: new Date('2026-09-15T13:00:00Z'),
+        lastMessageAt: new Date('2026-09-15T14:15:00Z'),
+        closedAt: null,
+        _count: { messages: 4 },
+      },
+    ])
+
+    const payload = await loadSection('messages')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    expect(payload.body.rows.map((row) => row.cells[0].text)).toEqual([
+      'Tom Girard',
+      'Cardinal Fine Foods',
+    ])
+    expect(payload.body.rows[0].cells[2].text).toBe('Live chat')
+    expect(payload.body.rows[1].cells[2].text).toBe('Web form')
+    // Chip 3 is "Open"; only the waiting chat thread is.
+    expect(payload.filters[3]).toBe('Open')
+    expect(payload.body.rows[0].buckets).toContain(3)
+    expect(payload.body.rows[1].buckets).not.toContain(3)
+  })
+})
+
+describe('media', () => {
+  it('asks for alt text on an image and not on a PDF', async () => {
+    prismaMock.media.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        url: '/media/jar.jpg',
+        filename: 'jar.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 1_468_006,
+        alt: null,
+        caption: null,
+        width: 2000,
+        height: 2000,
+        createdAt: new Date('2026-09-12T12:00:00Z'),
+        _count: { socialMediaPosts: 0, mediaTags: 0 },
+      },
+      {
+        id: 'm2',
+        url: '/media/sheet.pdf',
+        filename: 'price-sheet.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 612_000,
+        alt: null,
+        caption: null,
+        width: null,
+        height: null,
+        createdAt: new Date('2026-09-11T12:00:00Z'),
+        _count: { socialMediaPosts: 0, mediaTags: 0 },
+      },
+    ])
+
+    const payload = await loadSection('media')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    const [image, pdf] = payload.body.rows
+    expect(image.cells[1].text).toBe('Photo')
+    expect(image.cells[2].text).toBe('1.4 MB')
+    expect(image.cells[3].text).toBe('2000×2000')
+    expect(image.cells[4].text).toBe('Missing')
+    expect(pdf.cells[4].text).toBe('—')
+    expect(payload.body.totals[4].text).toBe('1 need alt text')
+  })
+})
+
+describe('users', () => {
+  it('asks only for the roles that can reach the admin panel', async () => {
+    await loadSection('users')
+
+    const where = prismaMock.user.findMany.mock.calls.at(-1)?.[0]?.where
+    expect(where).toEqual({ role: { in: ['DEVELOPER', 'ADMIN', 'STAFF'] } })
+  })
+
+  it('counts two-factor enrolment from the confirmed timestamp, not the secret', async () => {
+    prismaMock.user.findMany.mockResolvedValue([
+      {
+        id: 'u1',
+        name: 'Mike Madrid',
+        email: 'mike@josemadrid.net',
+        role: 'DEVELOPER',
+        isEmailVerified: true,
+        twoFactorEnabledAt: new Date('2026-03-01T12:00:00Z'),
+        lastLoginAt: new Date('2026-09-14T13:12:00Z'),
+        createdAt: new Date('2021-03-01T12:00:00Z'),
+      },
+      {
+        id: 'u2',
+        name: 'Casey Lin',
+        email: 'casey@josemadrid.net',
+        role: 'STAFF',
+        isEmailVerified: false,
+        twoFactorEnabledAt: null,
+        lastLoginAt: null,
+        createdAt: new Date('2026-01-01T12:00:00Z'),
+      },
+    ])
+
+    const payload = await loadSection('users')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    expect(payload.body.rows[0].cells[3].text).toBe('Enabled')
+    expect(payload.body.rows[1].cells[3].text).toBe('Disabled')
+    expect(payload.body.rows[1].cells[4].text).toBe('Never')
+    expect(payload.body.totals[3].text).toBe('1 with 2FA')
+    expect(payload.body.totals[3].tone).toBe('warn')
+  })
+})
+
+describe('content', () => {
+  it('measures the SEO budget against the values the page would actually publish', async () => {
+    // With no override the storefront falls back to the title and excerpt, so
+    // that is what the character count has to be taken from.
+    prismaMock.blogPost.findMany.mockResolvedValue([
+      {
+        id: 'b1',
+        slug: 'small-batch',
+        title: 'What makes a small batch',
+        excerpt: 'Twelve gallons at a time.',
+        status: 'PUBLISHED',
+        publishedAt: new Date('2026-09-13T12:00:00Z'),
+        scheduledFor: null,
+        featured: false,
+        readingMinutes: 4,
+        seoTitle: null,
+        seoDescription: null,
+        tags: ['kitchen'],
+        coverImage: null,
+        updatedAt: new Date('2026-09-13T12:00:00Z'),
+        author: { name: 'Mike', email: 'mike@josemadrid.net' },
+        category: { name: 'Kitchen' },
+        series: null,
+        crosspost: null,
+      },
+    ])
+
+    const payload = await loadSection('content')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    const seo = payload.body.rows[0].inspector.groups.find((group) => group.label === 'SEO')
+    expect(seo?.fields?.[0].value).toBe('24 / 60 chars')
+    expect(seo?.fields?.[1].value).toBe('25 / 160 chars')
+    expect(payload.body.rows[0].href).toBe('/admin/blog/posts/small-batch')
+    // The public post lives under the Heat Index, not a /blog prefix.
+    const content = payload.body.rows[0].inspector.groups.find((group) => group.label === 'CONTENT')
+    expect(content?.fields?.[0].value).toBe('/heat-index/small-batch')
+  })
+})
+
+describe('reviews', () => {
+  it('reports the average rating and how many still need moderating', async () => {
+    prismaMock.review.findMany.mockResolvedValue([
+      {
+        id: 'r1',
+        rating: 5,
+        title: null,
+        comment: 'Best salsa we have found anywhere.',
+        isVerified: true,
+        status: 'PENDING',
+        moderatedAt: null,
+        createdAt: new Date('2026-09-13T12:00:00Z'),
+        product: { id: 'p1', name: 'Black Bean & Corn' },
+        user: { name: 'Karen Wolfe', email: 'karen@example.com' },
+      },
+      {
+        id: 'r2',
+        rating: 4,
+        title: null,
+        comment: 'Smoky and thick.',
+        isVerified: false,
+        status: 'APPROVED',
+        moderatedAt: new Date('2026-09-10T12:00:00Z'),
+        createdAt: new Date('2026-09-09T12:00:00Z'),
+        product: { id: 'p2', name: 'Chipotle' },
+        user: { name: 'Danielle Poe', email: 'dp@example.com' },
+      },
+    ])
+
+    const payload = await loadSection('reviews')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    expect(payload.body.rows[0].cells[2].text).toBe('★★★★★')
+    expect(payload.body.rows[1].cells[2].text).toBe('★★★★☆')
+    expect(payload.body.totals[2].text).toBe('4.50 avg')
+    expect(payload.body.totals[5].text).toBe('1 pending')
   })
 })

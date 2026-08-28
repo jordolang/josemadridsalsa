@@ -6,10 +6,10 @@
  * a real `/admin` path, and the data behind it is loaded through the same RBAC
  * checks the web panel uses, so a STAFF account sees the same refusals here.
  *
- * `kind` records whether the section renders its own data in the desktop shell
- * or hands off to the web admin page. A `link` section still keeps its slot,
- * shortcut and palette entry — the shell shows its views and opens the real
- * page rather than an empty table.
+ * `kind` records how the content pane draws a section. Every section here loads
+ * its own data; `link` remains a supported kind so that a section added to this
+ * registry before its loader exists degrades to a hand-off card rather than an
+ * empty table.
  */
 
 export type DesktopSectionId =
@@ -56,7 +56,11 @@ export interface DesktopSection {
   kind: DesktopViewKind
   /** Single digit used with ⌘/Ctrl, when the section has a shortcut. */
   digit?: string
-  /** Sub-pages, shown for `link` sections and used to explain a section's scope. */
+  /**
+   * Sub-pages this section covers. They become command-palette entries, so a
+   * page the shell does not draw itself is still one ⌘K away, and they are the
+   * hand-off list if the section ever falls back to `link`.
+   */
   views?: { label: string; path: string }[]
 }
 
@@ -79,7 +83,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Purchase Orders',
         icon: 'i-truck',
         path: '/admin/purchase-orders',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Open POs', path: '/admin/purchase-orders' },
           { label: 'New PO', path: '/admin/purchase-orders/new' },
@@ -91,7 +95,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Invoices',
         icon: 'i-file',
         path: '/admin/invoices',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'All invoices', path: '/admin/invoices' },
           { label: 'Returns & RMAs', path: '/admin/returns' },
@@ -110,7 +114,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Wholesale',
         icon: 'i-truck',
         path: '/admin/wholesale',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Accounts', path: '/admin/wholesale' },
           { label: 'Locations', path: '/admin/locations' },
@@ -133,7 +137,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Email Marketing',
         icon: 'i-mail',
         path: '/admin/email-marketing',
-        kind: 'link',
+        kind: 'table',
         digit: '9',
         views: [
           { label: 'Dashboard', path: '/admin/email-marketing' },
@@ -149,7 +153,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Social',
         icon: 'i-share',
         path: '/admin/social',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Scheduled posts', path: '/admin/social' },
           { label: 'Social analytics', path: '/admin/analytics/social' },
@@ -161,7 +165,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Content & Blog',
         icon: 'i-file',
         path: '/admin/content',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Pages', path: '/admin/content/pages' },
           { label: 'Blog posts', path: '/admin/blog/posts' },
@@ -176,7 +180,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Lead Generation',
         icon: 'i-target',
         path: '/admin/lead-generation',
-        kind: 'link',
+        kind: 'table',
         views: [{ label: 'Campaigns', path: '/admin/lead-generation' }],
       },
       {
@@ -184,7 +188,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Reviews',
         icon: 'i-star',
         path: '/admin/reviews',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Reviews', path: '/admin/reviews' },
           { label: 'Forms', path: '/admin/forms' },
@@ -211,7 +215,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Media & Docs',
         icon: 'i-image',
         path: '/admin/media',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Media library', path: '/admin/media' },
           { label: 'Documents archive', path: '/admin/archive/documents' },
@@ -224,7 +228,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Messages',
         icon: 'i-message',
         path: '/admin/messages',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Inbox', path: '/admin/messages' },
           { label: 'Notifications', path: '/admin/notifications' },
@@ -235,7 +239,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         label: 'Users & Roles',
         icon: 'i-shield',
         path: '/admin/users',
-        kind: 'link',
+        kind: 'table',
         views: [
           { label: 'Staff accounts', path: '/admin/users' },
           { label: 'Credentials', path: '/admin/credentials' },

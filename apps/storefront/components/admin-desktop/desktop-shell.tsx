@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DESKTOP_SECTION_GROUPS, type DesktopSection, type DesktopSectionId } from '@/lib/admin-desktop/sections'
 import type { DesktopBadges, Inspector as InspectorData, Row, SectionPayload } from '@/lib/admin-desktop/types'
+import { matchesShortcut } from '@/lib/admin-desktop/shortcuts'
 import { Icon, IconSprite } from './icons'
 import {
   AnalyticsView,
@@ -124,6 +125,17 @@ export function DesktopShell({
         setSelected(0)
         setQuery('')
         setFilter(0)
+
+        // Keep `?section=` in step so a reload, and the macOS and Windows menu
+        // bars, all agree on where the window is. Replace rather than push:
+        // switching sections is not a page the back button should walk through.
+        try {
+          const url = new URL(window.location.href)
+          url.searchParams.set('section', id)
+          window.history.replaceState(null, '', url)
+        } catch {
+          // A window that will not let us rewrite its URL still navigated fine.
+        }
       } catch {
         if (ticket !== requestId.current) return
         setError('Could not load that section. Check the connection and try again.')
@@ -208,6 +220,18 @@ export function DesktopShell({
       })
     }
 
+    for (const item of sections) {
+      for (const view of item.views ?? []) {
+        items.push({
+          key: `view:${item.id}:${view.path}`,
+          label: `${item.label} · ${view.label}`,
+          hint: view.path,
+          icon: item.icon,
+          run: () => openPath(view.path),
+        })
+      }
+    }
+
     items.push({
       key: 'command:appearance',
       label: 'Toggle appearance',
@@ -240,7 +264,9 @@ export function DesktopShell({
     const needle = paletteQuery.trim().toLowerCase()
     return items
       .filter((item) => !needle || `${item.label} ${item.hint}`.toLowerCase().includes(needle))
-      .slice(0, 40)
+      // Filtering happens first, so anything is reachable by typing; the cap
+      // only bounds how long the unfiltered browse list gets.
+      .slice(0, 80)
   }, [sections, allRows, rows, currentSection, paletteQuery, goToSection, cycleAppearance, openPath, flash])
 
   // ------------------------------------------------------------ keyboard
@@ -297,6 +323,20 @@ export function DesktopShell({
         return
       }
 
+      // The inspector's own buttons, on the keys their labels advertise. These
+      // are checked before the plain-key handlers below because they carry a
+      // modifier, which the table's type-ahead deliberately ignores.
+      if (!typing && inspectorOpen && inspectorData?.actions?.length) {
+        const hit = inspectorData.actions.find(
+          (action) => action.shortcut && matchesShortcut(action.shortcut, event),
+        )
+        if (hit) {
+          event.preventDefault()
+          openPath(hit.href)
+          return
+        }
+      }
+
       if (typing || accel || event.altKey) return
 
       if (event.key === 'j' || event.key === 'ArrowDown') {
@@ -348,7 +388,21 @@ export function DesktopShell({
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [paletteOpen, paletteItems, paletteIndex, rows, activeRow, sections, section.filters.length, quickFind, goToSection, openRow])
+  }, [
+    paletteOpen,
+    paletteItems,
+    paletteIndex,
+    rows,
+    activeRow,
+    sections,
+    section.filters.length,
+    quickFind,
+    goToSection,
+    openRow,
+    inspectorOpen,
+    inspectorData,
+    openPath,
+  ])
 
   useEffect(() => {
     return () => {
@@ -558,7 +612,7 @@ export function DesktopShell({
           </div>
         </main>
 
-        {inspectorOpen ? <Inspector data={inspectorData} /> : null}
+        {inspectorOpen ? <Inspector data={inspectorData} onOpen={openPath} /> : null}
       </div>
 
       <footer className="jmsd-statusbar">

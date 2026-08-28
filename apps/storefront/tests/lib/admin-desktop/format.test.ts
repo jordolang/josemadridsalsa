@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
+  bytes,
   centsToMoney,
   channelLabel,
   channelTone,
   count,
+  excerpt,
   heatTone,
   humanise,
   money,
@@ -14,6 +16,7 @@ import {
   place,
   shortDate,
   stamp,
+  stars,
   toNumber,
 } from '@/lib/admin-desktop/format'
 
@@ -143,5 +146,54 @@ describe('dates', () => {
   it('shows a dash for a missing date', () => {
     expect(shortDate(null)).toBe('—')
     expect(stamp(undefined)).toBe('—')
+  })
+})
+
+describe('bytes', () => {
+  it('scales to the unit a file manager would show', () => {
+    expect(bytes(880)).toBe('880 B')
+    expect(bytes(612_000)).toBe('597.7 KB')
+    expect(bytes(1_468_006)).toBe('1.4 MB')
+    expect(bytes(6_871_947_674)).toBe('6.4 GB')
+  })
+
+  it('never prints a decimal point on whole bytes', () => {
+    expect(bytes(1)).toBe('1 B')
+  })
+
+  it('shows a dash rather than a nonsense size', () => {
+    expect(bytes(0)).toBe('—')
+    expect(bytes(-1)).toBe('—')
+    expect(bytes(Number.NaN)).toBe('—')
+  })
+})
+
+describe('stars', () => {
+  it('draws the rating out of five', () => {
+    expect(stars(5)).toBe('★★★★★')
+    expect(stars(2)).toBe('★★☆☆☆')
+    expect(stars(0)).toBe('☆☆☆☆☆')
+  })
+
+  it('clamps a rating that is out of range instead of drawing a ragged row', () => {
+    expect(stars(9)).toBe('★★★★★')
+    expect(stars(-2)).toBe('☆☆☆☆☆')
+  })
+})
+
+describe('excerpt', () => {
+  it('collapses the whitespace a textarea leaves behind', () => {
+    expect(excerpt('Best salsa\n\n  we have  found')).toBe('Best salsa we have found')
+  })
+
+  it('clips to the limit including the ellipsis', () => {
+    const clipped = excerpt('a'.repeat(200), 10)
+    expect(clipped).toHaveLength(10)
+    expect(clipped.endsWith('…')).toBe(true)
+  })
+
+  it('shows a dash for nothing at all', () => {
+    expect(excerpt(null)).toBe('—')
+    expect(excerpt('   ')).toBe('—')
   })
 })

@@ -49,6 +49,30 @@ export function percent(value: number, digits = 1): string {
   return `${value.toFixed(digits)}%`
 }
 
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB']
+
+/** `1.4 MB`. Base 1024, which is what a file manager shows next to the same file. */
+export function bytes(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '—'
+  const exponent = Math.min(Math.floor(Math.log(value) / Math.log(1024)), BYTE_UNITS.length - 1)
+  const scaled = value / 1024 ** exponent
+  // Whole bytes never want a decimal point; anything larger reads better with one.
+  return `${scaled.toFixed(exponent === 0 ? 0 : 1)} ${BYTE_UNITS[exponent]}`
+}
+
+/** `★★★★☆` — a rating out of five, drawn rather than spelled out. */
+export function stars(rating: number): string {
+  const filled = Math.max(0, Math.min(5, Math.round(rating)))
+  return '★'.repeat(filled) + '☆'.repeat(5 - filled)
+}
+
+/** First line of a free-text body, clipped for a table cell. */
+export function excerpt(value: string | null | undefined, limit = 90): string {
+  const line = (value ?? '').replace(/\s+/g, ' ').trim()
+  if (!line) return '—'
+  return line.length > limit ? `${line.slice(0, limit - 1)}…` : line
+}
+
 const dateFormat = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
