@@ -116,6 +116,25 @@ the root `package.json` is canonical.
     `CRON_SECRET` guard that refuses rather than fails open in production.
   - `integrations/easypost` (including the ounces-not-pounds convention),
     `integrations/email-dns`, `guides/jsdoc-conventions`.
+- **Six marketing email templates, led by the platform announcement to fundraising groups.**
+  `fundraiser_platform_announcement` tells coordinators what is coming and in what order — the new
+  website first, the new fundraising system behind it, and the José Madrid app on the App Store and
+  Google Play — described in terms of what a campaign actually does: a shareable group page, a
+  personal link per seller so orders credit automatically, supporters ordering online for shipment,
+  live totals, and one place for participant and order tracking instead of a shoebox. It is
+  explicit that nothing changes today and that groups already on the books get first access, so a
+  coordinator mid-season is not left wondering whether to wait. The store links are variables
+  rather than hardcoded URLs, so the template cannot ship a dead link before the apps are listed.
+  The other five cover distinct audiences and jobs: `website_launch_announcement` (retail
+  customers — what improved, and the password every imported account must set on first sign-in,
+  since `User.password` is null for them), `mobile_app_launch` (the apps once listed),
+  `fundraiser_referral_invite` (coordinators introducing another group, with a forwardable pitch),
+  `heat_index_digest` (a three-story content round-up), and `wholesale_prospect_outreach` (buyers at
+  shops that do not yet carry the salsa). All six follow the existing `baseStyles`/`headerImg`/
+  `jmsFooter` composition, ship HTML and plain-text bodies, and reuse header images already in
+  `public/email-templates`. Seed them with
+  `npm run db:seed:email-templates -- <key>` — a blanket run replaces the stored HTML of every
+  template, including any edited in the admin panel.
 
 ### Fixed
 

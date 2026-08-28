@@ -53,6 +53,12 @@ import { announcementNewsletterTemplate } from './announcement-newsletter'
 import { announcementSingleTemplate } from './announcement-single'
 import { orderConfirmationLightTemplate } from './order-confirmation-light'
 import { orderConfirmationDarkTemplate } from './order-confirmation-dark'
+import { fundraiserPlatformAnnouncementTemplate } from './fundraiser-platform-announcement'
+import { websiteLaunchAnnouncementTemplate } from './website-launch-announcement'
+import { mobileAppLaunchTemplate } from './mobile-app-launch'
+import { fundraiserReferralInviteTemplate } from './fundraiser-referral-invite'
+import { heatIndexDigestTemplate } from './heat-index-digest'
+import { wholesaleProspectOutreachTemplate } from './wholesale-prospect-outreach'
 
 // Export all templates individually for named imports
 export {
@@ -93,6 +99,12 @@ export {
   announcementSingleTemplate,
   orderConfirmationLightTemplate,
   orderConfirmationDarkTemplate,
+  fundraiserPlatformAnnouncementTemplate,
+  websiteLaunchAnnouncementTemplate,
+  mobileAppLaunchTemplate,
+  fundraiserReferralInviteTemplate,
+  heatIndexDigestTemplate,
+  wholesaleProspectOutreachTemplate,
 }
 
 // Export array for backward compatibility
@@ -134,4 +146,10 @@ export const emailTemplates = [
   announcementSingleTemplate,
   orderConfirmationLightTemplate,
   orderConfirmationDarkTemplate,
+  fundraiserPlatformAnnouncementTemplate,
+  websiteLaunchAnnouncementTemplate,
+  mobileAppLaunchTemplate,
+  fundraiserReferralInviteTemplate,
+  heatIndexDigestTemplate,
+  wholesaleProspectOutreachTemplate,
 ]
