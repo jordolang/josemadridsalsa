@@ -159,7 +159,7 @@ const seasonalFallTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('fall-season.png', 'Fall Flavors')}
+      ${headerImg('fall.png', 'Fall Flavors')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>

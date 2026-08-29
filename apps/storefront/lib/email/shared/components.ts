@@ -4,10 +4,21 @@
  */
 
 /**
- * Get the base URL for email template images
+ * Get the base URL for email template images.
+ *
+ * Email clients cannot resolve relative paths, so every image needs an absolute
+ * URL. Set EMAIL_IMAGE_BASE_URL to serve the assets from the Vercel Blob store
+ * instead of the storefront's own `public/email-templates` directory.
  */
 export function getImageBaseUrl(): string {
-  return 'https://www.josemadrid.net/email-templates'
+  return process.env.EMAIL_IMAGE_BASE_URL || 'https://www.josemadrid.net/email-templates'
+}
+
+/**
+ * Absolute URL for the José Madrid Salsa logo used in email headers and footers.
+ */
+export function getLogoUrl(): string {
+  return `${getImageBaseUrl()}/Jose-Madrid-Profile.png`
 }
 
 /**
@@ -58,30 +69,18 @@ export const jmsFooter = `
         <tr>
           <td align="center" style="padding: 28px 0 8px 0;">
             <a href="https://www.josemadridsalsa.com" target="_blank" style="text-decoration: none;">
-              <img src="https://www.josemadrid.net/email-templates/Jose-Madrid-Profile.png" alt="José Madrid Salsa" width="180" height="auto" style="display: block; border: 0; outline: none; max-width: 180px; height: auto;" />
+              <img src="${getLogoUrl()}" alt="José Madrid Salsa" width="180" height="auto" style="display: block; border: 0; outline: none; max-width: 180px; height: auto;" />
             </a>
           </td>
         </tr>
         <tr>
           <td align="center" style="padding: 4px 0 20px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; line-height: 1.4; color: #8c7a6b; letter-spacing: 0.5px;">
-            Handcrafted Gourmet Salsas · Zanesville, Ohio · Est. 1988
+            Handcrafted Gourmet Salsas · Zanesville, Ohio · Est.&nbsp;1988
           </td>
         </tr>
         <tr>
-          <td align="center" style="padding: 0 0 20px 0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Shop</a></td>
-                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
-                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com/our-story" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Our Story</a></td>
-                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
-                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com/our-salsas" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Flavors</a></td>
-                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
-                <td style="padding: 0 12px;"><a href="https://josemadridsalsafundraising.com" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Fundraising</a></td>
-                <td style="color: #d4c8ba; font-size: 12px;">&#124;</td>
-                <td style="padding: 0 12px;"><a href="https://www.josemadridsalsa.com/contact-us" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 1.2px;">Contact</a></td>
-              </tr>
-            </table>
+          <td align="center" style="padding: 0 0 20px 0; line-height: 2;">
+            <a href="https://www.josemadridsalsa.com" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 0.4px;">Shop</a><span style="color: #d4c8ba; font-size: 10px;">&#124;</span><a href="https://www.josemadridsalsa.com/our-story" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 0.4px;">Our Story</a><span style="color: #d4c8ba; font-size: 10px;">&#124;</span><a href="https://www.josemadridsalsa.com/our-salsas" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 0.4px;">Flavors</a><span style="color: #d4c8ba; font-size: 10px;">&#124;</span><a href="https://josemadridsalsafundraising.com" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 0.4px;">Fundraising</a><span style="color: #d4c8ba; font-size: 10px;">&#124;</span><a href="https://www.josemadridsalsa.com/contact-us" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #2d2318; text-decoration: none; text-transform: uppercase; letter-spacing: 0.4px;">Contact</a>
           </td>
         </tr>
         <tr>
@@ -100,16 +99,8 @@ export const jmsFooter = `
           <td align="center" style="padding: 0 0 20px 0;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ebe5db; border-radius: 6px;">
               <tr>
-                <td align="center" style="padding: 14px 20px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                      <td style="padding: 0 10px;"><a href="{{NEWSLETTER_PREFERENCES_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">Manage Preferences</a></td>
-                      <td style="color: #c8bfb3; font-size: 11px;">&#8226;</td>
-                      <td style="padding: 0 10px;"><a href="{{VIEW_IN_BROWSER_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">View in Browser</a></td>
-                      <td style="color: #c8bfb3; font-size: 11px;">&#8226;</td>
-                      <td style="padding: 0 10px;"><a href="{{FORWARD_TO_FRIEND_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">Forward to a Friend</a></td>
-                    </tr>
-                  </table>
+                <td align="center" style="padding: 14px 10px; line-height: 2;">
+                  <a href="{{NEWSLETTER_PREFERENCES_URL}}" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">Manage Preferences</a><span style="color: #c8bfb3; font-size: 10px;">&#8226;</span><a href="{{VIEW_IN_BROWSER_URL}}" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">View in Browser</a><span style="color: #c8bfb3; font-size: 10px;">&#8226;</span><a href="{{FORWARD_TO_FRIEND_URL}}" target="_blank" style="display: inline-block; white-space: nowrap; padding: 0 5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; color: #6b5d50; text-decoration: underline; letter-spacing: 0.3px;">Forward to a Friend</a>
                 </td>
               </tr>
             </table>
@@ -127,7 +118,7 @@ export const jmsFooter = `
         </tr>
         <tr>
           <td align="center" style="padding: 0 0 32px 0;">
-            <a href="{{UNSUBSCRIBE_URL}}" target="_blank" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #c8102e; text-decoration: underline; letter-spacing: 0.3px;">Unsubscribe</a>
+            <a href="{{UNSUBSCRIBE_URL}}" target="_blank" style="display: inline-block; white-space: nowrap; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #c8102e; text-decoration: underline; letter-spacing: 0.3px;">Unsubscribe</a>
           </td>
         </tr>
         <tr>

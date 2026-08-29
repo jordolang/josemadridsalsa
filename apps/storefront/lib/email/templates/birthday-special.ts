@@ -148,7 +148,7 @@ export const birthdaySpecialTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('birthday-celebration.png', 'Happy Birthday')}
+      ${headerImg('birthday-header.png', 'Happy Birthday')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:20px;margin-bottom:25px;text-align:center;color:#dc2626;font-weight:700;">🎂 Happy Birthday {{name}}! 🎂</p>

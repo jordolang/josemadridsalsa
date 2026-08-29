@@ -24,7 +24,7 @@ export const winBackTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('we-miss-you.png', 'We Miss You')}
+      ${headerImg('miss-you-letter.png', 'We Miss You')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>

@@ -159,7 +159,7 @@ const seasonalHolidayTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('holiday-season.png', 'Holiday Cheer')}
+      ${headerImg('christmas.png', 'Holiday Cheer')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>

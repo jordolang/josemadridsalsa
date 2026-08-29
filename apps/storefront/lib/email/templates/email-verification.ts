@@ -157,7 +157,7 @@ export const emailVerificationTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('email-verification.png', 'Verify Your Email')}
+      ${headerImg('email-header.png', 'Verify Your Email')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>

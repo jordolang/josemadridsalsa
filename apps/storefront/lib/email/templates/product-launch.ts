@@ -25,7 +25,7 @@ export const productLaunchTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('new-product.png', 'New Product Launch')}
+      ${headerImg('product-launch.png', 'New Product Launch')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>

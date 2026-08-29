@@ -150,6 +150,23 @@ the root `package.json` is canonical.
 
 ### Fixed
 
+- **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
+  `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset
+  on disk is `abandoned-cart.png` — so the header rendered as a broken-image placeholder in the
+  recipient's inbox. Each now points at the asset that exists. Two more modules,
+  `lib/email/resend-templates/shared.ts` and `emails/components/EmailHeader.tsx`, built their URLs
+  from the retired `josemadridsalsa.com` BigCommerce origin, which 404s for the whole
+  `/email-templates` path, and both fell back to an `/images/logo.png` that no longer exists after
+  the site images moved to Blob. All three now resolve through one `getImageBaseUrl()`, overridable
+  with `EMAIL_IMAGE_BASE_URL` to serve the assets from the Blob store instead. A test asserts every
+  referenced filename exists on disk, so this cannot regress silently, and
+  `npm run email:repair-images` rewrites the same URLs in email HTML already stored in the database.
+- **Footer links breaking mid-word on phones.** The footer navigation and preference links were laid
+  out as fixed table columns, so a narrow screen squeezed each cell until the label wrapped inside
+  itself — `FUNDRAI / SING`, `SH / OP`. Both rows are now centred inline links that never break
+  within a label, sized to sit on one line from 360px up and to wrap between whole labels below
+  that. `Est. 1988` no longer splits across lines either.
+
 - **Opening a customer or a show from the desktop shell no longer lands on a 404.** Pressing `⏎`
   on a row in `/admin-desktop` sets `window.location.href` directly, so an href that matches no
   page is a dead end with no way back. Customers pointed at `/admin/customers/{id}` and shows at
