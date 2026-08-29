@@ -155,6 +155,15 @@ describe('stored footer repair', () => {
     expect(repairFooter('<div>no footer here</div>')).toBe('<div>no footer here</div>')
   })
 
+  it('leaves a truncated footer alone rather than corrupting it', () => {
+    // A stored row whose footer table is never closed: without a matching tag
+    // there is no safe end to splice at, so the HTML must come back untouched.
+    const truncated = stored.slice(0, stored.indexOf('Handcrafted Gourmet Salsas'))
+
+    expect(truncated).toContain('background-color: #f4f1ec')
+    expect(repairFooter(truncated)).toBe(truncated)
+  })
+
   it('repairEmailHtml fixes images and the footer together', () => {
     const out = repairEmailHtml(
       `<img src="https://www.josemadrid.net/email-templates/cart-reminder.png" />${legacyFooter}`
