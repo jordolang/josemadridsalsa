@@ -16,7 +16,7 @@ import { getImageBaseUrl } from './components'
 export const FILENAME_REMAP: Record<string, string> = {
   'cart-reminder.png': 'abandoned-cart.png',
   'birthday-celebration.png': 'birthday-header.png',
-  'email-verification.png': 'email-header.png',
+  'email-verification.png': 'security-notice.png',
   'fall-season.png': 'fall.png',
   'gift-certificate.png': 'email-header.png',
   'holiday-season.png': 'christmas.png',

@@ -33,7 +33,7 @@ export function headerImg(filename: string, alt: string): string {
  * Using inline styles for maximum email client compatibility
  */
 export const baseStyles = {
-  container: 'width:100%;background-color:#f4f4f7;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;',
+  container: 'width:100%;margin:0;background-color:#f4f4f7;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;',
   wrapper: 'max-width:600px;margin:0 auto;background-color:#ffffff;',
   header: 'padding:0;text-align:center;',
   headerTitle: 'color:#ffffff;font-size:28px;font-weight:700;margin:0;',

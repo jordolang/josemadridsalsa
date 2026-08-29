@@ -165,7 +165,11 @@ the root `package.json` is canonical.
   out as fixed table columns, so a narrow screen squeezed each cell until the label wrapped inside
   itself — `FUNDRAI / SING`, `SH / OP`. Both rows are now centred inline links that never break
   within a label, sized to sit on one line from 360px up and to wrap between whole labels below
-  that. `Est. 1988` no longer splits across lines either.
+  that. `Est. 1988` no longer splits across lines either. Eleven templates declared their own
+  `jmsFooter` that shadowed the shared import, so the shared footer was not the one they rendered;
+  they now use it, along with the shared `headerImg` and `baseStyles` they had also copied. The
+  base styles reset the body margin, which `width:100%` was adding 8px of sideways scroll to on
+  every phone.
 
 - **Opening a customer or a show from the desktop shell no longer lands on a 404.** Pressing `⏎`
   on a row in `/admin-desktop` sets `window.location.href` directly, so an href that matches no

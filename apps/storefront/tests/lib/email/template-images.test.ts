@@ -9,7 +9,8 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync } from 'fs'
 import path from 'path'
-import { jmsFooter } from '@/lib/email/shared/components'
+import { baseStyles, jmsFooter } from '@/lib/email/shared/components'
+import { emailTemplates } from '@/lib/email/templates/index'
 import { repairImageUrls } from '@/lib/email/shared/image-repair'
 
 const ROOT = path.resolve(__dirname, '../../..')
@@ -98,5 +99,29 @@ describe('stored HTML repair', () => {
   it('leaves already-correct HTML untouched', () => {
     const stored = '<img src="https://www.josemadrid.net/email-templates/abandoned-cart.png" />'
     expect(repairImageUrls(stored)).toBe(stored)
+  })
+})
+
+describe('shared footer adoption', () => {
+  // Eleven templates used to declare a local `jmsFooter` that shadowed the shared
+  // import, so a fix to the shared footer silently missed them.
+  const withFooter = emailTemplates.filter((t) => t.html.includes('Handcrafted Gourmet Salsas'))
+
+  it('covers most of the template set', () => {
+    expect(withFooter.length).toBeGreaterThan(30)
+  })
+
+  it.each(withFooter.map((t) => [t.key, t.html]))('%s renders the shared footer', (_key, html) => {
+    expect(html).toContain('white-space: nowrap')
+    // The fixed-column markup that broke labels mid-word on narrow screens.
+    expect(html).not.toContain('style="padding: 0 12px;"><a')
+  })
+})
+
+describe('mobile layout', () => {
+  it('resets the default body margin so the page cannot scroll sideways', () => {
+    // width:100% plus the browser's default 8px body margin overflows every phone.
+    expect(baseStyles.container).toContain('width:100%')
+    expect(baseStyles.container).toContain('margin:0')
   })
 })
