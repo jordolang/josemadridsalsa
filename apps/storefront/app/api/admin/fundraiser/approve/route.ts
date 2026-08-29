@@ -42,11 +42,32 @@ export async function POST(req: NextRequest) {
   const dark = teamColorDark ?? darken(teamColor);
 
   const now = new Date();
+  // Approving a signup stands a campaign up as well as a team. The campaign owns the store —
+  // the catalog, the price per jar and the split — and the team is its arena presence, so a
+  // team without one would have nothing to sell. Arena seasons are monthly; the campaign gets
+  // a year's runway that an admin narrows on the campaign page.
+  const campaignEnd = new Date(now);
+  campaignEnd.setFullYear(campaignEnd.getFullYear() + 1);
+
   const [team] = await db.$transaction([
     db.fundraiserTeam.create({
       data: {
         slug, name: signup.teamName, school: signup.schoolName,
         activePeriod, status: "ACTIVE",
+        fundraiser: {
+          create: {
+            name: signup.teamName,
+            slug,
+            organizationName: signup.schoolName,
+            contactEmail: signup.contactEmail,
+            contactPhone: signup.contactPhone ?? null,
+            startDate: now,
+            endDate: campaignEnd,
+            goal: signup.goalAmount,
+            status: "ACTIVE",
+            isActive: true,
+          },
+        },
         teamColor, teamColorDark: dark, goalAmount: signup.goalAmount,
         // Seed HP to goal so the team starts at full health. Without this
         // the default `hpCurrent=0` means opponents can never take damage

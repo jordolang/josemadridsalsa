@@ -36,11 +36,11 @@ export async function GET(
 
   const [team, activeSeason] = await Promise.all([
     prisma.fundraiserTeam.findUnique({
-      where: { slug: fundraiser.slug },
+      where: { fundraiserId: id },
       select: {
         id: true, slug: true, name: true, school: true, status: true,
         teamColor: true, teamColorDark: true, goalAmount: true, salesCount: true,
-        hpCurrent: true, pricePerUnit: true, activePeriod: true, seasonId: true,
+        hpCurrent: true, activePeriod: true, seasonId: true,
       },
     }),
     prisma.fundraiserSeason.findFirst({
@@ -75,7 +75,9 @@ export async function POST(
   })
   if (!fundraiser) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const existing = await prisma.fundraiserTeam.findUnique({ where: { slug: fundraiser.slug } })
+  // Keyed on the relation now rather than on a matching slug. The slug pairing was the
+  // convention this route itself established; `fundraiserId` is that convention made real.
+  const existing = await prisma.fundraiserTeam.findUnique({ where: { fundraiserId: id } })
   if (existing) {
     return NextResponse.json({ team: existing, created: false })
   }
@@ -87,6 +89,7 @@ export async function POST(
 
   const team = await prisma.fundraiserTeam.create({
     data: {
+      fundraiserId: id,
       slug: fundraiser.slug,
       name: fundraiser.name,
       school: fundraiser.organizationName,
@@ -131,10 +134,12 @@ export async function DELETE(
   const fundraiser = await prisma.fundraiser.findUnique({ where: { id }, select: { slug: true } })
   if (!fundraiser) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const existing = await prisma.fundraiserTeam.findUnique({ where: { slug: fundraiser.slug } })
+  const existing = await prisma.fundraiserTeam.findUnique({ where: { fundraiserId: id } })
   if (!existing) return NextResponse.json({ success: true, removed: false })
 
-  await prisma.fundraiserTeam.delete({ where: { slug: fundraiser.slug } })
+  // Removing the arena presence leaves the campaign and its store untouched — the team was
+  // only ever the gamification layer over it.
+  await prisma.fundraiserTeam.delete({ where: { fundraiserId: id } })
 
   await logAuditWithRequest({
     userId: user.id,

@@ -1121,7 +1121,6 @@ interface ArenaTeamSummary {
   goalAmount: number
   salesCount: number
   hpCurrent: number
-  pricePerUnit: number
   activePeriod: string
   seasonId: string | null
 }
@@ -1259,7 +1258,7 @@ function BattleArenaTab({ fundraiser }: { fundraiser: FundraiserData }) {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Price / unit</p>
-                  <p className="font-semibold">${team.pricePerUnit}</p>
+                  <p className="font-semibold">${fmt(fundraiser.defaultUnitPrice)}</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs">

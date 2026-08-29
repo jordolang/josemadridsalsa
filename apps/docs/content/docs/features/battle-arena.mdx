@@ -271,6 +271,37 @@ if (activeShield) {
 
 ---
 
+## Where a sale comes from
+
+An arena team is the gamification layer over a `Fundraiser`, not a campaign of its own:
+`FundraiserTeam.fundraiserId` is required and unique. The **campaign owns the store** —
+the catalogue, the price per jar and the split — and the team owns the battle.
+
+That means a purchase in the arena is an ordinary order. It goes through the normal
+cart and `/api/checkout`, so it is charged the campaign's price, collects shipping and
+tax, reserves inventory, credits the group its share, and lands on the campaign's
+thank-you page like any other fundraiser sale.
+
+Damage is dealt by the `arena-damage` consumer in
+`lib/domain-events/handlers/arena-damage.ts`, off `payment.completed` — so it fires from
+whichever of the payment paths settled the order rather than from one provider's webhook.
+It is sized on **merchandise** (subtotal less discounts), the same base commission is taken
+from: letting freight or tax swing a battle would mean a supporter in a high-tax state hit
+harder for the same salsa. `FundraiserSaleEvent.orderId` is unique, so a replayed event is
+an idempotent hit rather than a second strike.
+
+<Callout type="warn">
+The team shop used to build its own Stripe Checkout Session from a parallel
+`FundraiserTeamProduct` catalogue and wrote **no order at all** — no shipping, no tax, no
+inventory movement, no commission, no order history — while pricing itself from the retail
+catalogue. Both that table and that route are gone. There is one catalogue
+(`FundraiserProduct`) and one checkout.
+</Callout>
+
+**Donations are still their own thing.** `/api/fundraiser/donate/create-session` buys no
+goods, so it has no order to hang off and still settles through the Stripe metadata path in
+`app/api/webhooks/stripe`.
+
 ## Game Mechanics Reference
 
 | Event                        | Result                                               |

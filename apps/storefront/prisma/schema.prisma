@@ -241,7 +241,6 @@ model Product {
   collectionProducts     CollectionProduct[]
   eventManifestItems     EventManifestItem[]
   fundraiserProducts     FundraiserProduct[]
-  fundraiserTeamProducts FundraiserTeamProduct[]
   inventoryAlerts        InventoryAlert[]
   inventoryTransactions  InventoryTransaction[]
   nutritionalInfo        NutritionalInfo?
@@ -1058,6 +1057,8 @@ model Fundraiser {
   profile              FundraiserProfile?
   gamificationActions  GamificationAction[]
   orders               Order[]
+  /// The campaign's Battle Arena presence, when it has been entered into a season.
+  arenaTeam            FundraiserTeam?
 
   @@map("fundraisers")
 }
@@ -1100,17 +1101,26 @@ model FundraiserChampionship {
   @@map("fundraiser_championships")
 }
 
+/// One product on one fundraiser's shelf.
+///
+/// The single catalog for every fundraiser store, arena teams included. `FundraiserTeamProduct`
+/// used to hold a parallel copy for teams, priced by its own rules and sold through its own
+/// Stripe session — two catalogs of the same jars that could disagree on price.
 model FundraiserProduct {
   id           String     @id @default(cuid())
   fundraiserId String
   productId    String
+  /// This fundraiser's price for this product. Null sells at `Fundraiser.defaultUnitPrice`.
   price        Decimal?   @db.Decimal(10, 2)
+  /// Display order on the fundraiser's store (lower first).
+  sortOrder    Int        @default(0)
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
   product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([fundraiserId, productId])
+  @@index([fundraiserId, isActive, sortOrder])
   @@map("fundraiser_products")
 }
 
@@ -3147,9 +3157,17 @@ model LeadEmailTemplate {
   @@map("lead_email_templates")
 }
 
+/// A campaign's Battle Arena presence: characters, HP, shields, damage.
+///
+/// Deliberately not a campaign of its own. Every team belongs to exactly one `Fundraiser`,
+/// which owns the store — the catalog, the price per jar and the split. The two models were
+/// already paired by slug (see `/api/admin/fundraisers/[id]/battle-arena`); `fundraiserId`
+/// makes that a real relation, so a team's shop cannot quote a price its campaign disagrees
+/// with, and a purchase made in the arena is an ordinary order that happens to deal damage.
 model FundraiserTeam {
   id                String                  @id @default(cuid())
   slug              String                  @unique
+  fundraiserId      String                  @unique
   name              String
   school            String
   activePeriod      String
@@ -3158,7 +3176,6 @@ model FundraiserTeam {
   teamColorDark     String                  @default("#452E7F")
   goalAmount        Int                     @default(1000)
   salesCount        Int                     @default(0)
-  pricePerUnit      Int                     @default(10)
   contactName       String
   contactEmail      String
   contactPhone      String?
@@ -3185,39 +3202,13 @@ model FundraiserTeam {
   championOfSeasons FundraiserSeason[]      @relation("SeasonChampion")
   shareEvents       FundraiserShareEvent[]
   shields           FundraiserShield[]
-  products          FundraiserTeamProduct[]
+  fundraiser        Fundraiser              @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
   season            FundraiserSeason?       @relation("SeasonTeams", fields: [seasonId], references: [id])
 
   @@index([activePeriod])
   @@index([status])
   @@index([seasonId])
   @@map("fundraiser_teams")
-}
-
-/// Product catalog for a FundraiserTeam. Each row links a Product to a
-/// team with an optional price override and sort order. The public
-/// /fundraise/[slug] page renders ACTIVE rows; checkout uses this table
-/// to build Stripe line items whose metadata triggers arena damage on
-/// settlement.
-model FundraiserTeamProduct {
-  id        String         @id @default(cuid())
-  teamId    String
-  productId String
-  /// Optional price override (dollars, 2-decimal). When null, the
-  /// Product's base price is used at checkout.
-  price     Decimal?       @db.Decimal(10, 2)
-  /// Display-order on the public catalog (lower first).
-  sortOrder Int            @default(0)
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  team      FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, productId])
-  @@index([teamId, isActive, sortOrder])
-  @@index([productId])
-  @@map("fundraiser_team_products")
 }
 
 model FundraiserSeason {

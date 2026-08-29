@@ -120,7 +120,7 @@ export default async function FundraiserAnalyticsPage({
         salesCount: true,
         hpCurrent: true,
         goalAmount: true,
-        pricePerUnit: true,
+        fundraiser: { select: { defaultUnitPrice: true } },
       },
     }),
     prisma.fundraiserSaleEvent.aggregate({
@@ -345,7 +345,7 @@ export default async function FundraiserAnalyticsPage({
               </TableHeader>
               <TableBody>
                 {arenaTeams.map((t) => {
-                  const raised = t.salesCount * t.pricePerUnit
+                  const raised = t.salesCount * Number(t.fundraiser.defaultUnitPrice)
                   const pct = t.goalAmount > 0 ? Math.min(100, (t.hpCurrent / t.goalAmount) * 100) : 0
                   return (
                     <TableRow key={t.id}>

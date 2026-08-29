@@ -148,6 +148,33 @@ the root `package.json` is canonical.
   `npm run db:seed:email-templates -- <key>` — a blanket run replaces the stored HTML of every
   template, including any edited in the admin panel.
 
+### Changed
+
+- **The Battle Arena team shop is now the fundraiser store, not a second one beside it.** An
+  arena team was effectively a campaign of its own: a parallel `FundraiserTeamProduct`
+  catalogue, its own price per jar (`FundraiserTeam.pricePerUnit`), and its own Stripe
+  Checkout Session. That session wrote **no order at all** — so an arena purchase of physical
+  salsa collected no shipping and no tax, moved no inventory, credited the group nothing, left
+  no order to fulfil or account for, and priced itself from the retail catalogue rather than
+  from what the page advertised. The two models were already paired by slug (the admin
+  promote-to-arena route creates a team with `slug = fundraiser.slug` and deletes it by the
+  same key); `FundraiserTeam.fundraiserId` makes that a real, required, unique relation. The
+  campaign now owns the store — one catalogue (`FundraiserProduct`, which gains `sortOrder`),
+  one price per jar, one split — and the team owns the battle. A purchase in the arena goes
+  through the ordinary cart and `/api/checkout`: the campaign's price, real shipping and tax,
+  reserved inventory, the group's half credited, and the campaign's own thank-you page.
+  Damage is dealt by a new `arena-damage` consumer off `payment.completed`, so it fires from
+  whichever payment path settled the order rather than from one provider's webhook, and it is
+  sized on merchandise rather than on the order total — letting freight or tax swing a battle
+  would mean a supporter in a high-tax state hit harder for the same salsa.
+  `FundraiserSaleEvent.orderId` already being unique makes a replayed event an idempotent hit
+  rather than a second strike. Donations are untouched: they buy no goods, so they have no
+  order to hang off and still settle through the Stripe metadata path. Removed with the
+  duplication: `fundraiser_team_products`, `FundraiserTeam.pricePerUnit`,
+  `/api/fundraiser/shop/create-session`, `/api/admin/fundraiser-teams/[id]/products`, the team
+  product catalogue editor, and `TeamProductCatalog`. Arena progress and the admin team page
+  read the campaign's `defaultUnitPrice`, and the team editor links to the campaign's store.
+
 ### Fixed
 
 - **A jar bought on a fundraiser's page is charged the fundraiser's price and credited to that

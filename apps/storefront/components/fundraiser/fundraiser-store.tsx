@@ -27,6 +27,10 @@ export interface FundraiserStoreProps {
   participantName?: string
   title?: string
   columns?: 2 | 3 | 4
+  /** Extra line under the split, for a store with something of its own to say. */
+  note?: string
+  /** The campaign's colour, where it has one. Used for the price, not for text on white. */
+  accentColor?: string
 }
 
 /**
@@ -47,6 +51,8 @@ export function FundraiserStore({
   participantName,
   title = 'Shop & Support',
   columns = 3,
+  note,
+  accentColor,
 }: FundraiserStoreProps) {
   const gridCols =
     columns === 2
@@ -81,6 +87,7 @@ export function FundraiserStore({
           to your door.
           {participantName ? ` Your order is credited to ${participantName}.` : ''}
         </p>
+        {note && <p className="mt-2 text-sm font-medium text-foreground">{note}</p>}
       </div>
 
       <div className={`grid grid-cols-1 gap-6 ${gridCols}`}>
@@ -114,7 +121,10 @@ export function FundraiserStore({
                 )}
               </div>
               <div className="mt-auto flex items-center justify-between gap-3">
-                <span className="text-lg font-bold text-salsa-600">
+                <span
+                  className="text-lg font-bold text-salsa-600"
+                  style={accentColor ? { color: accentColor } : undefined}
+                >
                   ${product.price.toFixed(2)}
                 </span>
                 <AddToCartButton product={product} store={{ slug, name }} />

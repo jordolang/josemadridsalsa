@@ -194,6 +194,13 @@ from admin RBAC. The `FUNDRAISER` role carries only four permissions:
 
 ## Gamification and the arena
 
+A campaign can be entered into the Battle Arena, which gives it a `FundraiserTeam` —
+characters, HP, shields, damage. The team is the gamification layer; the **campaign owns the
+store**, so `FundraiserTeam.fundraiserId` is required and unique and a team sells its
+campaign's catalogue at its campaign's price and split. Buying from a team's shop is an
+ordinary order that also deals arena damage. See [Battle Arena](/docs/features/battle-arena).
+
+
 Campaigns can opt into social features (`enableSocialFeatures`). Sales become
 `FundraiserSaleEvent`s that participants can react and reply to, with shields,
 share events and championships layered on top. That is documented separately in
