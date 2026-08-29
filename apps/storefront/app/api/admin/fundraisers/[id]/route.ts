@@ -28,6 +28,12 @@ const FundraiserUpdateSchema = z.object({
   thankYouImageUrl: z.string().nullable().optional(),
   thankYouCtaLabel: z.string().max(60).nullable().optional(),
   thankYouCtaUrl: z.string().nullable().optional(),
+  // How the group runs its drive, and the terms that follow from it.
+  fulfillmentMethod: z.enum(['ORDER_FORMS_AND_BULK', 'ONLINE_ONLY']).optional(),
+  brochureOption: z.enum(['PRINT_YOUR_OWN', 'PROFESSIONAL_100']).nullable().optional(),
+  brochureFee: z.number().min(0).nullable().optional(),
+  bulkDeliveryFee: z.number().min(0).nullable().optional(),
+  resaleNumber: z.string().max(60).nullable().optional(),
 })
 
 /**
@@ -148,6 +154,16 @@ export async function PUT(
     if (data.bio !== undefined) updateData.bio = data.bio
     if (data.pageConfig !== undefined) updateData.pageConfig = data.pageConfig
     if (data.defaultUnitPrice !== undefined) updateData.defaultUnitPrice = data.defaultUnitPrice
+    if (data.fulfillmentMethod !== undefined) updateData.fulfillmentMethod = data.fulfillmentMethod
+    if (data.brochureOption !== undefined) updateData.brochureOption = data.brochureOption
+    if (data.brochureFee !== undefined) updateData.brochureFee = data.brochureFee
+    if (data.bulkDeliveryFee !== undefined) updateData.bulkDeliveryFee = data.bulkDeliveryFee
+    if (data.resaleNumber !== undefined) {
+      updateData.resaleNumber = data.resaleNumber || null
+      // A changed certificate is an unverified certificate: whoever checked the last one did
+      // not check this one.
+      if ((data.resaleNumber || null) !== existing.resaleNumber) updateData.resaleVerifiedAt = null
+    }
     for (const field of [
       'thankYouHeadline',
       'thankYouMessage',

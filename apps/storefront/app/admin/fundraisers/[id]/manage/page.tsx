@@ -84,6 +84,8 @@ export default async function FundraiserManagePage({
     goal: fundraiserRaw.goal !== null ? fundraiserRaw.goal.toString() : null,
     commissionRate: fundraiserRaw.commissionRate.toString(),
     defaultUnitPrice: fundraiserRaw.defaultUnitPrice.toString(),
+    brochureFee: fundraiserRaw.brochureFee ? fundraiserRaw.brochureFee.toString() : null,
+    bulkDeliveryFee: fundraiserRaw.bulkDeliveryFee ? fundraiserRaw.bulkDeliveryFee.toString() : null,
     totalRevenue: fundraiserRaw.totalRevenue.toString(),
     totalCommission: fundraiserRaw.totalCommission.toString(),
     startDate: fundraiserRaw.startDate.toISOString(),

@@ -4,6 +4,7 @@ import { generateFundraiserApiKey } from "@/lib/fundraiser-auth";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { logAuditWithRequest } from "@/lib/audit";
 import { z } from "zod";
+import { resolveFulfillmentTerms } from "@/lib/fundraising/fulfillment";
 
 const DEFAULT_CHARACTERS = [
   { characterName:"Warrior",   characterClass:"warrior",   gender:"m", skinColor:"#8B5E3C", hairColor:"#1A0A00", position:0, quips:JSON.stringify(["HOLD THE LINE!","My shield has more dents than your dignity.","Bleed slower, I'm busy.","I've fought mountains scarier than you."]) },
@@ -17,6 +18,11 @@ const Schema = z.object({
   teamColorDark: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   activePeriod:  z.string().regex(/^\d{4}-\d{2}$/),
   reviewNotes:   z.string().optional(),
+  // The admin's call, pre-filled from what the school asked for. A phone call between the
+  // application and the approval often changes the answer, so this wins over the request.
+  fulfillmentMethod: z.enum(["ORDER_FORMS_AND_BULK", "ONLINE_ONLY"]).optional(),
+  brochureOption:    z.enum(["PRINT_YOUR_OWN", "PROFESSIONAL_100"]).optional(),
+  resaleNumber:      z.string().max(60).optional(),
 });
 
 function darken(hex: string): string {
@@ -41,6 +47,15 @@ export async function POST(req: NextRequest) {
   const { raw: apiKey, hash: apiKeyHash } = generateFundraiserApiKey();
   const dark = teamColorDark ?? darken(teamColor);
 
+  const { fulfillmentMethod, brochureOption, resaleNumber } = resolveFulfillmentTerms({
+    adminChoice: {
+      method: parsed.data.fulfillmentMethod,
+      brochure: parsed.data.brochureOption,
+      resaleNumber: parsed.data.resaleNumber,
+    },
+    request: signup,
+  });
+
   const now = new Date();
   // Approving a signup stands a campaign up as well as a team. The campaign owns the store —
   // the catalog, the price per jar and the split — and the team is its arena presence, so a
@@ -64,6 +79,9 @@ export async function POST(req: NextRequest) {
             startDate: now,
             endDate: campaignEnd,
             goal: signup.goalAmount,
+            fulfillmentMethod,
+            brochureOption,
+            resaleNumber,
             status: "ACTIVE",
             isActive: true,
           },
@@ -101,6 +119,8 @@ export async function POST(req: NextRequest) {
         teamSlug: team.slug,
         schoolName: signup.schoolName,
         activePeriod,
+        fulfillmentMethod,
+        brochureOption,
         reviewNotes: reviewNotes ?? null,
       },
     },

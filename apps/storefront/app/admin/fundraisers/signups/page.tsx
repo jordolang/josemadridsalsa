@@ -116,7 +116,13 @@ export default async function FundraiserSignupsAdminPage() {
                       </p>
                     )}
                   </div>
-                  <SignupActions signupId={s.id} defaultPeriod={period} />
+                  <SignupActions
+                    signupId={s.id}
+                    defaultPeriod={period}
+                    requestedFulfillment={s.requestedFulfillment}
+                    requestedBrochure={s.requestedBrochure}
+                    requestedResaleNumber={s.resaleNumber}
+                  />
                 </div>
               </Card>
             ))}

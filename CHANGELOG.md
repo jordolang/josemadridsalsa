@@ -148,6 +148,29 @@ the root `package.json` is canonical.
   `npm run db:seed:email-templates -- <key>` — a blanket run replaces the stored HTML of every
   template, including any edited in the admin panel.
 
+### Added
+
+- **A fundraising group now chooses how it runs its drive, and we explain what that means before
+  they pick.** Two shapes: collecting paper order forms for one bulk delivery at the close (the
+  default, and the classic salsa drive), or online orders only. The online link stays live on
+  *every* campaign either way — a supporter who would rather not fill in a paper form still
+  needs somewhere to buy, and those orders ship to that buyer's own address, taxed and paid for
+  at checkout, so they never turn up in the bulk delivery to confuse a coordinator's own
+  paperwork. The school picks on the signup form with the full explanation on the page rather
+  than in a tooltip, including the two things nobody should reach the end of a drive without
+  knowing: a paper drive means they are reselling to their supporters, so at the close they are
+  invoiced wholesale and the sales tax on those orders is theirs; an online-only drive means
+  they will have no records of their own and the dashboard is the only way to see whether
+  anyone is buying. A paper drive also picks its brochures — print their own free, or a set of
+  100 professionally printed with the fee deducted at settlement — and gives a resale
+  certificate, which is what makes the wholesale invoice tax-free. The admin confirms or
+  overrides all of it in the approval dialog, pre-filled from the application because a phone
+  call in between routinely changes the answer, and can change it later under **Manage →
+  Fulfillment** along with both fee amounts. Fees are snapshotted per campaign so a later
+  change to the standard fee cannot re-price a drive already running. Nothing about how the
+  store prices, charges, or ships has changed — this records the choice; acting on it comes
+  next.
+
 ### Changed
 
 - **The Battle Arena team shop is now the fundraiser store, not a second one beside it.** An

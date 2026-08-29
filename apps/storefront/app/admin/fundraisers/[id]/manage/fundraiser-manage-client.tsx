@@ -2,6 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  BROCHURE_LABELS,
+  BROCHURE_OPTIONS,
+  FULFILLMENT_LABELS,
+  FULFILLMENT_OPTIONS,
+} from '@/lib/fundraising/fulfillment'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -76,6 +82,11 @@ interface FundraiserData {
   goal: string | number | null
   commissionRate: string | number
   defaultUnitPrice: string | number
+  fulfillmentMethod: 'ORDER_FORMS_AND_BULK' | 'ONLINE_ONLY'
+  brochureOption: 'PRINT_YOUR_OWN' | 'PROFESSIONAL_100' | null
+  brochureFee: string | number | null
+  bulkDeliveryFee: string | number | null
+  resaleNumber: string | null
   status: FundraiserStatus
   isActive: boolean
   totalOrders: number
@@ -460,6 +471,176 @@ function ProductsTab({ fundraiser, allProducts }: { fundraiser: FundraiserData; 
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ─── Fulfillment Tab ──────────────────────────────────────────────────────────
+
+function FulfillmentTab({ fundraiser }: { fundraiser: FundraiserData }) {
+  const [method, setMethod] = useState(fundraiser.fulfillmentMethod)
+  const [brochure, setBrochure] = useState(fundraiser.brochureOption ?? 'PRINT_YOUR_OWN')
+  const [brochureFee, setBrochureFee] = useState(
+    fundraiser.brochureFee === null || fundraiser.brochureFee === undefined
+      ? ''
+      : String(Number(fundraiser.brochureFee))
+  )
+  const [deliveryFee, setDeliveryFee] = useState(
+    fundraiser.bulkDeliveryFee === null || fundraiser.bulkDeliveryFee === undefined
+      ? ''
+      : String(Number(fundraiser.bulkDeliveryFee))
+  )
+  const [resaleNumber, setResaleNumber] = useState(fundraiser.resaleNumber ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const collecting = method === 'ORDER_FORMS_AND_BULK'
+
+  const handleSave = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/fundraisers/${fundraiser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fulfillmentMethod: method,
+          // Cleared rather than left stale when a campaign stops collecting forms: a brochure
+          // choice on an online-only drive would describe something that no longer happens.
+          brochureOption: collecting ? brochure : null,
+          brochureFee: collecting && brochureFee !== '' ? Number(brochureFee) : null,
+          bulkDeliveryFee: collecting && deliveryFee !== '' ? Number(deliveryFee) : null,
+          resaleNumber: collecting ? resaleNumber || null : null,
+        }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to save')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error saving')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>How this group runs its drive</CardTitle>
+          <CardDescription>
+            The online link stays live either way — a supporter who would rather not fill in a
+            paper form still needs somewhere to buy. This only sets whether the group is also
+            collecting order forms for a bulk delivery.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex flex-col gap-2">
+            {FULFILLMENT_OPTIONS.map(opt => (
+              <label
+                key={opt.value}
+                className="flex items-start gap-3 rounded-md border border-border p-3 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="fulfillmentMethod"
+                  checked={method === opt.value}
+                  onChange={() => setMethod(opt.value)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-medium">{FULFILLMENT_LABELS[opt.value]}</span>
+                  <span className="block text-sm text-muted-foreground">{opt.tagline}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {collecting && (
+            <div className="space-y-5 border-l-2 border-border pl-4">
+              <div className="space-y-2">
+                <Label>Brochures</Label>
+                {BROCHURE_OPTIONS.map(opt => (
+                  <label key={opt.value} className="flex items-start gap-3 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="brochureOption"
+                      checked={brochure === opt.value}
+                      onChange={() => setBrochure(opt.value)}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="font-medium">{BROCHURE_LABELS[opt.value]}</span>
+                      <span className="block text-muted-foreground">{opt.detail}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="brochureFee">Brochure fee ($)</Label>
+                  <Input
+                    id="brochureFee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={brochureFee}
+                    onChange={e => setBrochureFee(e.target.value)}
+                    placeholder="Standard fee"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bulkDeliveryFee">Bulk delivery fee ($)</Label>
+                  <Input
+                    id="bulkDeliveryFee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={deliveryFee}
+                    onChange={e => setDeliveryFee(e.target.value)}
+                    placeholder="Standard fee"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Both are snapshotted on this campaign. Changing the standard fee later will not
+                re-price a drive that is already running.
+              </p>
+
+              <div className="space-y-1">
+                <Label htmlFor="resaleNumber">Resale certificate</Label>
+                <Input
+                  id="resaleNumber"
+                  value={resaleNumber}
+                  onChange={e => setResaleNumber(e.target.value)}
+                  placeholder="Not yet on file"
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  The bulk delivery is a wholesale sale to a reseller, which is only tax-free
+                  with a certificate on file. Needed before the delivery goes out.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex items-center gap-3">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save fulfillment
+            </Button>
+            {saved && (
+              <span className="flex items-center gap-1 text-sm text-primary">
+                <CheckCircle className="h-4 w-4" />Saved!
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -1350,6 +1531,7 @@ export default function FundraiserManageClient({ fundraiser, allProducts }: Prop
             </span>
           </TabsTrigger>
           <TabsTrigger value="commission">Commission &amp; Pricing</TabsTrigger>
+          <TabsTrigger value="fulfillment">Fulfillment</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="battle-arena">
             <Swords className="mr-1.5 h-3.5 w-3.5" />
@@ -1379,6 +1561,10 @@ export default function FundraiserManageClient({ fundraiser, allProducts }: Prop
 
         <TabsContent value="commission">
           <CommissionTab fundraiser={fundraiser} allProducts={allProducts} />
+        </TabsContent>
+
+        <TabsContent value="fulfillment">
+          <FulfillmentTab fundraiser={fundraiser} />
         </TabsContent>
 
         <TabsContent value="branding">

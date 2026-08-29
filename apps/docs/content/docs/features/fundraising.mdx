@@ -47,6 +47,46 @@ orders sends one message per threshold crossed instead of one message.
 Participants can be grouped into `FundraiserTeam`s, and campaigns can belong to a
 `FundraiserSeason`.
 
+## How a group runs its drive
+
+Every campaign is one of two shapes, set on `Fundraiser.fulfillmentMethod`:
+
+| Method | What it means |
+|---|---|
+| `ORDER_FORMS_AND_BULK` | **The default.** The group hands out brochures, collects the forms and the money face to face, and takes one delivery at the close to distribute. |
+| `ONLINE_ONLY` | No paper drive. The link is the whole campaign. |
+
+<Callout type="warn">
+**`ONLINE_ONLY` is not the opposite of "the store is open".** The online link is live on
+*every* campaign, whichever method is set — a supporter who would rather not fill in a paper
+form still needs somewhere to buy. The method only records whether the group is *also*
+collecting order forms. `ONLINE_STORE_ALWAYS_AVAILABLE` in
+`lib/fundraising/fulfillment.ts` exists to say so where someone will read it.
+</Callout>
+
+An online order **never joins the bulk delivery**. It is already paid for, already taxed, and
+already going to the buyer's own address — so the coordinator hands out only what arrived in
+their delivery, which is exactly what their order forms account for.
+
+The two channels also point the money in opposite directions. On the online side we are the
+seller: we take the payment, credit the group its share, and the buyer pays shipping and sales
+tax at checkout. On the collected-forms side **the group is a reseller, not our agent** — they
+have already taken the money, so at the close they are invoiced wholesale for our share plus
+the delivery and brochure fees, and sales tax on their resales is theirs. That invoice is only
+tax-free with a resale certificate on file, which is why `resaleNumber` is asked for at signup
+and shown in the admin.
+
+`brochureFee` and `bulkDeliveryFee` are snapshotted per campaign rather than read from a global
+setting, for the same reason `Order.unitCost` is: changing the standard fee must not re-price a
+drive that is already running.
+
+The choice is captured in three places — the school picks on the signup form
+(`requestedFulfillment` on `FundraiserSignupRequest`), the admin confirms or overrides at
+approval, and the admin can change it afterwards under **Manage → Fulfillment**. The precedence
+is one function, `resolveFulfillmentTerms()`: the admin wins, the school's request is the
+fallback, and collecting order forms is the default. All the school-facing copy lives beside it
+in the same module rather than being retyped into each form.
+
 ## Each campaign is its own store
 
 A fundraiser is a self-contained shop. It sells the same salsa the retail storefront
