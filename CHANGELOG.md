@@ -153,7 +153,9 @@ the root `package.json` is canonical.
 - **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
   `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset
   on disk is `abandoned-cart.png` — so the header rendered as a broken-image placeholder in the
-  recipient's inbox. Each now points at the asset that exists. Two more modules,
+  recipient's inbox. Each now points at the asset that exists. The password reset and email
+  verification headers share the corrected security artwork, which also drops a 6.1 MB PNG from
+  the password reset email. Two more modules,
   `lib/email/resend-templates/shared.ts` and `emails/components/EmailHeader.tsx`, built their URLs
   from the retired `josemadridsalsa.com` BigCommerce origin, which 404s for the whole
   `/email-templates` path, and both fell back to an `/images/logo.png` that no longer exists after

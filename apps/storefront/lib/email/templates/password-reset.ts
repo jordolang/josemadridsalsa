@@ -22,7 +22,7 @@ export const passwordResetTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('password-reset.png', 'Reset Your Password')}
+      ${headerImg('security-notice.png', 'Reset Your Password')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>
