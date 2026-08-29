@@ -11,7 +11,7 @@ import { readdirSync, readFileSync } from 'fs'
 import path from 'path'
 import { baseStyles, jmsFooter } from '@/lib/email/shared/components'
 import { emailTemplates } from '@/lib/email/templates/index'
-import { repairImageUrls } from '@/lib/email/shared/image-repair'
+import { repairImageUrls, repairFooter, repairEmailHtml } from '@/lib/email/shared/image-repair'
 
 const ROOT = path.resolve(__dirname, '../../..')
 const IMAGE_DIR = path.join(ROOT, 'public/email-templates')
@@ -123,5 +123,43 @@ describe('mobile layout', () => {
     // width:100% plus the browser's default 8px body margin overflows every phone.
     expect(baseStyles.container).toContain('width:100%')
     expect(baseStyles.container).toContain('margin:0')
+  })
+})
+
+describe('stored footer repair', () => {
+  // The exact footer a seeded row carries, taken from the template source as it
+  // stood before the mobile fix.
+  const legacyFooter = readFileSync(path.join(__dirname, 'fixtures/legacy-footer.html'), 'utf8').trim()
+  const stored = `<div>before</div>${legacyFooter}<div>after</div>`
+
+  it('swaps the legacy footer for the current one', () => {
+    const out = repairFooter(stored)
+
+    expect(out).toContain('<div>before</div>')
+    expect(out).toContain('<div>after</div>')
+    expect(out).toContain('white-space: nowrap')
+    expect(out).not.toContain('style="padding: 0 12px;"><a')
+  })
+
+  it('does not truncate at the footer\'s nested tables', () => {
+    // A naive search for the first </table> would drop everything after it.
+    expect(repairFooter(stored).endsWith('<div>after</div>')).toBe(true)
+  })
+
+  it('is idempotent', () => {
+    const once = repairFooter(stored)
+    expect(repairFooter(once)).toBe(once)
+  })
+
+  it('leaves HTML with no footer alone', () => {
+    expect(repairFooter('<div>no footer here</div>')).toBe('<div>no footer here</div>')
+  })
+
+  it('repairEmailHtml fixes images and the footer together', () => {
+    const out = repairEmailHtml(
+      `<img src="https://www.josemadrid.net/email-templates/cart-reminder.png" />${legacyFooter}`
+    )
+    expect(out).toContain('email-templates/abandoned-cart.png')
+    expect(out).toContain('white-space: nowrap')
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Repair broken image URLs in email HTML already stored in the database.
+ * Repair email HTML already stored in the database.
  *
  *   npm run email:repair-images                # dry run — reports every row it would change
  *   npm run email:repair-images -- --apply     # write the changes
@@ -13,13 +13,17 @@
  *   2. The retired josemadridsalsa.com BigCommerce origin, which serves 404 for the
  *      whole /email-templates path.
  *
- * Only image URLs are touched. To also pick up the current footer markup, re-seed
- * with `npm run db:seed:email-templates` — note that replaces the stored HTML of
- * every template it touches, including any edited in the admin panel.
+ * The stored footer is also swapped for the current one, which fixes the link
+ * labels that broke mid-word on narrow screens. Re-seeding with
+ * `npm run db:seed:email-templates` would do that too, but it replaces the whole
+ * template and discards any edit made in the admin panel; this rewrites only the
+ * image URLs and the footer, so admin edits to the body survive.
+ *
+ * Re-running is safe: every repair is a no-op once applied.
  */
 
 import { PrismaClient } from '@prisma/client'
-import { repairImageUrls } from '../lib/email/shared/image-repair'
+import { repairEmailHtml } from '../lib/email/shared/image-repair'
 
 const prisma = new PrismaClient()
 
@@ -40,7 +44,7 @@ async function collect(): Promise<Repair[]> {
   const repairs: Repair[] = []
   const add = (table: string, id: string, label: string, original: string | null) => {
     if (!original) return
-    const html = repairImageUrls(original)
+    const html = repairEmailHtml(original)
     if (html !== original) repairs.push({ table, id, label, html })
   }
 

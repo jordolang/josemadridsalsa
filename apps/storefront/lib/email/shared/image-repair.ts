@@ -10,7 +10,7 @@
  * placeholder in the recipient's inbox.
  */
 
-import { getImageBaseUrl } from './components'
+import { getImageBaseUrl, jmsFooter } from './components'
 
 /** Referenced filename → the asset that actually exists in public/email-templates. */
 export const FILENAME_REMAP: Record<string, string> = {
@@ -54,4 +54,51 @@ export function repairImageUrls(html: string): string {
   }
 
   return out
+}
+
+/** Opening tag of the branded footer table, identical in every template. */
+const FOOTER_TABLE_START =
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" ' +
+  'style="background-color: #f4f1ec;'
+
+/**
+ * Find the end of the table that starts at `from`, counting nested tables so the
+ * footer's inner tables do not terminate the match early.
+ */
+function endOfTable(html: string, from: number): number {
+  const tag = /<table\b|<\/table\s*>/gi
+  tag.lastIndex = from
+  let depth = 0
+
+  for (let m = tag.exec(html); m; m = tag.exec(html)) {
+    depth += m[0][1] === '/' ? -1 : 1
+    if (depth === 0) return m.index + m[0].length
+  }
+
+  return -1
+}
+
+/**
+ * Replace the stored footer with the current one.
+ *
+ * Stored HTML carries whatever footer markup was current when the row was
+ * written, including the fixed-column layout that broke link labels mid-word on
+ * narrow screens. Re-seeding would also fix this, but it replaces the whole
+ * template and discards any edit made in the admin panel; this swaps the footer
+ * alone. Replacing a current footer with itself is a no-op, so it is safe to
+ * re-run.
+ */
+export function repairFooter(html: string): string {
+  const start = html.indexOf(FOOTER_TABLE_START)
+  if (start < 0) return html
+
+  const end = endOfTable(html, start)
+  if (end < 0) return html
+
+  return html.slice(0, start) + jmsFooter.trim() + html.slice(end)
+}
+
+/** Every repair applied to one stored email body. */
+export function repairEmailHtml(html: string): string {
+  return repairFooter(repairImageUrls(html))
 }

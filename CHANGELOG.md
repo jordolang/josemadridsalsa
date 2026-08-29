@@ -160,7 +160,9 @@ the root `package.json` is canonical.
   the site images moved to Blob. All three now resolve through one `getImageBaseUrl()`, overridable
   with `EMAIL_IMAGE_BASE_URL` to serve the assets from the Blob store instead. A test asserts every
   referenced filename exists on disk, so this cannot regress silently, and
-  `npm run email:repair-images` rewrites the same URLs in email HTML already stored in the database.
+  `npm run email:repair-images` rewrites the same URLs — and swaps the stored footer for the
+  current one — in email HTML already stored in the database, which the admin test-send button,
+  campaigns and automations all render from rather than the template source.
 - **Footer links breaking mid-word on phones.** The footer navigation and preference links were laid
   out as fixed table columns, so a narrow screen squeezed each cell until the label wrapped inside
   itself — `FUNDRAI / SING`, `SH / OP`. Both rows are now centred inline links that never break
