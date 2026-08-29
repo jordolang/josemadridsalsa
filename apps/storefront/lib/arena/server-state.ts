@@ -49,6 +49,9 @@ export async function loadArenaSnapshot(period: string): Promise<ArenaSnapshot> 
     where: { status: 'ACTIVE', activePeriod: period },
     orderBy: { salesCount: 'desc' },
     include: {
+      // The price per jar lives on the campaign that owns the store, so the arena's
+      // "raised" figure and the shop cannot quote two different numbers.
+      fundraiser: { select: { defaultUnitPrice: true } },
       characters: {
         orderBy: { position: 'asc' },
         select: {
@@ -86,9 +89,9 @@ export async function loadArenaSnapshot(period: string): Promise<ArenaSnapshot> 
       teamColorDark: t.teamColorDark,
       goalAmount: t.goalAmount,
       salesCount: t.salesCount,
-      pricePerUnit: t.pricePerUnit,
+      pricePerUnit: Number(t.fundraiser.defaultUnitPrice),
       activePeriod: t.activePeriod,
-      raised: t.salesCount * t.pricePerUnit,
+      raised: t.salesCount * Number(t.fundraiser.defaultUnitPrice),
       hpCurrent: t.hpCurrent,
       hpMax: t.goalAmount,
       characters: t.characters,

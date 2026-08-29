@@ -203,57 +203,56 @@ model CollectionProduct {
 }
 
 model Product {
-  id                     String                  @id @default(cuid())
-  name                   String
-  slug                   String                  @unique
-  description            String?
-  heatLevel              HeatLevel
-  ingredients            String[]
-  price                  Decimal                 @db.Decimal(10, 2)
-  compareAtPrice         Decimal?                @db.Decimal(10, 2)
-  costPrice              Decimal?                @db.Decimal(10, 2)
-  taxCode                String?
-  sku                    String                  @unique
-  barcode                String?
-  inventory              Int                     @default(0)
-  lowStockThreshold      Int                     @default(5)
-  images                 String[]
-  featuredImage          String?
-  weight                 Decimal?                @db.Decimal(8, 2)
-  lengthInches           Decimal?                @db.Decimal(8, 2)
-  widthInches            Decimal?                @db.Decimal(8, 2)
-  heightInches           Decimal?                @db.Decimal(8, 2)
-  dimensions             Json?
-  metaTitle              String?
-  metaDescription        String?
-  ogImage                String?
-  searchKeywords         String[]
-  isActive               Boolean                 @default(true)
-  isFeatured             Boolean                 @default(false)
-  sortOrder              Int                     @default(0)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  categoryId             String
-  stockReserved          Int                     @default(0)
-  stockStatus            StockStatus             @default(IN_STOCK)
-  unitsPerCase           Int                     @default(12)
-  cartItems              CartItem[]
-  collectionProducts     CollectionProduct[]
-  eventManifestItems     EventManifestItem[]
-  fundraiserProducts     FundraiserProduct[]
-  fundraiserTeamProducts FundraiserTeamProduct[]
-  inventoryAlerts        InventoryAlert[]
-  inventoryTransactions  InventoryTransaction[]
-  nutritionalInfo        NutritionalInfo?
-  orderItems             OrderItem[]
-  productIngredients     ProductIngredient[]
-  productTags            ProductTag[]
-  purchaseOrderItems     PurchaseOrderItem[]
-  category               Category                @relation(fields: [categoryId], references: [id])
-  restockNotifications   RestockNotification[]
-  reviews                Review[]
-  shopListings           ShopListing[]
-  wishlistItems          WishlistItem[]
+  id                    String                 @id @default(cuid())
+  name                  String
+  slug                  String                 @unique
+  description           String?
+  heatLevel             HeatLevel
+  ingredients           String[]
+  price                 Decimal                @db.Decimal(10, 2)
+  compareAtPrice        Decimal?               @db.Decimal(10, 2)
+  costPrice             Decimal?               @db.Decimal(10, 2)
+  taxCode               String?
+  sku                   String                 @unique
+  barcode               String?
+  inventory             Int                    @default(0)
+  lowStockThreshold     Int                    @default(5)
+  images                String[]
+  featuredImage         String?
+  weight                Decimal?               @db.Decimal(8, 2)
+  lengthInches          Decimal?               @db.Decimal(8, 2)
+  widthInches           Decimal?               @db.Decimal(8, 2)
+  heightInches          Decimal?               @db.Decimal(8, 2)
+  dimensions            Json?
+  metaTitle             String?
+  metaDescription       String?
+  ogImage               String?
+  searchKeywords        String[]
+  isActive              Boolean                @default(true)
+  isFeatured            Boolean                @default(false)
+  sortOrder             Int                    @default(0)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  categoryId            String
+  stockReserved         Int                    @default(0)
+  stockStatus           StockStatus            @default(IN_STOCK)
+  unitsPerCase          Int                    @default(12)
+  cartItems             CartItem[]
+  collectionProducts    CollectionProduct[]
+  eventManifestItems    EventManifestItem[]
+  fundraiserProducts    FundraiserProduct[]
+  inventoryAlerts       InventoryAlert[]
+  inventoryTransactions InventoryTransaction[]
+  nutritionalInfo       NutritionalInfo?
+  orderItems            OrderItem[]
+  productIngredients    ProductIngredient[]
+  productTags           ProductTag[]
+  purchaseOrderItems    PurchaseOrderItem[]
+  category              Category               @relation(fields: [categoryId], references: [id])
+  restockNotifications  RestockNotification[]
+  reviews               Review[]
+  shopListings          ShopListing[]
+  wishlistItems         WishlistItem[]
 
   @@index([stockStatus])
   @@map("products")
@@ -533,72 +532,72 @@ model RewardRedemption {
 }
 
 model Order {
-  id                       String                 @id @default(cuid())
-  orderNumber              String                 @unique
-  userId                   String?
-  guestEmail               String?
-  guestPhone               String?
-  shippingAddressId        String?
-  billingAddressId         String?
-  status                   OrderStatus            @default(PENDING)
+  id                      String                 @id @default(cuid())
+  orderNumber             String                 @unique
+  userId                  String?
+  guestEmail              String?
+  guestPhone              String?
+  shippingAddressId       String?
+  billingAddressId        String?
+  status                  OrderStatus            @default(PENDING)
   /// Fulfillment is tracked separately from `status` and `paymentStatus` so an order can be
   /// (for example) PAID + PARTIALLY_FULFILLED without either field lying. Always write this
   /// through `lib/orders/fulfillment.ts` so it cannot drift from `status`.
-  fulfillmentStatus        FulfillmentStatus      @default(UNFULFILLED)
+  fulfillmentStatus       FulfillmentStatus      @default(UNFULFILLED)
   /// Where the order originated. Derived from paymentChannel/fundraiserId/importSource
   /// at creation time — see `lib/orders/sales-channel.ts` for the precedence.
-  salesChannel             SalesChannel           @default(WEBSITE)
-  subtotal                 Decimal                @db.Decimal(10, 2)
-  shippingCost             Decimal                @default(0) @db.Decimal(10, 2)
-  tax                      Decimal                @default(0) @db.Decimal(10, 2)
-  discountAmount           Decimal                @default(0) @db.Decimal(10, 2)
+  salesChannel            SalesChannel           @default(WEBSITE)
+  subtotal                Decimal                @db.Decimal(10, 2)
+  shippingCost            Decimal                @default(0) @db.Decimal(10, 2)
+  tax                     Decimal                @default(0) @db.Decimal(10, 2)
+  discountAmount          Decimal                @default(0) @db.Decimal(10, 2)
   // Codes applied at checkout. Recorded on the order so that completion (which may run
   // in the Stripe webhook, with no request context) knows what to redeem. Redemption is
   // deferred to payment success so an abandoned checkout cannot burn a gift balance or
   // consume a discount's usage allowance.
-  discountCode             String?
-  giftCertificateCode      String?
-  giftCertificateAmount    Decimal                @default(0) @db.Decimal(10, 2)
-  total                    Decimal                @db.Decimal(10, 2)
-  shippingMethod           String?
-  trackingNumber           String?
-  estimatedDelivery        DateTime?
-  actualDelivery           DateTime?
-  shippingLabelUrl         String?
-  easypostShipmentId       String?
-  carrierName              String?
-  trackingUrl              String?
-  lastTrackingUpdate       DateTime?
-  trackingHistory          Json?
-  packingSlipUrl           String?
-  invoiceUrl               String?
-  invoiceSentAt            DateTime?
-  modificationHistory      Json?
-  paymentStatus            PaymentStatus          @default(PENDING)
-  paymentMethod            String?
-  stripePaymentId          String?
-  customerNotes            String?
-  adminNotes               String?
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
-  shippedAt                DateTime?
-  deliveredAt              DateTime?
-  confirmationEmailSentAt  DateTime?
-  reviewRequestSentAt      DateTime?
+  discountCode            String?
+  giftCertificateCode     String?
+  giftCertificateAmount   Decimal                @default(0) @db.Decimal(10, 2)
+  total                   Decimal                @db.Decimal(10, 2)
+  shippingMethod          String?
+  trackingNumber          String?
+  estimatedDelivery       DateTime?
+  actualDelivery          DateTime?
+  shippingLabelUrl        String?
+  easypostShipmentId      String?
+  carrierName             String?
+  trackingUrl             String?
+  lastTrackingUpdate      DateTime?
+  trackingHistory         Json?
+  packingSlipUrl          String?
+  invoiceUrl              String?
+  invoiceSentAt           DateTime?
+  modificationHistory     Json?
+  paymentStatus           PaymentStatus          @default(PENDING)
+  paymentMethod           String?
+  stripePaymentId         String?
+  customerNotes           String?
+  adminNotes              String?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  shippedAt               DateTime?
+  deliveredAt             DateTime?
+  confirmationEmailSentAt DateTime?
+  reviewRequestSentAt     DateTime?
   /// When the customer was told their refund went through. Null means not yet told.
   ///
   /// Two things send this email — the admin status change, and the consumer that reacts to a
   /// refund actually settling at the processor — and they are reached by different admin
   /// actions on the same order. Without a shared marker a customer can be emailed twice about
   /// the same money, which reads as two refunds.
-  refundEmailSentAt        DateTime?
+  refundEmailSentAt       DateTime?
   /// Set once, by whichever path marks the order paid first. The claim on this column is what
   /// stops the same sale being credited twice when a webhook and a completion route race.
-  commissionCreditedAt     DateTime?
+  commissionCreditedAt    DateTime?
   /// What the group was actually paid for this order, recorded at the moment it was credited.
   /// Null means not a fundraiser order, or not yet credited — never zero. The rate is editable
   /// afterwards, so recomputing this later would disagree with what was really handed over.
-  fundraiserCommission     Decimal?               @db.Decimal(10, 2)
+  fundraiserCommission    Decimal?               @db.Decimal(10, 2)
   /// Set once, by whichever path marks the order paid first. The claim on this column is what
   /// stops purchase loyalty points being awarded twice when a webhook and a completion route
   /// race — the same guard `commissionCreditedAt` gives the fundraiser credit.
@@ -608,46 +607,46 @@ model Order {
   /// taken before the order row exists, so the InventoryTransaction rows carry no orderId),
   /// and releasing twice would silently under-count `Product.stockReserved`. Every release
   /// path claims this field first and only proceeds if the claim was theirs.
-  inventoryReleasedAt      DateTime?
-  loyaltyPointsAwardedAt   DateTime?
-  fundraiserId             String?
-  importSource             String?
-  importBatchId            String?
-  importedAt               DateTime?
-  printedInvoiceAt         DateTime?
-  printedPackingSlipAt     DateTime?
-  participantId            String?
-  paymentChannel           PaymentChannel?        @default(ONLINE)
-  paymentProvider          PaymentProvider?       @default(STRIPE)
-  providerPaymentId        String?
-  abandonedCartId          String?
+  inventoryReleasedAt     DateTime?
+  loyaltyPointsAwardedAt  DateTime?
+  fundraiserId            String?
+  importSource            String?
+  importBatchId           String?
+  importedAt              DateTime?
+  printedInvoiceAt        DateTime?
+  printedPackingSlipAt    DateTime?
+  participantId           String?
+  paymentChannel          PaymentChannel?        @default(ONLINE)
+  paymentProvider         PaymentProvider?       @default(STRIPE)
+  providerPaymentId       String?
+  abandonedCartId         String?
   /// First-touch marketing attribution, captured when the visitor first lands on the site and
   /// carried to the order through a cookie (see `lib/analytics/attribution.ts`). Every field is
   /// nullable and never inferred: a direct visit, an offline order (POS/manual/phone/event), and
   /// any order placed before this feature simply have none.
-  utmSource                String?
-  utmMedium                String?
-  utmCampaign              String?
-  utmTerm                  String?
-  utmContent               String?
+  utmSource               String?
+  utmMedium               String?
+  utmCampaign             String?
+  utmTerm                 String?
+  utmContent              String?
   /// The referring site's host (e.g. `google.com`), or null for a direct/typed-in visit.
-  referrer                 String?
+  referrer                String?
   /// The path of the first page the visitor landed on (query string stripped).
-  landingPage              String?
-  supportMessages          FundraiserMessage[]
-  giftCertificateUsages    GiftCertificateUsage[]
-  giftCertificates         GiftCertificate[]
-  items                    OrderItem[]
-  billingAddress           Address?               @relation("BillingAddress", fields: [billingAddressId], references: [id])
-  fundraiser               Fundraiser?            @relation(fields: [fundraiserId], references: [id])
-  participant              FundraiserParticipant? @relation(fields: [participantId], references: [id])
-  shippingAddress          Address?               @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
-  user                     User?                  @relation(fields: [userId], references: [id])
-  abandonedCart            AbandonedCart?         @relation(fields: [abandonedCartId], references: [id])
-  payments                 Payment[]
-  shippingLabels           ShippingLabel[]
-  fulfillments             Fulfillment[]
-  returnRequests           ReturnRequest[]
+  landingPage             String?
+  supportMessages         FundraiserMessage[]
+  giftCertificateUsages   GiftCertificateUsage[]
+  giftCertificates        GiftCertificate[]
+  items                   OrderItem[]
+  billingAddress          Address?               @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  fundraiser              Fundraiser?            @relation(fields: [fundraiserId], references: [id])
+  participant             FundraiserParticipant? @relation(fields: [participantId], references: [id])
+  shippingAddress         Address?               @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  user                    User?                  @relation(fields: [userId], references: [id])
+  abandonedCart           AbandonedCart?         @relation(fields: [abandonedCartId], references: [id])
+  payments                Payment[]
+  shippingLabels          ShippingLabel[]
+  fulfillments            Fulfillment[]
+  returnRequests          ReturnRequest[]
 
   /// Set when this order is a replacement raised by an exchange rather than a sale.
   ///
@@ -656,8 +655,8 @@ model Order {
   /// carry a real `unitCost`. Left in the sales population it would report as revenue 0 against
   /// cost > 0 — a loss on every exchange, blended into product and channel margin. Every
   /// revenue report therefore filters `exchangeForReturnId: null`.
-  exchangeForReturnId      String?                @unique
-  exchangeForReturn        ReturnRequest?         @relation("ExchangeForReturn", fields: [exchangeForReturnId], references: [id])
+  exchangeForReturnId String?        @unique
+  exchangeForReturn   ReturnRequest? @relation("ExchangeForReturn", fields: [exchangeForReturnId], references: [id])
 
   @@index([userId])
   @@index([participantId])
@@ -710,38 +709,37 @@ model FulfillmentItem {
 /// A customer's request to send goods back. Only quantities that actually shipped can be
 /// returned, so this hangs off the fulfillment accounting rather than the raw order lines.
 model ReturnRequest {
-  id            String              @id @default(cuid())
-  rmaNumber     String              @unique
-  orderId       String
-  status        ReturnStatus        @default(REQUESTED)
-  reason        ReturnReason
-  resolution    ReturnResolution    @default(REFUND)
-  customerNote  String?
-  adminNote     String?
+  id                String           @id @default(cuid())
+  rmaNumber         String           @unique
+  orderId           String
+  status            ReturnStatus     @default(REQUESTED)
+  reason            ReturnReason
+  resolution        ReturnResolution @default(REFUND)
+  customerNote      String?
+  adminNote         String?
   /// Withheld from the refund. Stored per-request because it is a judgement call.
-  restockingFee Decimal?            @db.Decimal(10, 2)
+  restockingFee     Decimal?         @db.Decimal(10, 2)
   /// The refund this return produced, set when it is completed with a REFUND resolution.
-  refundId      String?             @unique
+  refundId          String?          @unique
   /// Store credit issued instead of a refund, set when completed with STORE_CREDIT. Exactly
   /// one of `refundId` / `giftCertificateId` / `exchangeOrder` is ever populated — see
   /// `lib/orders/return-resolution.ts`.
-  giftCertificateId String?         @unique
-  requestedById String?
-  approvedById  String?
-  approvedAt    DateTime?
-  receivedAt    DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  giftCertificateId String?          @unique
+  requestedById     String?
+  approvedById      String?
+  approvedAt        DateTime?
+  receivedAt        DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-
-  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  refund        Refund?             @relation(fields: [refundId], references: [id])
-  giftCertificate GiftCertificate?  @relation(fields: [giftCertificateId], references: [id])
+  order           Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refund          Refund?             @relation(fields: [refundId], references: [id])
+  giftCertificate GiftCertificate?    @relation(fields: [giftCertificateId], references: [id])
   /// The replacement order raised for an EXCHANGE resolution. The foreign key lives on `Order`
   /// so revenue reports can exclude exchanges with a single `where` on the order itself.
-  exchangeOrder Order?              @relation("ExchangeForReturn")
-  items         ReturnRequestItem[]
+  exchangeOrder   Order?              @relation("ExchangeForReturn")
+  items           ReturnRequestItem[]
 
   @@index([orderId])
   @@index([status])
@@ -863,25 +861,25 @@ model Payment {
 }
 
 model Refund {
-  id             String          @id @default(cuid())
+  id                 String          @id @default(cuid())
   /// The processor's refund ID. Despite the name this is provider-agnostic — PayPal and
   /// Square refunds store their own IDs here. Pair it with `provider` to identify the
   /// processor; the column is not renamed because doing so would drop existing IDs.
-  stripeRefundId String          @unique
-  provider       PaymentProvider @default(STRIPE)
-  amount         Int
-  reason         String?
-  status         RefundStatus    @default(PENDING)
-  paymentId      String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  processedAt    DateTime?
+  stripeRefundId     String          @unique
+  provider           PaymentProvider @default(STRIPE)
+  amount             Int
+  reason             String?
+  status             RefundStatus    @default(PENDING)
+  paymentId          String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  processedAt        DateTime?
   /// Fundraiser commission taken back because of this refund. Non-null is also the claim that
   /// stops the same refund reversing twice. Null means not a fundraiser refund, or not yet
   /// processed — never zero.
-  commissionReversed Decimal?    @db.Decimal(10, 2)
-  payment        Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  returnRequest  ReturnRequest?
+  commissionReversed Decimal?        @db.Decimal(10, 2)
+  payment            Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  returnRequest      ReturnRequest?
 
   @@index([paymentId])
   @@index([provider])
@@ -1009,7 +1007,39 @@ model Fundraiser {
   startDate            DateTime
   endDate              DateTime
   goal                 Decimal?                @db.Decimal(10, 2)
-  commissionRate       Decimal                 @db.Decimal(5, 2)
+  /// The group's share of the merchandise subtotal, as a percentage (`50.00`, not `0.50`).
+  /// Half by default: the fundraiser price is set above retail so the group's half comes out
+  /// of that gap rather than out of the margin on the jar. Shipping and tax are excluded from
+  /// the base — see `lib/fundraising/commission.ts`.
+  commissionRate       Decimal                 @default(50.00) @db.Decimal(5, 2)
+  /// What this fundraiser's own store charges per jar when the product carries no override
+  /// of its own. Every fundraiser is a separate store selling the same catalogue at its own
+  /// price, so the price a supporter is quoted comes from here, never from `Product.price`.
+  defaultUnitPrice     Decimal                 @default(10.00) @db.Decimal(10, 2)
+  /// Thank-you page shown after checkout on this fundraiser's store. Every field is
+  /// optional: `lib/fundraising/thank-you.ts` fills the blanks with copy built from the
+  /// organization's own name, so a fundraiser that customises nothing still gets a page of
+  /// its own rather than the generic store confirmation.
+  thankYouHeadline     String?
+  thankYouMessage      String?
+  thankYouImageUrl     String?
+  thankYouCtaLabel     String?
+  thankYouCtaUrl       String?
+  /// How this group runs its drive. Collecting order forms is the default because it is the
+  /// classic salsa fundraiser; the online link stays live either way, so this never turns the
+  /// store off — see `FulfillmentMethod`.
+  fulfillmentMethod    FulfillmentMethod       @default(ORDER_FORMS_AND_BULK)
+  /// Only meaningful on a drive that collects order forms. Null means not yet chosen.
+  brochureOption       BrochureOption?
+  /// What this campaign was quoted, snapshotted rather than read from a global setting: a
+  /// later change to the standard fee must not re-price a drive that is already running.
+  brochureFee          Decimal?                @db.Decimal(10, 2)
+  bulkDeliveryFee      Decimal?                @db.Decimal(10, 2)
+  /// The group resells the bulk delivery to its own supporters, so that sale is wholesale and
+  /// only tax-free with a certificate on file. Held here rather than on `WholesaleAccount`
+  /// because a fundraising group is not a wholesale customer in any other sense.
+  resaleNumber         String?
+  resaleVerifiedAt     DateTime?
   status               FundraiserStatus        @default(DRAFT)
   isActive             Boolean                 @default(false)
   /// When the coordinator was told the campaign is live. Null means not yet sent.
@@ -1041,6 +1071,8 @@ model Fundraiser {
   profile              FundraiserProfile?
   gamificationActions  GamificationAction[]
   orders               Order[]
+  /// The campaign's Battle Arena presence, when it has been entered into a season.
+  arenaTeam            FundraiserTeam?
 
   @@map("fundraisers")
 }
@@ -1083,42 +1115,51 @@ model FundraiserChampionship {
   @@map("fundraiser_championships")
 }
 
+/// One product on one fundraiser's shelf.
+///
+/// The single catalog for every fundraiser store, arena teams included. `FundraiserTeamProduct`
+/// used to hold a parallel copy for teams, priced by its own rules and sold through its own
+/// Stripe session — two catalogs of the same jars that could disagree on price.
 model FundraiserProduct {
   id           String     @id @default(cuid())
   fundraiserId String
   productId    String
+  /// This fundraiser's price for this product. Null sells at `Fundraiser.defaultUnitPrice`.
   price        Decimal?   @db.Decimal(10, 2)
+  /// Display order on the fundraiser's store (lower first).
+  sortOrder    Int        @default(0)
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
   product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([fundraiserId, productId])
+  @@index([fundraiserId, isActive, sortOrder])
   @@map("fundraiser_products")
 }
 
 model FundraiserParticipant {
-  id              String                      @id @default(cuid())
-  fundraiserId    String
-  name            String
-  email           String
-  phone           String?
-  referralCode    String                      @unique
-  status          FundraiserParticipantStatus @default(ACTIVE)
-  totalOrders     Int                         @default(0)
-  totalRevenue    Decimal                     @default(0) @db.Decimal(10, 2)
-  totalCommission Decimal                     @default(0) @db.Decimal(10, 2)
+  id                    String                      @id @default(cuid())
+  fundraiserId          String
+  name                  String
+  email                 String
+  phone                 String?
+  referralCode          String                      @unique
+  status                FundraiserParticipantStatus @default(ACTIVE)
+  totalOrders           Int                         @default(0)
+  totalRevenue          Decimal                     @default(0) @db.Decimal(10, 2)
+  totalCommission       Decimal                     @default(0) @db.Decimal(10, 2)
   /// Highest sales milestone this participant has already been congratulated for.
   ///
   /// A marker rather than a derived value because domain events are delivered at-least-once:
   /// without it a replayed `payment.completed` would send a second "you reached 25 sales"
   /// email. Comparing the highest milestone reached against this column also collapses a
   /// burst of orders into one message instead of one per threshold crossed.
-  lastMilestoneNotified Int                    @default(0)
-  createdAt       DateTime                    @default(now())
-  updatedAt       DateTime                    @default(now()) @updatedAt
-  fundraiser      Fundraiser                  @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
-  orders          Order[]
+  lastMilestoneNotified Int                         @default(0)
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @default(now()) @updatedAt
+  fundraiser            Fundraiser                  @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  orders                Order[]
 
   @@index([fundraiserId])
   @@map("fundraiser_participants")
@@ -1223,10 +1264,10 @@ model AnalyticsSetting {
 }
 
 model ShippingSettings {
-  id                    String   @id @default(cuid())
-  originAddress         Json?
-  defaultCarrier        String?
-  enabledCarriers       String[] @default([])
+  id              String   @id @default(cuid())
+  originAddress   Json?
+  defaultCarrier  String?
+  enabledCarriers String[] @default([])
 
   // Flat-rate presets for the estimate/fallback rate path — the numbers quoted when live carrier
   // rates are unavailable (no API key, origin unset, carrier outage). All amounts are whole cents.
@@ -1245,11 +1286,11 @@ model ShippingSettings {
   /// Per-state cost multipliers for remote destinations, e.g. { "AK": 1.5, "HI": 1.5, "PR": 2.0 }.
   stateSurcharges            Json?
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  updatedById           String?
-  singleton             String   @unique @default("singleton")
-  updatedBy             User?    @relation(fields: [updatedById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+  singleton   String   @unique @default("singleton")
+  updatedBy   User?    @relation(fields: [updatedById], references: [id])
 
   @@map("shipping_settings")
 }
@@ -3130,30 +3171,37 @@ model LeadEmailTemplate {
   @@map("lead_email_templates")
 }
 
+/// A campaign's Battle Arena presence: characters, HP, shields, damage.
+///
+/// Deliberately not a campaign of its own. Every team belongs to exactly one `Fundraiser`,
+/// which owns the store — the catalog, the price per jar and the split. The two models were
+/// already paired by slug (see `/api/admin/fundraisers/[id]/battle-arena`); `fundraiserId`
+/// makes that a real relation, so a team's shop cannot quote a price its campaign disagrees
+/// with, and a purchase made in the arena is an ordinary order that happens to deal damage.
 model FundraiserTeam {
-  id                String                  @id @default(cuid())
-  slug              String                  @unique
+  id                String                 @id @default(cuid())
+  slug              String                 @unique
+  fundraiserId      String                 @unique
   name              String
   school            String
   activePeriod      String
-  status            FundraiserTeamStatus    @default(PENDING)
-  teamColor         String                  @default("#9B7FFF")
-  teamColorDark     String                  @default("#452E7F")
-  goalAmount        Int                     @default(1000)
-  salesCount        Int                     @default(0)
-  pricePerUnit      Int                     @default(10)
+  status            FundraiserTeamStatus   @default(PENDING)
+  teamColor         String                 @default("#9B7FFF")
+  teamColorDark     String                 @default("#452E7F")
+  goalAmount        Int                    @default(1000)
+  salesCount        Int                    @default(0)
   contactName       String
   contactEmail      String
   contactPhone      String?
-  apiKeyHash        String?                 @unique
+  apiKeyHash        String?                @unique
   apiKeyIssuedAt    DateTime?
   apiKeyRotatedAt   DateTime?
   approvedBy        String?
   approvedAt        DateTime?
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  consecutiveShares Int                     @default(0)
-  hpCurrent         Int                     @default(0)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  consecutiveShares Int                    @default(0)
+  hpCurrent         Int                    @default(0)
   hpResetAt         DateTime?
   lastShareUserId   String?
   seasonId          String?
@@ -3165,42 +3213,16 @@ model FundraiserTeam {
   storyHtml         String?
   characters        FundraiserCharacter[]
   saleEvents        FundraiserSaleEvent[]
-  championOfSeasons FundraiserSeason[]      @relation("SeasonChampion")
+  championOfSeasons FundraiserSeason[]     @relation("SeasonChampion")
   shareEvents       FundraiserShareEvent[]
   shields           FundraiserShield[]
-  products          FundraiserTeamProduct[]
-  season            FundraiserSeason?       @relation("SeasonTeams", fields: [seasonId], references: [id])
+  fundraiser        Fundraiser             @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  season            FundraiserSeason?      @relation("SeasonTeams", fields: [seasonId], references: [id])
 
   @@index([activePeriod])
   @@index([status])
   @@index([seasonId])
   @@map("fundraiser_teams")
-}
-
-/// Product catalog for a FundraiserTeam. Each row links a Product to a
-/// team with an optional price override and sort order. The public
-/// /fundraise/[slug] page renders ACTIVE rows; checkout uses this table
-/// to build Stripe line items whose metadata triggers arena damage on
-/// settlement.
-model FundraiserTeamProduct {
-  id        String         @id @default(cuid())
-  teamId    String
-  productId String
-  /// Optional price override (dollars, 2-decimal). When null, the
-  /// Product's base price is used at checkout.
-  price     Decimal?       @db.Decimal(10, 2)
-  /// Display-order on the public catalog (lower first).
-  sortOrder Int            @default(0)
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  team      FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, productId])
-  @@index([teamId, isActive, sortOrder])
-  @@index([productId])
-  @@map("fundraiser_team_products")
 }
 
 model FundraiserSeason {
@@ -3248,21 +3270,27 @@ model FundraiserCharacter {
 }
 
 model FundraiserSignupRequest {
-  id            String                 @id @default(cuid())
-  schoolName    String
-  teamName      String
-  contactName   String
-  contactEmail  String
-  contactPhone  String?
-  goalAmount    Int                    @default(1000)
-  message       String?
-  status        FundraiserSignupStatus @default(PENDING)
-  reviewedBy    String?
-  reviewedAt    DateTime?
-  reviewNotes   String?
-  apiKeyShownAt DateTime?
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  id                   String                 @id @default(cuid())
+  schoolName           String
+  teamName             String
+  contactName          String
+  contactEmail         String
+  contactPhone         String?
+  goalAmount           Int                    @default(1000)
+  message              String?
+  /// What the school asked for on the form. The admin confirms or overrides it at approval,
+  /// so this records the request rather than the agreement — a phone call in between often
+  /// changes the answer.
+  requestedFulfillment FulfillmentMethod?
+  requestedBrochure    BrochureOption?
+  resaleNumber         String?
+  status               FundraiserSignupStatus @default(PENDING)
+  reviewedBy           String?
+  reviewedAt           DateTime?
+  reviewNotes          String?
+  apiKeyShownAt        DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 
   @@index([status])
   @@index([contactEmail])
@@ -4038,6 +4066,28 @@ enum FundraiserTeamStatus {
   ACTIVE
   SUSPENDED
   ENDED
+}
+
+/// How a group runs its drive.
+///
+/// Not a switch over the online store: every campaign keeps a live link regardless, because a
+/// supporter who would rather not fill in a paper form still needs somewhere to buy. This is
+/// only about whether the group is also collecting order forms for a bulk delivery.
+enum FulfillmentMethod {
+  /// The default, and the classic salsa drive. The group hands out brochures, collects the
+  /// forms and the money face to face, and takes one delivery at the close to distribute.
+  /// They are reselling to their supporters, so that side is invoiced to them wholesale.
+  ORDER_FORMS_AND_BULK
+  /// No paper drive. The link is the whole campaign, and every order ships to its buyer.
+  ONLINE_ONLY
+}
+
+/// Where a group running order forms gets its brochures.
+enum BrochureOption {
+  /// We supply a print-ready brochure with the order form on it. No charge.
+  PRINT_YOUR_OWN
+  /// A set of 100 professionally printed, charged at settlement rather than up front.
+  PROFESSIONAL_100
 }
 
 enum FundraiserSignupStatus {
@@ -4890,44 +4940,44 @@ enum PollResultsVisibility {
 }
 
 model Poll {
-  id                  String                @id @default(cuid())
-  slug                String                @unique
-  title               String
-  subtitle            String?
+  id                       String                @id @default(cuid())
+  slug                     String                @unique
+  title                    String
+  subtitle                 String?
   /// Intro copy shown above the questions.
-  description         String?
-  imageUrl            String?
-  imageAlt            String?
+  description              String?
+  imageUrl                 String?
+  imageAlt                 String?
   /// Tailwind-ish accent key ("salsa", "verde", "amber", ...) used to theme the card.
-  accentColor         String?
-  status              ContentStatus         @default(DRAFT)
-  visibility          PollVisibility        @default(PUBLIC)
+  accentColor              String?
+  status                   ContentStatus         @default(DRAFT)
+  visibility               PollVisibility        @default(PUBLIC)
   /// Share secret for INVITE_ONLY polls. Null for public ones.
-  accessCode          String?               @unique
-  featured            Boolean               @default(false)
-  sortOrder           Int                   @default(0)
-  publishedAt         DateTime?
+  accessCode               String?               @unique
+  featured                 Boolean               @default(false)
+  sortOrder                Int                   @default(0)
+  publishedAt              DateTime?
   /// Voting window. Outside it the poll renders read-only.
-  startsAt            DateTime?
-  endsAt              DateTime?
-  resultsVisibility   PollResultsVisibility @default(AFTER_VOTE)
+  startsAt                 DateTime?
+  endsAt                   DateTime?
+  resultsVisibility        PollResultsVisibility @default(AFTER_VOTE)
   /// Whether the same browser may answer more than once.
-  allowMultipleSubmissions Boolean          @default(false)
+  allowMultipleSubmissions Boolean               @default(false)
   /// Offer an optional email field on the response form.
-  collectEmail        Boolean               @default(false)
+  collectEmail             Boolean               @default(false)
   /// Overrides the built-in participation/promotional-use advisory.
-  consentNotice       String?
-  thankYouMessage     String?
-  closedMessage       String?
-  seoTitle            String?
-  seoDescription      String?
-  noIndex             Boolean               @default(false)
+  consentNotice            String?
+  thankYouMessage          String?
+  closedMessage            String?
+  seoTitle                 String?
+  seoDescription           String?
+  noIndex                  Boolean               @default(false)
   /// Denormalised tally so the index can show participation without loading answers.
-  responseCount       Int                   @default(0)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  questions           PollQuestion[]
-  responses           PollResponse[]
+  responseCount            Int                   @default(0)
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  questions                PollQuestion[]
+  responses                PollResponse[]
 
   @@index([status, visibility])
   @@index([status, featured, sortOrder])
@@ -4982,26 +5032,26 @@ model PollOption {
 }
 
 model PollResponse {
-  id                 String       @id @default(cuid())
-  pollId             String
-  poll               Poll         @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  id                  String       @id @default(cuid())
+  pollId              String
+  poll                Poll         @relation(fields: [pollId], references: [id], onDelete: Cascade)
   /// Required, but any non-empty value is accepted — visitors are told a first
   /// name alone is fine.
-  firstName          String
-  lastName           String?
-  email              String?
+  firstName           String
+  lastName            String?
+  email               String?
   /// The voter asked to be credited anonymously if we quote them publicly.
-  anonymousRequested Boolean      @default(false)
+  anonymousRequested  Boolean      @default(false)
   /// The voter ticked the promotional-use advisory.
-  consentAcknowledged Boolean     @default(false)
+  consentAcknowledged Boolean      @default(false)
   /// Signed-in voter, when there was one. Plain id, no relation, so the User
   /// model stays untouched.
-  userId             String?
+  userId              String?
   /// SHA-256 of IP + salt. Repeat-submission guard only; never displayed.
-  ipHash             String?
-  userAgent          String?
-  submittedAt        DateTime     @default(now())
-  answers            PollAnswer[]
+  ipHash              String?
+  userAgent           String?
+  submittedAt         DateTime     @default(now())
+  answers             PollAnswer[]
 
   @@index([pollId, submittedAt])
   @@index([pollId, ipHash])
@@ -5038,26 +5088,26 @@ model PollAnswer {
 ///
 /// The document itself is never discarded — `fileUrl` stays as the evidence behind every figure.
 model FormCapture {
-  id               String            @id @default(cuid())
-  formType         CaptureFormType
-  status           CaptureStatus     @default(UPLOADED)
+  id       String          @id @default(cuid())
+  formType CaptureFormType
+  status   CaptureStatus   @default(UPLOADED)
 
   /// The stored photo/PDF. This is the audit trail; do not delete it after posting.
-  fileUrl          String
-  fileName         String?
-  mimeType         String?
+  fileUrl  String
+  fileName String?
+  mimeType String?
   /// SHA-256 of the uploaded bytes. Unique, so re-uploading the identical photo is rejected
   /// instead of quietly double-posting the same money.
-  fileHash         String            @unique
+  fileHash String  @unique
 
   /// The date written *on the form*, not the upload date. Null until extraction finds one.
-  capturedOn       DateTime?
+  capturedOn DateTime?
   /// Optional link to the show this form came from. Plain id, matching `LedgerEntry.enteredById`,
   /// to keep `FeaturedEvent` untouched.
-  eventId          String?
+  eventId    String?
 
-  uploadedById     String
-  uploadedAt       DateTime          @default(now())
+  uploadedById String
+  uploadedAt   DateTime @default(now())
 
   extractedAt      DateTime?
   /// The exact model id that read the form, so a future re-read is comparable.
@@ -5066,25 +5116,25 @@ model FormCapture {
   rawExtraction    Json?
   extractionError  String?
   /// Lowest line confidence on the form; the gate for auto-approval.
-  minConfidence    Decimal?          @db.Decimal(4, 3)
+  minConfidence    Decimal?  @db.Decimal(4, 3)
   /// The total printed on the form, when it states one. Reconciled against the sum of lines.
   statedTotalCents Int?
   /// True when the stated total matches the line sum. Null when the form states no total.
   reconciled       Boolean?
 
-  reviewedById     String?
-  reviewedAt       DateTime?
-  reviewNotes      String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewNotes   String?
   /// Set when this form looks like a re-photograph of one already captured (same type, date and
   /// event). Advisory only — the reviewer decides.
-  duplicateOfId    String?
+  duplicateOfId String?
 
-  postedAt         DateTime?
+  postedAt DateTime?
 
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  lines            FormCaptureLine[]
+  lines FormCaptureLine[]
 
   @@index([status])
   @@index([formType, capturedOn])
@@ -5095,36 +5145,36 @@ model FormCapture {
 
 /// One money line read off a captured form. Each becomes at most one `LedgerEntry`.
 model FormCaptureLine {
-  id            String          @id @default(cuid())
-  captureId     String
+  id         String @id @default(cuid())
+  captureId  String
   /// Order on the form, 1-based, so a reviewer reads the screen in the order the paper reads.
-  lineNumber    Int
+  lineNumber Int
 
   /// The row label as it appears on the form ("Cash", "Credit", "Booth fee", "Mileage").
-  label         String
-  direction     LedgerDirection
-  category      LedgerCategory
+  label       String
+  direction   LedgerDirection
+  category    LedgerCategory
   /// Cents, always positive; `direction` carries the sign. Matches `LedgerEntry.amountCents`.
-  amountCents   Int
+  amountCents Int
   /// Units where the form records them (jars sold, miles driven). Not money.
-  quantity      Int?
+  quantity    Int?
 
   /// Model confidence for this line, 0.000–1.000. Null on a line a person added by hand.
-  confidence    Decimal?        @db.Decimal(4, 3)
+  confidence Decimal? @db.Decimal(4, 3)
   /// Exactly what the model read, before parsing. The audit trail for a corrected figure.
-  rawValue      String?
+  rawValue   String?
   /// True once a human changed any field on this line.
-  edited        Boolean         @default(false)
+  edited     Boolean  @default(false)
   /// Excluded lines are kept (so the form still reads whole) but never posted.
-  excluded      Boolean         @default(false)
+  excluded   Boolean  @default(false)
 
   /// The ledger row this line produced. Unique: a line can never post twice.
-  ledgerEntryId String?         @unique
+  ledgerEntryId String? @unique
 
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  capture       FormCapture     @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  capture FormCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
 
   @@unique([captureId, lineNumber])
   @@index([captureId])

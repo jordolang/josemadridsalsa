@@ -28,6 +28,7 @@ import {
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
+import { cartStoreContext } from '@/lib/store/cart'
 import {
   PaymentMethodSelector,
   DEFAULT_METHODS,
@@ -700,6 +701,10 @@ function CheckoutForm() {
     try {
       // Get referral code from cookie if available
       const referralCode = getReferralCodeFromCookie()
+      // Which store the cart was filled in. A fundraiser cart is priced and credited through
+      // its campaign; the referral code only names the student within it, and a supporter who
+      // bought from the campaign page itself has none.
+      const cartStore = cartStoreContext(items)
 
       const checkoutResponse = await fetch('/api/checkout', {
         method: 'POST',
@@ -726,6 +731,7 @@ function CheckoutForm() {
           discountCode: appliedDiscount?.code,
           giftCertificateCode: appliedGift?.code,
           referralCode: referralCode || undefined,
+          fundraiserSlug: cartStore?.slug,
           paymentMethod: selectedPaymentMethod === 'link' ? 'link' : undefined,
         }),
       })
@@ -1128,6 +1134,7 @@ function CheckoutForm() {
                           notes={formState.notes || undefined}
                           shippingMethod={selectedShippingOption?.method}
                           referralCode={getReferralCodeFromCookie() || undefined}
+                          fundraiserSlug={cartStoreContext(items)?.slug}
                           disabled={isProcessing}
                           onSuccess={(orderId, orderAccessToken) => {
                             clearCart()
@@ -1156,6 +1163,7 @@ function CheckoutForm() {
                           notes={formState.notes || undefined}
                           shippingMethod={selectedShippingOption?.method}
                           referralCode={getReferralCodeFromCookie() || undefined}
+                          fundraiserSlug={cartStoreContext(items)?.slug}
                           disabled={isProcessing}
                           onSuccess={(orderId, orderAccessToken) => {
                             clearCart()
@@ -1189,6 +1197,7 @@ function CheckoutForm() {
                       notes={formState.notes || undefined}
                       shippingMethod={selectedShippingOption?.method}
                       referralCode={getReferralCodeFromCookie() || undefined}
+                      fundraiserSlug={cartStoreContext(items)?.slug}
                       disabled={isProcessing}
                       onSuccess={(orderId, orderAccessToken) => {
                         clearCart()

@@ -11,9 +11,11 @@ import { notifyOperators, severityFor, dedupeKeys } from '@/lib/notifications/di
 import { getCurrentUser } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
-import { getReferralFromCode } from '@/lib/fundraising/referral-tracker'
-import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
-import { getFundraiserPriceOverrides } from '@/lib/fundraising/pricing.server'
+import {
+  FundraiserStoreUnavailableError,
+  priceInStore,
+  resolveFundraiserStore,
+} from '@/lib/fundraising/store.server'
 import { getStoreSettings, isBelowMinimumOrder, formatMinimumOrder } from '@/lib/store-settings'
 import { BundlePricingError, priceCartLines } from '@/lib/bundles'
 
@@ -47,6 +49,9 @@ const PayPalCheckoutSchema = z.object({
   discountCode: z.string().optional(),
   shippingMethod: z.string().optional(),
   referralCode: z.string().optional(),
+  // Which fundraiser's store the cart was filled in. Only the slug travels: the prices,
+  // the catalogue and the group to credit are all resolved from it server-side.
+  fundraiserSlug: z.string().optional(),
 })
 
 const toDecimal = (value: number) =>
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, customer, shipping, notes, shippingMethod, referralCode } = parsed.data
+    const { items, customer, shipping, notes, shippingMethod, referralCode, fundraiserSlug } = parsed.data
 
     // Validate products exist
     // Deduplicated: the same salsa can appear on more than one line — once loose and once
@@ -100,21 +105,47 @@ export async function POST(request: NextRequest) {
 
     const productMap = new Map(products.map((product) => [product.id, product]))
 
-    // A fundraiser sells at its own price, and the supporter was quoted that price on the
-    // fundraiser page. Resolved from the referral code here rather than accepted from the
-    // client, for the same reason shipping is recomputed server-side.
-    const fundraiserPrices = await getFundraiserPriceOverrides(referralCode, productIds)
+    // Each fundraiser is its own store: its own catalogue, its own price per jar and its own
+    // share of the proceeds. Resolved from the campaign slug and referral code here rather
+    // than accepted from the client, for the same reason shipping is recomputed server-side.
+    let store
+    try {
+      store = await resolveFundraiserStore({ fundraiserSlug, referralCode })
+    } catch (error) {
+      if (error instanceof FundraiserStoreUnavailableError) {
+        return NextResponse.json({ error: error.message }, { status: 503 })
+      }
+      throw error
+    }
 
-    // Packs are priced here, from the pack definitions, never from anything the browser
-    // sent. A Choose 5 advertised at $28 is charged at $28: the jars share that price
-    // instead of being charged at catalogue price.
+    // A cart that says it came from a campaign must be priced by that campaign. Falling back
+    // to retail would charge the supporter the wrong price and credit the group nothing.
+    if (fundraiserSlug && !store) {
+      return NextResponse.json(
+        { error: 'This fundraiser is no longer accepting orders.' },
+        { status: 400 }
+      )
+    }
+
+    const storePrices = store ? priceInStore(store, productIds) : null
+    if (storePrices && storePrices.unavailable.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            'One or more items are no longer sold by this fundraiser. Please remove them and try again.',
+        },
+        { status: 400 }
+      )
+    }
+
     let pricedItems
     try {
       pricedItems = priceCartLines(items, (line) => {
         const product = productMap.get(line.productId)
-        return product
-          ? fundraiserUnitPrice(product.price, fundraiserPrices.get(line.productId))
-          : 0
+        if (!product) return 0
+        // In a fundraiser store the store's price is the price; the retail catalogue price
+        // is not a fallback, because it is the one figure that is certainly wrong here.
+        return storePrices ? (storePrices.prices.get(product.id) ?? 0) : Number(product.price)
       })
     } catch (error) {
       if (error instanceof BundlePricingError) {
@@ -278,20 +309,12 @@ export async function POST(request: NextRequest) {
 
       const total = subtotal + taxAmount + finalShippingCost
 
-      // Look up participant from referral code
-      let participantId: string | undefined
-      let fundraiserId: string | undefined
-      if (referralCode) {
-        try {
-          const referralInfo = await getReferralFromCode(referralCode)
-          if (referralInfo) {
-            participantId = referralInfo.participantId
-            fundraiserId = referralInfo.fundraiserId
-          }
-        } catch (error) {
-          console.error('[PayPal Checkout] Failed to look up referral code:', error)
-        }
-      }
+      // Attribution comes from the same store that priced the cart, so a sale can never be
+      // charged at a campaign's price and credited to nobody. A campaign sale with no referral
+      // code is credited to the group alone — that is a supporter who bought from the school's
+      // own page rather than through one student's link.
+      const participantId = store?.participantId
+      const fundraiserId = store?.fundraiserId
 
       // Create the order in DB
       const order = await prisma.order.create({

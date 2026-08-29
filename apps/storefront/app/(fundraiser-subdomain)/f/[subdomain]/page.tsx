@@ -6,6 +6,10 @@ import {
   validatePageConfig,
 } from '@/lib/fundraiser-page-config'
 import { BlockRenderer } from '@/components/fundraiser-portal/block-renderer'
+import {
+  loadFundraiserStoreProducts,
+  resolveFundraiserStore,
+} from '@/lib/fundraising/store.server'
 import { FundraiserSocialBoard } from '@/components/social/fundraiser-board'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
@@ -18,21 +22,6 @@ const getFundraiserBySubdomain = cache(async function getFundraiserBySubdomain(s
   const fundraiser = await prisma.fundraiser.findUnique({
     where: { subdomain },
     include: {
-      products: {
-        where: { isActive: true },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              price: true,
-              images: true,
-            },
-          },
-        },
-      },
       participants: {
         where: { status: 'ACTIVE' },
         orderBy: { totalRevenue: 'desc' },
@@ -114,29 +103,11 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
   const configValidation = validatePageConfig(fundraiser.pageConfig)
   const pageConfig = configValidation.success ? configValidation.data : defaultPageConfig
 
-  // If fundraiser has no products, load fallback store products
-  let fallbackProducts: Array<{
-    id: string
-    name: string
-    slug: string
-    description: string | null
-    price: any
-    images: string[]
-  }> = []
-  let isFallback = false
-
-  if (fundraiser.products.length === 0) {
-    const storeProducts = await prisma.product.findMany({
-      where: { isActive: true, inventory: { gt: 0 } },
-      take: 12,
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, slug: true, description: true, price: true, images: true },
-    })
-    if (storeProducts.length > 0) {
-      fallbackProducts = storeProducts
-      isFallback = true
-    }
-  }
+  // The campaign's own shop, priced and stocked by the campaign. A fundraiser that has not
+  // curated a catalogue sells the whole active one at its store price, so there is no longer
+  // a fallback shelf warning supporters that their purchase benefits nobody.
+  const store = await resolveFundraiserStore({ fundraiserSlug: fundraiser.slug })
+  const storeProducts = store ? await loadFundraiserStoreProducts(store) : []
 
   // Determine URL for sharing
   const headersList = await headers()
@@ -144,7 +115,11 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
   const protocol = headersList.get('x-forwarded-proto') || 'https'
   const currentUrl = `${protocol}://${host}/f/${subdomain}`
 
-  const fundraiserWithFallback = { ...fundraiser, fallbackProducts, isFallback }
+  const fundraiserWithStore = {
+    ...fundraiser,
+    commissionRate: Number(fundraiser.commissionRate),
+    storeProducts,
+  }
 
   return (
     <div className="min-h-screen">
@@ -152,7 +127,7 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
         <BlockRenderer
           key={`${block.type}-${index}`}
           block={block}
-          fundraiser={fundraiserWithFallback}
+          fundraiser={fundraiserWithStore}
         />
       ))}
 

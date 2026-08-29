@@ -50,7 +50,7 @@ export default async function SeasonDetailPage({ params }: Props) {
             goalAmount: true,
             salesCount: true,
             hpCurrent: true,
-            pricePerUnit: true,
+            fundraiser: { select: { defaultUnitPrice: true } },
           },
         },
       },
@@ -122,7 +122,7 @@ export default async function SeasonDetailPage({ params }: Props) {
             goalAmount: t.goalAmount,
             salesCount: t.salesCount,
             hpCurrent: t.hpCurrent,
-            raised: t.salesCount * t.pricePerUnit,
+            raised: t.salesCount * Number(t.fundraiser.defaultUnitPrice),
           }))}
           availableTeams={availableTeams}
           seasonLocked={season.status === 'ENDED' || season.status === 'ARCHIVED'}

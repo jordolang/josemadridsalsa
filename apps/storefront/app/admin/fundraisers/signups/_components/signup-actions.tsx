@@ -15,15 +15,28 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  BROCHURE_OPTIONS,
+  FULFILLMENT_LABELS,
+  FULFILLMENT_OPTIONS,
+} from '@/lib/fundraising/fulfillment'
+import type { BrochureOption, FulfillmentMethod } from '@prisma/client'
 
 type Pending = 'idle' | 'approving' | 'rejecting'
 
 export function SignupActions({
   signupId,
   defaultPeriod,
+  requestedFulfillment,
+  requestedBrochure,
+  requestedResaleNumber,
 }: {
   signupId: string
   defaultPeriod: string
+  /** What the school asked for. Null means they applied before the question existed. */
+  requestedFulfillment: FulfillmentMethod | null
+  requestedBrochure: BrochureOption | null
+  requestedResaleNumber: string | null
 }) {
   const router = useRouter()
   const [pending, setPending] = useState<Pending>('idle')
@@ -36,6 +49,16 @@ export function SignupActions({
   const [activePeriod, setActivePeriod] = useState(defaultPeriod)
   const [approveNotes, setApproveNotes] = useState('')
   const [rejectNotes, setRejectNotes] = useState('')
+  // Pre-filled from the application, but the admin's selection is what gets saved: a phone
+  // call between applying and approving often changes the answer.
+  const [fulfillment, setFulfillment] = useState<FulfillmentMethod>(
+    requestedFulfillment ?? 'ORDER_FORMS_AND_BULK'
+  )
+  const [brochure, setBrochure] = useState<BrochureOption>(
+    requestedBrochure ?? 'PRINT_YOUR_OWN'
+  )
+  const [resaleNumber, setResaleNumber] = useState(requestedResaleNumber ?? '')
+  const collecting = fulfillment === 'ORDER_FORMS_AND_BULK'
 
   async function handleApprove() {
     setError(null)
@@ -49,6 +72,9 @@ export function SignupActions({
           teamColor,
           activePeriod,
           reviewNotes: approveNotes || undefined,
+          fulfillmentMethod: fulfillment,
+          brochureOption: collecting ? brochure : undefined,
+          resaleNumber: collecting ? resaleNumber || undefined : undefined,
         }),
       })
       const data = await res.json()
@@ -164,6 +190,66 @@ export function SignupActions({
                     </div>
                   </div>
                 </div>
+                <div className="space-y-2 rounded-md border border-border p-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <Label>Fulfillment</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {requestedFulfillment
+                        ? `They asked for: ${FULFILLMENT_LABELS[requestedFulfillment]}`
+                        : 'They applied before this question existed'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {FULFILLMENT_OPTIONS.map((opt) => (
+                      <label key={opt.value} className="flex items-start gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name={`fulfillment-${signupId}`}
+                          checked={fulfillment === opt.value}
+                          onChange={() => setFulfillment(opt.value)}
+                          className="mt-1"
+                        />
+                        <span>
+                          <span className="font-medium">{FULFILLMENT_LABELS[opt.value]}</span>
+                          <span className="block text-xs text-muted-foreground">{opt.tagline}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {collecting && (
+                    <div className="space-y-2 border-l-2 border-border pl-3 pt-1">
+                      <div className="flex flex-col gap-1.5">
+                        <Label className="text-xs">Brochures</Label>
+                        {BROCHURE_OPTIONS.map((opt) => (
+                          <label key={opt.value} className="flex items-start gap-2 text-sm">
+                            <input
+                              type="radio"
+                              name={`brochure-${signupId}`}
+                              checked={brochure === opt.value}
+                              onChange={() => setBrochure(opt.value)}
+                              className="mt-1"
+                            />
+                            <span>{opt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`resale-${signupId}`} className="text-xs">
+                          Resale certificate
+                        </Label>
+                        <Input
+                          id={`resale-${signupId}`}
+                          value={resaleNumber}
+                          onChange={(e) => setResaleNumber(e.target.value)}
+                          placeholder="Needed before the bulk delivery ships"
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-1">
                   <Label htmlFor={`notes-${signupId}`}>Notes (optional)</Label>
                   <Textarea

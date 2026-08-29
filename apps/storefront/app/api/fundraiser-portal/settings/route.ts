@@ -19,6 +19,11 @@ export async function GET() {
       contactPhone: fundraiser.contactPhone,
       bio: fundraiser.bio,
       missionStatement: fundraiser.missionStatement,
+      thankYouHeadline: fundraiser.thankYouHeadline,
+      thankYouMessage: fundraiser.thankYouMessage,
+      thankYouImageUrl: fundraiser.thankYouImageUrl,
+      thankYouCtaLabel: fundraiser.thankYouCtaLabel,
+      thankYouCtaUrl: fundraiser.thankYouCtaUrl,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error'
@@ -33,6 +38,13 @@ const UpdateSettingsSchema = z.object({
   contactPhone: z.string().optional(),
   bio: z.string().max(5000).optional(),
   missionStatement: z.string().max(2000).optional(),
+  // The campaign's own thank-you page. Every field is optional and a blank one falls back to
+  // copy built from the organization's name — see `lib/fundraising/thank-you.ts`.
+  thankYouHeadline: z.string().max(120).nullable().optional(),
+  thankYouMessage: z.string().max(2000).nullable().optional(),
+  thankYouImageUrl: z.string().url().nullable().optional().or(z.literal('')),
+  thankYouCtaLabel: z.string().max(60).nullable().optional(),
+  thankYouCtaUrl: z.string().url().nullable().optional().or(z.literal('')),
 })
 
 export async function PATCH(request: Request) {
@@ -72,6 +84,16 @@ export async function PATCH(request: Request) {
     if (parsed.data.contactPhone !== undefined) data.contactPhone = parsed.data.contactPhone
     if (parsed.data.bio !== undefined) data.bio = parsed.data.bio
     if (parsed.data.missionStatement !== undefined) data.missionStatement = parsed.data.missionStatement
+    for (const field of [
+      'thankYouHeadline',
+      'thankYouMessage',
+      'thankYouImageUrl',
+      'thankYouCtaLabel',
+      'thankYouCtaUrl',
+    ] as const) {
+      // An emptied field means "go back to the standard wording", which is what null stores.
+      if (parsed.data[field] !== undefined) data[field] = parsed.data[field] || null
+    }
 
     if (Object.keys(data).length > 0) {
       await prisma.fundraiser.update({

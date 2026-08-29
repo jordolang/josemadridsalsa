@@ -20,15 +20,7 @@ import { ImageTextBlock } from './blocks/image-text-block'
 import { CountdownBlock } from './blocks/countdown-block'
 import { AnnouncementBannerBlock } from './blocks/announcement-banner-block'
 import type { Prisma } from '@prisma/client'
-
-type FallbackProduct = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  price: any
-  images: string[]
-}
+import type { FundraiserStoreProduct } from '@/components/fundraiser/fundraiser-store'
 
 type FundraiserData = {
   name: string
@@ -43,17 +35,10 @@ type FundraiserData = {
   goal: Prisma.Decimal | number | string | null
   totalRevenue: Prisma.Decimal | number | string | null
   slug: string
-  products: Array<{
-    price: Prisma.Decimal | number | string | null
-    product: {
-      id: string
-      name: string
-      slug: string
-      description: string | null
-      price: Prisma.Decimal | number | string | null
-      images: string[]
-    }
-  }>
+  /** The group's share of merchandise, as a percentage. */
+  commissionRate: number
+  /** This campaign's shelf, at this campaign's prices — see `lib/fundraising/store.server.ts`. */
+  storeProducts: FundraiserStoreProduct[]
   participants: Array<{
     id: string
     name: string
@@ -61,8 +46,6 @@ type FundraiserData = {
     totalRevenue: Prisma.Decimal | number | string
     referralCode: string
   }>
-  fallbackProducts?: FallbackProduct[]
-  isFallback?: boolean
 }
 
 type BlockRendererProps = {
@@ -82,12 +65,7 @@ export function BlockRenderer({ block, fundraiser }: BlockRendererProps) {
       return <ProgressBarBlock block={block} fundraiser={fundraiser} />
     case 'product_showcase':
       return (
-        <ProductShowcaseBlock
-          block={block}
-          fundraiser={fundraiser}
-          fallbackProducts={fundraiser.fallbackProducts}
-          isFallback={fundraiser.isFallback}
-        />
+<ProductShowcaseBlock block={block} fundraiser={fundraiser} />
       )
     case 'participant_leaderboard':
       return <LeaderboardBlock block={block} fundraiser={fundraiser} />

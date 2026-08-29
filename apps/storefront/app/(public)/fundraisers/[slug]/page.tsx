@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { createMetadata } from '@/lib/metadata'
-import { ProductGrid } from '@/components/store/product-grid'
 import { MessageBoard } from '@/components/fundraiser/MessageBoard'
 import { FundraisingProgress } from '@/components/fundraiser/fundraising-progress'
 import { TeamMembersStrip, type TeamMember } from '@/components/fundraiser/team-members-strip'
@@ -15,7 +14,11 @@ import { FundraiserSidebar } from '@/components/fundraiser/fundraiser-sidebar'
 import { BattleArenaPanel } from '@/components/fundraiser/battle-arena-panel'
 import type { SupporterFeedItem } from '@/components/fundraiser/supporter-feed'
 import prisma from '@/lib/prisma'
-import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
+import { FundraiserStore } from '@/components/fundraiser/fundraiser-store'
+import {
+  loadFundraiserStoreProducts,
+  resolveFundraiserStore,
+} from '@/lib/fundraising/store.server'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,30 +34,6 @@ async function getFundraiser(slug: string) {
   return prisma.fundraiser.findUnique({
     where: { slug, isActive: true },
     include: {
-      products: {
-        where: { isActive: true },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              price: true,
-              compareAtPrice: true,
-              featuredImage: true,
-              heatLevel: true,
-              sku: true,
-              inventory: true,
-              isFeatured: true,
-              ingredients: true,
-              weight: true,
-              dimensions: true,
-              nutritionalInfo: true,
-            },
-          },
-        },
-      },
       participants: {
         where: { status: 'ACTIVE' },
         orderBy: { totalRevenue: 'desc' },
@@ -141,32 +120,10 @@ export default async function FundraiserPage({ params }: PageProps) {
       : undefined,
   }))
 
-  const products = fundraiser.products.map((fp) => ({
-    id: fp.product.id,
-    name: fp.product.name,
-    slug: fp.product.slug,
-    description: fp.product.description,
-    price: fundraiserUnitPrice(fp.product.price, fp.price),
-    compareAtPrice: fp.product.compareAtPrice ? Number(fp.product.compareAtPrice) : null,
-    featuredImage: fp.product.featuredImage,
-    heatLevel: fp.product.heatLevel as string,
-    sku: fp.product.sku,
-    inventory: fp.product.inventory,
-    isFeatured: fp.product.isFeatured,
-    ingredients: fp.product.ingredients,
-    weight: fp.product.weight ? fp.product.weight.toString() : null,
-    dimensions: typeof fp.product.dimensions === 'string' ? fp.product.dimensions : null,
-    nutritionalInfo: fp.product.nutritionalInfo as {
-      calories: number
-      sodiumMg: number
-      totalFatG: number
-      totalCarbG: number
-      sugarsG: number
-      dietaryFiberG: number
-      proteinG: number
-      servingSize: string
-    } | null,
-  }))
+  // The campaign's own store: its catalogue at its prices. Resolved through the same module
+  // checkout uses, so the price quoted here is the price charged.
+  const store = await resolveFundraiserStore({ fundraiserSlug: slug })
+  const products = store ? await loadFundraiserStoreProducts(store) : []
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40">
@@ -319,28 +276,13 @@ export default async function FundraiserPage({ params }: PageProps) {
 
             {/* Products */}
             <section id="shop" className="scroll-mt-24 space-y-4">
-              {products.length > 0 ? (
-                <ProductGrid
-                  products={products}
-                  title="Shop & Support"
-                  description={`Every jar goes toward ${fundraiser.organizationName}'s goal.`}
-                  showFilters={true}
-                  showSearch={true}
-                  showSort={true}
-                  columns={3}
-                />
-              ) : (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <h2 className="text-xl font-serif font-bold text-foreground mb-2">
-                      Products coming soon
-                    </h2>
-                    <p className="text-muted-foreground">
-                      We&apos;re setting up the salsa selection for this fundraiser.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+              <FundraiserStore
+                slug={fundraiser.slug}
+                name={fundraiser.name}
+                organizationName={fundraiser.organizationName}
+                commissionRate={Number(fundraiser.commissionRate)}
+                products={products}
+              />
             </section>
 
             {/* Message board */}

@@ -16,7 +16,7 @@ async function main() {
       goalAmount: true,
       hpCurrent: true,
       salesCount: true,
-      pricePerUnit: true,
+      fundraiser: { select: { defaultUnitPrice: true } },
       seasonId: true,
       logoUrl: true,
       heroImageUrl: true,

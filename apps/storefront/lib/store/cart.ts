@@ -27,7 +27,25 @@ export interface CartItem {
   bundleGroupId?: string
   /** The pack's name, for the cart to label the line with. */
   bundleName?: string
+  /**
+   * The fundraiser store this jar was picked from, by campaign slug. Absent on retail lines.
+   *
+   * A fundraiser sells at its own price and keeps its own share, so the line has to remember
+   * which shop quoted it. Checkout re-resolves the store from this slug and prices the cart
+   * again from the fundraiser's own catalogue — the price below is never sent.
+   */
+  fundraiserSlug?: string
+  /** The campaign's display name, for the cart to label the line with. */
+  fundraiserName?: string
 }
+
+/** Which store a cart is shopping in. Null is the retail storefront. */
+export type CartStoreContext = { slug: string; name: string } | null
+
+/** What `addItem` did. A cart holds one store's goods at a time — see `cartStoreContext`. */
+export type AddItemResult =
+  | { added: true }
+  | { added: false; reason: 'store-conflict'; currentStore: CartStoreContext }
 
 /** One jar the customer picked for a pack. */
 export interface BundleSelection {
@@ -87,6 +105,19 @@ export function toCheckoutItems(items: CartItem[]) {
   return Array.from(merged.values())
 }
 
+/**
+ * The store a cart belongs to, taken from its lines.
+ *
+ * Every line agrees, because `addItem` refuses to mix them: a cart holding a school's ten
+ * dollar jars alongside retail nine dollar ones has no single price list, no single group to
+ * credit, and no single thank-you page to land on.
+ */
+export function cartStoreContext(items: CartItem[]): CartStoreContext {
+  const first = items[0]
+  if (!first?.fundraiserSlug) return null
+  return { slug: first.fundraiserSlug, name: first.fundraiserName ?? first.fundraiserSlug }
+}
+
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
@@ -97,7 +128,8 @@ interface CartStore {
   totalPrice: () => number
 
   // Actions
-  addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void
+  addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => AddItemResult
+  replaceWithItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void
   addBundle: (bundleId: string, selections: BundleSelection[]) => boolean
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
@@ -148,6 +180,16 @@ const cartStoreConfig: StateCreator<CartStore> = (set, get) => ({
 
   addItem: (newItem: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
     const items = get().items
+
+    // One store per cart. The jar the customer just clicked was quoted by a particular shop
+    // — a school's campaign, or the retail storefront — and checkout prices the whole cart
+    // through one of them. Mixing would either overcharge the retail lines or hand a group
+    // half of a sale that was never made on their page.
+    const currentStore = cartStoreContext(items)
+    if (items.length > 0 && currentStore?.slug !== (newItem.fundraiserSlug ?? undefined)) {
+      return { added: false, reason: 'store-conflict', currentStore } as const
+    }
+
     const existingItem = items.find((item: CartItem) => item.id === newItem.id)
 
     let updatedItems: CartItem[]
@@ -175,6 +217,23 @@ const cartStoreConfig: StateCreator<CartStore> = (set, get) => ({
     if (typeof window !== 'undefined') {
       trackCartChanges(updatedItems, get().guestEmail)
     }
+
+    return { added: true } as const
+  },
+
+  /**
+   * Empty the cart and add this one line, for a customer who has chosen to start again in a
+   * different store. The only way past the check above, and always an explicit choice.
+   */
+  replaceWithItem: (newItem: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
+    const updatedItems: CartItem[] = [
+      { productId: newItem.id, ...newItem, quantity: newItem.quantity || 1 },
+    ]
+    set({ items: updatedItems })
+
+    if (typeof window !== 'undefined') {
+      trackCartChanges(updatedItems, get().guestEmail)
+    }
   },
 
   /**
@@ -189,6 +248,9 @@ const cartStoreConfig: StateCreator<CartStore> = (set, get) => ({
   addBundle: (bundleId: string, selections: BundleSelection[]) => {
     const bundle = getSalsaBundle(bundleId)
     if (!bundle || selections.length !== bundle.size) return false
+
+    // Packs are retail-only, so they cannot join a fundraiser cart — see `addItem`.
+    if (cartStoreContext(get().items)) return false
 
     const bundleGroupId = newBundleGroupId()
 
