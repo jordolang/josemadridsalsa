@@ -28,7 +28,7 @@ export const GiftCertificateDeliveryEmail = ({
 
   return (
     <EmailLayout previewText={previewText}>
-      <EmailHeader headerImage="gift-certificate.png" headerAlt="You've Received a Gift!" />
+      <EmailHeader headerImage="email-header.png" headerAlt="You've Received a Gift!" />
 
       <Section style={bodyContent}>
         <Section style={section}>

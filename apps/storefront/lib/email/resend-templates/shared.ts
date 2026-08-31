@@ -5,8 +5,10 @@
  * email-client compatibility (Outlook, Gmail, Apple Mail, etc.).
  */
 
-const IMAGE_BASE_URL = 'https://www.josemadridsalsa.com/email-templates'
-const LOGO_URL = 'https://josemadrid.net/images/logo.png'
+import { getImageBaseUrl, getLogoUrl } from '../shared/components'
+
+const IMAGE_BASE_URL = getImageBaseUrl()
+const LOGO_URL = getLogoUrl()
 
 /* ── Colour palette ─────────────────────────────────────── */
 

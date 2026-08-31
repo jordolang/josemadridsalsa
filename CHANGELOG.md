@@ -200,6 +200,30 @@ the root `package.json` is canonical.
 
 ### Fixed
 
+- **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
+  `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset
+  on disk is `abandoned-cart.png` — so the header rendered as a broken-image placeholder in the
+  recipient's inbox. Each now points at the asset that exists. The password reset and email
+  verification headers share the corrected security artwork, which also drops a 6.1 MB PNG from
+  the password reset email. Two more modules,
+  `lib/email/resend-templates/shared.ts` and `emails/components/EmailHeader.tsx`, built their URLs
+  from the retired `josemadridsalsa.com` BigCommerce origin, which 404s for the whole
+  `/email-templates` path, and both fell back to an `/images/logo.png` that no longer exists after
+  the site images moved to Blob. All three now resolve through one `getImageBaseUrl()`, overridable
+  with `EMAIL_IMAGE_BASE_URL` to serve the assets from the Blob store instead. A test asserts every
+  referenced filename exists on disk, so this cannot regress silently, and
+  `npm run email:repair-images` rewrites the same URLs — and swaps the stored footer for the
+  current one — in email HTML already stored in the database, which the admin test-send button,
+  campaigns and automations all render from rather than the template source.
+- **Footer links breaking mid-word on phones.** The footer navigation and preference links were laid
+  out as fixed table columns, so a narrow screen squeezed each cell until the label wrapped inside
+  itself — `FUNDRAI / SING`, `SH / OP`. Both rows are now centred inline links that never break
+  within a label, sized to sit on one line from 360px up and to wrap between whole labels below
+  that. `Est. 1988` no longer splits across lines either. Eleven templates declared their own
+  `jmsFooter` that shadowed the shared import, so the shared footer was not the one they rendered;
+  they now use it, along with the shared `headerImg` and `baseStyles` they had also copied. The
+  base styles reset the body margin, which `width:100%` was adding 8px of sideways scroll to on
+  every phone.
 - **A jar bought on a fundraiser's page is charged the fundraiser's price and credited to that
   fundraiser.** Every campaign is now a self-contained store: its own `defaultUnitPrice` ($10 by
   default), its own catalogue, its own share of the proceeds (`commissionRate`, 50% by default),

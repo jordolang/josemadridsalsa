@@ -113,6 +113,7 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass â
 | `FROM_EMAIL` | No | Default sender address. Defaults to `orders@josemadridsalsa.com`. |
 | `BUSINESS_POSTAL_ADDRESS` | No | Physical mailing address printed in marketing-email footers, as CAN-SPAM requires. Defaults to the Zanesville address. |
 | `FUNDRAISING_REPLY_TO` | No | Reply-to address on fundraiser re-signup invitations. Defaults to the owner's address. |
+| `EMAIL_IMAGE_BASE_URL` | No | Absolute base URL for email header and footer images. Email clients cannot resolve relative paths, so every image needs a full URL. Defaults to `https://www.josemadrid.net/email-templates`; point it at the Vercel Blob store to serve the assets from there instead. No trailing slash. |
 
 ## Google Services
 
