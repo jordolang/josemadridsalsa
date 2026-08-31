@@ -200,6 +200,14 @@ the root `package.json` is canonical.
 
 ### Fixed
 
+- **CI went red on a full artifact store rather than on a broken build.** The Desktop Apps workflow
+  kept its 111 MB Windows installer for the repository's 90-day default, although the only consumer
+  is the `publish` job in the same run, which uploads the binaries to the rolling GitHub Release
+  where they live permanently — so four desktop builds pinned close to half a gigabyte of dead
+  weight and filled the account's Actions storage. Both installer uploads now expire after a day.
+  CI's own coverage and Playwright reports drop from 30 days to 7, and all three of its uploads are
+  `continue-on-error`, so a full store can no longer fail a run whose tests all passed.
+
 - **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
   `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset
   on disk is `abandoned-cart.png` — so the header rendered as a broken-image placeholder in the
