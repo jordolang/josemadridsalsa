@@ -2,7 +2,11 @@
  * Repair email HTML already stored in the database.
  *
  *   npm run email:repair-images                # dry run — reports every row it would change
- *   npm run email:repair-images -- --apply     # write the changes
+ *   npm run email:repair-images apply          # write the changes
+ *   npm run email:repair-images -- --apply     # same thing, explicit flag form
+ *
+ * `npm run email:repair-images --apply` does NOT write: npm consumes the flag as
+ * its own option, so the script sees no arguments and stays a dry run.
  *
  * Stored email HTML is a snapshot taken when a template was seeded or saved in the
  * admin panel, so fixing the source templates does not fix rows already written.
@@ -56,7 +60,11 @@ async function collect(): Promise<Repair[]> {
 }
 
 async function main() {
-  const apply = process.argv.includes('--apply')
+  // `npm run <script> --apply` drops the flag — npm reads it as its own option and
+  // the script sees no arguments at all. Accept the bare word, which npm does pass
+  // through, so both spellings work.
+  const args = process.argv.slice(2)
+  const apply = args.includes('--apply') || args.includes('apply')
   const repairs = await collect()
 
   if (repairs.length === 0) {
@@ -70,7 +78,11 @@ async function main() {
   }
 
   if (!apply) {
-    console.log('\nDry run — re-run with --apply to write these changes.')
+    console.log('\nDry run — nothing was written. To apply, run either of:')
+    console.log('  npm run email:repair-images apply')
+    console.log('  npm run email:repair-images -- --apply')
+    console.log('\nNote: `npm run email:repair-images --apply` does NOT work —')
+    console.log('npm consumes the flag, so the script never sees it and stays a dry run.')
     return
   }
 
