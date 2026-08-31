@@ -799,6 +799,21 @@ describe('Orders API', () => {
               country: true,
             },
           },
+          // A campaign sale confirms on the group's own thank-you page, so the order
+          // carries the copy that page is built from.
+          fundraiser: {
+            select: {
+              slug: true,
+              name: true,
+              organizationName: true,
+              logoUrl: true,
+              thankYouHeadline: true,
+              thankYouMessage: true,
+              thankYouImageUrl: true,
+              thankYouCtaLabel: true,
+              thankYouCtaUrl: true,
+            },
+          },
         },
       })
     })

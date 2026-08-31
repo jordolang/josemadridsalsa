@@ -7,11 +7,14 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { createMetadata } from '@/lib/metadata';
-import { ProductGrid } from '@/components/store/product-grid';
 import { ReferralHeader } from '@/components/fundraising/referral-header';
 import prisma from '@/lib/prisma';
 import { formatPrice } from '@/lib/utils';
-import { fundraiserUnitPrice } from '@/lib/fundraising/pricing'
+import { FundraiserStore } from '@/components/fundraiser/fundraiser-store'
+import {
+  loadFundraiserStoreProducts,
+  resolveFundraiserStore,
+} from '@/lib/fundraising/store.server'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,30 +33,6 @@ async function getFundraiserWithParticipant(slug: string, referralCode: string) 
       isActive: true, // Only show active fundraisers publicly
     },
     include: {
-      products: {
-        where: { isActive: true },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              price: true,
-              compareAtPrice: true,
-              featuredImage: true,
-              heatLevel: true,
-              sku: true,
-              inventory: true,
-              isFeatured: true,
-              ingredients: true,
-              weight: true,
-              dimensions: true,
-              nutritionalInfo: true,
-            },
-          },
-        },
-      },
       _count: {
         select: {
           orders: true,
@@ -149,14 +128,13 @@ export default async function ParticipantReferralPage({ params }: PageProps) {
     year: 'numeric',
   });
 
-  // Convert products to ProductGrid format
-  const products = fundraiser.products.map((fp) => ({
-    ...fp.product,
-    price: fundraiserUnitPrice(fp.product.price, fp.price),
-    compareAtPrice: fp.product.compareAtPrice ? Number(fp.product.compareAtPrice) : null,
-    weight: fp.product.weight ? fp.product.weight.toString() : null,
-    dimensions: fp.product.dimensions ? fp.product.dimensions.toString() : null,
-  }));
+  // This participant's view of the campaign store — the same catalogue and the same prices
+  // as the campaign page, with the sale credited to them as well as to the group.
+  const store = await resolveFundraiserStore({
+    fundraiserSlug: slug,
+    referralCode: participantCode,
+  });
+  const products = store ? await loadFundraiserStoreProducts(store) : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -300,17 +278,15 @@ export default async function ParticipantReferralPage({ params }: PageProps) {
             </p>
           </div>
 
-          {products.length > 0 ? (
-            <ProductGrid products={products} />
-          ) : (
-            <Card className="card surface-shadow max-w-md mx-auto">
-              <CardContent className="text-center py-12">
-                <p className="text-muted-foreground">
-                  No products are currently available for this fundraiser.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          <FundraiserStore
+            slug={fundraiser.slug}
+            name={fundraiser.name}
+            organizationName={fundraiser.organizationName}
+            commissionRate={Number(fundraiser.commissionRate)}
+            products={products}
+            participantName={participant.name}
+            title={`Shop & Support ${participant.name}`}
+          />
         </div>
       </section>
 

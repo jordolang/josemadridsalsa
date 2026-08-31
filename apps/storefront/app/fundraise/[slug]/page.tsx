@@ -13,7 +13,11 @@ import { TeamMembersStrip } from '@/components/fundraiser/team-members-strip'
 import { TeamRosterGrid } from '@/components/fundraiser/team-roster-grid'
 import { SupporterFeedInteractive } from '@/components/fundraiser/supporter-feed-interactive'
 import { DonateActionCard } from '@/components/fundraiser/donate-action-card'
-import { TeamProductCatalog } from '@/components/fundraiser/team-product-catalog'
+import { FundraiserStore } from '@/components/fundraiser/fundraiser-store'
+import {
+  loadFundraiserStoreProducts,
+  resolveFundraiserStore,
+} from '@/lib/fundraising/store.server'
 import { BattleWidget } from '@/components/arena/battle-widget'
 import type { AttackFeedItem } from '@/components/arena/attack-feed'
 import { ShareStatusToast } from '@/components/arena/share-status-toast'
@@ -63,20 +67,14 @@ export default async function FundraiserProfilePage({ params }: Props) {
           remainingHP: true,
         },
       },
-      products: {
-        where: { isActive: true, product: { isActive: true } },
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              price: true,
-              description: true,
-              featuredImage: true,
-            },
-          },
+      fundraiser: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          organizationName: true,
+          commissionRate: true,
+          defaultUnitPrice: true,
         },
       },
     },
@@ -170,7 +168,8 @@ export default async function FundraiserProfilePage({ params }: Props) {
     }
   }
 
-  const raised = team.salesCount * team.pricePerUnit
+  const unitPrice = Number(team.fundraiser.defaultUnitPrice)
+  const raised = team.salesCount * unitPrice
   const supporterCount = team.salesCount
 
   const feedItems = recentSales.map((s) => {
@@ -238,15 +237,11 @@ export default async function FundraiserProfilePage({ params }: Props) {
     activeShield: team.shields[0] ?? null,
   }
 
-  const catalogProducts = team.products.map((tp) => ({
-    id: tp.id,
-    productId: tp.product.id,
-    name: tp.product.name,
-    slug: tp.product.slug,
-    price: Number(tp.price ?? tp.product.price),
-    imageUrl: tp.product.featuredImage,
-    description: tp.product.description,
-  }))
+  // The team shops from its campaign's store — one catalog, one price per jar, one split.
+  // The shop tab used to build its own Stripe session from a parallel team catalog, which
+  // charged no shipping or tax and left no order behind to fulfil or account for.
+  const store = await resolveFundraiserStore({ fundraiserSlug: team.fundraiser.slug })
+  const catalogProducts = store ? await loadFundraiserStoreProducts(store) : []
 
   // T1 fields are nullable; fall back to the same synthetic copy the page
   // used before the admin edit form exists. `team.storyHtml`, `logoUrl`,
@@ -350,12 +345,15 @@ export default async function FundraiserProfilePage({ params }: Props) {
 
             {catalogProducts.length > 0 && (
               <TabsContent value="shop" className="mt-6">
-                <TeamProductCatalog
-                  teamId={team.id}
-                  teamSlug={team.slug}
-                  teamName={team.name}
-                  teamColor={team.teamColor}
+                <FundraiserStore
+                  slug={team.fundraiser.slug}
+                  name={team.fundraiser.name}
+                  organizationName={team.fundraiser.organizationName}
+                  commissionRate={Number(team.fundraiser.commissionRate)}
                   products={catalogProducts}
+                  title={`Shop ${team.name}`}
+                  note="Every jar you buy damages rival teams in the Battle Arena."
+                  accentColor={team.teamColor}
                 />
               </TabsContent>
             )}
@@ -392,7 +390,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
               teamId={team.id}
               teamSlug={team.slug}
               teamName={team.name}
-              pricePerUnit={team.pricePerUnit}
+              pricePerUnit={unitPrice}
               viewer={
                 session?.user
                   ? {

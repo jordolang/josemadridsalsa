@@ -12,6 +12,11 @@ type SettingsState = {
   contactPhone: string
   bio: string
   missionStatement: string
+  thankYouHeadline: string
+  thankYouMessage: string
+  thankYouImageUrl: string
+  thankYouCtaLabel: string
+  thankYouCtaUrl: string
 }
 
 export default function FundraiserSettingsPage() {
@@ -21,6 +26,11 @@ export default function FundraiserSettingsPage() {
     contactPhone: '',
     bio: '',
     missionStatement: '',
+    thankYouHeadline: '',
+    thankYouMessage: '',
+    thankYouImageUrl: '',
+    thankYouCtaLabel: '',
+    thankYouCtaUrl: '',
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -39,6 +49,11 @@ export default function FundraiserSettingsPage() {
             contactPhone: data.contactPhone || '',
             bio: data.bio || '',
             missionStatement: data.missionStatement || '',
+            thankYouHeadline: data.thankYouHeadline || '',
+            thankYouMessage: data.thankYouMessage || '',
+            thankYouImageUrl: data.thankYouImageUrl || '',
+            thankYouCtaLabel: data.thankYouCtaLabel || '',
+            thankYouCtaUrl: data.thankYouCtaUrl || '',
           })
         }
       } catch {
@@ -193,6 +208,70 @@ export default function FundraiserSettingsPage() {
                 rows={4}
                 placeholder="Share more about your organization..."
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Thank-you page */}
+        <div className="rounded-lg border border-gray-200 bg-white p-6">
+          <h2 className="font-semibold text-gray-900">Thank-You Page</h2>
+          <p className="mb-4 mt-1 text-sm text-gray-500">
+            What supporters see right after they order from your store. Leave anything blank
+            and we&apos;ll use standard wording written around your organization&apos;s name.
+          </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="thankYouHeadline">Headline</Label>
+              <Input
+                id="thankYouHeadline"
+                name="thankYouHeadline"
+                value={settings.thankYouHeadline}
+                onChange={handleChange}
+                placeholder="Thank you for supporting our team!"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="thankYouMessage">Message</Label>
+              <Textarea
+                id="thankYouMessage"
+                name="thankYouMessage"
+                value={settings.thankYouMessage}
+                onChange={handleChange}
+                rows={4}
+                placeholder="Tell your supporters what their order makes possible..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="thankYouImageUrl">Image URL</Label>
+              <Input
+                id="thankYouImageUrl"
+                name="thankYouImageUrl"
+                value={settings.thankYouImageUrl}
+                onChange={handleChange}
+                placeholder="Defaults to your logo"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="thankYouCtaLabel">Button Label</Label>
+                <Input
+                  id="thankYouCtaLabel"
+                  name="thankYouCtaLabel"
+                  value={settings.thankYouCtaLabel}
+                  onChange={handleChange}
+                  placeholder="Share our campaign"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="thankYouCtaUrl">Button Link</Label>
+                <Input
+                  id="thankYouCtaUrl"
+                  name="thankYouCtaUrl"
+                  value={settings.thankYouCtaUrl}
+                  onChange={handleChange}
+                  placeholder="Defaults to your campaign page"
+                />
+              </div>
             </div>
           </div>
         </div>

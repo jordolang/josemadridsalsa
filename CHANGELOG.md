@@ -148,6 +148,56 @@ the root `package.json` is canonical.
   `npm run db:seed:email-templates -- <key>` — a blanket run replaces the stored HTML of every
   template, including any edited in the admin panel.
 
+### Added
+
+- **A fundraising group now chooses how it runs its drive, and we explain what that means before
+  they pick.** Two shapes: collecting paper order forms for one bulk delivery at the close (the
+  default, and the classic salsa drive), or online orders only. The online link stays live on
+  *every* campaign either way — a supporter who would rather not fill in a paper form still
+  needs somewhere to buy, and those orders ship to that buyer's own address, taxed and paid for
+  at checkout, so they never turn up in the bulk delivery to confuse a coordinator's own
+  paperwork. The school picks on the signup form with the full explanation on the page rather
+  than in a tooltip, including the two things nobody should reach the end of a drive without
+  knowing: a paper drive means they are reselling to their supporters, so at the close they are
+  invoiced wholesale and the sales tax on those orders is theirs; an online-only drive means
+  they will have no records of their own and the dashboard is the only way to see whether
+  anyone is buying. A paper drive also picks its brochures — print their own free, or a set of
+  100 professionally printed with the fee deducted at settlement — and gives a resale
+  certificate, which is what makes the wholesale invoice tax-free. The admin confirms or
+  overrides all of it in the approval dialog, pre-filled from the application because a phone
+  call in between routinely changes the answer, and can change it later under **Manage →
+  Fulfillment** along with both fee amounts. Fees are snapshotted per campaign so a later
+  change to the standard fee cannot re-price a drive already running. Nothing about how the
+  store prices, charges, or ships has changed — this records the choice; acting on it comes
+  next.
+
+### Changed
+
+- **The Battle Arena team shop is now the fundraiser store, not a second one beside it.** An
+  arena team was effectively a campaign of its own: a parallel `FundraiserTeamProduct`
+  catalogue, its own price per jar (`FundraiserTeam.pricePerUnit`), and its own Stripe
+  Checkout Session. That session wrote **no order at all** — so an arena purchase of physical
+  salsa collected no shipping and no tax, moved no inventory, credited the group nothing, left
+  no order to fulfil or account for, and priced itself from the retail catalogue rather than
+  from what the page advertised. The two models were already paired by slug (the admin
+  promote-to-arena route creates a team with `slug = fundraiser.slug` and deletes it by the
+  same key); `FundraiserTeam.fundraiserId` makes that a real, required, unique relation. The
+  campaign now owns the store — one catalogue (`FundraiserProduct`, which gains `sortOrder`),
+  one price per jar, one split — and the team owns the battle. A purchase in the arena goes
+  through the ordinary cart and `/api/checkout`: the campaign's price, real shipping and tax,
+  reserved inventory, the group's half credited, and the campaign's own thank-you page.
+  Damage is dealt by a new `arena-damage` consumer off `payment.completed`, so it fires from
+  whichever payment path settled the order rather than from one provider's webhook, and it is
+  sized on merchandise rather than on the order total — letting freight or tax swing a battle
+  would mean a supporter in a high-tax state hit harder for the same salsa.
+  `FundraiserSaleEvent.orderId` already being unique makes a replayed event an idempotent hit
+  rather than a second strike. Donations are untouched: they buy no goods, so they have no
+  order to hang off and still settle through the Stripe metadata path. Removed with the
+  duplication: `fundraiser_team_products`, `FundraiserTeam.pricePerUnit`,
+  `/api/fundraiser/shop/create-session`, `/api/admin/fundraiser-teams/[id]/products`, the team
+  product catalogue editor, and `TeamProductCatalog`. Arena progress and the admin team page
+  read the campaign's `defaultUnitPrice`, and the team editor links to the campaign's store.
+
 ### Fixed
 
 - **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
@@ -174,6 +224,29 @@ the root `package.json` is canonical.
   they now use it, along with the shared `headerImg` and `baseStyles` they had also copied. The
   base styles reset the body margin, which `width:100%` was adding 8px of sideways scroll to on
   every phone.
+- **A jar bought on a fundraiser's page is charged the fundraiser's price and credited to that
+  fundraiser.** Every campaign is now a self-contained store: its own `defaultUnitPrice` ($10 by
+  default), its own catalogue, its own share of the proceeds (`commissionRate`, 50% by default),
+  and its own thank-you page. Previously the campaign pages linked out to the retail product
+  pages, so a jar advertised at $10 on a school's page went into the cart at the $9 catalogue
+  price; and attribution hung entirely off a participant's referral code, so a supporter who
+  shopped from the campaign page itself — carrying no code — had their cart priced from the
+  retail catalogue and their order recorded against nobody. `lib/fundraising/store.server.ts` is
+  now the one place a store is resolved, from the campaign slug (with the referral code naming
+  only the seller within it), and every fundraiser page and all three checkout routes price
+  through it, so what a supporter is quoted is what they are charged. The retail catalogue price
+  is no longer a fallback in a fundraiser store, a curated store refuses a product it does not
+  carry rather than charging retail for it, and a campaign that has curated nothing sells the
+  whole active catalogue at its store price — replacing the shelf that used to warn supporters
+  their purchase benefited nobody. Cart lines carry the store they were picked from and a cart
+  holds one store's goods at a time; adding across stores offers a fresh cart instead of silently
+  mixing price lists. `creditFundraiserCommission()` now needs only a `fundraiserId`, so a sale
+  made on the campaign page earns the group its half with no seller attached, and
+  `reverseFundraiserCommission()` mirrors it. Shipping and tax stay out of the split, as before.
+  Coordinators write their own thank-you page under **Settings → Thank-You Page**; anything left
+  blank falls back to copy built from their organisation's name, so every campaign gets a page of
+  its own. Admins set the store price and the split together, per campaign, under
+  **Manage → Commission**.
 
 - **Opening a customer or a show from the desktop shell no longer lands on a 404.** Pressing `⏎`
   on a row in `/admin-desktop` sets `window.location.href` directly, so an href that matches no

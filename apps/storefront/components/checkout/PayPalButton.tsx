@@ -25,12 +25,14 @@ interface PayPalButtonProps {
   notes?: string
   shippingMethod?: string
   referralCode?: string
+  /** Which fundraiser's store the cart was filled in, if any. */
+  fundraiserSlug?: string
   onSuccess: (orderId: string, orderAccessToken: string) => void
   onError: (message: string) => void
   disabled?: boolean
 }
 
-export function PayPalButton({ items, customer, shipping, notes, shippingMethod, referralCode, onSuccess, onError, disabled }: PayPalButtonProps) {
+export function PayPalButton({ items, customer, shipping, notes, shippingMethod, referralCode, fundraiserSlug, onSuccess, onError, disabled }: PayPalButtonProps) {
   return (
     <div className={disabled ? 'pointer-events-none opacity-50' : ''}>
       <PayPalButtons
@@ -54,6 +56,7 @@ export function PayPalButton({ items, customer, shipping, notes, shippingMethod,
                 notes,
                 shippingMethod,
                 referralCode,
+                fundraiserSlug,
               }),
             })
 

@@ -36,7 +36,7 @@ export async function BattleArenaPanel({ slug, className }: BattleArenaPanelProp
       goalAmount: true,
       salesCount: true,
       hpCurrent: true,
-      pricePerUnit: true,
+      fundraiser: { select: { defaultUnitPrice: true } },
       shields: {
         where: { expiresAt: { gt: now }, remainingHP: { gt: 0 } },
         orderBy: { expiresAt: 'desc' },
@@ -49,7 +49,7 @@ export async function BattleArenaPanel({ slug, className }: BattleArenaPanelProp
   if (!team) return null
 
   const shield = team.shields[0] ?? null
-  const raised = team.salesCount * team.pricePerUnit
+  const raised = team.salesCount * Number(team.fundraiser.defaultUnitPrice)
 
   return (
     <Card
