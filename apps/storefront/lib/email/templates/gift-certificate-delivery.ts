@@ -23,7 +23,7 @@ export const giftCertificateDeliveryTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('gift-certificate.png', 'Gift Certificate')}
+      ${headerImg('email-header.png', 'Gift Certificate')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{recipientName}},</p>

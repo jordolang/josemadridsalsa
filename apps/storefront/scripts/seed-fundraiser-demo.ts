@@ -176,8 +176,22 @@ async function main() {
           teamColor: t.teamColor,
           teamColorDark: t.teamColorDark,
           goalAmount: t.goalAmount,
-          pricePerUnit: t.pricePerUnit,
           hpCurrent: t.goalAmount,
+          // The campaign owns the store: the catalog, the price per jar and the split.
+          fundraiser: {
+            create: {
+              name: t.name,
+              slug: t.slug,
+              organizationName: t.school,
+              contactEmail: t.contactEmail,
+              startDate: new Date(),
+              endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              goal: t.goalAmount,
+              defaultUnitPrice: t.pricePerUnit,
+              status: 'ACTIVE',
+              isActive: true,
+            },
+          },
           contactName: t.contactName,
           contactEmail: t.contactEmail,
           apiKeyHash: hash,

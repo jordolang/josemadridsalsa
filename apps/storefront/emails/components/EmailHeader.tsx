@@ -1,4 +1,5 @@
 import { Section, Img, Text, Hr } from '@react-email/components';
+import { getImageBaseUrl, getLogoUrl } from '@/lib/email/shared/components';
 
 interface EmailHeaderProps {
   logoUrl?: string;
@@ -8,10 +9,10 @@ interface EmailHeaderProps {
   headerAlt?: string;
 }
 
-const IMAGE_BASE_URL = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.josemadridsalsa.com'}/email-templates`;
+const IMAGE_BASE_URL = getImageBaseUrl();
 
 export const EmailHeader = ({
-  logoUrl = 'https://josemadrid.net/images/logo.png',
+  logoUrl = getLogoUrl(),
   companyName = 'Jose Madrid Salsa',
   tagline = 'Authentic homemade salsa delivered to your door',
   headerImage,

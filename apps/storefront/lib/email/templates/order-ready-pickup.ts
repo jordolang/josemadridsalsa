@@ -21,7 +21,7 @@ export const orderReadyPickupTemplate: EmailTemplateDefinition = {
 <body style="${baseStyles.container}">
   <div style="${baseStyles.wrapper}">
     <div style="${baseStyles.header}">
-      ${headerImg('order-ready.png', 'Order Ready for Pickup')}
+      ${headerImg('order-update.png', 'Order Ready for Pickup')}
     </div>
     <div style="${baseStyles.content}">
       <p style="font-size:16px;margin-bottom:20px;">Hi {{name}},</p>

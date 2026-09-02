@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { verifyOrderAccessToken } from '@/lib/orders/access-token'
+import { fundraiserThankYou } from '@/lib/fundraising/thank-you'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -65,6 +66,19 @@ export async function GET(
             country: true,
           },
         },
+        fundraiser: {
+          select: {
+            slug: true,
+            name: true,
+            organizationName: true,
+            logoUrl: true,
+            thankYouHeadline: true,
+            thankYouMessage: true,
+            thankYouImageUrl: true,
+            thankYouCtaLabel: true,
+            thankYouCtaUrl: true,
+          },
+        },
       },
     })
 
@@ -110,6 +124,17 @@ export async function GET(
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       user: order.user,
+      // A campaign sale confirms on the campaign's own thank-you page. The copy is the
+      // organization's where they have written any, and built from their name where they
+      // have not — see `lib/fundraising/thank-you.ts`.
+      fundraiser: order.fundraiser
+        ? {
+            slug: order.fundraiser.slug,
+            name: order.fundraiser.name,
+            organizationName: order.fundraiser.organizationName,
+            thankYou: fundraiserThankYou(order.fundraiser, { slug: order.fundraiser.slug }),
+          }
+        : null,
       items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,

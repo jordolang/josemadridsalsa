@@ -466,6 +466,10 @@ export async function POST(request: Request) {
           extractFundraiserCharacterId,
           resolveDonorFromStripeSession,
         } = await import('@/lib/arena/stripe-donor')
+        // Donations only. An arena *purchase* is an ordinary order now, so its damage is
+        // dealt by the `arena-damage` domain event handler off `payment.completed` —
+        // together with its shipping, tax, inventory and commission. A donation buys no
+        // goods, so it has no order to hang off and still settles here.
         const fundraiserTeamId = extractFundraiserTeamId(checkoutSession)
         if (!fundraiserTeamId) {
           console.log('checkout.session.completed — no fundraiserTeamId, skipping')

@@ -26,7 +26,7 @@ export const OrderReadyPickupEmail = ({
 
   return (
     <EmailLayout previewText={previewText}>
-      <EmailHeader headerImage="order-ready.png" headerAlt="Your Order is Ready" />
+      <EmailHeader headerImage="order-update.png" headerAlt="Your Order is Ready" />
 
       <Section style={bodyContent}>
         <Section style={section}>
