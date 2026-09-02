@@ -51,7 +51,10 @@ jobs:
           # Only the `publish` job below consumes this, in the same run; the
           # installer itself then lives on the GitHub Release. Keeping a 111 MB
           # artifact for the 90-day default filled the account's storage quota.
-          retention-days: 1
+          # Three days rather than one: `publish` needs both platforms, and each
+          # artifact's clock starts at its own upload, so a macOS runner queued
+          # behind a finished Windows build must not outlive the installer.
+          retention-days: 3
 
   macos:
     name: macOS app
@@ -91,8 +94,9 @@ jobs:
           name: macos-app
           path: apps/macos-admin/dist/*.dmg
           if-no-files-found: error
-          # Same handoff as the Windows installer above.
-          retention-days: 1
+          # Same handoff, and the same cross-platform wait, as the Windows
+          # installer above.
+          retention-days: 3
 
   publish:
     name: Publish release

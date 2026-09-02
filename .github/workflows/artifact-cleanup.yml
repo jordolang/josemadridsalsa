@@ -102,16 +102,26 @@ jobs:
                 deleted += 1
                 freed += a.size_in_bytes
               } catch (error) {
-                // A run that finished mid-sweep can retire its own artifact, and
-                // one already-gone artifact must not abandon the other 500.
-                failures.push(`${a.name} (${a.id}): ${error.message}`)
+                // An artifact that expired mid-sweep is already gone, which is
+                // the outcome we wanted; anything else (403, rate limit, 5xx)
+                // means the quota is still occupied and the run must say so.
+                const benign = error.status === 404
+                failures.push({ text: `${a.name} (${a.id}): ${error.message}`, benign })
               }
             }
 
+            const real = failures.filter((f) => !f.benign)
+
             core.summary.addRaw(`\nDeleted **${deleted}** artifacts, freeing **${mb(freed)} MB**.`)
             if (failures.length) {
-              core.summary.addRaw(`\n\n${failures.length} could not be deleted:\n`)
-              core.summary.addList(failures.slice(0, 20))
+              core.summary.addRaw(`\n\n${failures.length} could not be deleted (${real.length} not already expired):\n`)
+              core.summary.addList(failures.slice(0, 20).map((f) => f.text))
             }
             await core.summary.write()
             core.info(`Deleted ${deleted} artifacts, freed ${mb(freed)} MB, ${failures.length} failures`)
+
+            // A sweep that the API refused frees nothing, so a green run would
+            // report the quota as cleared while it is still full.
+            if (real.length) {
+              core.setFailed(`${real.length} artifact(s) could not be deleted; storage was not fully reclaimed.`)
+            }
