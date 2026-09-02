@@ -117,17 +117,23 @@ jobs:
 
       # One rolling tag holds the current installers. The app's update feed points
       # at this tag by name, so it cannot be shadowed by a platform release.
+      #
+      # The release is recreated rather than re-uploaded into. `--clobber` deletes
+      # the previous asset before writing the new one, and GitHub's immutable
+      # releases refuse that with "Cannot delete asset from an immutable release",
+      # which failed every rebuild after the first. Deleting the release and its
+      # tag, then creating both again, keeps the tag name — and so the download
+      # URL the update feed is built from — exactly as it was.
       - name: Publish to the rolling desktop release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view desktop-latest >/dev/null 2>&1; then
-            gh release upload desktop-latest release/* --clobber
-          else
-            gh release create desktop-latest release/* \
-              --title "Desktop Apps (latest)" \
-              --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
+            gh release delete desktop-latest --yes --cleanup-tag
           fi
+          gh release create desktop-latest release/* \
+            --title "Desktop Apps (latest)" \
+            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
 
       # A tagged run additionally keeps a fixed copy of that build.
       - name: Publish the tagged release

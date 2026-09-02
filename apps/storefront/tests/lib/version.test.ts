@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import {
   bumpProjectVersion,
@@ -177,3 +179,29 @@ function compareSemver(a: string, b: string): number {
   }
   return 0
 }
+
+describe('release coverage', () => {
+  it('bumps every workspace whose version ships in an artifact', async () => {
+    // The desktop apps take their version from two different places: the macOS
+    // bundle from the root package.json (build-app.sh) and the Windows
+    // installer plus its `latest.yml` update feed from the windows-admin
+    // workspace. A workspace missing here keeps its old number through a
+    // release, and an installed app then never sees the build as an update.
+    const script = await readFile(
+      join(__dirname, '..', '..', 'scripts', 'version-bump.ts'),
+      'utf-8',
+    )
+    const list = script.slice(
+      script.indexOf('const PACKAGE_FILES'),
+      script.indexOf(']', script.indexOf('const PACKAGE_FILES')),
+    )
+
+    for (const file of [
+      'package.json',
+      'apps/storefront/package.json',
+      'apps/windows-admin/package.json',
+    ]) {
+      expect(list).toContain(`'${file}'`)
+    }
+  })
+})
