@@ -154,7 +154,7 @@
     "recharts": "^3.7.0",
     "rehype-sanitize": "^6.0.0",
     "resend": "^6.10.0",
-    "sanitize-html": "^2.17.5",
+    "sanitize-html": "^2.17.7",
     "serpapi": "^2.2.1",
     "shebang-regex": "^4.0.0",
     "sonner": "^2.0.7",
