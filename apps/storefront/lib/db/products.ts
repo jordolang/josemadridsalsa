@@ -154,44 +154,51 @@ export async function getProducts(filters: ProductFilters = {}) {
 /**
  * Get a single product by slug with all relations
  */
-export async function getProductBySlug(slug: string) {
-  try {
-    const product = await prisma.product.findUnique({
-      where: { slug },
-      include: {
-        category: true,
-        nutritionalInfo: true,
-        productIngredients: {
-          include: { ingredient: true },
-          orderBy: { sortOrder: 'asc' as const },
-        },
-        productTags: {
-          include: {
-            tag: true,
+export const getProductBySlug = unstable_cache(
+  async (slug: string) => {
+    try {
+      const product = await prisma.product.findUnique({
+        where: { slug },
+        include: {
+          category: true,
+          nutritionalInfo: true,
+          productIngredients: {
+            include: { ingredient: true },
+            orderBy: { sortOrder: 'asc' as const },
+          },
+          productTags: {
+            include: {
+              tag: true,
+            },
           },
         },
-      },
-    })
+      })
 
-    if (!product) {
-      return null
-    }
+      if (!product) {
+        return null
+      }
 
-    // Convert Decimal prices to numbers
-    return {
-      ...product,
-      price: parseFloat(String(product.price)),
-      compareAtPrice: product.compareAtPrice
-        ? parseFloat(String(product.compareAtPrice))
-        : null,
-      costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
-      weight: product.weight ? parseFloat(String(product.weight)) : null,
+      // Convert Decimal prices to numbers
+      return {
+        ...product,
+        price: parseFloat(String(product.price)),
+        compareAtPrice: product.compareAtPrice
+          ? parseFloat(String(product.compareAtPrice))
+          : null,
+        costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
+        weight: product.weight ? parseFloat(String(product.weight)) : null,
+      }
+    } catch (error: unknown) {
+      console.error('Error fetching product by slug:', error)
+      throw new Error(`Failed to fetch product: ${getErrorMessage(error)}`)
     }
-  } catch (error: unknown) {
-    console.error('Error fetching product by slug:', error)
-    throw new Error(`Failed to fetch product: ${getErrorMessage(error)}`)
+  },
+  (slug: string) => ['product-by-slug', slug],
+  {
+    revalidate: 1800, // 30 minutes in seconds
+    tags: ['products'],
   }
-}
+)
 
 /**
  * Get all active categories with product counts
