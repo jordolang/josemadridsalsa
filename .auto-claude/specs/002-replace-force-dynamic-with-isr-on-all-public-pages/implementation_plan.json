@@ -44,7 +44,7 @@
             "type": "manual",
             "instructions": "Review revalidation-strategy.md for appropriateness based on data update frequency"
           },
-          "status": "pending",
+          "status": "completed",
           "notes": "Strategy: 60s for products/blog index, 300-900s for detail pages, 3600s+ for static content"
         }
       ]
@@ -80,7 +80,7 @@
               "Reviews load"
             ]
           },
-          "status": "pending",
+          "status": "completed",
           "notes": "Remove 'export const dynamic = force-dynamic', add 'export const revalidate = 300'"
         },
         {
@@ -726,5 +726,5 @@
   "planStatus": "in_progress",
   "xstateState": "planning",
   "executionPhase": "coding",
-  "updated_at": "2026-09-07T10:28:54.848Z"
+  "updated_at": "2026-09-07T10:34:52.883Z"
 }

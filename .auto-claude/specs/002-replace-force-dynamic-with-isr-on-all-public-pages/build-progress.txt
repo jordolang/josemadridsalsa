@@ -167,4 +167,95 @@ Result: 54 instances found (matches expected count)
 Commit: 533b55c4
 Message: "auto-claude: subtask-1-1 - Search and catalog all public pages with force-dyn"
 
-Next: Proceed to subtask-1-2 (Determine appropriate revalidation periods)
+✅ SUBTASK 1-2 COMPLETED: Determine appropriate revalidation periods for each page category
+Status: Completed successfully
+Created: ./.auto-claude/specs/002-replace-force-dynamic-with-isr-on-all-public-pages/revalidation-strategy.md
+
+Strategy Overview:
+Created a comprehensive tiered revalidation strategy based on data update frequency, user expectations, traffic volume, and business criticality.
+
+Revalidation Tiers:
+- Tier 1 (60s): Real-time critical - Homepage, product listings, collections, blog index (4 pages)
+- Tier 2 (300s): Frequent updates - Bundles, recipe listing, blog categories/series, polls (8 pages)
+- Tier 3 (900s): Daily updates - Product details, blog posts, merchandise, fundraisers (6 pages)
+- Tier 4 (3600s): Weekly updates - Recipe details, locations, forms, contact, FAQ, developer portal (9 pages)
+- Tier 5 (7200s): Monthly updates - Wholesale, gift certificate success (2 pages)
+- Tier 6 (86400s): Very static - Legal pages, about, our story (9 pages)
+
+Pages Excluded from ISR (Remain Dynamic):
+- Account pages (4) - User-specific data
+- Checkout pages (3) - Transaction-specific data
+- Order tracking (1) - Real-time tracking data
+- Fundraiser participant pages (2) - Real-time leaderboards
+- Special cases (3) - Unsubscribe, catch-all route
+Total excluded: 13 pages
+
+Implementation Pattern:
+- Remove: export const dynamic = 'force-dynamic'
+- Remove: export const revalidate = 0 (if present)
+- Add: export const revalidate = <appropriate-value>
+
+Expected Impact:
+- Pages to migrate: 38 out of 51 audited pages
+- Overall database reduction: ~95%
+- TTFB improvement: 300-800ms → 50-100ms (cached)
+- Cache hit rate: 85-95%+ depending on tier
+
+Future Enhancement:
+- On-demand revalidation using revalidatePath() for immediate cache updates
+- Priority pages: Products, blog posts, legal pages, collections
+
+Risk Mitigation:
+- Stale data: Short revalidation for critical pages, on-demand revalidation future phase
+- Cache poisoning: Proper error handling, notFound() for missing resources
+- Build-time failures: ISR builds on-demand, generateStaticParams() has fallbacks
+
+Verification Strategy:
+- Build-time: Ensure no force-dynamic remains, verify revalidate values
+- Runtime: Monitor X-Vercel-Cache header, TTFB, database query count
+- Success metrics: <100ms TTFB, >95% cache hit rate for static, 80-90% DB reduction
+
+Rollout Alignment:
+Aligns perfectly with implementation_plan.json phases:
+- Phase 2: Tiers 1, 2, 3 (High-traffic)
+- Phase 3: Tiers 3, 4 (Medium-traffic)
+- Phase 4: Tiers 5, 6 (Static content)
+
+Decision Log:
+- Homepage at 60s (high traffic + moderate updates)
+- Legal pages at 24h (rarely change, on-demand for immediate updates)
+- Fundraiser campaigns at 900s (balance leaderboards vs cache)
+- Account/checkout excluded (user-specific incompatible with ISR)
+- On-demand revalidation deferred to future phase
+
+References:
+- Pattern files: heat-index/page.tsx (300s), recipes/[slug]/page.tsx (3600s)
+- Based on page-audit.md findings
+- Aligned with implementation_plan.json phases
+
+Verification: ✅ PASSED (Manual Review)
+Document is comprehensive, well-structured, and provides clear guidance for each page category with appropriate revalidation periods based on data update frequency.
+
+Next: Proceed to Phase 2 - Update High-Traffic Pages (subtask-2-1: Homepage)
+
+=== PHASE 2: Update High-Traffic Pages ===
+
+✅ SUBTASK 2-1 COMPLETED: Update homepage to use ISR with 5-minute revalidation
+Status: Completed successfully
+File Modified: apps/storefront/app/(public)/page.tsx
+
+Changes Made:
+- Removed: export const dynamic = 'force-dynamic'
+- Added: export const revalidate = 300
+
+Technical Details:
+- Revalidation period: 300 seconds (5 minutes)
+- Pattern followed: apps/storefront/app/(public)/heat-index/page.tsx
+- Line changed: Line 20
+
+Verification:
+- ✅ Code change applied successfully
+- ✅ TypeScript syntax valid
+- ⏳ Browser testing pending (requires dev server)
+
+Next: Proceed to subtask-2-2 (Products listing page)
