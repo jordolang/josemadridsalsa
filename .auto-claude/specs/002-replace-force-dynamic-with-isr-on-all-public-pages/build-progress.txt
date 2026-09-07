@@ -259,3 +259,62 @@ Verification:
 - ⏳ Browser testing pending (requires dev server)
 
 Next: Proceed to subtask-2-2 (Products listing page)
+
+✅ SUBTASK 2-2 COMPLETED: Update products listing page to use ISR with 5-minute revalidation
+Status: Completed successfully
+File Modified: apps/storefront/app/(public)/products/page.tsx
+
+Changes Made:
+- Added: import { Suspense } from 'react'
+- Added: import { logger } from '@/lib/logger'
+- Changed: export const revalidate from 0 to 300 (5 minutes)
+- Updated: console.error to logger.error with structured logging
+- Added: Suspense wrapper around return component
+
+Technical Details:
+- Revalidation period: 300 seconds (5 minutes)
+- Pattern followed: apps/storefront/app/(public)/salsas/page.tsx
+- Error handling: Now uses logger.error with error object
+- Loading state: Suspense fallback with min-h-screen div
+
+Verification:
+- ✅ Code changes applied successfully
+- ✅ TypeScript type checking passed (npx tsc --noEmit)
+- ✅ Linting passed (npm run lint) - no new warnings introduced
+- ✅ File follows pattern from salsas/page.tsx exactly
+
+Commit: 6a7c18f3
+Message: "auto-claude: subtask-2-2 - Update products listing page to use ISR with 5-min"
+
+Next: Proceed to subtask-2-3 (Individual product pages)
+
+✅ SUBTASK 2-3 COMPLETED: Update individual product pages to use ISR with 15-minute revalidation
+Status: Completed successfully
+File Modified: apps/storefront/app/(public)/products/[slug]/page.tsx
+
+Changes Made:
+- Removed: export const dynamic = 'force-dynamic'
+- Added: export const revalidate = 900 (15 minutes)
+- Added: generateStaticParams() function for pre-generating product pages at build time
+
+Technical Details:
+- Revalidation period: 900 seconds (15 minutes)
+- Pattern followed: apps/storefront/app/(public)/recipes/[slug]/page.tsx
+- Build-time optimization: generateStaticParams() with timeout protection (5 seconds)
+- Fallback strategy: Returns empty array if database unavailable during build
+- Pre-generation: Generates top 50 active products (ordered by featured, sortOrder)
+
+Key Features of generateStaticParams():
+- Detects build environment (VERCEL, CI, or missing DATABASE_URL)
+- Timeout protection to prevent hanging during build
+- Limits to 50 products for reasonable build time
+- Orders by featured products first (isFeatured DESC, sortOrder ASC)
+- Graceful fallback to empty array on error
+
+Verification:
+- ✅ Code changes applied successfully
+- ✅ Follows ISR pattern from recipe page exactly
+- ✅ TypeScript syntax valid
+- ⏳ Browser testing pending (requires dev server permission)
+
+Next: Proceed to subtask-2-4 (Collections listing page)
