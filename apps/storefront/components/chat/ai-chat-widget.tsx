@@ -360,7 +360,7 @@ export function AiChatWidget() {
                       <span>
                         {mode === 'live'
                           ? 'A human from our team is on the line.'
-                          : `Powered by ${process.env.NEXT_PUBLIC_AI_CHAT_PROVIDER ?? 'OpenAI'}`}
+                          : `Powered by ${process.env.NEXT_PUBLIC_AI_CHAT_PROVIDER ?? 'Anthropic'}`}
                       </span>
                       {mode === 'ai' ? (
                         <button

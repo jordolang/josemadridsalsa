@@ -7,20 +7,24 @@ const globalForPrisma = globalThis as unknown as {
 
 const sanitizeUrl = (value?: string | null) => value?.trim()
 
-const resolveDatabaseUrl = () => {
+export const resolveDatabaseUrl = () => {
   // Normalize env values (copy/paste into Vercel can leave trailing whitespace/newlines)
   process.env.DATABASE_URL = sanitizeUrl(process.env.DATABASE_URL) || undefined
+  process.env.POSTGRES_PRISMA_URL = sanitizeUrl(process.env.POSTGRES_PRISMA_URL) || undefined
   process.env.POSTGRES_URL = sanitizeUrl(process.env.POSTGRES_URL) || undefined
   process.env.PRISMA_DATABASE_URL = sanitizeUrl(process.env.PRISMA_DATABASE_URL) || undefined
 
-  if (!process.env.DATABASE_URL) {
-    if (process.env.PRISMA_DATABASE_URL) {
-      process.env.DATABASE_URL = process.env.PRISMA_DATABASE_URL
-      console.log('[Prisma] DATABASE_URL not set, fell back to PRISMA_DATABASE_URL')
-    } else if (process.env.POSTGRES_URL) {
-      process.env.DATABASE_URL = process.env.POSTGRES_URL
-      console.log('[Prisma] DATABASE_URL not set, fell back to POSTGRES_URL')
-    }
+  // POSTGRES_PRISMA_URL/POSTGRES_URL are written and rotated by the database provider's Vercel
+  // integration; DATABASE_URL is set by hand and goes stale the moment the password is rotated.
+  // Preferring the managed values keeps the app on live credentials after a rotation instead of
+  // failing every query with "Authentication failed against database server".
+  const managedUrl = process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL
+  if (managedUrl && managedUrl !== process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = managedUrl
+    console.log('[Prisma] Using provider-managed connection string')
+  } else if (!process.env.DATABASE_URL && process.env.PRISMA_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.PRISMA_DATABASE_URL
+    console.log('[Prisma] DATABASE_URL not set, fell back to PRISMA_DATABASE_URL')
   }
 
   return process.env.DATABASE_URL
