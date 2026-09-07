@@ -220,6 +220,21 @@ the root `package.json` is canonical.
   clock starts at its own upload, so a queued macOS runner must not outlive the Windows installer. All three CI uploads are `continue-on-error`, so a full store can no longer
   fail a run whose tests all passed.
 
+- **The site went down whenever the database password was rotated.** Provisioning wrote fresh
+  credentials into `POSTGRES_PRISMA_URL`/`POSTGRES_URL`, but the hand-set `DATABASE_URL` held the
+  previous password and won the precedence check in `lib/prisma.ts`, so every query failed with
+  "Authentication failed against database server" and the storefront returned 500s. The
+  provider-managed connection string is now preferred over the hand-set one, which keeps the app
+  on live credentials across a rotation.
+- **The contact form returned "Internal server error" and dropped the message.** Recording the
+  submission as a `Conversation` ran before the notification email and took the whole request down
+  with it when the database was unreachable. Filing the conversation is now best-effort, so the
+  email to the team goes out either way and the visitor gets a success response.
+- **Picante could not answer anything.** `/api/ai-chat` called OpenAI, whose account had no credits
+  remaining, even though the documented provider for this project is Anthropic. The route now
+  speaks to Claude through the Anthropic SDK (`ANTHROPIC_API_KEY`, `claude-opus-5` by default),
+  matching what `environment-variables.mdx` already specified; `AI_CHAT_PROVIDER=openai` still
+  selects the old path. The chat widget's "Powered by" label follows the new default.
 - **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
   `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset
   on disk is `abandoned-cart.png` — so the header rendered as a broken-image placeholder in the

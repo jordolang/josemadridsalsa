@@ -56,33 +56,42 @@ export async function POST(request: Request) {
     const { name, email, company, phone, message, sourcePage, submittedAt, userId } = parsed.data
     const receivedAt = submittedAt || new Date().toISOString()
 
-    const conversation = await prisma.conversation.create({
-      data: {
-        subject: `Contact form submission from ${name}`,
-        email,
-        messages: {
-          create: [
-            {
-              senderType: 'USER',
-              body: [
-                `Name: ${name}`,
-                `Email: ${email}`,
-                company ? `Company: ${company}` : null,
-                phone ? `Phone: ${phone}` : null,
-                `Submitted: ${receivedAt}`,
-                '',
-                message,
-              ]
-                .filter(Boolean)
-                .join('\n'),
-            },
-          ],
+    // Filing the submission in the inbox is useful but secondary: the email to the team is what
+    // actually has to go out. A database outage used to take the whole form down with a 500, so
+    // this is best-effort and the send below runs either way.
+    let conversationId: string | null = null
+    try {
+      const conversation = await prisma.conversation.create({
+        data: {
+          subject: `Contact form submission from ${name}`,
+          email,
+          messages: {
+            create: [
+              {
+                senderType: 'USER',
+                body: [
+                  `Name: ${name}`,
+                  `Email: ${email}`,
+                  company ? `Company: ${company}` : null,
+                  phone ? `Phone: ${phone}` : null,
+                  `Submitted: ${receivedAt}`,
+                  '',
+                  message,
+                ]
+                  .filter(Boolean)
+                  .join('\n'),
+              },
+            ],
+          },
         },
-      },
-      select: {
-        id: true,
-      },
-    })
+        select: {
+          id: true,
+        },
+      })
+      conversationId = conversation.id
+    } catch (dbError) {
+      console.error('Contact form: failed to record conversation', dbError)
+    }
 
     // Send email to company
     const result = await sendEmail({
@@ -104,7 +113,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       messageId: result.messageId,
-      conversationId: conversation.id,
+      conversationId,
       from: email,
     })
   } catch (error) {

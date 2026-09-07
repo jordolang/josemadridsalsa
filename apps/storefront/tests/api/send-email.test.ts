@@ -63,6 +63,25 @@ describe('Send Email API', () => {
       unsubscribeUrl: 'https://example.com/unsubscribe',
     }
 
+    it('still emails the team when the conversation record cannot be written', async () => {
+      // A database outage used to surface to the visitor as "Internal server error" and the
+      // message was lost entirely. Filing the conversation is secondary to delivering the email.
+      vi.mocked(prisma.conversation.create).mockRejectedValue(new Error('Authentication failed'))
+
+      const request = new NextRequest('http://localhost/api/send-email/contact', {
+        method: 'POST',
+        body: JSON.stringify(validContactData),
+      })
+
+      const response = await ContactPOST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(true)
+      expect(data.conversationId).toBeNull()
+      expect(mockSendEmail).toHaveBeenCalledTimes(1)
+    })
+
     it('should validate required field: name', async () => {
       const request = new NextRequest('http://localhost/api/send-email/contact', {
         method: 'POST',
