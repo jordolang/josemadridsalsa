@@ -1,3 +1,5 @@
+import { unstable_cache } from 'next/cache'
+
 import prisma from '@/lib/prisma'
 import { Prisma, HeatLevel } from '@prisma/client'
 import { getErrorMessage } from '@/lib/errors'
@@ -194,35 +196,42 @@ export async function getProductBySlug(slug: string) {
 /**
  * Get all active categories with product counts
  */
-export async function getCategories() {
-  try {
-    const categories = await prisma.category.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: {
-        sortOrder: 'asc',
-      },
-      include: {
-        _count: {
-          select: {
-            products: {
-              where: {
-                isActive: true,
+export const getCategories = unstable_cache(
+  async () => {
+    try {
+      const categories = await prisma.category.findMany({
+        where: {
+          isActive: true,
+        },
+        orderBy: {
+          sortOrder: 'asc',
+        },
+        include: {
+          _count: {
+            select: {
+              products: {
+                where: {
+                  isActive: true,
+                },
               },
             },
           },
         },
-      },
-    })
+      })
 
-    // Only return categories that have products
-    return categories.filter((category) => category._count.products > 0)
-  } catch (error: unknown) {
-    console.error('Error fetching categories:', error)
-    throw new Error(`Failed to fetch categories: ${getErrorMessage(error)}`)
+      // Only return categories that have products
+      return categories.filter((category) => category._count.products > 0)
+    } catch (error: unknown) {
+      console.error('Error fetching categories:', error)
+      throw new Error(`Failed to fetch categories: ${getErrorMessage(error)}`)
+    }
+  },
+  ['categories'],
+  {
+    revalidate: 3600, // 1 hour in seconds
+    tags: ['categories'],
   }
-}
+)
 
 /**
  * Get an active collection by slug with its active products, in the curated order.
