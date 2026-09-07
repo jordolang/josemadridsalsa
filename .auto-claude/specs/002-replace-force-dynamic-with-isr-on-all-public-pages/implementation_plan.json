@@ -128,8 +128,8 @@
               "Add to cart button works"
             ]
           },
-          "status": "pending",
-          "notes": "Remove 'export const dynamic = force-dynamic', add 'export const revalidate = 900'"
+          "status": "completed",
+          "notes": "Removed 'export const dynamic = force-dynamic', added 'export const revalidate = 900', added generateStaticParams() with timeout protection"
         },
         {
           "id": "subtask-2-4",
@@ -150,8 +150,8 @@
               "No console errors"
             ]
           },
-          "status": "pending",
-          "notes": "Remove 'export const dynamic = force-dynamic', change 'export const revalidate = 0' to 'export const revalidate = 300'"
+          "status": "completed",
+          "notes": "Removed 'export const dynamic = force-dynamic', changed 'export const revalidate = 0' to 'export const revalidate = 300'"
         },
         {
           "id": "subtask-2-5",
@@ -726,5 +726,5 @@
   "planStatus": "in_progress",
   "xstateState": "planning",
   "executionPhase": "coding",
-  "updated_at": "2026-09-07T10:43:17.486Z"
+  "updated_at": "2026-09-07T10:46:27.708Z"
 }

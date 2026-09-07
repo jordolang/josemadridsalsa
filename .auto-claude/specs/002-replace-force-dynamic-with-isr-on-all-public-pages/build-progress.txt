@@ -318,3 +318,27 @@ Verification:
 - ⏳ Browser testing pending (requires dev server permission)
 
 Next: Proceed to subtask-2-4 (Collections listing page)
+✅ SUBTASK 2-4 COMPLETED: Update collections page to use ISR with 5-minute revalidation
+Status: Completed successfully
+File Modified: apps/storefront/app/(public)/collections/[slug]/page.tsx
+
+Changes Made:
+- Removed: export const dynamic = 'force-dynamic'
+- Changed: export const revalidate from 0 to 300 (5 minutes)
+
+Technical Details:
+- Revalidation period: 300 seconds (5 minutes)
+- Pattern: Removed force-dynamic to enable true ISR
+- ISR now active: Static pages will be generated on-demand and revalidated every 5 minutes
+
+Verification:
+- ✅ Code changes applied successfully
+- ✅ TypeScript type checking passed (npx tsc --noEmit --skipLibCheck)
+- ⏳ Browser testing pending (requires dev server permission)
+
+Note: Unlike the pattern file (products/page.tsx) which had both force-dynamic and revalidate,
+this implementation correctly removes force-dynamic to enable true ISR. Having both would
+be contradictory since force-dynamic prevents static generation.
+
+Commit: Pending
+Next: Proceed to subtask-2-5 (Heat Index blog listing page)
