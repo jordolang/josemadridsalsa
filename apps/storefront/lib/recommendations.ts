@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import type { HeatLevel } from '@prisma/client'
 import { PAID_PAYMENT_STATUSES } from '@/lib/payments/status'
@@ -15,11 +16,112 @@ export interface RecommendedProduct {
 }
 
 /**
+ * Internal cached implementation of frequently bought together logic.
+ * Cached for 1 hour with 'recommendations' tag for manual revalidation.
+ */
+const getCachedFrequentlyBoughtTogether = unstable_cache(
+  async (productId: string, limit: number): Promise<RecommendedProduct[]> => {
+    const isDev = process.env.NODE_ENV === 'development'
+    try {
+      const startTime = isDev ? Date.now() : 0
+      if (isDev) {
+        console.log('[Recommendations] getFrequentlyBoughtTogether: Starting query for productId:', productId)
+      }
+
+      const results = await prisma.$queryRaw<
+        Array<{
+          id: string
+          name: string
+          slug: string
+          price: number
+          featuredImage: string | null
+          heatLevel: string | null
+          sku: string
+          inventory: number
+          co_occurrence_count: number
+          max_count: number
+        }>
+      >`
+        WITH orders_with_product AS (
+          SELECT DISTINCT "orderId"
+          FROM order_items
+          WHERE "productId" = ${productId}
+          ORDER BY "orderId" DESC
+          LIMIT 100
+        ),
+        co_occurrences AS (
+          SELECT
+            oi."productId",
+            COUNT(DISTINCT oi."orderId")::int AS co_occurrence_count
+          FROM order_items oi
+          INNER JOIN orders_with_product owp ON owp."orderId" = oi."orderId"
+          WHERE oi."productId" != ${productId}
+          GROUP BY oi."productId"
+          ORDER BY co_occurrence_count DESC
+          LIMIT ${limit * 2}
+        ),
+        co_occurrences_with_max AS (
+          SELECT
+            "productId",
+            co_occurrence_count,
+            MAX(co_occurrence_count) OVER ()::int AS max_count
+          FROM co_occurrences
+        )
+        SELECT
+          p.id,
+          p.name,
+          p.slug,
+          p.price::float AS price,
+          p."featuredImage",
+          p."heatLevel",
+          p.sku,
+          p.inventory,
+          co.co_occurrence_count,
+          co.max_count
+        FROM co_occurrences_with_max co
+        INNER JOIN products p ON p.id = co."productId"
+        WHERE p."isActive" = true AND p.inventory > 0
+        ORDER BY co.co_occurrence_count DESC
+        LIMIT ${limit}
+      `
+
+      if (isDev) {
+        const duration = Date.now() - startTime
+        console.log(`[Recommendations] getFrequentlyBoughtTogether: Query completed in ${duration}ms (${results.length} results)`)
+      }
+
+      // Calculate normalized scores
+      return results.map(product => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: Number(product.price),
+        featuredImage: product.featuredImage,
+        heatLevel: product.heatLevel,
+        sku: product.sku,
+        inventory: product.inventory,
+        score: product.max_count > 0 ? product.co_occurrence_count / product.max_count : 0,
+      }))
+    } catch (error) {
+      console.error('Error getting frequently bought together:', error)
+      return []
+    }
+  },
+  ['frequently-bought-together'],
+  {
+    revalidate: 3600, // 1 hour
+    tags: ['recommendations'],
+  }
+)
+
+/**
  * Get "Frequently Bought Together" recommendations for a product.
  *
  * Analyses the last 100 orders containing the target product and ranks
  * co-purchased products by occurrence frequency. Out-of-stock and inactive
  * products are excluded from results.
+ *
+ * Results are cached for 1 hour to improve performance on frequently accessed products.
  *
  * @param {string} productId - The ID of the product to find companions for.
  * @param {number} [limit=4] - Maximum number of recommendations to return.
@@ -29,91 +131,7 @@ export async function getFrequentlyBoughtTogether(
   productId: string,
   limit: number = 4
 ): Promise<RecommendedProduct[]> {
-  const isDev = process.env.NODE_ENV === 'development'
-  try {
-    const startTime = isDev ? Date.now() : 0
-    if (isDev) {
-      console.log('[Recommendations] getFrequentlyBoughtTogether: Starting query for productId:', productId)
-    }
-
-    const results = await prisma.$queryRaw<
-      Array<{
-        id: string
-        name: string
-        slug: string
-        price: number
-        featuredImage: string | null
-        heatLevel: string | null
-        sku: string
-        inventory: number
-        co_occurrence_count: number
-        max_count: number
-      }>
-    >`
-      WITH orders_with_product AS (
-        SELECT DISTINCT "orderId"
-        FROM order_items
-        WHERE "productId" = ${productId}
-        ORDER BY "orderId" DESC
-        LIMIT 100
-      ),
-      co_occurrences AS (
-        SELECT
-          oi."productId",
-          COUNT(DISTINCT oi."orderId")::int AS co_occurrence_count
-        FROM order_items oi
-        INNER JOIN orders_with_product owp ON owp."orderId" = oi."orderId"
-        WHERE oi."productId" != ${productId}
-        GROUP BY oi."productId"
-        ORDER BY co_occurrence_count DESC
-        LIMIT ${limit * 2}
-      ),
-      co_occurrences_with_max AS (
-        SELECT
-          "productId",
-          co_occurrence_count,
-          MAX(co_occurrence_count) OVER ()::int AS max_count
-        FROM co_occurrences
-      )
-      SELECT
-        p.id,
-        p.name,
-        p.slug,
-        p.price::float AS price,
-        p."featuredImage",
-        p."heatLevel",
-        p.sku,
-        p.inventory,
-        co.co_occurrence_count,
-        co.max_count
-      FROM co_occurrences_with_max co
-      INNER JOIN products p ON p.id = co."productId"
-      WHERE p."isActive" = true AND p.inventory > 0
-      ORDER BY co.co_occurrence_count DESC
-      LIMIT ${limit}
-    `
-
-    if (isDev) {
-      const duration = Date.now() - startTime
-      console.log(`[Recommendations] getFrequentlyBoughtTogether: Query completed in ${duration}ms (${results.length} results)`)
-    }
-
-    // Calculate normalized scores
-    return results.map(product => ({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: Number(product.price),
-      featuredImage: product.featuredImage,
-      heatLevel: product.heatLevel,
-      sku: product.sku,
-      inventory: product.inventory,
-      score: product.max_count > 0 ? product.co_occurrence_count / product.max_count : 0,
-    }))
-  } catch (error) {
-    console.error('Error getting frequently bought together:', error)
-    return []
-  }
+  return getCachedFrequentlyBoughtTogether(productId, limit)
 }
 
 /**
