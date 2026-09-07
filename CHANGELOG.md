@@ -14,6 +14,15 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **An `Artifact Cleanup` workflow** (Actions tab, manual trigger), documented at
+  `deployment/ci-artifact-storage`. Retention settings stop future accumulation but never reclaim
+  what is already stored, and the UI deletes one artifact at a time — unworkable against 553 of
+  them. Takes an age threshold and an optional name filter, and defaults to a dry run that reports
+  what it would free before anything is deleted. A sweep continues past individual failures, but
+  a refusal that leaves storage occupied (403, rate limiting, 5xx) fails the run rather than
+  reporting a cleared quota that is still full; a 404 is the artifact expiring on its own and is
+  treated as success.
+
 - **A desktop shell at `/admin-desktop`, and both desktop apps now open on it.** The Windows and
   macOS apps were hardened windows onto the web admin panel; they still are, but the window they
   open is a dense, keyboard-driven view of the same database rather than a web page in a frame:
@@ -199,6 +208,17 @@ the root `package.json` is canonical.
   read the campaign's `defaultUnitPrice`, and the team editor links to the campaign's store.
 
 ### Fixed
+
+- **CI went red on a full artifact store rather than on a broken build.** A full inventory of the
+  553 stored artifacts found 4.06 GB, of which Playwright reports were 3.05 GB — 265 of them in a
+  single month at ~12 MB each, held for 30 days. Coverage reports added another 598 MB on the same
+  window. Both now expire after 7 days, matching the build artifacts that already used it. The
+  Desktop Apps workflow contributed 425 MB in four Windows installers kept for the repository's
+  90-day default, although the only consumer is the `publish` job in the same run, which uploads
+  the binaries to the rolling GitHub Release where they live permanently; both desktop uploads now
+  expire after three days — not one, because `publish` needs both platforms and each artifact's
+  clock starts at its own upload, so a queued macOS runner must not outlive the Windows installer. All three CI uploads are `continue-on-error`, so a full store can no longer
+  fail a run whose tests all passed.
 
 - **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
   `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset

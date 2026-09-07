@@ -1,0 +1,104 @@
+---
+title: CI Artifact Storage
+description: Retention windows for GitHub Actions artifacts, and how to run the Artifact Cleanup workflow when the storage quota fills
+---
+
+# CI Artifact Storage
+
+GitHub Actions artifacts count against the account's storage quota. When that quota
+fills, **every upload fails** — which surfaces as a red CI run whose tests all passed:
+
+```
+Failed to CreateArtifact: Artifact storage quota has been hit
+```
+
+That failure is about storage, not about the code. This page covers the retention
+windows that keep the store from filling, and the workflow that empties it when it
+already has.
+
+## Retention windows
+
+| Artifact | Workflow | Retention | Why |
+|---|---|---:|---|
+| `coverage-reports` | `ci.yml` | 7 days | Reporting only; read within days of a run |
+| `playwright-report` | `ci.yml` | 7 days | Same, and by far the largest recurring consumer |
+| `build-artifacts` | `ci.yml` | 7 days | Reporting only |
+| `windows-installer` | `desktop-release.yml` | 3 days | Handed to `publish` in the same run |
+| `macos-app` | `desktop-release.yml` | 3 days | Handed to `publish` in the same run |
+
+Two things are worth knowing before changing any of these numbers.
+
+**Volume dominates size.** The store fills from many small artifacts held a long
+time, not from a few large ones. A measurement of 553 unexpired artifacts totalling
+4.06 GB found Playwright reports were 3.05 GB of it — 265 reports at roughly 12 MB
+each, all created within one month. Shortening a widely-produced artifact's window
+saves far more than deleting a single large one.
+
+**The desktop artifacts cannot go to one day.** The `publish` job declares
+`needs: [windows, macos]`, but each artifact's retention clock starts when *its own*
+upload finishes. If one runner completes while the other is still queued, a one-day
+window can expire the first artifact before `publish` downloads it, failing an
+otherwise good release. Three days covers worst-case cross-platform queue latency.
+
+The three `ci.yml` uploads are also marked `continue-on-error: true`. Reporting
+artifacts are a convenience for reading a run after the fact, not a result — a full
+store must never turn a green test suite red.
+
+## Reclaiming storage that is already used
+
+Retention only governs what is written from here on. It never reclaims what is
+already stored, and the Actions UI deletes one artifact at a time, which is
+unworkable against several hundred. Use the **Artifact Cleanup** workflow.
+
+### Running it
+
+From **Actions → Artifact Cleanup → Run workflow**:
+
+| Input | Default | Meaning |
+|---|---|---|
+| `older_than_days` | `7` | Delete artifacts older than this many days |
+| `name_filter` | *(blank)* | Restrict to one exact artifact name; blank means every name |
+| `dry_run` | **checked** | Report what would be deleted without deleting it |
+
+It **defaults to a dry run**, so the first click is always safe: it writes a job
+summary table of what it would delete and how many MB that would free, and touches
+nothing. Read that table, then re-run with `dry_run` unchecked to perform the
+deletion.
+
+To free the most space with the least risk, start with
+`name_filter: playwright-report` — on the measurement above that alone accounted for
+75% of the store.
+
+The workflow requests `permissions: actions: write`. Listing artifacts needs only
+read access; deleting them is what requires write.
+
+### Reading the result
+
+The job summary reports how many artifacts were deleted and how much was freed.
+Already-expired artifacts are skipped — they occupy no storage, so deleting them
+would free nothing and only spend API calls.
+
+### When it fails
+
+The sweep continues past individual failures rather than abandoning the remaining
+artifacts, but it does **not** finish green if deletions were genuinely refused:
+
+- A **404** is benign. The artifact expired between listing and deletion, which is
+  the outcome that was wanted anyway. These are reported but do not fail the run.
+- **Anything else** — 403, rate limiting, 5xx — means the storage is still occupied.
+  The run is marked failed, because a green run would otherwise report the quota as
+  cleared while it is still full.
+
+If the run fails with 403s, the token lacks `actions: write` for the repository.
+Check that the workflow's `permissions` block survived any edit, and that the
+repository's default workflow permissions are not restricted to read-only under
+**Settings → Actions → General → Workflow permissions**.
+
+If it fails on rate limiting, re-run it. The sweep is idempotent — artifacts deleted
+by the previous attempt simply no longer appear in the listing.
+
+## Raising the quota
+
+Deleting artifacts and shortening retention address consumption. If the repository
+legitimately needs more storage than the plan allows, the limit itself is raised in
+the account's billing settings, not in this repository.
