@@ -1,0 +1,170 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: Jose Madrid Salsa - Replace force-dynamic with ISR
+Workspace: .auto-claude/worktrees/tasks/002-replace-force-dynamic-with-isr-on-all-public-pages
+Started: 2026-09-07
+
+Workflow Type: refactor
+Rationale: Migrating from force-dynamic (full SSR on every request) to ISR (cached HTML with background revalidation) across 64 public pages. This pattern change will preserve existing functionality while dramatically improving performance.
+
+Session 1 (Planner):
+- Created implementation_plan.json
+- Created project_index.json
+- Created context.json
+- Created init.sh
+- Phases: 5
+- Total subtasks: 26
+- Created this build-progress.txt
+
+Phase Summary:
+- Phase 1 (Audit): 2 subtasks - Investigation phase to catalog pages and define revalidation strategy
+- Phase 2 (High-Traffic): 7 subtasks - Update homepage, products, collections, heat-index (highest impact)
+- Phase 3 (Medium-Traffic): 6 subtasks - Update recipes, bundles, merchandise, fundraisers
+- Phase 4 (Static Content): 5 subtasks - Update about, contact, terms, privacy, FAQ, etc.
+- Phase 5 (Verification): 4 subtasks - Testing, build verification, performance measurement
+
+Services Involved:
+- storefront: Primary Next.js app containing all 64 public pages
+
+Estimated Impact:
+- Pages to modify: ~64 page.tsx files in apps/storefront/app/(public)
+- Expected TTFB improvement: 300-800ms → ~50ms for cached hits
+- Expected database load reduction: 80-90% on public routes
+- Core Web Vitals: Improved LCP and FCP scores
+
+Parallelism Analysis:
+- Max parallel phases: 1 (sequential recommended due to dependencies)
+- Parallel groups: Phase 4 (static content) subtasks can run in parallel
+- Recommended workers: 1
+- Execution strategy: Sequential with careful testing at each phase
+
+Revalidation Strategy:
+- High frequency (60-300s): Product listings, blog index, collections
+- Medium frequency (900-1800s): Individual products, recipes, bundles
+- Low frequency (3600-7200s): Static content, contact, FAQ
+- Very low frequency (86400s): Legal pages, terms, privacy
+
+Technical Details:
+- Next.js version: 16.3.1
+- Current pattern: export const dynamic = 'force-dynamic'
+- Target pattern: Remove force-dynamic, add export const revalidate = <seconds>
+- Some pages already have revalidate set but it's overridden by force-dynamic
+
+Files for Planner Reference:
+- Spec: ./.auto-claude/specs/002-replace-force-dynamic-with-isr-on-all-public-pages/spec.md
+- Plan: ./.auto-claude/specs/002-replace-force-dynamic-with-isr-on-all-public-pages/implementation_plan.json
+- Context: ./.auto-claude/specs/002-replace-force-dynamic-with-isr-on-all-public-pages/context.json
+- Project Index: ./.auto-claude/specs/002-replace-force-dynamic-with-isr-on-all-public-pages/project_index.json
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 002 --parallel 1
+
+Or manually start the environment:
+
+  cd .auto-claude/worktrees/tasks/002-replace-force-dynamic-with-isr-on-all-public-pages
+  bash .auto-claude/specs/002-replace-force-dynamic-with-isr-on-all-public-pages/init.sh
+
+=== PRE-PLANNING INVESTIGATION COMPLETED ===
+
+Checklist:
+✅ Explored project directory structure
+✅ Searched for existing force-dynamic implementations (found 175 files)
+✅ Read pattern files to understand ISR usage
+✅ Identified tech stack (Next.js 16, React 19, TypeScript, Prisma)
+✅ Found configuration files (next.config.mjs, package.json)
+✅ Created project_index.json
+✅ Created context.json
+✅ Documented existing patterns and revalidation strategies
+
+Key Findings:
+- 64 page.tsx files in (public) route group
+- Many already have revalidate set but force-dynamic overrides it
+- Some pages (e.g., heat-index/[slug]) already use ISR correctly (no force-dynamic)
+- Existing revalidation values range from 60s to 3600s
+- Need systematic approach to remove force-dynamic while preserving/adding revalidate
+
+Risk Assessment:
+- Medium risk: Changes are systematic but affect high-traffic pages
+- Mitigation: Phased rollout starting with audit, then high-traffic, then static
+- Testing strategy: Unit tests, type checks, lint, build verification, browser testing
+- Rollback plan: Simple - revert commits if issues arise
+
+=== END SESSION 1 ===
+
+Next Steps (for Coder Agent):
+1. Execute Phase 1: Audit and Categorize
+   - Run grep to find all force-dynamic pages
+   - Create page-audit.md with categorized list
+   - Create revalidation-strategy.md
+
+2. Execute Phase 2: High-Traffic Pages
+   - Start with homepage (highest visibility)
+   - Then products, collections (highest traffic)
+   - Verify each change with browser testing
+
+3. Continue through phases 3, 4, and 5 sequentially
+   - Test thoroughly at each step
+   - Document any issues or surprises
+
+Remember:
+- One subtask at a time
+- Verify before moving to next subtask
+- Commit after each subtask completion
+- Do NOT skip verification steps
+
+---
+Planning completed: 2026-09-07
+Planner: Claude Sonnet 4.5 (Session 1)
+Ready for Coder Agent to begin implementation
+
+=== SESSION 2 (Coder Agent) ===
+Date: 2026-09-07
+Phase: 1 - Audit and Categorize Pages
+
+✅ SUBTASK 1-1 COMPLETED: Search and catalog all public pages with force-dynamic export
+Status: Completed successfully
+Created: ./.auto-claude/specs/002-replace-force-dynamic-with-isr-on-all-public-pages/page-audit.md
+
+Findings:
+- Total pages with force-dynamic: 54 instances across 51 unique files
+- Created comprehensive audit document with categorization by page type
+- Pages categorized into 15 groups:
+  1. Homepage & Landing Pages (3)
+  2. Product & E-commerce (6)
+  3. Blog & Content (7)
+  4. Recipe Pages (2)
+  5. User Account (4)
+  6. Checkout & Transaction (4)
+  7. Fundraising (6)
+  8. Collections (1)
+  9. Forms (3)
+  10. Polls (2)
+  11. Location & Tracking (4)
+  12. Legal & Policy (6)
+  13. Static/Marketing (4)
+  14. Special Pages (3)
+  15. Layout (1)
+
+Priority Recommendations:
+- High Priority (Quick Wins): Legal/policy pages (6), Blog/content (7), Recipes (2), Static/marketing (4)
+- Medium Priority: Product pages (6), Location pages (4), Collections (1), Forms (3)
+- Low Priority (Needs careful planning): Account pages (4), Checkout (4), Fundraising (6), Polls (2)
+- Needs Architecture Decision: Homepage (3), Public layout (1), Catch-all route (1)
+
+Technical Patterns Observed:
+- Most use 'export const dynamic = force-dynamic'
+- Some also have 'export const revalidate = 0' (redundant)
+- Some have revalidate values but force-dynamic overrides them
+- Mix of data sources: Prisma, Google APIs, CMS queries
+
+Verification: ✅ PASSED
+Command: grep -r "export const dynamic = 'force-dynamic'" ./apps/storefront/app/(public)/ --include="*.tsx" | wc -l
+Result: 54 instances found (matches expected count)
+
+Commit: 533b55c4
+Message: "auto-claude: subtask-1-1 - Search and catalog all public pages with force-dyn"
+
+Next: Proceed to subtask-1-2 (Determine appropriate revalidation periods)
