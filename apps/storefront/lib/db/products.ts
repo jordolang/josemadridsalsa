@@ -254,42 +254,49 @@ export const getCategories = unstable_cache(
  * straight into the same `ProductCard`. Returns null when the collection does not exist or is
  * inactive. Inactive products in the collection are filtered out rather than shown.
  */
-export async function getCollectionBySlug(slug: string) {
-  try {
-    const collection = await prisma.collection.findFirst({
-      where: { slug, isActive: true },
-      include: {
-        products: {
-          where: { product: { isActive: true } },
-          orderBy: { sortOrder: 'asc' },
-          include: {
-            product: {
-              include: {
-                category: true,
-                productTags: { include: { tag: true } },
+export const getCollectionBySlug = unstable_cache(
+  async (slug: string) => {
+    try {
+      const collection = await prisma.collection.findFirst({
+        where: { slug, isActive: true },
+        include: {
+          products: {
+            where: { product: { isActive: true } },
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              product: {
+                include: {
+                  category: true,
+                  productTags: { include: { tag: true } },
+                },
               },
             },
           },
         },
-      },
-    })
+      })
 
-    if (!collection) return null
+      if (!collection) return null
 
-    const products = collection.products.map(({ product }) => ({
-      ...product,
-      price: parseFloat(String(product.price)),
-      compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : null,
-      costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
-      weight: product.weight ? parseFloat(String(product.weight)) : null,
-    }))
+      const products = collection.products.map(({ product }) => ({
+        ...product,
+        price: parseFloat(String(product.price)),
+        compareAtPrice: product.compareAtPrice ? parseFloat(String(product.compareAtPrice)) : null,
+        costPrice: product.costPrice ? parseFloat(String(product.costPrice)) : null,
+        weight: product.weight ? parseFloat(String(product.weight)) : null,
+      }))
 
-    return { collection, products }
-  } catch (error: unknown) {
-    console.error('Error fetching collection:', error)
-    throw new Error(`Failed to fetch collection: ${getErrorMessage(error)}`)
+      return { collection, products }
+    } catch (error: unknown) {
+      console.error('Error fetching collection:', error)
+      throw new Error(`Failed to fetch collection: ${getErrorMessage(error)}`)
+    }
+  },
+  ['collection-by-slug'],
+  {
+    revalidate: 1800, // 30 minutes in seconds
+    tags: ['products'],
   }
-}
+)
 
 /**
  * Get total count of products matching filters (for pagination)
