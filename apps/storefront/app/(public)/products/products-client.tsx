@@ -53,7 +53,7 @@ export function ProductsClient({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(initialView || 'grid')
 
   // Update URL when filters change
-  const updateFilters = (updates: {
+  const updateFilters = useCallback((updates: {
     category?: string
     heatLevel?: string
     search?: string
@@ -98,7 +98,7 @@ export function ProductsClient({
     }
 
     router.push(`/products?${params.toString()}`, { scroll: false })
-  }
+  }, [searchParams, router])
 
   // Since we're using server-side filtering, we don't need client-side filtering
   const filteredProducts = initialProducts
