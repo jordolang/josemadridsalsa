@@ -585,3 +585,25 @@ Individual fundraiser pages now use Incremental Static Regeneration with a 5-min
 ### Notes:
 Both about and our-story pages now use Incremental Static Regeneration with a 24-hour (86400 seconds) revalidation period. This is appropriate for static content that changes very infrequently. The pages will be statically generated and revalidated once per day, providing excellent performance while keeping the content reasonably fresh for any rare updates.
 
+
+## 2026-09-09 - Subtask-4-2 Completed
+
+**Subtask:** Update contact/FAQ pages to use ISR with 2-hour revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated `apps/storefront/app/(public)/contact/page.tsx`:
+  - Removed `export const dynamic = 'force-dynamic'`
+  - Added `export const revalidate = 7200 // 2 hours`
+- Updated `apps/storefront/app/(public)/faq/page.tsx`:
+  - Removed `export const dynamic = 'force-dynamic'`
+  - Added `export const revalidate = 7200 // 2 hours`
+
+### Verification:
+- TypeScript type-check passed ✅
+- Both pages updated successfully ✅
+- Commit: 031e173f
+
+### Notes:
+Both contact and FAQ pages now use Incremental Static Regeneration with a 2-hour (7200 seconds) revalidation period. This is appropriate for semi-static content that may have occasional updates (e.g., contact information changes, new FAQs added). The pages will be statically generated and revalidated every 2 hours, providing excellent performance while keeping the content reasonably fresh for moderate updates.
+
