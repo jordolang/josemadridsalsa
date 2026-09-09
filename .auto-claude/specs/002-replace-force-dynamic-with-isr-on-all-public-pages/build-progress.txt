@@ -633,3 +633,26 @@ Both contact and FAQ pages now use Incremental Static Regeneration with a 2-hour
 ### Notes:
 All legal and policy pages now use Incremental Static Regeneration with a 24-hour (86400 seconds) revalidation period. This is appropriate for legal content that changes very infrequently. The pages will be statically generated and revalidated once per day, providing excellent performance while ensuring any compliance-related updates are reflected within a reasonable timeframe.
 
+
+
+## 2026-09-09 - Subtask-4-4 Completed
+
+**Subtask:** Update find-us and location pages to use ISR with 1-hour revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated 2 location/map pages:
+  - `apps/storefront/app/(public)/find-us/page.tsx`
+  - `apps/storefront/app/(public)/where-is-jose/page.tsx`
+- Replaced `export const dynamic = 'force-dynamic'` with `export const revalidate = 3600 // 1 hour`
+
+### Verification:
+- TypeScript type-check passed ✅
+- ESLint passed with only pre-existing warnings ✅
+- Both pages updated successfully ✅
+- No force-dynamic exports remain ✅
+- Commit: 2b31fbff
+
+### Notes:
+Both location-based pages now use Incremental Static Regeneration with a 1-hour (3600 seconds) revalidation period. This is appropriate for location data that may change periodically but doesn't require real-time updates. The pages will serve from cache for excellent performance while ensuring location and event data stays reasonably fresh. The find-us page includes a map and location search functionality, while where-is-jose tracks events and markets.
+
