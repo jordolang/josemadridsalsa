@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { requirePermission } from '@/lib/rbac';
 import { ok, fail } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
@@ -100,6 +101,10 @@ export async function PATCH(
       changes: body,
     });
 
+    // Invalidate product and recommendation caches
+    revalidateTag('products', 'max');
+    revalidateTag('recommendations', 'max');
+
     return ok({ product });
   } catch (error: any) {
     console.error('Error updating product:', error);
@@ -143,6 +148,10 @@ export async function DELETE(
       entityId: id,
       changes: { name: existingProduct.name, sku: existingProduct.sku },
     });
+
+    // Invalidate product and recommendation caches
+    revalidateTag('products', 'max');
+    revalidateTag('recommendations', 'max');
 
     return ok({
       message: 'Product deleted successfully',

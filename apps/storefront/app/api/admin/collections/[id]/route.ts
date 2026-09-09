@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { ok, fail, failFromError } from '@/lib/api'
@@ -80,6 +81,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       changes: { ...data, productIds },
     })
 
+    // Invalidate collections cache
+    revalidateTag('collections', 'max')
+
     return ok({ collection })
   } catch (error: any) {
     if (error instanceof SyntaxError) return fail('Invalid JSON body', 400)
@@ -113,6 +117,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       entityId: id,
       changes: { name: existing.name },
     })
+
+    // Invalidate collections cache
+    revalidateTag('collections', 'max')
 
     return ok({ message: 'Collection deleted' })
   } catch (error) {
