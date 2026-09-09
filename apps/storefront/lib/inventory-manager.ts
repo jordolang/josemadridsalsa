@@ -646,6 +646,65 @@ export async function deductReservedInventoryOnceInTx(
 }
 
 /**
+ * Bulk idempotent version of {@link deductReservedInventoryInTx}.
+ *
+ * Deducts reserved inventory for multiple order items in a single transaction,
+ * skipping any items that already have an `ORDER_COMPLETION` transaction.
+ * Uses a single batched query to check all existing deductions, avoiding N+1.
+ *
+ * Returns an array of results in the same order as the input reservations:
+ * each element is either the deduction result, or `null` when already deducted.
+ *
+ * Must run inside the enclosing (Serializable) transaction. All reservations
+ * must have an `orderId` — the whole guard keys on it.
+ */
+export async function bulkDeductReservedInventoryOnceInTx(
+  reservations: InventoryReservation[],
+  tx: Prisma.TransactionClient
+) {
+  // Validate all reservations have orderIds
+  for (const reservation of reservations) {
+    if (!reservation.orderId) {
+      throw new Error('bulkDeductReservedInventoryOnceInTx requires an orderId on each reservation to guard against double-deduction');
+    }
+  }
+
+  // Batch check for existing deductions in a single query
+  const existingDeductions = await tx.inventoryTransaction.findMany({
+    where: {
+      OR: reservations.map(r => ({
+        productId: r.productId,
+        orderId: r.orderId,
+        reason: 'ORDER_COMPLETION',
+      })),
+    },
+    select: {
+      productId: true,
+      orderId: true,
+    },
+  });
+
+  // Create a Set of already-deducted product-order pairs for O(1) lookup
+  const deductedPairs = new Set(
+    existingDeductions.map(d => `${d.productId}:${d.orderId}`)
+  );
+
+  // Process each reservation, maintaining input order
+  const results = [];
+  for (const reservation of reservations) {
+    const key = `${reservation.productId}:${reservation.orderId}`;
+    if (deductedPairs.has(key)) {
+      results.push(null);
+    } else {
+      const result = await deductReservedInventoryInTx(reservation, tx);
+      results.push(result);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Check inventory levels and create/resolve alerts.
  * Exported so callers can fire alerts after a committed transaction.
  */
