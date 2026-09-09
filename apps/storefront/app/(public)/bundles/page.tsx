@@ -8,8 +8,6 @@ import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import type { ShareContent } from '@/types/sharing'
 import { ScrollToTopButton } from './scroll-to-top-button'
 
-export const dynamic = 'force-dynamic'
-
 export const revalidate = 300
 
 export default async function BundlesPage() {

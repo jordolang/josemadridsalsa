@@ -4,8 +4,6 @@ import type { Product } from '@/components/store/product-card'
 import { getProducts, getCategories } from '@/lib/db/products'
 import { logger } from '@/lib/logger'
 
-export const dynamic = 'force-dynamic'
-
 export const revalidate = 300
 
 interface SearchParams {
