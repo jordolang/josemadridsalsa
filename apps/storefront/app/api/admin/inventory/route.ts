@@ -197,12 +197,12 @@ export async function POST(req: NextRequest) {
       userId: user.id,
     }));
 
-    // Process adjustments
+    // Process adjustments (all-or-nothing - throws on any failure)
     const results = await bulkAdjustInventory(adjustmentsWithUser);
 
-    // Count successes and failures
-    const successCount = results.filter((r) => r.success).length;
-    const failureCount = results.filter((r) => !r.success).length;
+    // All adjustments succeeded (if any failed, an error would have been thrown)
+    const successCount = results.length;
+    const failureCount = 0;
 
     // Log audit
     await logAudit({

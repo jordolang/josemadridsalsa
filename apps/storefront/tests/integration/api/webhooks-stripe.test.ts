@@ -41,21 +41,23 @@ vi.mock('@/lib/email/automation', () => ({
 }))
 
 vi.mock('@/lib/inventory-manager', () => ({
-  deductReservedInventoryOnceInTx: vi.fn(() =>
-    Promise.resolve({
-      product: {
-        id: 'prod-1',
-        name: 'Test Product',
-        sku: 'TEST-SKU',
-        inventory: 97,
-        stockReserved: 0,
-        lowStockThreshold: 10,
-        stockStatus: 'IN_STOCK',
-      },
-      transaction: { id: 'txn-1' },
-      previousInventory: 100,
-      newInventory: 97,
-    })
+  bulkDeductReservedInventoryOnceInTx: vi.fn((reservations: any[]) =>
+    Promise.resolve(
+      reservations.map(() => ({
+        product: {
+          id: 'prod-1',
+          name: 'Test Product',
+          sku: 'TEST-SKU',
+          inventory: 97,
+          stockReserved: 0,
+          lowStockThreshold: 10,
+          stockStatus: 'IN_STOCK',
+        },
+        transaction: { id: 'txn-1' },
+        previousInventory: 100,
+        newInventory: 97,
+      }))
+    )
   ),
   checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
 }))

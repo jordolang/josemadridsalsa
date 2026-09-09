@@ -491,7 +491,7 @@ describe('Inventory API - Edge Cases', () => {
       expect(data.error).toContain('Database lock timeout');
     });
 
-    it('should handle bulk adjustments with partial failures', async () => {
+    it('should report all bulk adjustments as successful when the atomic operation succeeds', async () => {
       vi.mocked(prisma.product.findMany).mockResolvedValue([
         { id: 'prod-1' },
         { id: 'prod-2' },
@@ -519,8 +519,8 @@ describe('Inventory API - Edge Cases', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.successCount).toBe(2);
-      expect(data.failureCount).toBe(1);
+      expect(data.successCount).toBe(3);
+      expect(data.failureCount).toBe(0);
       expect(data.results).toHaveLength(3);
     });
   });
