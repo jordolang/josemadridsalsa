@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createMetadata } from '@/lib/metadata';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 86400
 
 export const metadata: Metadata = createMetadata({
   title: 'La Perla Tortilla Factory - Toledo, OH | Jose Madrid Chips',
