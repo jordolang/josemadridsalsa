@@ -607,3 +607,29 @@ Both about and our-story pages now use Incremental Static Regeneration with a 24
 ### Notes:
 Both contact and FAQ pages now use Incremental Static Regeneration with a 2-hour (7200 seconds) revalidation period. This is appropriate for semi-static content that may have occasional updates (e.g., contact information changes, new FAQs added). The pages will be statically generated and revalidated every 2 hours, providing excellent performance while keeping the content reasonably fresh for moderate updates.
 
+
+## 2026-09-09 - Subtask-4-3 Completed
+
+**Subtask:** Update legal/policy pages to use ISR with 24-hour revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated all 6 legal/policy pages:
+  - `apps/storefront/app/(public)/terms/page.tsx`
+  - `apps/storefront/app/(public)/privacy/page.tsx`
+  - `apps/storefront/app/(public)/accessibility/page.tsx`
+  - `apps/storefront/app/(public)/shipping/page.tsx`
+  - `apps/storefront/app/(public)/returns/page.tsx`
+  - `apps/storefront/app/(public)/refunds/page.tsx`
+- Replaced `export const dynamic = 'force-dynamic'` with `export const revalidate = 86400 // 24 hours`
+
+### Verification:
+- TypeScript type-check passed ✅
+- ESLint passed with only pre-existing warnings ✅
+- All 6 pages updated successfully ✅
+- No force-dynamic exports remain ✅
+- Commit: 13f3540d
+
+### Notes:
+All legal and policy pages now use Incremental Static Regeneration with a 24-hour (86400 seconds) revalidation period. This is appropriate for legal content that changes very infrequently. The pages will be statically generated and revalidated once per day, providing excellent performance while ensuring any compliance-related updates are reflected within a reasonable timeframe.
+
