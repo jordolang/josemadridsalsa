@@ -110,7 +110,7 @@ export function GiftBoxSelector() {
   const slots = useMemo(() => {
     if (!selectedBox) return []
     return Array.from({ length: selectedBox.size })
-  }, [selectedBox?.size])
+  }, [selectedBox])
 
   return (
     <section className="py-20 bg-background">
