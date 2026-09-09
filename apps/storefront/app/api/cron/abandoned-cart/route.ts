@@ -15,10 +15,10 @@ import {
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://josemadrid.net'
 
-const abandonedCartStageTemplates = {
-  [1]: abandonedCartStage1Template,
-  [2]: abandonedCartStage2Template,
-  [3]: abandonedCartStage3Template,
+const abandonedCartStageTemplates: Record<number, typeof abandonedCartStage1Template> = {
+  1: abandonedCartStage1Template,
+  2: abandonedCartStage2Template,
+  3: abandonedCartStage3Template,
 }
 
 async function sendAbandonedCartEmail(
