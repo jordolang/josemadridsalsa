@@ -180,6 +180,112 @@ export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
 }
 
 /**
+ * Adjust inventory for multiple products within a single transaction.
+ * Provides atomic all-or-nothing behavior for bulk adjustments.
+ * If any product validation fails, the entire operation rolls back.
+ *
+ * Does NOT trigger alert checks or emails — the caller is responsible
+ * for firing alerts after the enclosing transaction commits.
+ */
+export async function bulkAdjustInventoryInTx(
+  adjustments: InventoryAdjustment[],
+  tx: Prisma.TransactionClient
+) {
+  // Step 1: Fetch all products and validate in a single batch query
+  const productIds = adjustments.map(adj => adj.productId);
+  const products = await tx.product.findMany({
+    where: { id: { in: productIds } },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      inventory: true,
+      stockReserved: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  // Create a map for O(1) lookup
+  const productMap = new Map(products.map(p => [p.id, p]));
+
+  // Step 2: Validate all adjustments BEFORE making any changes
+  const validatedAdjustments = [];
+  for (const adjustment of adjustments) {
+    const { productId, quantity } = adjustment;
+    const product = productMap.get(productId);
+
+    if (!product) {
+      throw new Error(`Product not found: ${productId}`);
+    }
+
+    const previousStock = product.inventory;
+    const newStock = previousStock + quantity;
+
+    if (newStock < 0) {
+      throw new Error(
+        `Insufficient inventory for ${product.name} (SKU: ${product.sku}). ` +
+        `Current: ${previousStock}, Requested: ${Math.abs(quantity)}`
+      );
+    }
+
+    if (newStock < product.stockReserved) {
+      throw new Error(
+        `Cannot set inventory below reserved stock for ${product.name} (SKU: ${product.sku}). ` +
+        `New inventory: ${newStock}, Reserved: ${product.stockReserved}`
+      );
+    }
+
+    const newAvailable = newStock - product.stockReserved;
+    const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+    validatedAdjustments.push({
+      adjustment,
+      product,
+      previousStock,
+      newStock,
+      newStockStatus,
+    });
+  }
+
+  // Step 3: If ALL validations pass, update inventory for ALL products atomically
+  const results = [];
+  for (const { adjustment, product, previousStock, newStock, newStockStatus } of validatedAdjustments) {
+    const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId } = adjustment;
+
+    // Update product inventory
+    const updatedProduct = await tx.product.update({
+      where: { id: productId },
+      data: { inventory: newStock, stockStatus: newStockStatus },
+    });
+
+    // Create inventory transaction record
+    const transaction = await tx.inventoryTransaction.create({
+      data: {
+        productId,
+        type,
+        quantity,
+        previousStock,
+        newStock,
+        reason,
+        notes,
+        orderId,
+        purchaseOrderId,
+        userId,
+      },
+    });
+
+    results.push({
+      product: updatedProduct,
+      transaction,
+      previousStock,
+      newStock,
+    });
+  }
+
+  return results;
+}
+
+/**
  * Reserve inventory for a product (e.g., during checkout)
  * Uses Serializable transaction isolation to prevent race conditions.
  * Retries up to 3 times on serialization conflicts (P2034).
