@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendOrderConfirmationEmail } from '@/lib/email/automation'
-import { deductReservedInventoryOnceInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
+import { bulkDeductReservedInventoryOnceInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { PAID_PAYMENT_STATUS, isPaid } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { dedupeKeys, notifyOperators, severityFor } from '@/lib/notifications/dispatch'
@@ -164,39 +164,26 @@ export async function POST(request: Request) {
 
           // Deduct reserved inventory for product orders (not gift certificates).
           // Atomically decrements both `inventory` and `stockReserved`.
-          // deductReservedInventoryOnceInTx is idempotent per order item: it skips
+          // bulkDeductReservedInventoryOnceInTx is idempotent per order item: it skips
           // items that already have an ORDER_COMPLETION transaction for this order,
           // guarding against /api/checkout/complete finalizing the same order in
           // parallel (and the commit-vs-`processed`-marker race).
-          const deductionResults: Array<{
-            productId: string
-            newInventory: number
-            lowStockThreshold: number
-          }> = []
+          const reservations = order.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            orderId: order.id,
+            notes: `Webhook deduction for order ${order.orderNumber}`,
+          }))
 
-          if (order.items.length > 0) {
-            for (const item of order.items) {
-              const result = await deductReservedInventoryOnceInTx(
-                {
-                  productId: item.productId,
-                  quantity: item.quantity,
-                  orderId: order.id,
-                  notes: `Webhook deduction for order ${order.orderNumber}`,
-                },
-                tx
-              )
+          const bulkResults = await bulkDeductReservedInventoryOnceInTx(reservations, tx)
 
-              if (!result) {
-                continue
-              }
-
-              deductionResults.push({
-                productId: item.productId,
-                newInventory: result.newInventory,
-                lowStockThreshold: result.product.lowStockThreshold,
-              })
-            }
-          }
+          const deductionResults = bulkResults
+            .filter((result): result is NonNullable<typeof result> => result !== null)
+            .map(result => ({
+              productId: result.product.id,
+              newInventory: result.newInventory,
+              lowStockThreshold: result.product.lowStockThreshold,
+            }))
 
           // Redeem the codes recorded on the order. Idempotent on orderId, because
           // /api/checkout/complete completes the same order in parallel.
