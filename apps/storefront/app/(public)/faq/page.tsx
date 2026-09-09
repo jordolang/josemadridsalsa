@@ -9,14 +9,14 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 
+export const revalidate = 7200 // 2 hours
+
 export const metadata: Metadata = createMetadata({
   title: 'Frequently Asked Questions - Jose Madrid Salsa',
   description:
     'Answers to common questions about ordering, shipping, fundraising and wholesale with Jose Madrid Salsa.',
   pathname: '/faq',
 })
-
-export const dynamic = 'force-dynamic'
 
 /** Public FAQ page, grouped by the categories set up in the admin. */
 export default async function FaqPage() {
