@@ -656,3 +656,80 @@ All legal and policy pages now use Incremental Static Regeneration with a 24-hou
 ### Notes:
 Both location-based pages now use Incremental Static Regeneration with a 1-hour (3600 seconds) revalidation period. This is appropriate for location data that may change periodically but doesn't require real-time updates. The pages will serve from cache for excellent performance while ensuring location and event data stays reasonably fresh. The find-us page includes a map and location search functionality, while where-is-jose tracks events and markets.
 
+
+## 2026-09-09 - Subtask-4-5 Completed
+
+**Subtask:** Update remaining public pages (polls, forms, developer, etc.) with appropriate revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated 8 remaining public pages with ISR:
+  - `apps/storefront/app/(public)/polls/page.tsx` - 300s (5 minutes)
+  - `apps/storefront/app/(public)/polls/[slug]/page.tsx` - 300s (5 minutes)
+  - `apps/storefront/app/(public)/forms/page.tsx` - 1800s (30 minutes)
+  - `apps/storefront/app/(public)/forms/[slug]/page.tsx` - 1800s (30 minutes)
+  - `apps/storefront/app/(public)/developer/page.tsx` - 3600s (1 hour)
+  - `apps/storefront/app/(public)/developer/blog/page.tsx` - 3600s (1 hour)
+  - `apps/storefront/app/(public)/developer/blog/[slug]/page.tsx` - 3600s (1 hour)
+  - `apps/storefront/app/(public)/wholesale/page.tsx` - 7200s (2 hours)
+- Replaced `export const dynamic = 'force-dynamic'` with appropriate `export const revalidate = X` values
+
+### Verification:
+- TypeScript type-check passed ✅
+- ESLint passed with only pre-existing warnings ✅
+- All 8 pages updated successfully ✅
+- Implementation plan updated (status: completed) ✅
+- Commit: 0fb2ed8b
+
+### Notes:
+All remaining public pages now use Incremental Static Regeneration with revalidation periods matched to their content update frequency:
+- Polls (5 min): Active community engagement features that may have new responses
+- Forms (30 min): Business templates that are fairly static but may have occasional updates
+- Developer blog (1 hour): Technical content that changes infrequently
+- Wholesale page (2 hours): Business information that is mostly static
+
+This completes Phase 4 (Update Static Content Pages). All static content pages have been migrated from force-dynamic to ISR with appropriate revalidation periods.
+
+
+=== PHASE 5: Verification and Performance Testing ===
+
+## 2026-09-09 - Subtask-5-1 Completed
+
+**Subtask:** Run full test suite to ensure no regressions
+**Status:** ✅ COMPLETED
+
+### Verification Results:
+
+#### TypeScript Type Check
+- Command: npm run type-check
+- Result: ✅ PASSED - No type errors
+
+#### ESLint
+- Command: npm run lint
+- Result: ✅ PASSED - 0 errors, 35 warnings (all pre-existing)
+
+#### Test Suite
+- Result: 24 failed tests are PRE-EXISTING (not caused by ISR changes)
+- Main repo has 48 failing tests including same localStorage issues
+- Conclusion: No new test failures introduced by ISR migration
+
+**Failed Tests Analysis:**
+Both failing test files have localStorage issues (test infrastructure, not ISR-related):
+1. LiveChatNotifier.dock.test.tsx - localStorage.clear() undefined
+2. cart-bundles.test.ts - localStorage.setItem() undefined
+
+**ISR Changes Impact:**
+- ✅ No new test failures
+- ✅ TypeScript compilation successful
+- ✅ ESLint passes with no new warnings
+- ✅ All ISR-modified pages have correct exports
+- ✅ No force-dynamic exports remain
+
+### Acceptance Criteria Met:
+- ✅ TypeScript types valid
+- ✅ Build completes successfully
+- ✅ No force-dynamic exports in migrated pages
+- ✅ All pages have appropriate revalidate values
+- ✅ No new test failures introduced
+- ✅ No new lint errors
+
