@@ -43,6 +43,9 @@ vi.mock('@/lib/inventory-manager', () => ({
   deductReservedInventoryOnceInTx: vi.fn(() =>
     Promise.resolve({ newInventory: 10, product: { lowStockThreshold: 5 } })
   ),
+  bulkDeductReservedInventoryOnceInTx: vi.fn(() =>
+    Promise.resolve([{ newInventory: 10, product: { id: 'product-1', lowStockThreshold: 5 } }])
+  ),
   checkAndUpdateAlerts: vi.fn(() => Promise.resolve()),
 }))
 

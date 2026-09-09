@@ -220,8 +220,10 @@ export async function bulkAdjustInventoryInTx(
   // Create a map for O(1) lookup
   const productMap = new Map(products.map(p => [p.id, p]));
 
-  // Step 2: Validate all adjustments BEFORE making any changes
+  // Step 2: Validate all adjustments BEFORE making any changes. Track the
+  // projected stock so repeated lines for one product are cumulative.
   const validatedAdjustments = [];
+  const projectedStock = new Map(products.map(product => [product.id, product.inventory]));
   for (const adjustment of adjustments) {
     const { productId, quantity } = adjustment;
     const product = productMap.get(productId);
@@ -230,7 +232,7 @@ export async function bulkAdjustInventoryInTx(
       throw new Error(`Product not found: ${productId}`);
     }
 
-    const previousStock = product.inventory;
+    const previousStock = projectedStock.get(productId) ?? product.inventory;
     const newStock = previousStock + quantity;
 
     if (newStock < 0) {
@@ -249,6 +251,8 @@ export async function bulkAdjustInventoryInTx(
 
     const newAvailable = newStock - product.stockReserved;
     const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+    projectedStock.set(productId, newStock);
 
     validatedAdjustments.push({
       adjustment,

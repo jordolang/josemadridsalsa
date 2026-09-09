@@ -486,11 +486,11 @@ describe('bulkAdjustInventoryInTx', () => {
       const results = await bulkAdjustInventoryInTx(adjustments, mockTx);
 
       expect(results).toHaveLength(2);
-      // Both adjustments use the SAME starting inventory (100) from the initial fetch
+      // Repeated adjustments are applied cumulatively from the initial fetch.
       expect(results[0].previousStock).toBe(100);
       expect(results[0].newStock).toBe(90);
-      expect(results[1].previousStock).toBe(100);
-      expect(results[1].newStock).toBe(95);
+      expect(results[1].previousStock).toBe(90);
+      expect(results[1].newStock).toBe(85);
     });
 
     it('should handle product at exact threshold boundary', async () => {

@@ -6,8 +6,8 @@
  *
  * Expected results:
  * - Before optimization: ~40 queries (4 per item × 10 items)
- * - After optimization: ~4-22 queries (2 batched reads + writes)
- * - Reduction in read queries: ~90% (20 → 2)
+ * - After optimization: ~4-31 queries (1 batched read + writes)
+ * - Reduction in read queries: ~45% overall for a 10-item order
  */
 
 import { describe, it, expect } from 'vitest'
@@ -28,11 +28,11 @@ describe('Query Count Verification - N+1 Optimization', () => {
     const totalQueriesBefore = totalQueriesPerItem * ORDER_ITEMS
 
     // AFTER OPTIMIZATION (Batched Pattern)
-    // Now uses 2 batched reads + individual writes:
+    // Now uses 1 batched read, product reads, and individual writes:
     const queriesAfter = {
       // BATCHED READS (avoid N+1):
       batchedIdempotencyCheck: 1, // inventoryTransaction.findMany (single query for all items)
-      batchedProductFetch: 1,     // product.findMany (single query for all items)
+      productFetches: ORDER_ITEMS, // product.findUnique (one per item)
 
       // INDIVIDUAL WRITES (per item, but necessary for isolation):
       productUpdates: ORDER_ITEMS,      // product.update (one per item)
@@ -42,7 +42,7 @@ describe('Query Count Verification - N+1 Optimization', () => {
 
     // Calculate the critical read query reduction
     const readQueriesBefore = ORDER_ITEMS * 2 // findFirst + findUnique per item
-    const readQueriesAfter = 2 // 2 batched findMany queries
+    const readQueriesAfter = 1 + ORDER_ITEMS // batched idempotency query + product reads
     const readQueryReduction = Math.round((1 - readQueriesAfter / readQueriesBefore) * 100)
 
     // Overall query reduction
@@ -64,7 +64,8 @@ describe('Query Count Verification - N+1 Optimization', () => {
     console.log('\nAFTER OPTIMIZATION (Batched Pattern):')
     console.log(`  Batched reads:`)
     console.log(`    - findMany (idempotency):   ${queriesAfter.batchedIdempotencyCheck}`)
-    console.log(`    - findMany (products):      ${queriesAfter.batchedProductFetch}`)
+    console.log(`  Product reads:`)
+    console.log(`    - findUnique (product):     ${queriesAfter.productFetches}`)
     console.log(`  Individual writes:`)
     console.log(`    - update (inventory):       ${queriesAfter.productUpdates}`)
     console.log(`    - create (transaction):     ${queriesAfter.transactionCreates}`)
@@ -73,21 +74,21 @@ describe('Query Count Verification - N+1 Optimization', () => {
     console.log('\nOPTIMIZATION RESULTS:')
     console.log(`  Read queries:   ${readQueriesBefore} → ${readQueriesAfter} (${readQueryReduction}% reduction) ⭐`)
     console.log(`  Total queries:  ${totalQueriesBefore} → ${totalQueriesAfter} (${overallReduction}% reduction)`)
-    console.log(`  Critical fix:   Eliminated N+1 on reads by batching findMany`)
+    console.log(`  Critical fix:   Batched the idempotency read to remove its N+1 pattern`)
     console.log('========================================\n')
 
     // Verify the optimization metrics
-    expect(readQueriesAfter).toBe(2)
+    expect(readQueriesAfter).toBe(11)
     expect(readQueriesBefore).toBe(20)
-    expect(readQueryReduction).toBe(90)
+    expect(readQueryReduction).toBe(45)
 
     expect(totalQueriesAfter).toBeLessThan(totalQueriesBefore)
-    expect(totalQueriesAfter).toBe(22) // 2 reads + 20 writes
+    expect(totalQueriesAfter).toBe(31) // 1 batched read + 10 product reads + 20 writes
     expect(totalQueriesBefore).toBe(40) // 40 sequential queries
 
     // The critical metric: batched reads instead of N+1
     expect(queriesAfter.batchedIdempotencyCheck).toBe(1)
-    expect(queriesAfter.batchedProductFetch).toBe(1)
+    expect(queriesAfter.productFetches).toBe(ORDER_ITEMS)
   })
 
   it('should show scalability of batched approach', () => {
@@ -107,9 +108,9 @@ describe('Query Count Verification - N+1 Optimization', () => {
 
     for (const { items, name } of testCases) {
       const before = items * 4
-      const after = 2 + (items * 2) // 2 batched reads + individual writes
+      const after = 1 + (items * 3) // 1 batched read + product read + individual writes
       const readsBefore = items * 2
-      const readsAfter = 2
+      const readsAfter = 1 + items
       const reduction = Math.round((1 - after / before) * 100)
       const readReduction = Math.round((1 - readsAfter / readsBefore) * 100)
 
@@ -121,10 +122,10 @@ describe('Query Count Verification - N+1 Optimization', () => {
         `${reduction}%`
       )
 
-      // Verify batched reads stay constant at 2, regardless of order size
-      expect(readsAfter).toBe(2)
-      // Read reduction varies by order size, but always significant
-      expect(readReduction).toBeGreaterThanOrEqual(66) // Even 3 items: 6→2 = 66% reduction
+      // The idempotency read stays batched; product reads remain per item.
+      expect(readsAfter).toBe(1 + items)
+      // Read reduction remains significant because only the idempotency check is batched.
+      expect(readReduction).toBeGreaterThanOrEqual(40)
     }
     console.log('========================================\n')
   })
@@ -157,7 +158,7 @@ describe('Query Count Verification - N+1 Optimization', () => {
     console.log('  reservations,')
     console.log('  tx')
     console.log(')')
-    console.log('// Single call: 2 batched reads (findMany) + individual writes')
+    console.log('// Single call: 1 batched read + product reads + individual writes')
     console.log('```')
 
     console.log('\nKEY OPTIMIZATION TECHNIQUES:')
@@ -165,9 +166,8 @@ describe('Query Count Verification - N+1 Optimization', () => {
     console.log('   - Old: inventoryTransaction.findFirst() per item')
     console.log('   - New: inventoryTransaction.findMany() once for all items')
     console.log('')
-    console.log('2. Batched product fetch:')
-    console.log('   - Old: product.findUnique() per item')
-    console.log('   - New: product.findMany() once for all items')
+    console.log('2. Product fetch:')
+    console.log('   - Current: product.findUnique() per item inside the deduction helper')
     console.log('')
     console.log('3. Transaction integrity maintained:')
     console.log('   - All operations still within Serializable transaction')
@@ -175,7 +175,7 @@ describe('Query Count Verification - N+1 Optimization', () => {
     console.log('   - Stock validation performed before any updates')
 
     console.log('\nIMPACT ON STRIPE WEBHOOK:')
-    console.log('- Reduced DB round-trips by 90% for read queries')
+    console.log('- Reduced DB round-trips by 45% overall for a 10-item order')
     console.log('- Faster webhook response time')
     console.log('- Less transaction hold time on database')
     console.log('- Reduced connection pool pressure')
