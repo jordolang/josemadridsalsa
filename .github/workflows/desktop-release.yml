@@ -11,39 +11,8 @@ on:
       - 'desktop-v*'
 
 jobs:
-  # The rolling release is opened once, up front, and each build uploads its own
-  # files straight into it. Artifact storage is deliberately not used: it is an
-  # account-wide quota shared with every other repository, and when it fills the
-  # builds still pass while the uploads fail — two green jobs and no installer.
-  prepare:
-    name: Open the rolling release
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Recreate desktop-latest
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          # Deleted and recreated rather than emptied: `--clobber` deletes each
-          # asset first, and GitHub refuses that on an immutable release. A
-          # rolling tag is disposable by definition.
-          #
-          # The tag itself is left alone. Removing it too (--cleanup-tag) and
-          # immediately recreating a release on the same name raced GitHub's own
-          # bookkeeping and came back 422; keeping the tag means the new release
-          # just attaches to a ref that never went away. --target only applies
-          # when the tag is genuinely absent, which is the first run after a
-          # cleanup.
-          gh release delete desktop-latest --yes 2>/dev/null || true
-          gh release create desktop-latest \
-            --target "${GITHUB_SHA}" \
-            --title "Desktop Apps (latest)" \
-            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
-
   windows:
     name: Windows installer
-    needs: prepare
     runs-on: windows-latest
 
     steps:
@@ -70,25 +39,27 @@ jobs:
       - name: Build installer
         run: npm run dist:win --workspace=@jose-madrid/windows-admin
 
-      - name: Upload installer to the release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          gh release upload desktop-latest \
-            apps/windows-admin/release/*.exe \
-            apps/windows-admin/release/*.blockmap \
-            apps/windows-admin/release/latest.yml \
-            --clobber
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            apps/windows-admin/release/*.exe
+            apps/windows-admin/release/*.blockmap
+            apps/windows-admin/release/latest.yml
+          if-no-files-found: error
+          # Only the `publish` job below consumes this, in the same run; the
+          # installer itself then lives on the GitHub Release. Keeping a 111 MB
+          # artifact for the 90-day default filled the account's storage quota.
+          # Three days rather than one: `publish` needs both platforms, and each
+          # artifact's clock starts at its own upload, so a macOS runner queued
+          # behind a finished Windows build must not outlive the installer.
+          retention-days: 3
 
   macos:
     name: macOS app
-    needs: prepare
     # A full Xcode toolchain is required: the SwiftUI macro plugins that @State
-    # expands through are absent from the standalone Command Line Tools. This is
-    # also why the disk image cannot be built on a machine that only has the
-    # Command Line Tools — running this workflow is the way to get one there.
+    # expands through are absent from the standalone Command Line Tools.
     runs-on: macos-15
 
     steps:
@@ -103,37 +74,77 @@ jobs:
       - name: Show toolchain
         run: swift --version
 
-      # build-app.sh produces both the bundle and the disk image, so the
-      # artifact a release ships is byte-for-byte what a developer gets
-      # locally. It used to be packaged here instead, from the .app alone —
-      # which made an image with nothing to drag the app *to*.
-      - name: Build app bundle and disk image
+      - name: Build app bundle
         working-directory: apps/macos-admin
         run: ./build-app.sh
 
-      - name: Upload disk image to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: gh release upload desktop-latest apps/macos-admin/dist/*.dmg --clobber
+      - name: Package disk image
+        working-directory: apps/macos-admin
+        run: |
+          VERSION=$(node -p "require('../../package.json').version")
+          hdiutil create \
+            -volname "Jose Madrid Salsa Admin" \
+            -srcfolder "dist/Jose Madrid Salsa Admin.app" \
+            -ov -format UDZO \
+            "dist/JoseMadridSalsaAdmin-${VERSION}.dmg"
 
-  # A tagged run additionally keeps a fixed copy of the build under that tag.
-  tagged:
-    name: Tagged copy
+      - name: Upload disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: apps/macos-admin/dist/*.dmg
+          if-no-files-found: error
+          # Same handoff, and the same cross-platform wait, as the Windows
+          # installer above.
+          retention-days: 3
+
+  publish:
+    name: Publish release
     needs: [windows, macos]
-    if: startsWith(github.ref, 'refs/tags/desktop-v')
     runs-on: ubuntu-latest
 
     steps:
-      # Taken back off the rolling release the two builds just filled, rather
-      # than rebuilt, so the tagged copy is the identical binary.
-      - name: Copy the rolling release under the tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect files
         run: |
           mkdir -p release
-          gh release download desktop-latest --dir release
+          find artifacts -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.blockmap' -o -name 'latest.yml' \) \
+            -exec cp {} release/ \;
+          ls -la release
+
+      # One rolling tag holds the current installers. The app's update feed points
+      # at this tag by name, so it cannot be shadowed by a platform release.
+      #
+      # The release is recreated rather than re-uploaded into. `--clobber` deletes
+      # the previous asset before writing the new one, and GitHub's immutable
+      # releases refuse that with "Cannot delete asset from an immutable release",
+      # which failed every rebuild after the first. Deleting the release and its
+      # tag, then creating both again, keeps the tag name — and so the download
+      # URL the update feed is built from — exactly as it was.
+      - name: Publish to the rolling desktop release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view desktop-latest >/dev/null 2>&1; then
+            gh release delete desktop-latest --yes --cleanup-tag
+          fi
+          gh release create desktop-latest release/* \
+            --title "Desktop Apps (latest)" \
+            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
+
+      # A tagged run additionally keeps a fixed copy of that build.
+      - name: Publish the tagged release
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
           gh release create "${GITHUB_REF_NAME}" release/* \
             --title "Desktop Apps ${GITHUB_REF_NAME}" \
             --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel."
