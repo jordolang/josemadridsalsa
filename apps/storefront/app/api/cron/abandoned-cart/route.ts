@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 import { sendEmail, substituteVariables } from '@/lib/email/sender'
-import { abandonedCartTemplate } from '@/lib/email/templates/abandoned-cart'
+import { abandonedCartStage1Template } from '@/lib/email/templates/abandoned-cart-stage-1'
+import { abandonedCartStage2Template } from '@/lib/email/templates/abandoned-cart-stage-2'
+import { abandonedCartStage3Template } from '@/lib/email/templates/abandoned-cart-stage-3'
 import { checkUnsubscribed } from '@/lib/email/logger'
 import {
   abandonedCartWhere,
@@ -12,6 +14,12 @@ import {
 } from '@/lib/checkout/abandoned-cart'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://josemadrid.net'
+
+const abandonedCartStageTemplates = {
+  [1]: abandonedCartStage1Template,
+  [2]: abandonedCartStage2Template,
+  [3]: abandonedCartStage3Template,
+}
 
 async function sendAbandonedCartEmail(
   cartId: string,
@@ -33,6 +41,11 @@ async function sendAbandonedCartEmail(
   const cartTotal = formatCartTotal(cartData)
   const unsubscribeUrl = `${BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}`
 
+  const template = abandonedCartStageTemplates[stage]
+  if (!template) {
+    return false
+  }
+
   const { subject, intro } = stageCopy(stage)
 
   const vars: Record<string, string> = {
@@ -46,9 +59,9 @@ async function sendAbandonedCartEmail(
     FORWARD_TO_FRIEND_URL: '',
   }
 
-  const html = substituteVariables(abandonedCartTemplate.html, vars)
+  const html = substituteVariables(template.html, vars)
     .replace('{{stageIntro}}', intro)
-  const text = substituteVariables(abandonedCartTemplate.text, vars)
+  const text = substituteVariables(template.text, vars)
 
   const result = await sendEmail({ to: email, subject, html, text })
   return result.success
