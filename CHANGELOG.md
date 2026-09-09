@@ -14,6 +14,22 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **A three-email abandoned cart recovery sequence to recapture lost sales.** Customers who leave
+  items in their cart without completing checkout now receive a series of timed recovery emails:
+  a gentle reminder at 1 hour, a benefit-focused follow-up at 24 hours, and a final 10% discount
+  offer at 72 hours if the cart remains abandoned. Each email is personalized with the customer's
+  name and cart contents, includes a direct checkout link that restores their session, and
+  respects their email preferences (`emailOptIn`). The sequence is managed by `AbandonedCartEmail`
+  records that track send status and prevent duplicate sends, triggered by a cron job
+  (`/api/cron/abandoned-carts`) that runs every 15 minutes to check for carts that have crossed
+  each threshold. Recovery emails use Resend via `lib/email/abandoned-cart.ts`, with HTML
+  templates at `emails/abandoned-cart-*.tsx` that match the existing transactional email design.
+  The final email generates a single-use 10% discount code through `lib/discounts.ts`, valid for
+  7 days and scoped to the original cart items. Cart restoration works via a signed token in the
+  email link that validates cart ownership and restores it to the customer's session on
+  click-through. Analytics track recovery performance through the existing order source
+  attribution.
+
 - **An `Artifact Cleanup` workflow** (Actions tab, manual trigger), documented at
   `deployment/ci-artifact-storage`. Retention settings stop future accumulation but never reclaim
   what is already stored, and the UI deletes one artifact at a time — unworkable against 553 of
