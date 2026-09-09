@@ -4,7 +4,7 @@ import { createMetadata } from '@/lib/metadata'
 import { getListedPolls } from '@/lib/polls/queries'
 import { PollCard } from '@/components/polls/poll-card'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 export const metadata: Metadata = createMetadata({
   title: 'Community Polls | Jose Madrid Salsa',

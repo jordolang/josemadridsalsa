@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { createMetadata } from '@/lib/metadata';
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 7200
 
 export const metadata: Metadata = createMetadata({
   title: 'Wholesale - Jose Madrid Salsa',
