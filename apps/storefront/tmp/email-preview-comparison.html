@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abandoned Cart Email Sequence - Manual Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .instructions h2 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .instructions ul {
+            margin: 10px 0;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .email-preview {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .email-header {
+            background: #dc2626;
+            color: white;
+            padding: 15px 20px;
+        }
+        .email-header h2 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+        .email-header p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .email-body {
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        iframe {
+            width: 100%;
+            min-height: 800px;
+            border: none;
+        }
+        .checklist {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .checklist h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .checklist label {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .checklist label:hover {
+            background: #f8f9fa;
+        }
+        .checklist input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .stage-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .stage-1 { background: #fef3c7; color: #92400e; }
+        .stage-2 { background: #fee2e2; color: #991b1b; }
+        .stage-3 { background: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Abandoned Cart Email Sequence - Manual Verification</h1>
+
+        <div class="instructions">
+            <h2>📋 Verification Instructions</h2>
+            <p><strong>Purpose:</strong> Verify the 3-stage abandoned cart email sequence has distinct messaging and proper rendering.</p>
+            <ul>
+                <li><strong>Stage 1 (1 hour):</strong> Gentle reminder, friendly tone, no pressure</li>
+                <li><strong>Stage 2 (24 hours):</strong> Urgency messaging, stock warnings, "high demand alert"</li>
+                <li><strong>Stage 3 (48 hours):</strong> Final chance, expiration countdown, optional discount</li>
+            </ul>
+            <p><strong>Testing:</strong></p>
+            <ol>
+                <li>Review each email preview below</li>
+                <li>Open DevTools (F12) and test mobile viewports (375px, 390px, 768px)</li>
+                <li>Verify distinct messaging in each stage</li>
+                <li>Check that all variables are substituted (no {{...}} visible)</li>
+                <li>Complete the checklist at the bottom</li>
+            </ol>
+            <p><strong>For full testing (database & cron):</strong> See <code>MANUAL-VERIFICATION.md</code></p>
+        </div>
+
+        <div class="grid">
+            <div class="email-preview">
+                <div class="email-header">
+                    <h2>
+                        Stage 1: Gentle Reminder
+                        <span class="stage-badge stage-1">1 HOUR</span>
+                    </h2>
+                    <p>Subject: "Don't forget your salsa! 🌶️"</p>
+                </div>
+                <div class="email-body" id="stage1"></div>
+            </div>
+
+            <div class="email-preview">
+                <div class="email-header">
+                    <h2>
+                        Stage 2: Urgency
+                        <span class="stage-badge stage-2">24 HOURS</span>
+                    </h2>
+                    <p>Subject: "Still waiting for you! Your cart won't last forever 🌶️"</p>
+                </div>
+                <div class="email-body" id="stage2"></div>
+            </div>
+
+            <div class="email-preview">
+                <div class="email-header">
+                    <h2>
+                        Stage 3: Final Chance
+                        <span class="stage-badge stage-3">48 HOURS</span>
+                    </h2>
+                    <p>Subject: "⏰ Final Chance! Your cart expires soon 🌶️"</p>
+                </div>
+                <div class="email-body" id="stage3"></div>
+            </div>
+        </div>
+
+        <div class="checklist">
+            <h2>✅ Verification Checklist</h2>
+            <form id="verificationForm">
+                <h3>Stage 1 - Gentle Reminder</h3>
+                <label><input type="checkbox" name="stage1-tone"> Friendly, non-pushy tone</label>
+                <label><input type="checkbox" name="stage1-callout"> Yellow cart total callout box present</label>
+                <label><input type="checkbox" name="stage1-cta"> "Complete Your Order" CTA button visible</label>
+                <label><input type="checkbox" name="stage1-benefits"> Lists brand benefits (handcrafted, fresh, etc.)</label>
+                <label><input type="checkbox" name="stage1-no-urgency"> No urgency or pressure language</label>
+
+                <h3 style="margin-top: 20px;">Stage 2 - Urgency</h3>
+                <label><input type="checkbox" name="stage2-warning"> Red warning callout about stock</label>
+                <label><input type="checkbox" name="stage2-alert"> "HIGH DEMAND ALERT" section present</label>
+                <label><input type="checkbox" name="stage2-cta"> "Secure Your Order Now" CTA (more urgent)</label>
+                <label><input type="checkbox" name="stage2-stock"> Emphasizes limited stock</label>
+                <label><input type="checkbox" name="stage2-hours"> Shows hours waiting (24 hours)</label>
+
+                <h3 style="margin-top: 20px;">Stage 3 - Final Chance</h3>
+                <label><input type="checkbox" name="stage3-countdown"> Large red expiration countdown</label>
+                <label><input type="checkbox" name="stage3-discount"> Green discount offer section visible</label>
+                <label><input type="checkbox" name="stage3-code"> Discount code displayed prominently</label>
+                <label><input type="checkbox" name="stage3-cta"> "Claim Your Order Now" CTA (most urgent)</label>
+                <label><input type="checkbox" name="stage3-warnings"> Multiple expiration warnings throughout</label>
+
+                <h3 style="margin-top: 20px;">Mobile Responsiveness</h3>
+                <label><input type="checkbox" name="mobile-375"> iPhone SE (375px) - readable, no overflow</label>
+                <label><input type="checkbox" name="mobile-390"> iPhone 12 (390px) - readable, no overflow</label>
+                <label><input type="checkbox" name="mobile-768"> iPad (768px) - readable, no overflow</label>
+                <label><input type="checkbox" name="mobile-buttons"> All CTAs are tappable (44px min)</label>
+
+                <h3 style="margin-top: 20px;">General</h3>
+                <label><input type="checkbox" name="general-vars"> All variables substituted (no {{...}})</label>
+                <label><input type="checkbox" name="general-distinct"> Distinct messaging across all 3 stages</label>
+                <label><input type="checkbox" name="general-branding"> José Madrid branding consistent</label>
+                <label><input type="checkbox" name="general-urls"> Recovery URLs well-formed</label>
+
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+                    <p style="margin: 0;"><strong>Next Steps:</strong></p>
+                    <ul style="margin: 10px 0;">
+                        <li>Complete this checklist</li>
+                        <li>See <code>MANUAL-VERIFICATION.md</code> for database testing</li>
+                        <li>Update <code>build-progress.txt</code> with results</li>
+                        <li>Mark subtask-3-2 as completed in <code>implementation_plan.json</code></li>
+                    </ul>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Email template rendering - simplified inline version
+        const BASE_URL = 'http://localhost:3000';
+        const IMAGE_BASE_URL = 'https://www.josemadrid.net/email-templates';
+
+        const baseStyles = {
+            container: 'width:100%;margin:0;background-color:#f4f4f7;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;',
+            wrapper: 'max-width:600px;margin:0 auto;background-color:#ffffff;',
+            header: 'padding:0;text-align:center;',
+            content: 'padding:40px 32px;color:#333333;line-height:1.6;',
+            button: 'display:inline-block;padding:14px 32px;background-color:#dc2626;color:#ffffff !important;text-decoration:none;border-radius:6px;font-weight:600;margin:20px 0;',
+            divider: 'height:1px;background-color:#e2e8f0;margin:30px 0;border:none;',
+        };
+
+        const footerHTML = `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f1ec;">
+            <tr><td align="center" style="padding: 32px 16px;"><p style="margin:0;color:#8c7a6b;font-size:13px;">Handcrafted Gourmet Salsas · Zanesville, Ohio · Est. 1988</p></td></tr>
+        </table>`;
+
+        function headerImg(filename, alt) {
+            return `<img src="${IMAGE_BASE_URL}/${filename}" alt="${alt}" width="600" style="display:block;width:100%;max-width:600px;height:auto;" />`;
+        }
+
+        // Stage 1 Template
+        const stage1HTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Cart is Waiting</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      ${headerImg('abandoned-cart.png', 'Your Cart is Waiting')}
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi Sarah Johnson,</p>
+      <p style="margin-bottom:20px;">We noticed you left some delicious items in your cart. Your taste in salsa is excellent, and we'd hate for you to miss out!</p>
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#92400e;font-weight:600;">📦 Cart Total: $47.85</p>
+        <p style="margin:0;color:#92400e;">Your items are reserved and ready to ship</p>
+      </div>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${BASE_URL}/api/cart/recover?token=test-token-1" style="${baseStyles.button}">Complete Your Order</a>
+      </div>
+      <hr style="${baseStyles.divider}">
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">Why customers love José Madrid Salsa:</h3>
+      <ul style="padding-left:20px;">
+        <li style="margin-bottom:10px;">Handcrafted in small batches since 1982</li>
+        <li style="margin-bottom:10px;">Fresh, premium ingredients</li>
+        <li style="margin-bottom:10px;">Fast, secure shipping</li>
+        <li style="margin-bottom:10px;">Satisfaction guaranteed</li>
+      </ul>
+      <p style="margin-top:30px;">Questions? Reply to this email or call us at <a href="tel:7405214304" style="color:#dc2626;">740-521-4304</a>.</p>
+      <p style="margin-top:20px;"><strong>The José Madrid Salsa Team</strong></p>
+    </div>
+    ${footerHTML}
+  </div>
+</body>
+</html>`;
+
+        // Stage 2 Template
+        const stage2HTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Your Cart is Still Waiting</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      ${headerImg('abandoned-cart.png', 'Your Cart is Still Waiting')}
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi Sarah Johnson,</p>
+      <p style="margin-bottom:20px;">Your cart has been waiting for <strong>24</strong> hours now, and we wanted to remind you before it's too late!</p>
+      <div style="background:#fee2e2;border-left:4px solid #dc2626;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#991b1b;font-weight:600;">⚠️ Important Notice</p>
+        <p style="margin:0;color:#991b1b;">We can't guarantee these items will still be in stock much longer. Popular flavors sell out fast!</p>
+      </div>
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#92400e;font-weight:600;">📦 Your Cart Total: $47.85</p>
+        <p style="margin:0;color:#92400e;">Items reserved for a limited time only</p>
+      </div>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${BASE_URL}/api/cart/recover?token=test-token-2" style="${baseStyles.button}">Secure Your Order Now</a>
+      </div>
+      <hr style="${baseStyles.divider}">
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">⏰ Why order now:</h3>
+      <ul style="padding-left:20px;">
+        <li style="margin-bottom:10px;"><strong>Stock is limited</strong> - our most popular flavors sell out quickly</li>
+        <li style="margin-bottom:10px;"><strong>Fresh batches</strong> - handcrafted in small quantities</li>
+        <li style="margin-bottom:10px;"><strong>Fast shipping</strong> - get your salsa before it's gone</li>
+        <li style="margin-bottom:10px;"><strong>100% satisfaction</strong> - guaranteed or your money back</li>
+      </ul>
+      <div style="background:#f3f4f6;border-radius:6px;padding:20px;margin:30px 0;text-align:center;">
+        <p style="margin:0 0 10px;color:#374151;font-size:14px;font-weight:600;">🔥 HIGH DEMAND ALERT</p>
+        <p style="margin:0;color:#6b7280;font-size:13px;">Your items are popular right now. Complete your order to avoid disappointment.</p>
+      </div>
+      <p style="margin-top:30px;">Have questions or need help? Reply to this email or call us at <a href="tel:7405214304" style="color:#dc2626;">740-521-4304</a>.</p>
+      <p style="margin-top:20px;"><strong>The José Madrid Salsa Team</strong></p>
+    </div>
+    ${footerHTML}
+  </div>
+</body>
+</html>`;
+
+        // Stage 3 Template
+        const stage3HTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Final Chance - Your Cart Expires Soon</title></head>
+<body style="${baseStyles.container}">
+  <div style="${baseStyles.wrapper}">
+    <div style="${baseStyles.header}">
+      ${headerImg('abandoned-cart.png', 'Final Chance - Your Cart Expires Soon')}
+    </div>
+    <div style="${baseStyles.content}">
+      <p style="font-size:16px;margin-bottom:20px;">Hi Sarah Johnson,</p>
+      <p style="margin-bottom:20px;"><strong>This is your final reminder.</strong> Your cart will expire in <strong>12</strong> hours, and we won't be able to hold your items any longer.</p>
+      <div style="background:#fee2e2;border:3px solid #dc2626;padding:25px;margin:30px 0;border-radius:8px;text-align:center;">
+        <p style="margin:0 0 15px;color:#991b1b;font-weight:700;font-size:28px;">⏰ CART EXPIRES IN 12 HOURS</p>
+        <p style="margin:0;color:#991b1b;font-weight:600;">Your reserved items will be released after this time</p>
+      </div>
+      <div style="background:#dcfce7;border:3px solid #16a34a;padding:30px;margin:30px 0;border-radius:8px;text-align:center;">
+        <p style="margin:0 0 10px;color:#166534;font-weight:700;font-size:20px;">🎁 SPECIAL OFFER - JUST FOR YOU!</p>
+        <p style="margin:0 0 15px;color:#166534;font-size:32px;font-weight:700;">10% OFF</p>
+        <p style="margin:0 0 10px;color:#166534;font-weight:600;font-size:18px;">Use code: SAVE10</p>
+        <p style="margin:0;color:#166534;font-size:14px;">This exclusive offer expires with your cart!</p>
+      </div>
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:20px;margin:30px 0;border-radius:6px;">
+        <p style="margin:0 0 10px;color:#92400e;font-weight:600;">📦 Your Cart Total: $47.85</p>
+        <p style="margin:0;color:#92400e;">Save 10% with code <strong>SAVE10</strong></p>
+      </div>
+      <div style="text-align:center;margin:30px 0;">
+        <a href="${BASE_URL}/api/cart/recover?token=test-token-3" style="${baseStyles.button}">Claim Your Order Now</a>
+      </div>
+      <hr style="${baseStyles.divider}">
+      <h3 style="color:#dc2626;font-size:18px;margin-bottom:15px;">🔥 This is your last chance to:</h3>
+      <ul style="padding-left:20px;">
+        <li style="margin-bottom:10px;"><strong>Secure your items</strong> - they'll be released to other customers after expiration</li>
+        <li style="margin-bottom:10px;"><strong>Save 10%</strong> - this exclusive discount expires with your cart</li>
+        <li style="margin-bottom:10px;"><strong>Lock in today's prices</strong> - prices subject to change</li>
+        <li style="margin-bottom:10px;"><strong>Enjoy fresh salsa</strong> - handcrafted in small batches since 1982</li>
+      </ul>
+      <div style="background:#fef3c7;border-radius:6px;padding:20px;margin:30px 0;text-align:center;">
+        <p style="margin:0 0 10px;color:#92400e;font-size:14px;font-weight:600;">⚠️ URGENT: Your cart will be cleared in 12 hours</p>
+        <p style="margin:0;color:#92400e;font-size:13px;">After that, we cannot guarantee availability or pricing.</p>
+      </div>
+      <p style="margin-top:30px;">Need help completing your order? Reply to this email or call us at <a href="tel:7405214304" style="color:#dc2626;">740-521-4304</a>. We're here to help!</p>
+      <p style="margin-top:20px;"><strong>The José Madrid Salsa Team</strong></p>
+    </div>
+    ${footerHTML}
+  </div>
+</body>
+</html>`;
+
+        // Render emails
+        document.getElementById('stage1').innerHTML = stage1HTML;
+        document.getElementById('stage2').innerHTML = stage2HTML;
+        document.getElementById('stage3').innerHTML = stage3HTML;
+
+        // Save checklist state to localStorage
+        const form = document.getElementById('verificationForm');
+        form.addEventListener('change', () => {
+            const formData = new FormData(form);
+            const checked = {};
+            for (const [key, value] of formData.entries()) {
+                checked[key] = true;
+            }
+            localStorage.setItem('abandonedCartChecklist', JSON.stringify(checked));
+
+            // Update progress
+            const total = form.querySelectorAll('input[type="checkbox"]').length;
+            const completed = Object.keys(checked).length;
+            console.log(`Progress: ${completed}/${total} checks completed`);
+        });
+
+        // Load saved checklist state
+        const saved = localStorage.getItem('abandonedCartChecklist');
+        if (saved) {
+            const checked = JSON.parse(saved);
+            for (const [name, value] of Object.entries(checked)) {
+                const input = form.querySelector(`input[name="${name}"]`);
+                if (input) input.checked = true;
+            }
+        }
+    </script>
+</body>
+</html>
