@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { ok, fail, failFromError } from '@/lib/api'
@@ -86,6 +87,9 @@ export async function POST(req: NextRequest) {
       entityId: collection.id,
       changes: { ...data, productIds },
     })
+
+    // Invalidate collections cache
+    revalidateTag('collections')
 
     return ok({ collection }, 201)
   } catch (error: any) {

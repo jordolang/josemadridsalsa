@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { requirePermission } from '@/lib/rbac';
 import { ok, fail, parsePagination } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
@@ -180,6 +181,10 @@ export async function POST(req: NextRequest) {
       changes: { name: product.name, sku: product.sku },
     });
 
+    // Invalidate product and recommendation caches
+    revalidateTag('products');
+    revalidateTag('recommendations');
+
     return ok({ product }, 201);
   } catch (error: any) {
     console.error('Error creating product:', error);
@@ -226,6 +231,10 @@ export async function PATCH(req: NextRequest) {
       changes: { productIds, updates, count: result.count },
     });
 
+    // Invalidate product and recommendation caches
+    revalidateTag('products');
+    revalidateTag('recommendations');
+
     return ok({
       message: `${result.count} products updated successfully`,
       count: result.count,
@@ -269,6 +278,10 @@ export async function DELETE(req: NextRequest) {
       entityType: 'product',
       changes: { productIds, count: result.count },
     });
+
+    // Invalidate product and recommendation caches
+    revalidateTag('products');
+    revalidateTag('recommendations');
 
     return ok({
       message: `${result.count} products deleted successfully`,
