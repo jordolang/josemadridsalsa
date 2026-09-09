@@ -28,8 +28,16 @@ jobs:
           # Deleted and recreated rather than emptied: `--clobber` deletes each
           # asset first, and GitHub refuses that on an immutable release. A
           # rolling tag is disposable by definition.
-          gh release delete desktop-latest --yes --cleanup-tag 2>/dev/null || true
+          #
+          # The tag itself is left alone. Removing it too (--cleanup-tag) and
+          # immediately recreating a release on the same name raced GitHub's own
+          # bookkeeping and came back 422; keeping the tag means the new release
+          # just attaches to a ref that never went away. --target only applies
+          # when the tag is genuinely absent, which is the first run after a
+          # cleanup.
+          gh release delete desktop-latest --yes 2>/dev/null || true
           gh release create desktop-latest \
+            --target "${GITHUB_SHA}" \
             --title "Desktop Apps (latest)" \
             --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
 
