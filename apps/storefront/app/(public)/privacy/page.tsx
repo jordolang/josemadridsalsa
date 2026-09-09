@@ -9,7 +9,7 @@ export const metadata: Metadata = createMetadata({
   pathname: '/privacy',
 });
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 86400; // 24 hours
 
 export default async function PrivacyPolicyPage() {
   const settings = await getStoreSettings();
