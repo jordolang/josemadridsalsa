@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Grid3X3, List } from 'lucide-react'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
@@ -53,7 +53,7 @@ export function ProductsClient({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(initialView || 'grid')
 
   // Update URL when filters change
-  const updateFilters = (updates: {
+  const updateFilters = useCallback((updates: {
     category?: string
     heatLevel?: string
     search?: string
@@ -98,10 +98,15 @@ export function ProductsClient({
     }
 
     router.push(`/products?${params.toString()}`, { scroll: false })
-  }
+  }, [searchParams, router])
 
   // Since we're using server-side filtering, we don't need client-side filtering
   const filteredProducts = initialProducts
+
+  // Memoize expensive price calculation for gift box
+  const jarPrice = useMemo(() => {
+    return typicalJarPrice(initialProducts.map((product) => product.price))
+  }, [initialProducts])
 
   const handleRefresh = useCallback(async () => {
     router.refresh()
@@ -233,7 +238,7 @@ export function ProductsClient({
       </section>
 
       {/* Gift Box Quick Add */}
-      <GiftBoxQuickAdd jarPrice={typicalJarPrice(initialProducts.map((product) => product.price))} />
+      <GiftBoxQuickAdd jarPrice={jarPrice} />
 
       {/* Products Grid */}
       <section className="py-12">

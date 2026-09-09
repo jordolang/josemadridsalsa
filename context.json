@@ -1,0 +1,50 @@
+{
+  "files_to_modify": {
+    "storefront": [
+      "apps/storefront/app/(public)/products/products-client.tsx",
+      "apps/storefront/app/(public)/checkout/page.tsx",
+      "apps/storefront/components/checkout/PaymentMethodSelector.tsx",
+      "apps/storefront/components/store/gift-box-selector.tsx"
+    ]
+  },
+  "files_to_reference": [
+    "apps/storefront/components/store/product-grid.tsx",
+    "apps/storefront/components/arena/leaderboard-table.tsx"
+  ],
+  "patterns": {
+    "useMemo_pattern": "Wrap expensive computations with useMemo([deps]) - see product-grid.tsx lines 69-119",
+    "useCallback_pattern": "Wrap event handlers passed as props with useCallback([deps])",
+    "array_operations": "Filter, map, reduce on arrays should be memoized if executed on every render",
+    "object_creation": "URLSearchParams, Array.from, Object.values should be memoized if expensive"
+  },
+  "existing_implementations": {
+    "description": "Found existing memoization in product-grid.tsx for filtering/sorting, and leaderboard-table.tsx for derived data. Checkout page already has some useMemo for subtotal and paymentMethods.",
+    "relevant_files": [
+      "apps/storefront/components/store/product-grid.tsx",
+      "apps/storefront/components/arena/leaderboard-table.tsx"
+    ],
+    "good_examples": {
+      "product_grid_filtering": "Lines 69-119 show useMemo for filter+sort with proper dependencies",
+      "leaderboard_derived_data": "Lines 70-84 show useMemo for expensive transformations",
+      "checkout_subtotal": "Lines 348-351 already use useMemo for cart total"
+    }
+  },
+  "performance_issues_found": {
+    "products_client": [
+      "Line 56-101: updateFilters function not memoized - creates new URLSearchParams on every call",
+      "Line 236: typicalJarPrice(initialProducts.map(p => p.price)) - inline map operation on every render"
+    ],
+    "checkout_page": [
+      "Lines 197, 529, 713: toCheckoutItems(items) transformation not memoized",
+      "Note: subtotal (348-351) and paymentMethods (367-375) already use useMemo correctly"
+    ],
+    "payment_method_selector": [
+      "Lines 73-74: Two filter operations on methods array without useMemo"
+    ],
+    "gift_box_selector": [
+      "Line 165: Array.from({ length: selectedBox.size }) recreated on every render",
+      "Line 237: Another Array.from({ length: selectedBox.size })",
+      "Line 107: Object.values(selections).filter(...).length - unmemoized"
+    ]
+  }
+}

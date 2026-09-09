@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -107,6 +107,11 @@ export function GiftBoxSelector() {
   const selectedCount = Object.values(selections).filter((p) => p !== null).length
   const isComplete = selectedBox && selectedCount === selectedBox.size
 
+  const slots = useMemo(() => {
+    if (!selectedBox) return []
+    return Array.from({ length: selectedBox.size })
+  }, [selectedBox])
+
   return (
     <section className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -162,7 +167,7 @@ export function GiftBoxSelector() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {Array.from({ length: selectedBox.size }).map((_, index) => {
+                {slots.map((_, index) => {
                   const selectedProduct = selections[index]
                   return (
                     <div
@@ -234,7 +239,7 @@ export function GiftBoxSelector() {
                     className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted cursor-pointer"
                     onClick={() => {
                       // Find first empty slot
-                      const emptySlot = Array.from({ length: selectedBox.size }).findIndex(
+                      const emptySlot = slots.findIndex(
                         (_, i) => selections[i] === null
                       )
                       if (emptySlot !== -1) {
