@@ -158,21 +158,33 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
 }
 
 /**
- * Adjust inventory for multiple products (bulk operation)
+ * Adjust inventory for multiple products (bulk operation).
+ * Provides atomic all-or-nothing behavior via a single transaction.
+ * After the transaction commits, fires alert checks for all affected products.
  */
 export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
-  const results = [];
+  const results = await withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => bulkAdjustInventoryInTx(adjustments, tx),
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
 
-  for (const adjustment of adjustments) {
+  // Check if we need to create alerts after adjustments (non-critical — adjustments already committed)
+  for (const result of results) {
     try {
-      const result = await adjustInventory(adjustment);
-      results.push({ success: true, ...result });
-    } catch (error: any) {
-      results.push({
-        success: false,
-        productId: adjustment.productId,
-        error: error.message,
-      });
+      await checkAndUpdateAlerts(
+        result.product.id,
+        result.newStock,
+        result.product.lowStockThreshold
+      );
+    } catch (alertError) {
+      console.error(
+        `[bulkAdjustInventory] Alert sync failed for product ${result.product.id}:`,
+        alertError
+      );
     }
   }
 
