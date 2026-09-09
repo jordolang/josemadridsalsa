@@ -13,7 +13,7 @@ import {
 } from '@/lib/merchandise/config'
 import { createMetadata } from '@/lib/metadata'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 900 // 15 minutes
 
 export const metadata: Metadata = createMetadata({
   title: 'Merchandise - Jose Madrid Salsa',

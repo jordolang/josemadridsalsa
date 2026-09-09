@@ -171,8 +171,8 @@
               "Categories render"
             ]
           },
-          "status": "pending",
-          "notes": "Already has 'export const revalidate = 300', just remove 'export const dynamic = force-dynamic'"
+          "status": "completed",
+          "notes": "Removed 'export const dynamic = force-dynamic', kept existing 'export const revalidate = 300'"
         },
         {
           "id": "subtask-2-6",
@@ -191,8 +191,8 @@
               "Heat level filter works"
             ]
           },
-          "status": "pending",
-          "notes": "Already has 'export const revalidate = 60', just remove 'export const dynamic = force-dynamic'"
+          "status": "completed",
+          "notes": "Removed 'export const dynamic = force-dynamic', kept existing 'export const revalidate = 60'"
         },
         {
           "id": "subtask-2-7",
@@ -211,7 +211,7 @@
               "No console errors"
             ]
           },
-          "status": "pending",
+          "status": "completed",
           "notes": "Already has 'export const revalidate = 3600', just remove 'export const dynamic = force-dynamic'"
         }
       ]
@@ -243,7 +243,7 @@
               "No console errors"
             ]
           },
-          "status": "pending",
+          "status": "completed",
           "notes": "Already has 'export const revalidate = 300', just remove 'export const dynamic = force-dynamic'"
         },
         {
@@ -265,8 +265,8 @@
               "No console errors"
             ]
           },
-          "status": "pending",
-          "notes": "Remove 'export const dynamic = force-dynamic', add 'export const revalidate = 300'"
+          "status": "completed",
+          "notes": "Converted to server component with ISR: revalidate = 300. Extracted scroll button to client component."
         },
         {
           "id": "subtask-3-3",
@@ -289,26 +289,6 @@
           },
           "status": "pending",
           "notes": "Remove 'export const dynamic = force-dynamic', add 'export const revalidate = 900'"
-        },
-        {
-          "id": "subtask-3-4",
-          "description": "Update gift certificates page to use ISR with 30-minute revalidation",
-          "service": "storefront",
-          "files_to_modify": [
-            "apps/storefront/app/(public)/gift-certificates/page.tsx"
-          ],
-          "files_to_create": [],
-          "patterns_from": [],
-          "verification": {
-            "type": "browser",
-            "url": "http://localhost:3000/gift-certificates",
-            "checks": [
-              "Gift certificate page renders",
-              "No console errors"
-            ]
-          },
-          "status": "pending",
-          "notes": "Remove 'export const dynamic = force-dynamic', add 'export const revalidate = 1800'"
         },
         {
           "id": "subtask-3-5",
@@ -724,7 +704,8 @@
   "qa_signoff": null,
   "status": "in_progress",
   "planStatus": "in_progress",
-  "xstateState": "planning",
+  "xstateState": "coding",
   "executionPhase": "coding",
-  "updated_at": "2026-09-07T10:46:27.708Z"
+  "updated_at": "2026-09-09T13:07:49.760Z",
+  "recoveryNote": "Manually recovered 2026-09-07: runner was killed mid subtask-2-7. Edit committed as 4d3280e6, subtask-3-4 removed (planned file never existed), status reset from human_review/complete to resume at subtask-3-1."
 }
