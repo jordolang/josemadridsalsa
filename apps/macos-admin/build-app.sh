@@ -77,3 +77,42 @@ iconutil -c icns "$ICONSET_DIR" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
 # right-click-to-open prompt on a machine that did not build the app.
 codesign --force --deep --sign - "$APP_DIR"
 echo "$APP_DIR"
+
+# ---------------------------------------------------------------------------
+# Installer
+# ---------------------------------------------------------------------------
+
+# A .app in a folder is not something you hand to somebody. The disk image is
+# the installer: the bundle beside an /Applications symlink, so the whole
+# install is one drag. Named to match the Windows artifact
+# (JoseMadridSalsaAdmin-Setup-<version>.exe) so the two sit together in a
+# release.
+DMG_PATH="$SCRIPT_DIR/dist/JoseMadridSalsaAdmin-$VERSION.dmg"
+STAGING="$SCRIPT_DIR/.build/dmg"
+
+rm -rf "$STAGING"
+mkdir -p "$STAGING"
+cp -R "$APP_DIR" "$STAGING/"
+ln -s /Applications "$STAGING/Applications"
+
+# UDZO is the compressed read-only format every macOS since 10.x mounts without
+# a prompt. -ov so a rebuild replaces the image rather than failing on it.
+# macOS 27 prints a deprecation notice pointing at `diskutil image create`; that
+# command does not exist on the older systems this may be built on, so hdiutil
+# stays until it actually stops working. The notice is noise, not a failure.
+rm -f "$DMG_PATH"
+hdiutil create \
+  -volname "$APP_NAME" \
+  -srcfolder "$STAGING" \
+  -ov \
+  -format UDZO \
+  "$DMG_PATH" >/dev/null
+
+rm -rf "$STAGING"
+
+# An unsigned image gets quarantined on the machine that downloads it, and the
+# first open needs a right-click. Signing it ad-hoc does not remove that, but it
+# does mean the image itself is not reported as damaged.
+codesign --force --sign - "$DMG_PATH"
+
+echo "$DMG_PATH"

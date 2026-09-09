@@ -11,8 +11,31 @@ on:
       - 'desktop-v*'
 
 jobs:
+  # The rolling release is opened once, up front, and each build uploads its own
+  # files straight into it. Artifact storage is deliberately not used: it is an
+  # account-wide quota shared with every other repository, and when it fills the
+  # builds still pass while the uploads fail — two green jobs and no installer.
+  prepare:
+    name: Open the rolling release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Recreate desktop-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Deleted and recreated rather than emptied: `--clobber` deletes each
+          # asset first, and GitHub refuses that on an immutable release. A
+          # rolling tag is disposable by definition.
+          gh release delete desktop-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create desktop-latest \
+            --title "Desktop Apps (latest)" \
+            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
+
   windows:
     name: Windows installer
+    needs: prepare
     runs-on: windows-latest
 
     steps:
@@ -39,20 +62,25 @@ jobs:
       - name: Build installer
         run: npm run dist:win --workspace=@jose-madrid/windows-admin
 
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: |
-            apps/windows-admin/release/*.exe
-            apps/windows-admin/release/*.blockmap
-            apps/windows-admin/release/latest.yml
-          if-no-files-found: error
+      - name: Upload installer to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release upload desktop-latest \
+            apps/windows-admin/release/*.exe \
+            apps/windows-admin/release/*.blockmap \
+            apps/windows-admin/release/latest.yml \
+            --clobber
 
   macos:
     name: macOS app
+    needs: prepare
     # A full Xcode toolchain is required: the SwiftUI macro plugins that @State
-    # expands through are absent from the standalone Command Line Tools.
+    # expands through are absent from the standalone Command Line Tools. This is
+    # also why the disk image cannot be built on a machine that only has the
+    # Command Line Tools — running this workflow is the way to get one there.
     runs-on: macos-15
 
     steps:
@@ -67,68 +95,37 @@ jobs:
       - name: Show toolchain
         run: swift --version
 
-      - name: Build app bundle
+      # build-app.sh produces both the bundle and the disk image, so the
+      # artifact a release ships is byte-for-byte what a developer gets
+      # locally. It used to be packaged here instead, from the .app alone —
+      # which made an image with nothing to drag the app *to*.
+      - name: Build app bundle and disk image
         working-directory: apps/macos-admin
         run: ./build-app.sh
 
-      - name: Package disk image
-        working-directory: apps/macos-admin
-        run: |
-          VERSION=$(node -p "require('../../package.json').version")
-          hdiutil create \
-            -volname "Jose Madrid Salsa Admin" \
-            -srcfolder "dist/Jose Madrid Salsa Admin.app" \
-            -ov -format UDZO \
-            "dist/JoseMadridSalsaAdmin-${VERSION}.dmg"
+      - name: Upload disk image to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload desktop-latest apps/macos-admin/dist/*.dmg --clobber
 
-      - name: Upload disk image
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-app
-          path: apps/macos-admin/dist/*.dmg
-          if-no-files-found: error
-
-  publish:
-    name: Publish release
+  # A tagged run additionally keeps a fixed copy of the build under that tag.
+  tagged:
+    name: Tagged copy
     needs: [windows, macos]
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Collect files
+      # Taken back off the rolling release the two builds just filled, rather
+      # than rebuilt, so the tagged copy is the identical binary.
+      - name: Copy the rolling release under the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           mkdir -p release
-          find artifacts -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.blockmap' -o -name 'latest.yml' \) \
-            -exec cp {} release/ \;
-          ls -la release
-
-      # One rolling tag holds the current installers. The app's update feed points
-      # at this tag by name, so it cannot be shadowed by a platform release.
-      - name: Publish to the rolling desktop release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view desktop-latest >/dev/null 2>&1; then
-            gh release upload desktop-latest release/* --clobber
-          else
-            gh release create desktop-latest release/* \
-              --title "Desktop Apps (latest)" \
-              --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
-          fi
-
-      # A tagged run additionally keeps a fixed copy of that build.
-      - name: Publish the tagged release
-        if: startsWith(github.ref, 'refs/tags/desktop-v')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
+          gh release download desktop-latest --dir release
           gh release create "${GITHUB_REF_NAME}" release/* \
             --title "Desktop Apps ${GITHUB_REF_NAME}" \
             --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel."
