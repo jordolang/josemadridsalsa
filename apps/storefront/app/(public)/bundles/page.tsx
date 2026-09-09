@@ -1,5 +1,4 @@
-'use client'
-
+import { Suspense } from 'react'
 import { GiftBoxSelector } from '@/components/store/gift-box-selector'
 import { Package, Heart, Users, Sparkles, CheckCircle2, HelpCircle } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -7,9 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { SocialShare } from '@/components/ui/social-share'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import type { ShareContent } from '@/types/sharing'
+import { ScrollToTopButton } from './scroll-to-top-button'
 
+export const dynamic = 'force-dynamic'
 
-export default function BundlesPage() {
+export const revalidate = 300
+
+export default async function BundlesPage() {
   const shareContent: ShareContent = {
     title: 'Bundle Deals - Create Your Perfect Gift Box',
     description: 'Mix and match your favorite Jose Madrid salsas! Choose from 3, 5, 6, or 12-pack gift boxes.',
@@ -40,7 +43,9 @@ export default function BundlesPage() {
       </section>
 
       {/* Gift Box Selector */}
-      <GiftBoxSelector />
+      <Suspense fallback={<div className="min-h-[400px]" />}>
+        <GiftBoxSelector />
+      </Suspense>
 
       {/* How It Works Section */}
       <section className="py-20 bg-background">
@@ -333,12 +338,7 @@ export default function BundlesPage() {
           <p className="text-xl text-white/90 mb-8">
             Scroll up and start building your perfect gift box today!
           </p>
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="bg-white text-salsa-600 hover:bg-gray-100 font-semibold px-8 py-4 rounded-lg transition-colors"
-          >
-            Get Started
-          </button>
+          <ScrollToTopButton />
         </div>
       </section>
     </main>
