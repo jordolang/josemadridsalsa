@@ -523,3 +523,40 @@ Next: Proceed to subtask-3-3 (Merchandise page)
 ### Notes:
 Simple replacement following the ISR pattern. The merchandise page is now using Incremental Static Regeneration with a 15-minute revalidation period, which is appropriate for medium-traffic content that doesn't change frequently.
 
+
+## 2026-09-09 - Subtask-3-5 Completed
+
+**Subtask:** Update fundraising main page to use ISR with 15-minute revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated `apps/storefront/app/(public)/fundraising/page.tsx`:
+  - Removed `export const dynamic = 'force-dynamic'`
+  - Added `export const revalidate = 900 // 15 minutes`
+
+### Verification:
+- TypeScript syntax verified ✅
+- Code change applied successfully ✅
+- Commit: 67561d82
+
+### Notes:
+Simple replacement following the ISR pattern. The fundraising page is now using Incremental Static Regeneration with a 15-minute revalidation period, which is appropriate for medium-traffic fundraising content and the active campaigns grid. The page will be statically generated and revalidated every 15 minutes, significantly improving TTFB compared to the previous force-dynamic approach.
+
+
+## 2026-09-09 - Subtask-3-6 Completed
+
+**Subtask:** Update individual fundraiser pages to use ISR with 5-minute revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated `apps/storefront/app/(public)/fundraisers/[slug]/page.tsx`:
+  - Removed `export const dynamic = 'force-dynamic'`
+  - Added `export const revalidate = 300 // 5 minutes`
+
+### Verification:
+- Code change applied successfully ✅
+- TypeScript syntax verified ✅
+
+### Notes:
+Individual fundraiser pages now use Incremental Static Regeneration with a 5-minute revalidation period. This is appropriate for fundraising progress data that needs fresher updates than other content pages, but doesn't require force-dynamic rendering on every request. The page will be statically generated and revalidated every 5 minutes, significantly improving TTFB while keeping fundraising data reasonably current.
+
