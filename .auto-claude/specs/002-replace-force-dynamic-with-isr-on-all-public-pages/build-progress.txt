@@ -560,3 +560,28 @@ Simple replacement following the ISR pattern. The fundraising page is now using 
 ### Notes:
 Individual fundraiser pages now use Incremental Static Regeneration with a 5-minute revalidation period. This is appropriate for fundraising progress data that needs fresher updates than other content pages, but doesn't require force-dynamic rendering on every request. The page will be statically generated and revalidated every 5 minutes, significantly improving TTFB while keeping fundraising data reasonably current.
 
+
+=== PHASE 4: Update Static Content Pages (Lowest Risk) ===
+
+## 2026-09-09 - Subtask-4-1 Completed
+
+**Subtask:** Update about/our-story pages to use ISR with 24-hour revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated `apps/storefront/app/(public)/about/page.tsx`:
+  - Removed `export const dynamic = 'force-dynamic'`
+  - Added `export const revalidate = 86400 // 24 hours`
+- Updated `apps/storefront/app/(public)/our-story/page.tsx`:
+  - Removed `export const dynamic = 'force-dynamic'`
+  - Added `export const revalidate = 86400 // 24 hours`
+
+### Verification:
+- TypeScript type-check passed ✅
+- ESLint passed ✅
+- Both pages updated successfully ✅
+- Commit: 8b51d0d2
+
+### Notes:
+Both about and our-story pages now use Incremental Static Regeneration with a 24-hour (86400 seconds) revalidation period. This is appropriate for static content that changes very infrequently. The pages will be statically generated and revalidated once per day, providing excellent performance while keeping the content reasonably fresh for any rare updates.
+

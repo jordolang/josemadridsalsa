@@ -360,8 +360,8 @@
               "Our story page renders"
             ]
           },
-          "status": "pending",
-          "notes": "Remove 'export const dynamic = force-dynamic', add 'export const revalidate = 86400'"
+          "status": "completed",
+          "notes": "Replaced 'export const dynamic = force-dynamic' with 'export const revalidate = 86400' (24 hours)"
         },
         {
           "id": "subtask-4-2",
@@ -706,6 +706,6 @@
   "planStatus": "in_progress",
   "xstateState": "coding",
   "executionPhase": "coding",
-  "updated_at": "2026-09-09T13:20:07.346Z",
+  "updated_at": "2026-09-09T13:22:34.405Z",
   "recoveryNote": "Manually recovered 2026-09-07: runner was killed mid subtask-2-7. Edit committed as 4d3280e6, subtask-3-4 removed (planned file never existed), status reset from human_review/complete to resume at subtask-3-1."
 }
