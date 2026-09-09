@@ -21,8 +21,17 @@ process.env.ENCRYPTION_KEY =
 
 import '@testing-library/jest-dom/vitest' // Note: /vitest sub-export, not main export
 import { cleanup } from '@testing-library/react'
-import { afterEach, beforeAll, afterAll } from 'vitest'
+import { afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { server } from './tests/mocks/server'
+
+vi.mock('next/cache', async () => {
+  const actual = await vi.importActual<typeof import('next/cache')>('next/cache')
+
+  return {
+    ...actual,
+    unstable_cache: (fn: (...args: never[]) => unknown) => fn,
+  }
+})
 
 // Start MSW server before all tests
 beforeAll(() => {
