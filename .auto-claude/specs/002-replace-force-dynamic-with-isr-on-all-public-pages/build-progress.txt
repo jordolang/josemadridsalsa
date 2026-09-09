@@ -504,3 +504,22 @@ rendered server-side, with client components used only for interactive elements
 
 Next: Proceed to subtask-3-3 (Merchandise page)
 
+
+## 2026-09-09 09:16:31 - Subtask-3-3 Completed
+
+**Subtask:** Update merchandise page to use ISR with 15-minute revalidation
+**Status:** ✅ COMPLETED
+
+### Changes Made:
+- Updated `apps/storefront/app/(public)/merchandise/page.tsx`:
+  - Removed `export const dynamic = 'force-dynamic'`
+  - Added `export const revalidate = 900 // 15 minutes`
+
+### Verification:
+- TypeScript type-check passed ✅
+- No build errors
+- Commit: 45bf7579
+
+### Notes:
+Simple replacement following the ISR pattern. The merchandise page is now using Incremental Static Regeneration with a 15-minute revalidation period, which is appropriate for medium-traffic content that doesn't change frequently.
+
