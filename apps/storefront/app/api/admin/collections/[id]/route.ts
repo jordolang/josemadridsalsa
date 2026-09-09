@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })
 
     // Invalidate collections cache
-    revalidateTag('collections')
+    revalidateTag('collections', 'max')
 
     return ok({ collection })
   } catch (error: any) {
@@ -119,7 +119,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     })
 
     // Invalidate collections cache
-    revalidateTag('collections')
+    revalidateTag('collections', 'max')
 
     return ok({ message: 'Collection deleted' })
   } catch (error) {

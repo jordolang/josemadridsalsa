@@ -102,8 +102,8 @@ export async function PATCH(
     });
 
     // Invalidate product and recommendation caches
-    revalidateTag('products');
-    revalidateTag('recommendations');
+    revalidateTag('products', 'max');
+    revalidateTag('recommendations', 'max');
 
     return ok({ product });
   } catch (error: any) {
@@ -150,8 +150,8 @@ export async function DELETE(
     });
 
     // Invalidate product and recommendation caches
-    revalidateTag('products');
-    revalidateTag('recommendations');
+    revalidateTag('products', 'max');
+    revalidateTag('recommendations', 'max');
 
     return ok({
       message: 'Product deleted successfully',

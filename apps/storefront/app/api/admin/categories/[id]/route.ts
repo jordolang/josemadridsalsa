@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })
 
     // Invalidate categories cache
-    revalidateTag('categories')
+    revalidateTag('categories', 'max')
 
     return ok({ category })
   } catch (error: any) {
@@ -95,7 +95,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     })
 
     // Invalidate categories cache
-    revalidateTag('categories')
+    revalidateTag('categories', 'max')
 
     return ok({ message: 'Category deleted' })
   } catch (error: any) {

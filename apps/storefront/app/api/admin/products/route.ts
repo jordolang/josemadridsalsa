@@ -182,8 +182,8 @@ export async function POST(req: NextRequest) {
     });
 
     // Invalidate product and recommendation caches
-    revalidateTag('products');
-    revalidateTag('recommendations');
+    revalidateTag('products', 'max');
+    revalidateTag('recommendations', 'max');
 
     return ok({ product }, 201);
   } catch (error: any) {
@@ -232,8 +232,8 @@ export async function PATCH(req: NextRequest) {
     });
 
     // Invalidate product and recommendation caches
-    revalidateTag('products');
-    revalidateTag('recommendations');
+    revalidateTag('products', 'max');
+    revalidateTag('recommendations', 'max');
 
     return ok({
       message: `${result.count} products updated successfully`,
@@ -280,8 +280,8 @@ export async function DELETE(req: NextRequest) {
     });
 
     // Invalidate product and recommendation caches
-    revalidateTag('products');
-    revalidateTag('recommendations');
+    revalidateTag('products', 'max');
+    revalidateTag('recommendations', 'max');
 
     return ok({
       message: `${result.count} products deleted successfully`,

@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Invalidate collections cache
-    revalidateTag('collections')
+    revalidateTag('collections', 'max')
 
     return ok({ collection }, 201)
   } catch (error: any) {

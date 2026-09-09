@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Invalidate categories cache
-    revalidateTag('categories')
+    revalidateTag('categories', 'max')
 
     return ok({ category }, 201)
   } catch (error: any) {
