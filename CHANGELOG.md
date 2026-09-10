@@ -208,6 +208,32 @@ the root `package.json` is canonical.
   read the campaign's `defaultUnitPrice`, and the team editor links to the campaign's store.
 
 ### Fixed
+- **Public pages no longer force a full server render on every request — mostly.** Nearly every
+  page under `(public)` carried `dynamic = 'force-dynamic'`, so each visit re-rendered the page and
+  re-queried PostgreSQL. Those exports are gone, replaced by a per-page `revalidate` window: 5
+  minutes for the homepage, product and collection listings and blog indexes; 15 minutes for
+  product, salsa and blog detail pages; an hour for recipes and locations; 2 hours for wholesale
+  and the gift-certificate receipt; 24 hours for legal, About and La Perla. Pages that must stay
+  per-request — account, checkout, order tracking, unsubscribe, the fundraiser participant
+  leaderboards, and the signed-in return-request page — keep `force-dynamic` explicitly rather
+  than inheriting it.
+
+  The `force-dynamic` on the `(public)` layout was the reason none of this had taken effect
+  previously: Next resolves route segment config parent-first, and a child that sets only
+  `revalidate` leaves the inherited `dynamic` in place, so every page migrated to ISR was still
+  rendered dynamically. Removing it means these routes are now genuinely prerendered, which in
+  turn exposed two latent bugs, both fixed here: `/find-us` and `/products/search` called
+  `useSearchParams()` without a Suspense boundary, which is only legal once a route is
+  prerendered.
+
+  **Not yet realised for data-backed pages.** `AnnouncementBar`, a server component in the
+  `(public)` layout, reads `x-pathname` via `headers()` to pick a path-scoped announcement. A
+  dynamic API anywhere in the tree opts the whole route out of static rendering, so while the
+  static content pages (legal, About, La Perla, wholesale, merchandise, recipes and polls indexes,
+  and the gift-certificate receipt — 17 routes) do now serve prerendered HTML, the rest still
+  render per request. Making the announcement bar pick its announcement on the client would lift
+  the remaining routes; that is deliberately left as a follow-up.
+
 
 - **CI went red on a full artifact store rather than on a broken build.** A full inventory of the
   553 stored artifacts found 4.06 GB, of which Playwright reports were 3.05 GB — 265 of them in a
