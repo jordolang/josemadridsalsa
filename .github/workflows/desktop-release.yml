@@ -43,17 +43,27 @@ jobs:
       # That quota is shared across every repository on the account; when it
       # fills, the build still passes while the upload fails, which is how this
       # workflow reported green builds and shipped nothing for two weeks.
-      - name: Upload installer to the build release
+      # Assets are attached at creation, not uploaded afterwards: every release in
+      # this repository is created immutable, and an immutable release refuses
+      # both new assets and replacements. The tag is pushed by hand beforehand
+      # because a ruleset stops the Actions token creating refs, and each
+      # platform gets its own release because a release can only be created once
+      # — the two runners finish at different times and neither has the other's
+      # files without going back through artifact storage.
+      - name: Publish the installer
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release upload desktop-build-20260910 \
+          gh release delete desktop-windows-20260910 --yes 2>/dev/null || true
+          gh release create desktop-windows-20260910 \
             apps/windows-admin/release/*.exe \
             apps/windows-admin/release/*.blockmap \
             apps/windows-admin/release/latest.yml \
-            --clobber
+            --verify-tag \
+            --title "Windows installer (2026-09-10)" \
+            --notes "Built by the Desktop Apps workflow."
 
   macos:
     name: macOS app
@@ -80,11 +90,18 @@ jobs:
         working-directory: apps/macos-admin
         run: ./build-app.sh
 
-      - name: Upload disk image to the build release
+      # Same reasoning as the Windows job above: created with its asset attached,
+      # on a tag pushed by hand.
+      - name: Publish the disk image
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release upload desktop-build-20260910 apps/macos-admin/dist/*.dmg --clobber
+        run: |
+          gh release delete desktop-macos-20260910 --yes 2>/dev/null || true
+          gh release create desktop-macos-20260910 apps/macos-admin/dist/*.dmg \
+            --verify-tag \
+            --title "macOS disk image (2026-09-10)" \
+            --notes "Built by the Desktop Apps workflow."
 
   # Both builds upload to the release themselves, so there is nothing left to
   # collect. The rolling `desktop-latest` tag is unusable — it was consumed by an
@@ -106,7 +123,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir -p release
-          gh release download desktop-build-20260910 --dir release
+          gh release download desktop-macos-20260910 --dir release
+          gh release download desktop-windows-20260910 --dir release
           gh release create "${GITHUB_REF_NAME}" release/* \
             --title "Desktop Apps ${GITHUB_REF_NAME}" \
             --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel."
