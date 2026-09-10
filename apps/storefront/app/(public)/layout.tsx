@@ -17,9 +17,11 @@ import { getCalendarEvents } from '@/lib/server/google-data'
 import { getHeaderGroups } from '@/lib/cms/navigation'
 import { getFooterOverrides } from '@/lib/cms/footer'
 
-// Force all public routes dynamic: prevents build failures from prerendering
-// pages that call Prisma (the database) at render time.
-export const dynamic = 'force-dynamic'
+// No route segment config here on purpose. `dynamic = 'force-dynamic'` on this
+// layout used to cascade to every public route and override each page's own
+// `revalidate`, which disabled ISR site-wide. The three fetches below all catch
+// their own errors and fall back to empty data, so prerendering this layout is
+// safe. Each page declares its own `revalidate` (or `force-dynamic`).
 
 export default async function PublicLayout({
   children,

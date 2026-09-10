@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 86400 // 24 hours
 
 export const metadata: Metadata = createMetadata({
   title: 'About Jose - Jose Madrid Salsa',

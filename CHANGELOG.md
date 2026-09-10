@@ -208,6 +208,38 @@ the root `package.json` is canonical.
   read the campaign's `defaultUnitPrice`, and the team editor links to the campaign's store.
 
 ### Fixed
+- **Public pages no longer force a full server render on every request — mostly.** Nearly every
+  page under `(public)` carried `dynamic = 'force-dynamic'`, so each visit re-rendered the page and
+  re-queried PostgreSQL. Those exports are gone, replaced by a per-page `revalidate` window: 5
+  minutes for the homepage, product and collection listings and blog indexes; 15 minutes for
+  product, salsa and blog detail pages; an hour for recipes and locations; 2 hours for wholesale
+  and the gift-certificate receipt; 24 hours for legal, About and La Perla. Pages that must stay
+  per-request — account, checkout, order tracking, unsubscribe, the fundraiser participant
+  leaderboards, and the signed-in return-request page — keep `force-dynamic` explicitly rather
+  than inheriting it.
+
+  The `force-dynamic` on the `(public)` layout was the reason none of this had taken effect
+  previously: Next resolves route segment config parent-first, and a child that sets only
+  `revalidate` leaves the inherited `dynamic` in place, so every page migrated to ISR was still
+  rendered dynamically. Removing it means these routes are now genuinely prerendered, which in
+  turn exposed two latent bugs, both fixed here: `/find-us` and `/products/search` called
+  `useSearchParams()` without a Suspense boundary, which is only legal once a route is
+  prerendered.
+
+  Removing the layout export was necessary but not sufficient: `AnnouncementBar`, a server
+  component in the same layout, read `x-pathname` via `headers()`, and a dynamic API anywhere in
+  the tree opts the whole route out of static rendering — so even with the cascade gone, **no**
+  public route was prerendered. The bar now receives every live announcement and picks the one
+  targeted at the current path from `usePathname()` in the client, which is known at prerender
+  time. The build route table goes from 16 prerendered routes to 67: the homepage, the product,
+  salsa, recipe and blog detail pages, every listing and index, and the static content pages.
+  `/live` is pinned to `force-dynamic` — it reports whether the stream is on air right now.
+
+  One tier remains cosmetic: the layout fetches the events calendar with `next: { revalidate: 300 }`
+  and the shortest window in a tree wins, so every public route currently revalidates at 5 minutes
+  regardless of the hour or day it declares. Lifting that means fetching the event ticker's data
+  from the client, and is left as a follow-up.
+
 
 - **CI went red on a full artifact store rather than on a broken build.** A full inventory of the
   553 stored artifacts found 4.06 GB, of which Playwright reports were 3.05 GB — 265 of them in a

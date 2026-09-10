@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import type { BusinessFormTemplate } from '@/types/forms'
 import { createMetadata } from '@/lib/metadata'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 1800
 
 
 type FormPageProps = {

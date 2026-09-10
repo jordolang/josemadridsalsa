@@ -5,7 +5,7 @@ import { ContactForm } from '@/components/store/contact-form'
 import { createMetadata } from '@/lib/metadata'
 import { getStoreSettings } from '@/lib/store-settings'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 7200 // 2 hours
 
 export const metadata: Metadata = createMetadata({
   title: 'Contact Us - Jose Madrid Salsa',

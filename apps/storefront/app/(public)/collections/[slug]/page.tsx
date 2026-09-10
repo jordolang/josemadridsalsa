@@ -4,8 +4,7 @@ import { notFound } from 'next/navigation'
 import { getCollectionBySlug } from '@/lib/db/products'
 import { ProductCard, type Product } from '@/components/store/product-card'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 300 // 5 minutes
 
 interface PageProps {
   params: Promise<{ slug: string }>

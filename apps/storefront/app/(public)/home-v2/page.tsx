@@ -15,7 +15,7 @@ import { ScrollVideoHero } from '@/components/store/scroll-video-hero'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 // Lazy load heavy below-the-fold components
 const AnimatedTestimonials = nextDynamic(

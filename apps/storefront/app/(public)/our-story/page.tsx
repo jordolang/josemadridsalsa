@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { createMetadata } from '@/lib/metadata'
 import { LeaveAReview } from '@/components/reviews/leave-a-review'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 86400 // 24 hours
 
 export const metadata: Metadata = createMetadata({
   title: 'Our Story - Jose Madrid Salsa',

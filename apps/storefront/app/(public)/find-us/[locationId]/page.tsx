@@ -7,7 +7,6 @@ import { getLocationImageUrl } from '@/lib/utils/image'
 import { LocationImage } from './_components/LocationImage'
 import { LocationShare } from './_components/LocationShare'
 
-export const dynamic = 'force-dynamic'
 
 type LocationPageProps = {
   params: Promise<{

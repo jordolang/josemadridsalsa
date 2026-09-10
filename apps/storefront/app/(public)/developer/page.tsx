@@ -4,7 +4,7 @@ import { DeveloperPageSections } from '@/components/developer/developer-page-sec
 import { parseChangelog } from '@/lib/developer/parse-changelog'
 import { getDeveloperPageContent } from '@/lib/developer/page-content'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 export const metadata = developerPageMetadata
 
