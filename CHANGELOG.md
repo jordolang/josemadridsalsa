@@ -226,13 +226,19 @@ the root `package.json` is canonical.
   `useSearchParams()` without a Suspense boundary, which is only legal once a route is
   prerendered.
 
-  **Not yet realised for data-backed pages.** `AnnouncementBar`, a server component in the
-  `(public)` layout, reads `x-pathname` via `headers()` to pick a path-scoped announcement. A
-  dynamic API anywhere in the tree opts the whole route out of static rendering, so while the
-  static content pages (legal, About, La Perla, wholesale, merchandise, recipes and polls indexes,
-  and the gift-certificate receipt — 17 routes) do now serve prerendered HTML, the rest still
-  render per request. Making the announcement bar pick its announcement on the client would lift
-  the remaining routes; that is deliberately left as a follow-up.
+  Removing the layout export was necessary but not sufficient: `AnnouncementBar`, a server
+  component in the same layout, read `x-pathname` via `headers()`, and a dynamic API anywhere in
+  the tree opts the whole route out of static rendering — so even with the cascade gone, **no**
+  public route was prerendered. The bar now receives every live announcement and picks the one
+  targeted at the current path from `usePathname()` in the client, which is known at prerender
+  time. The build route table goes from 16 prerendered routes to 67: the homepage, the product,
+  salsa, recipe and blog detail pages, every listing and index, and the static content pages.
+  `/live` is pinned to `force-dynamic` — it reports whether the stream is on air right now.
+
+  One tier remains cosmetic: the layout fetches the events calendar with `next: { revalidate: 300 }`
+  and the shortest window in a tree wins, so every public route currently revalidates at 5 minutes
+  regardless of the hour or day it declares. Lifting that means fetching the event ticker's data
+  from the client, and is left as a follow-up.
 
 
 - **CI went red on a full artifact store rather than on a broken build.** A full inventory of the
