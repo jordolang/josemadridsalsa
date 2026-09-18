@@ -74,7 +74,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     <div className="min-h-screen bg-background">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger -- JSON-LD with JSON.stringify, not raw HTML
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
       <article className="container mx-auto px-4 py-12 lg:py-20">

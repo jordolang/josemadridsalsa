@@ -18,7 +18,14 @@ vi.mock('@/lib/prisma', () => {
     },
     user: {
       findUnique: vi.fn(),
+      findMany: vi.fn(() => Promise.resolve([])),
       update: vi.fn(),
+    },
+    domainEvent: {
+      create: vi.fn(),
+    },
+    notification: {
+      upsert: vi.fn(),
     },
     abandonedCart: {
       updateMany: vi.fn(),

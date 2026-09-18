@@ -19,6 +19,7 @@ export const metadata: Metadata = createMetadata({
 })
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
 type FindUsPageProps = {

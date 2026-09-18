@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -80,7 +80,7 @@ export function ParticipantDashboard({
   )
 
   // Auto-refresh functionality
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
     router.refresh()
     setLastUpdated(new Date())
@@ -89,7 +89,7 @@ export function ParticipantDashboard({
     setTimeout(() => {
       setIsRefreshing(false)
     }, 500)
-  }
+  }, [router])
 
   // Set up auto-refresh interval - refresh every 10 seconds when campaign is active
   useEffect(() => {
@@ -100,7 +100,7 @@ export function ParticipantDashboard({
     }, 10000) // 10 seconds
 
     return () => clearInterval(interval)
-  }, [isActive])
+  }, [handleRefresh, isActive])
 
   // Format last updated time
   const formatLastUpdated = () => {

@@ -295,7 +295,6 @@ export default async function SocialAnalyticsPage({
             {accounts.map((a) => (
               <div key={a.id} className="flex items-center gap-3 rounded-md border p-3">
                 {a.profileImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={a.profileImageUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
                 ) : (
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground">

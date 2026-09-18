@@ -195,6 +195,7 @@ function SortableHead({
         'h-10 border-neutral-800 bg-black/50 font-mono text-[10px] uppercase tracking-widest text-neutral-400',
         className,
       )}
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <button
         type="button"
@@ -205,9 +206,6 @@ function SortableHead({
           align === 'center' && 'justify-center',
           active && 'text-amber-300',
         )}
-        aria-sort={
-          active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'
-        }
       >
         {label}
         <Icon className="h-3 w-3" />

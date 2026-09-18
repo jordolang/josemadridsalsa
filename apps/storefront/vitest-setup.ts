@@ -35,7 +35,7 @@ vi.mock('next/cache', async () => {
 
 // Start MSW server before all tests
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'warn' })
+  server.listen({ onUnhandledRequest: 'bypass' })
 })
 
 // Cleanup and reset after each test to prevent test pollution

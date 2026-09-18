@@ -156,9 +156,10 @@ export default function CredentialsPageClient({
 
   // Clear timers on unmount
   useEffect(() => {
+    const timers = revealTimersRef.current
     return () => {
       setRevealedPasswords({})
-      Object.values(revealTimersRef.current).forEach(clearInterval)
+      Object.values(timers).forEach(clearInterval)
     }
   }, [])
 
