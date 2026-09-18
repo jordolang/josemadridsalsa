@@ -39,6 +39,35 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Fixed
+- **Production has not deployed since the `next` 16.3.3 bump, and CI has not installed at all.**
+  Dependabot raised `next` from 16.3.1 to 16.3.3 in all four app workspaces but left
+  `package-lock.json` at 16.3.1, so `npm ci` refused the tree outright — every CI run since has
+  died at "Install dependencies" — and Vercel, which falls back to `npm install`, resolved the
+  gap by keeping the hoisted 16.3.1 for the root packages that peer-depend on Next and nesting a
+  second copy at 16.3.3 under `apps/storefront`. Two copies mean two `NextRequest` types, and the
+  build failed type-checking the generated route validator with "Property `[Internal]` is
+  missing". The lockfile now resolves a single hoisted `next@16.3.3`. Regenerating it in place
+  was not enough: npm keeps a lockfile entry that nothing forces it to move, so the stale root
+  entry had to be dropped before re-resolving.
+
+- **The `vitest` 5.0.0 bump is reverted to 4.1.4 until the rest of its family goes with it.**
+  Dependabot raised `vitest` alone in `apps/storefront` and `apps/windows-admin` and left
+  `@vitest/coverage-v8` and `@vitest/ui` on 4, so npm nested a `vitest@5` per workspace while
+  `@vitest/expect`, `@vitest/runner` and `@vitest/utils` stayed hoisted at 4. The 5.0.0 runner
+  driving the 4.1.4 matchers failed 57 tests with `Cannot read properties of undefined (reading
+  'indexOf')` — every one of them an `await expect(…).rejects.toThrow('message')`, which is to
+  say every test that asserts an error is raised. The bump merged against a CI run that never got
+  past installing, so nothing caught it. Moving the whole family to 5 is a real upgrade and wants
+  its own green run, not a rider on this one.
+
+- **The shipping E2E suite could not reach the storefront it was testing.** Tightening MSW to
+  `onUnhandledRequest: 'error'` made the suite fail on any request nobody had written a mock for,
+  which is right — but passed as the bare string it refuses to let *any* unhandled request
+  through, including the five shipping files' calls to the live server at `E2E_BASE_URL`, which
+  are the thing under test. Thirteen tests died on `Cannot bypass a request when using the
+  "error" strategy`. The strategy is a callback now: requests to `E2E_BASE_URL` pass through,
+  everything else still fails the run.
+
 - **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
   with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
   the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four
