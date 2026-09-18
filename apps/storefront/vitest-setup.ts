@@ -27,8 +27,22 @@ vi.mock('next/cache', async () => {
   }
 })
 
+/**
+ * The shipping E2E files drive a real storefront at `E2E_BASE_URL` (see `tests/helpers/e2e.ts`),
+ * and those requests are the thing under test rather than a mock somebody forgot to write.
+ * Everything else unhandled still fails the run, which is the point of the `error` strategy —
+ * but the strategy has to be a callback to say so: passing the string `'error'` refuses to let
+ * any request through at all, with "Cannot bypass a request when using the error strategy".
+ */
+const e2eBaseUrl = process.env.E2E_BASE_URL
+
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' })
+  server.listen({
+    onUnhandledRequest(request, print) {
+      if (e2eBaseUrl && request.url.startsWith(e2eBaseUrl)) return
+      print.error()
+    },
+  })
 })
 
 afterEach(() => {

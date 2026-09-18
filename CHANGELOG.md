@@ -60,6 +60,14 @@ the root `package.json` is canonical.
   past installing, so nothing caught it. Moving the whole family to 5 is a real upgrade and wants
   its own green run, not a rider on this one.
 
+- **The shipping E2E suite could not reach the storefront it was testing.** Tightening MSW to
+  `onUnhandledRequest: 'error'` made the suite fail on any request nobody had written a mock for,
+  which is right — but passed as the bare string it refuses to let *any* unhandled request
+  through, including the five shipping files' calls to the live server at `E2E_BASE_URL`, which
+  are the thing under test. Thirteen tests died on `Cannot bypass a request when using the
+  "error" strategy`. The strategy is a callback now: requests to `E2E_BASE_URL` pass through,
+  everything else still fails the run.
+
 - **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
   with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
   the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four
