@@ -23,7 +23,10 @@ the root `package.json` is canonical.
   ingredients, the image gallery, the social share image and the search keywords were not on the
   sheet at all and are now, and the on-hand count is editable there but written as an inventory
   adjustment, so a correction typed on the product sheet still lands in the ledger and still
-  needs the inventory permission. Alt text is deliberately not offered: `Product.images` is a
+  needs the inventory permission. A count only counts as corrected when it differs from the one
+  the sheet opened on, so a sale that lands while somebody is editing a name is never read as a
+  correction and reversed, and a count typed against stock that has since moved is refused
+  before anything is saved. Alt text is deliberately not offered: `Product.images` is a
   list of strings with nowhere to keep one.
 
 - **An `Artifact Cleanup` workflow** (Actions tab, manual trigger), documented at

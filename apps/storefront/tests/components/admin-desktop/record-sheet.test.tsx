@@ -308,6 +308,32 @@ describe('the product gallery', () => {
     expect(screen.getByLabelText(/^Name/)).toHaveFocus()
   })
 
+  it('round-trips the hidden baseline without drawing a field for it', async () => {
+    const fetchMock = mockFetch(() => ({ ok: true, message: 'Peach saved' }))
+    const user = userEvent.setup()
+
+    render(
+      <RecordSheet
+        request={{
+          form: 'product.edit',
+          recordId: 'p1',
+          values: { name: 'Peach', slug: 'peach', sku: 'JMS-PCH-16', categoryId: 'cat1', heatLevel: 'FRUIT', price: '11.95', inventory: '40', inventoryAt: '40' },
+        }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByLabelText(/Stock when this sheet opened/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Save product' }))
+
+    const write = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes('/api/admin/desktop/write'),
+    )
+    expect(JSON.parse(String(write?.[1]?.body)).values.inventoryAt).toBe('40')
+  })
+
   it('adds an image by URL and counts it against the cap', async () => {
     mockFetch(() => ({ options: [] }))
     const user = userEvent.setup()

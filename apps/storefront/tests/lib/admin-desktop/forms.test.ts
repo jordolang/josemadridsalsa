@@ -167,6 +167,13 @@ describe('the form registry', () => {
     }
   })
 
+  it('carries the count the edit sheet opened on, so a save can tell touched from untouched', () => {
+    const baseline = formFields(DESKTOP_FORMS['product.edit']).find(
+      (field) => field.name === 'inventoryAt',
+    )
+    expect(baseline?.type).toBe('hidden')
+  })
+
   it('lays the product sheets out as a band over a stack', () => {
     // The pictures and the numbers sit side by side across the top; everything
     // else keeps its own order underneath, full width.

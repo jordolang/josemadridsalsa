@@ -35,6 +35,7 @@ export type FieldType =
   | 'tags'
   | 'lines'
   | 'images'
+  | 'hidden'
 
 export interface FormOption {
   value: string
@@ -88,6 +89,15 @@ export interface FormField {
   maxItems?: number
   defaultValue?: FieldValue
 }
+
+/**
+ * How many images one product may carry.
+ *
+ * Read by the gallery to stop offering an add, and by the write handler to
+ * refuse a list that arrives over the limit anyway — one number so the two
+ * cannot drift.
+ */
+export const PRODUCT_IMAGE_LIMIT = 10
 
 export type FieldValue = string | number | boolean | string[] | LineValue[] | null
 export type LineValue = Record<string, string>
@@ -380,7 +390,7 @@ export const DESKTOP_FORMS = {
             label: 'Gallery',
             type: 'images',
             span: 2,
-            maxItems: 10,
+            maxItems: PRODUCT_IMAGE_LIMIT,
             help: 'The first image leads the storefront; a featured URL below always takes that spot.',
           },
           { name: 'featuredImage', label: 'Featured image URL', type: 'url', span: 2 },
@@ -467,7 +477,7 @@ export const DESKTOP_FORMS = {
             label: 'Gallery',
             type: 'images',
             span: 2,
-            maxItems: 10,
+            maxItems: PRODUCT_IMAGE_LIMIT,
             help: 'The first image leads the storefront; a featured URL below always takes that spot.',
           },
           { name: 'featuredImage', label: 'Featured image URL', type: 'url', span: 2 },
@@ -494,6 +504,12 @@ export const DESKTOP_FORMS = {
           { name: 'lowStockThreshold', label: 'Reorder at', type: 'integer', min: 0 },
           { name: 'weight', label: 'Weight (oz)', type: 'number', min: 0 },
           { name: 'unitsPerCase', label: 'Units per case', type: 'integer', min: 1 },
+          // The count the sheet opened on. The handler compares the submitted
+          // count against this rather than against a fresh read, so a save that
+          // never touched the field cannot be read as a correction — and a
+          // movement that landed while the sheet was open is refused instead of
+          // being silently undone.
+          { name: 'inventoryAt', label: 'Stock when this sheet opened', type: 'hidden' },
         ],
       },
       {
@@ -2118,6 +2134,7 @@ export function defaultValues(spec: FormSpec): FormValues {
     else if (field.type === 'tags') values[field.name] = []
     else if (field.type === 'lines') values[field.name] = []
     else if (field.type === 'images') values[field.name] = []
+    else if (field.type === 'hidden') values[field.name] = null
     else values[field.name] = ''
   }
   return values

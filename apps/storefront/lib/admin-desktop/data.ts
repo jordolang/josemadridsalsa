@@ -393,6 +393,9 @@ function productEditValues(product: Prisma.ProductGetPayload<object>): FormValue
     costPrice: moneyValue(product.costPrice),
     weight: moneyValue(product.weight),
     inventory: numberValue(product.inventory),
+    // The same count, kept so the handler can tell a corrected field from an
+    // untouched one rather than diffing against a fresh read.
+    inventoryAt: numberValue(product.inventory),
     lowStockThreshold: numberValue(product.lowStockThreshold),
     unitsPerCase: numberValue(product.unitsPerCase),
     sortOrder: numberValue(product.sortOrder),

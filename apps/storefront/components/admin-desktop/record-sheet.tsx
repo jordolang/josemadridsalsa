@@ -92,7 +92,7 @@ function asList(value: FieldValue | undefined): string[] {
 
 /** Whether a field renders a single input the sheet can open focused on. */
 function takesFocus(field: FormField): boolean {
-  return !['checkbox', 'tags', 'lines', 'images'].includes(field.type)
+  return !['checkbox', 'tags', 'lines', 'images', 'hidden'].includes(field.type)
 }
 
 /** A blank row for a `lines` repeater, honouring each column's default. */
@@ -351,6 +351,10 @@ function Field({
       </div>
     )
   }
+
+  // A value the sheet carries but nobody edits — round-tripped so the handler
+  // can compare what was submitted against what the sheet opened on.
+  if (field.type === 'hidden') return null
 
   if (field.type === 'images') {
     return <Gallery className={className} field={field} urls={asImages(value)} onChange={onChange} />
