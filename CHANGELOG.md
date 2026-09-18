@@ -13,7 +13,81 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Fixed
+- **Cutting a version left the Windows installer on the old number.** electron-builder stamps
+  the installer from `apps/windows-admin/package.json`, which `version:feature` did not update —
+  so a 2.1 release would have produced `JoseMadridSalsaAdmin-Setup-2.0.0.exe`, `latest.yml` would
+  have advertised 2.0.0, and electron-updater would never have offered the update to anyone
+  already running it. The workspace list moved to `lib/version.ts` as `VERSIONED_PACKAGE_FILES`
+  so it can be tested, and it now checks that every listed file exists, that they are all on one
+  version, and that the root's `version` and `projectVersion` still agree.
+
+## [2.1] — 2026-09-09
+
 ### Added
+- **Every page the desktop shell used to hand to the web admin, it now draws itself.** A section
+  in `/admin-desktop` was one table, and anything beside it — returns, shipping labels, the
+  suppression list, the mileage log, the reconciliation, the credential vault — was a link that
+  left the window. Sections now have **pages**: a tab strip under the heading, a URL of its own
+  (`?section=email&page=email.suppressions`), and a name in the command palette. 35 new pages
+  were added across sixteen sections, 58 in all: Orders gained Returns & RMAs and Shipping
+  labels; Purchase Orders, Suppliers; Fundraisers, the Battle arena; Events & Shows, Packing
+  manifests; Wholesale, the Store locator; Financials, Reconciliation; Email Marketing gained
+  Templates, Automations, Lists & subscribers, Suppressions, the Send log and the Brand kit;
+  Social gained Connected accounts, Product feeds and Reach; Content & Blog gained Pages,
+  Banners, FAQs, Redirects and SEO; Lead Generation, Campaigns; Reviews, Forms; Analytics gained
+  Retention, Margin and Attribution; Media & Docs gained the Documents, Mileage and Show
+  archives; Messages gained Live chat and Notifications; Users & Roles, the Credential vault;
+  and Settings gained Payments, Shipping and Integrations. Every one reads live data through
+  Prisma, and the three analytics pages call the same `lib/analytics/*` reports the web pages do
+  rather than recomputing them, so the two never disagree. Around thirty-five new write
+  operations came with them — editing and stepping a return through approval and receipt,
+  suppliers and stockists, arena teams, manifests, automations, lists, subscribers,
+  suppressions, the brand kit, CMS pages, banners, FAQs, redirects, notifications, integrations
+  and shipping settings — all through the same form registry, write registry and audited route
+  as the rest. Permissions follow each page's own `/admin` equivalent rather than its section's,
+  so the vault needs `credentials:read` and Integrations needs `api_keys:manage`; a tab an
+  account cannot load is left out of the strip, and `?page=` is checked against the section in
+  the path so it is never a way to read one section's rows through another. What still leaves
+  the window now does so for a reason that is written down: a document to print, a file to
+  upload, an OAuth round trip, a streaming job, a live conversation, or a secret that is written
+  once and never shown back. The vault page is the sharpest case — it lists what is stored, who
+  it is for and when it was last rotated, and never reads the encrypted value.
+
+- **The desktop shell now does the work instead of handing it to the admin panel, and its
+  columns are yours to size.** Every button in `/admin-desktop` used to be a link: pressing
+  **New fundraiser** left the window and loaded an `/admin` page inside it, which made the shell
+  a launcher wearing an app's clothes. Actions are now *commands* — a create or an edit opens a
+  form over the table, a status change asks and then writes, and only the handful of jobs that
+  genuinely belong elsewhere still navigate. All 23 sections gained the work they were only
+  displaying: orders (create, status, tracking, mark paid, cancel), products (create, edit,
+  retire, delete, stock adjustment, reorder point), customers, fundraisers and their
+  participants, shows and their financials, purchase orders and suppliers (including receiving
+  everything outstanding into stock in one action), invoices, wholesale accounts, ledger
+  entries, email campaigns, social posts, blog posts, leads and lead campaigns, review
+  moderation, media, message and chat threads, staff accounts, and store and search settings —
+  around fifty operations in all. Rather than fifty screens, a form is a *description*:
+  `lib/admin-desktop/forms.ts` says what fields it has, `lib/admin-desktop/writes.ts` holds the
+  permission, the Zod schema and the write, keyed by the same id, and one renderer draws all of
+  them through one route, `POST /api/admin/desktop/write`, so every operation gets the same
+  staff check, the same permission check and the same audit row. Loaders send the record they
+  already read alongside the command, so a sheet opens filled in without a second query; what a
+  form needs beyond that — the product list behind a line item, the templates behind a campaign —
+  comes from `/api/admin/desktop/options/[source]` when the sheet opens, so a picker is never
+  stale. Paths with real logic behind them reuse it rather than restating it: a manual order is
+  priced, de-duplicated and deducted from stock by the same `lib/admin/manual-order.ts` and
+  `lib/inventory-manager.ts` that `/api/admin/orders` uses. Writes refuse with reasons rather
+  than error codes — a ledger row derived from an order says the order owns it, a product that
+  has been sold is retired rather than deleted, a campaign with orders against it is cancelled
+  rather than removed, a post whose title runs past the 60-character budget says how long it is,
+  and publishing one hands back the Search Console step no agent can do. Separately, every table
+  column now has a grab strip: drag to size it, double-click to reset it, or use `←`/`→` on a
+  focused strip to size it without a mouse. Widths are remembered per section and per column in
+  that window rather than on the account, because the same person on a laptop and on the shop
+  monitor wants different columns wide, and **Reset columns** appears once a section has any.
+  `F5` re-reads the current section, and a save reloads it with the row you were working on
+  still selected.
+
 - **A desktop shell at `/admin-desktop`, and both desktop apps now open on it.** The Windows and
   macOS apps were hardened windows onto the web admin panel; they still are, but the window they
   open is a dense, keyboard-driven view of the same database rather than a web page in a frame:
@@ -43,9 +117,8 @@ the root `package.json` is canonical.
   Messages merges the support inbox, the contact form and the live-chat handoff into one list,
   because they are three tables but one job. Both windows are
   now frameless so the shell's title bar runs to the top edge: macOS floats its traffic lights
-  over the left of it, Windows paints its window buttons over the right. The shell is read-only —
-  editing still happens on the admin pages it opens. `/admin-desktop` is disallowed in
-  `robots.txt` and carries `noindex`, since it is a staff tool rather than a page.
+  over the left of it, Windows paints its window buttons over the right. `/admin-desktop` is
+  disallowed in `robots.txt` and carries `noindex`, since it is a staff tool rather than a page.
 
 - **Desktop admin apps for Windows 11 and macOS, and the guarded database console they carry.**
   Both apps are hardened windows onto the real admin panel rather than reimplementations of it:

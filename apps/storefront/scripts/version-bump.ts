@@ -21,19 +21,18 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
-import { bumpProjectVersion, fromSemver, toSemver, type VersionBump } from '../lib/version'
+import {
+  bumpProjectVersion,
+  fromSemver,
+  toSemver,
+  VERSIONED_PACKAGE_FILES,
+  type VersionBump,
+} from '../lib/version'
 
 /** Monorepo root, from `apps/storefront/scripts`. */
 const ROOT = resolve(__dirname, '..', '..', '..')
 
-const PACKAGE_FILES = [
-  'package.json',
-  'apps/storefront/package.json',
-  'apps/fundraising/package.json',
-  'apps/admin/package.json',
-  'packages/shared-types/package.json',
-  'packages/shared-utils/package.json',
-]
+const PACKAGE_FILES = VERSIONED_PACKAGE_FILES
 
 function parseArgs(argv: string[]) {
   const bump = argv.find((arg) => ['major', 'feature', 'increment'].includes(arg)) as

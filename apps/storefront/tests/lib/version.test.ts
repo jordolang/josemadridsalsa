@@ -1,6 +1,10 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import {
+  VERSIONED_PACKAGE_FILES,
   bumpProjectVersion,
   formatProjectVersion,
   fromSemver,
@@ -177,3 +181,43 @@ function compareSemver(a: string, b: string): number {
   }
   return 0
 }
+
+describe('VERSIONED_PACKAGE_FILES', () => {
+  const ROOT = resolve(__dirname, '..', '..', '..', '..')
+
+  it('names files that actually exist', () => {
+    for (const file of VERSIONED_PACKAGE_FILES) {
+      expect(existsSync(join(ROOT, file)), `${file} is listed but not on disk`).toBe(true)
+    }
+  })
+
+  it('includes the workspace the Windows installer is stamped from', () => {
+    // electron-builder reads the version from apps/windows-admin/package.json,
+    // not the root. Leaving it out cuts a release whose .exe still carries the
+    // previous number, so latest.yml advertises the old version and
+    // electron-updater never offers the update to anyone already running it.
+    expect(VERSIONED_PACKAGE_FILES).toContain('apps/windows-admin/package.json')
+  })
+
+  it('keeps every listed workspace on one version', () => {
+    // They are bumped together, so if they have drifted apart the next release
+    // will paper over it rather than anyone noticing.
+    const versions = VERSIONED_PACKAGE_FILES.map((file) => ({
+      file,
+      version: JSON.parse(readFileSync(join(ROOT, file), 'utf-8')).version as string,
+    }))
+
+    const root = versions[0].version
+    for (const entry of versions) {
+      expect(entry.version, `${entry.file} is out of step with the root`).toBe(root)
+    }
+  })
+
+  it('agrees with the canonical projectVersion at the root', () => {
+    const root = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')) as {
+      version: string
+      projectVersion: string
+    }
+    expect(toSemver(root.projectVersion)).toBe(root.version)
+  })
+})

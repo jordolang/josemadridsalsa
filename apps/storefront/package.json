@@ -1,6 +1,6 @@
 {
   "name": "@jose-madrid/storefront",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "api-keys:create": "tsx scripts/create-partner-api-key.ts",
