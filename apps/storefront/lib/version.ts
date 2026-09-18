@@ -157,3 +157,26 @@ export function suggestBump(changelogEntries: string[]): VersionBump {
   const looksLikeFeature = changelogEntries.some((entry) => featureSignals.test(entry))
   return looksLikeFeature ? 'feature' : 'increment'
 }
+
+/**
+ * The workspaces whose `package.json` carries the platform version.
+ *
+ * The two desktop apps read their version from different places: the macOS
+ * bundle takes the root's (see `apps/macos-admin/build-app.sh`), while
+ * electron-builder stamps the Windows installer and its `latest.yml` update
+ * feed from `apps/windows-admin` instead. Leaving that one out is not cosmetic:
+ * it produces a release whose `.exe` still calls itself by the previous number,
+ * so the feed advertises the old version and electron-updater never offers the
+ * update to anyone already running it.
+ *
+ * `apps/docs` and `apps/agent` version themselves and stay out on purpose.
+ */
+export const VERSIONED_PACKAGE_FILES = [
+  'package.json',
+  'apps/storefront/package.json',
+  'apps/fundraising/package.json',
+  'apps/admin/package.json',
+  'apps/windows-admin/package.json',
+  'packages/shared-types/package.json',
+  'packages/shared-utils/package.json',
+] as const

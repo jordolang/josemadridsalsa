@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
  * The App Router route table, read off disk rather than hardcoded, so a page
  * that is added, moved, or deleted is reflected without touching this file.
  *
- * A desktop row's `href` is handed straight to `window.location.href`, so an
+ * A desktop `open` command is handed straight to `window.location.href`, so an
  * href that matches no route is a 404 the shell has no way to recover from.
  */
 
@@ -69,8 +69,22 @@ function matches(pattern: string[], parts: string[]): boolean {
  * Query strings and hashes are ignored — they do not affect which page renders.
  */
 export function isRealAdminRoute(href: string): boolean {
+  if (!href.split('#')[0].split('?')[0].startsWith('/admin')) return false
+  return isRealAppRoute(href)
+}
+
+/**
+ * True when `href` resolves to any page in this app, admin or storefront.
+ *
+ * The desktop shell links out to a few public pages — a product, a published
+ * article — to show the operator what a customer sees. An absolute URL is
+ * somebody else's site (a media CDN, Google Maps) and is not ours to check.
+ */
+export function isRealAppRoute(href: string): boolean {
+  if (/^https?:\/\//.test(href)) return true
+
   const path = href.split('#')[0].split('?')[0]
-  if (!path.startsWith('/admin')) return false
+  if (!path.startsWith('/')) return false
 
   const parts = path.split('/').filter(Boolean)
   return ROUTE_PATTERNS.some((pattern) => matches(pattern, parts))
