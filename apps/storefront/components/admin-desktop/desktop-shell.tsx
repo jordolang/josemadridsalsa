@@ -1,10 +1,33 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DESKTOP_SECTION_GROUPS, type DesktopSection, type DesktopSectionId } from '@/lib/admin-desktop/sections'
-import type { DesktopBadges, Inspector as InspectorData, Row, SectionPayload } from '@/lib/admin-desktop/types'
+import {
+  DESKTOP_SECTION_GROUPS,
+  findPage,
+  pagesFor,
+  type DesktopSection,
+  type DesktopSectionId,
+} from '@/lib/admin-desktop/sections'
+import type {
+  DesktopBadges,
+  DesktopCommand,
+  Inspector as InspectorData,
+  Row,
+  SectionPayload,
+} from '@/lib/admin-desktop/types'
 import { matchesShortcut } from '@/lib/admin-desktop/shortcuts'
+import {
+  hasCustomWidths,
+  readColumnWidths,
+  withColumnWidth,
+  withoutColumnWidth,
+  withoutSectionWidths,
+  writeColumnWidths,
+  type ColumnWidths,
+} from '@/lib/admin-desktop/columns'
+import { findForm } from '@/lib/admin-desktop/forms'
 import { Icon, IconSprite } from './icons'
+import { RecordSheet, type SheetRequest } from './record-sheet'
 import {
   AnalyticsView,
   DashboardView,
@@ -49,6 +72,12 @@ interface PaletteItem {
   run: () => void
 }
 
+/** A `write` command waiting on the operator to say yes. */
+interface PendingConfirm {
+  message: string
+  command: Extract<DesktopCommand, { kind: 'write' }>
+}
+
 export function DesktopShell({
   initialSection,
   badges,
@@ -79,12 +108,18 @@ export function DesktopShell({
   const [quickFind, setQuickFind] = useState('')
   const [toast, setToast] = useState('')
   const [frame, setFrame] = useState<FrameChrome>('browser')
+  const [sheet, setSheet] = useState<SheetRequest | null>(null)
+  const [confirming, setConfirming] = useState<PendingConfirm | null>(null)
+  const [working, setWorking] = useState(false)
+  const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
 
   const filterInputRef = useRef<HTMLInputElement>(null)
   const quickFindTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** The request that owns the current render, so a slow section cannot land after a fast one. */
   const requestId = useRef(0)
+  /** The row id to re-select once a reload lands, so a save does not lose your place. */
+  const restoreRow = useRef<string | null>(null)
 
   // Undefined means "no list was supplied" — every section shows, which is what
   // an older server render or a test fixture expects. An empty array is a real
@@ -126,58 +161,95 @@ export function DesktopShell({
     }
   }, [])
 
+  // Column widths are read after mount rather than during render, because the
+  // server has no idea what this window's operator dragged.
+  useEffect(() => {
+    setColumnWidths(readColumnWidths())
+  }, [])
+
   const flash = useCallback((message: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast(message)
-    toastTimer.current = setTimeout(() => setToast(''), 1900)
+    toastTimer.current = setTimeout(() => setToast(''), 2600)
   }, [])
 
-  const goToSection = useCallback(
-    async (id: DesktopSectionId) => {
-      if (id === section.id) {
-        setPaletteOpen(false)
-        return
-      }
+  // ------------------------------------------------------------ loading
 
-      const ticket = ++requestId.current
-      setPaletteOpen(false)
-      setLoading(true)
-      setError(null)
+  /**
+   * Load one page.
+   *
+   * `id` is a section id for a section's own list, or a page id inside one —
+   * the route resolves both, so the shell never has to know which sub-page a
+   * command meant, only its name.
+   */
+  const fetchSection = useCallback(async (id: string, keepPlace: boolean) => {
+    const entry = findPage(id)
+    const sectionId = entry?.section.id ?? (id as DesktopSectionId)
+    const ticket = ++requestId.current
+    setLoading(true)
+    setError(null)
 
-      try {
-        const response = await fetch(`/api/admin/desktop/${id}`, { credentials: 'same-origin' })
-        if (response.status === 403) throw new SectionDeniedError()
-        if (!response.ok) throw new Error(`Request failed with ${response.status}`)
-        const payload = (await response.json()) as SectionPayload
-        if (ticket !== requestId.current) return
-        setSection(payload)
+    try {
+      const query = entry && entry.page.id !== sectionId ? `?page=${encodeURIComponent(entry.page.id)}` : ''
+      const response = await fetch(`/api/admin/desktop/${sectionId}${query}`, { credentials: 'same-origin' })
+      if (response.status === 403) throw new SectionDeniedError()
+      if (!response.ok) throw new Error(`Request failed with ${response.status}`)
+      const payload = (await response.json()) as SectionPayload
+      if (ticket !== requestId.current) return
+
+      setSection(payload)
+      if (!keepPlace) {
         setSelected(0)
         setQuery('')
         setFilter(0)
+      }
+    } catch (failure) {
+      if (ticket !== requestId.current) return
+      setError(
+        failure instanceof SectionDeniedError
+          ? 'Your account does not have permission to open that page.'
+          : 'Could not load that page. Check the connection and try again.',
+      )
+    } finally {
+      if (ticket === requestId.current) setLoading(false)
+    }
+  }, [])
 
-        // Keep `?section=` in step so a reload, and the macOS and Windows menu
-        // bars, all agree on where the window is. Replace rather than push:
-        // switching sections is not a page the back button should walk through.
-        try {
-          const url = new URL(window.location.href)
-          url.searchParams.set('section', id)
-          window.history.replaceState(null, '', url)
-        } catch {
-          // A window that will not let us rewrite its URL still navigated fine.
-        }
-      } catch (error) {
-        if (ticket !== requestId.current) return
-        setError(
-          error instanceof SectionDeniedError
-            ? 'Your account does not have permission to open that section.'
-            : 'Could not load that section. Check the connection and try again.',
-        )
-      } finally {
-        if (ticket === requestId.current) setLoading(false)
+  /**
+   * Move the window to one page.
+   *
+   * Everything that navigates goes through here — the sidebar, the page strip,
+   * the palette and a `section`/`page` command — so the URL, the menu bars and
+   * what is on screen can never disagree about where the window is.
+   */
+  const goToPage = useCallback(
+    async (id: string) => {
+      setPaletteOpen(false)
+      if (id === section.page) return
+
+      await fetchSection(id, false)
+
+      // Keep `?section=`/`?page=` in step so a reload, and the macOS and Windows
+      // menu bars, all agree on where the window is. Replace rather than push:
+      // switching pages is not something the back button should walk through.
+      try {
+        const entry = findPage(id)
+        const url = new URL(window.location.href)
+        url.searchParams.set('section', entry?.section.id ?? id)
+        if (entry && entry.page.id !== entry.section.id) url.searchParams.set('page', entry.page.id)
+        else url.searchParams.delete('page')
+        window.history.replaceState(null, '', url)
+      } catch {
+        // A window that will not let us rewrite its URL still navigated fine.
       }
     },
-    [section.id],
+    [section.page, fetchSection],
   )
+
+  const goToSection = useCallback((id: DesktopSectionId) => goToPage(id), [goToPage])
+
+  /** Reload what is on screen, keeping the filter and the selected row. */
+  const reload = useCallback(() => fetchSection(section.page, true), [fetchSection, section.page])
 
   /** Leave the shell for a page in the web admin, in this same window. */
   const openPath = useCallback((path: string) => {
@@ -198,6 +270,128 @@ export function DesktopShell({
     })
   }, [flash])
 
+  // ------------------------------------------------------------ columns
+
+  const sectionWidths = columnWidths[section.id]
+
+  const resizeColumn = useCallback(
+    (key: string, width: number) => {
+      setColumnWidths((previous) => {
+        const next = withColumnWidth(previous, section.id, key, width)
+        writeColumnWidths(next)
+        return next
+      })
+    },
+    [section.id],
+  )
+
+  const resetColumn = useCallback(
+    (key: string) => {
+      setColumnWidths((previous) => {
+        const next = withoutColumnWidth(previous, section.id, key)
+        writeColumnWidths(next)
+        return next
+      })
+      flash(`${key} back to its default width`)
+    },
+    [section.id, flash],
+  )
+
+  const resetAllColumns = useCallback(() => {
+    setColumnWidths((previous) => {
+      const next = withoutSectionWidths(previous, section.id)
+      writeColumnWidths(next)
+      return next
+    })
+    flash('Column widths reset')
+  }, [section.id, flash])
+
+  // ------------------------------------------------------------- writes
+
+  /** Send one no-form mutation, then reload so the table shows what happened. */
+  const runWrite = useCallback(
+    async (command: Extract<DesktopCommand, { kind: 'write' }>) => {
+      if (working) return
+      setWorking(true)
+      setConfirming(null)
+
+      try {
+        const response = await fetch('/api/admin/desktop/write', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: command.op, recordId: command.recordId, values: command.values ?? {} }),
+        })
+
+        const body = (await response.json()) as { ok?: boolean; message?: string; error?: string }
+
+        if (!response.ok || !body.ok) {
+          flash(body.error ?? 'That did not go through.')
+          return
+        }
+
+        restoreRow.current = command.recordId ?? null
+        flash(command.success ?? body.message ?? 'Done')
+        await reload()
+      } catch {
+        flash('Could not reach the server. Check the connection and try again.')
+      } finally {
+        setWorking(false)
+      }
+    },
+    [working, flash, reload],
+  )
+
+  /**
+   * The one place a button turns into something happening.
+   *
+   * Everything the window can do arrives here as a command, which is what lets
+   * the shell act in place: a create opens a sheet, a status change asks and
+   * then writes, and only the handful of pages the shell does not draw itself
+   * are still a navigation.
+   */
+  const runCommand = useCallback(
+    (command: DesktopCommand) => {
+      setPaletteOpen(false)
+
+      switch (command.kind) {
+        case 'form':
+          if (!findForm(command.form)) {
+            flash('That form is not available in this window yet.')
+            return
+          }
+          setSheet({
+            form: command.form,
+            recordId: command.recordId,
+            values: command.values,
+            title: command.title,
+          })
+          return
+
+        case 'write':
+          if (command.confirm) {
+            setConfirming({ message: command.confirm, command })
+            return
+          }
+          void runWrite(command)
+          return
+
+        case 'section':
+          void goToSection(command.section)
+          return
+
+        case 'page':
+          void goToPage(command.page)
+          return
+
+        case 'open':
+          openPath(command.href)
+          return
+      }
+    },
+    [flash, runWrite, goToSection, goToPage, openPath],
+  )
+
   // ---------------------------------------------------------------- rows
 
   const body = section.body
@@ -212,6 +406,16 @@ export function DesktopShell({
       (row) => (filter === 0 || row.buckets.includes(filter)) && (!needle || row.search.toLowerCase().includes(needle)),
     )
   }, [allRows, query, filter])
+
+  // A reload after a write puts the cursor back on the row that was acted on,
+  // rather than snapping to the top of a list somebody was working down.
+  useEffect(() => {
+    const wanted = restoreRow.current
+    if (!wanted) return
+    restoreRow.current = null
+    const index = rows.findIndex((row) => row.id === wanted)
+    if (index >= 0) setSelected(index)
+  }, [rows])
 
   const activeRow = rows[Math.min(selected, Math.max(rows.length - 1, 0))] ?? null
 
@@ -237,6 +441,18 @@ export function DesktopShell({
       })
     }
 
+    // The current section's own header buttons, so "New fundraiser" is reachable
+    // by typing it rather than only by finding the button.
+    for (const action of section.actions) {
+      items.push({
+        key: `action:${section.id}:${action.label}`,
+        label: action.label,
+        hint: currentSection.label,
+        icon: action.icon,
+        run: () => runCommand(action.command),
+      })
+    }
+
     for (const row of allRows.slice(0, 40)) {
       const [first, second] = row.cells
       items.push({
@@ -253,18 +469,44 @@ export function DesktopShell({
       })
     }
 
+    // Every page of every visible section, so a page two clicks in — the
+    // suppression list, the show archive — is still one ⌘K away.
     for (const item of sections) {
-      for (const view of item.views ?? []) {
+      for (const entry of pagesFor(item)) {
+        if (entry.id === item.id) continue
         items.push({
-          key: `view:${item.id}:${view.path}`,
-          label: `${item.label} · ${view.label}`,
-          hint: view.path,
+          key: `page:${entry.id}`,
+          label: `${item.label} · ${entry.label}`,
+          hint: entry.path,
           icon: item.icon,
-          run: () => openPath(view.path),
+          run: () => void goToPage(entry.id),
         })
       }
     }
 
+    items.push({
+      key: 'command:refresh',
+      label: 'Refresh this section',
+      hint: 'Read the data again',
+      icon: 'i-rotate',
+      shortcut: 'F5',
+      run: () => {
+        setPaletteOpen(false)
+        void reload()
+      },
+    })
+    items.push({
+      key: 'command:columns',
+      label: 'Reset column widths',
+      hint: hasCustomWidths(columnWidths, section.id)
+        ? `${currentSection.label} has hand-set widths`
+        : `${currentSection.label} is on its default widths`,
+      icon: 'i-columns',
+      run: () => {
+        setPaletteOpen(false)
+        resetAllColumns()
+      },
+    })
     items.push({
       key: 'command:appearance',
       label: 'Toggle appearance',
@@ -300,24 +542,54 @@ export function DesktopShell({
       // Filtering happens first, so anything is reachable by typing; the cap
       // only bounds how long the unfiltered browse list gets.
       .slice(0, 80)
-  }, [sections, allRows, rows, currentSection, paletteQuery, goToSection, cycleAppearance, openPath, flash])
+  }, [
+    sections,
+    section.actions,
+    section.id,
+    allRows,
+    rows,
+    currentSection,
+    paletteQuery,
+    columnWidths,
+    goToSection,
+    goToPage,
+    runCommand,
+    cycleAppearance,
+    resetAllColumns,
+    reload,
+    openPath,
+    flash,
+  ])
 
   // ------------------------------------------------------------ keyboard
 
   const openRow = useCallback(
     (row: Row | null) => {
-      if (row?.href) openPath(row.href)
-      else flash('This row has no page to open')
+      if (row?.open) runCommand(row.open)
+      else flash('There is nothing to open on this row')
     },
-    [openPath, flash],
+    [runCommand, flash],
   )
+
+  /** True while a sheet or a confirmation owns the keyboard. */
+  const modalOpen = sheet !== null || confirming !== null
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      // A sheet and a confirmation handle their own keys; the table's j/k and
+      // type-ahead must not fire underneath one.
+      if (modalOpen) return
+
       const target = event.target as HTMLElement | null
       const tag = target?.tagName?.toLowerCase() ?? ''
-      const typing = tag === 'input' || tag === 'textarea' || target?.isContentEditable === true
+      const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable === true
       const accel = event.metaKey || event.ctrlKey
+
+      if (event.key === 'F5') {
+        event.preventDefault()
+        void reload()
+        return
+      }
 
       if (accel && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -365,7 +637,7 @@ export function DesktopShell({
         )
         if (hit) {
           event.preventDefault()
-          openPath(hit.href)
+          runCommand(hit.command)
           return
         }
       }
@@ -422,6 +694,7 @@ export function DesktopShell({
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [
+    modalOpen,
     paletteOpen,
     paletteItems,
     paletteIndex,
@@ -434,7 +707,8 @@ export function DesktopShell({
     openRow,
     inspectorOpen,
     inspectorData,
-    openPath,
+    runCommand,
+    reload,
   ])
 
   useEffect(() => {
@@ -483,9 +757,9 @@ export function DesktopShell({
           <span className="jmsd-mono" style={{ color: 'var(--faint)', fontSize: 10.5 }}>
             {section.path}
           </span>
-          {loading ? (
+          {loading || working ? (
             <span className="jmsd-mono" style={{ color: 'var(--goldt)', fontSize: 10.5 }}>
-              loading…
+              {working ? 'saving…' : 'loading…'}
             </span>
           ) : null}
         </div>
@@ -505,6 +779,14 @@ export function DesktopShell({
             <span className="jmsd-key" style={{ marginLeft: 26 }}>
               ⌘K
             </span>
+          </button>
+          <button
+            type="button"
+            className="jmsd-icon-button"
+            title="Refresh this section"
+            onClick={() => void reload()}
+          >
+            <Icon name="i-rotate" size={14} />
           </button>
           <button type="button" className="jmsd-icon-button" title="Appearance" onClick={cycleAppearance}>
             <Icon name="i-settings" size={14} />
@@ -568,8 +850,14 @@ export function DesktopShell({
                 <button
                   key={action.label}
                   type="button"
-                  className={`jmsd-action ${action.primary ? 'jmsd-action--primary' : ''}`}
-                  onClick={() => openPath(action.href)}
+                  className={[
+                    'jmsd-action',
+                    action.primary ? 'jmsd-action--primary' : '',
+                    action.danger ? 'jmsd-action--danger' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => runCommand(action.command)}
                 >
                   <Icon name={action.icon} size={13} />
                   <span>{action.label}</span>
@@ -577,6 +865,24 @@ export function DesktopShell({
               ))}
             </div>
           </div>
+
+          {/* Absent on an older server render; one page needs no strip. */}
+          {(section.pages?.length ?? 0) > 1 ? (
+            <div className="jmsd-pagestrip" role="tablist" aria-label={`${currentSection.label} pages`}>
+              {section.pages.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  role="tab"
+                  className="jmsd-pagetab"
+                  aria-selected={entry.id === section.page}
+                  onClick={() => void goToPage(entry.id)}
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="jmsd-filterbar">
             <div className="jmsd-filter-input">
@@ -606,6 +912,12 @@ export function DesktopShell({
                 {label}
               </button>
             ))}
+            {isRowView && hasCustomWidths(columnWidths, section.id) ? (
+              <button type="button" className="jmsd-chip" onClick={resetAllColumns} title="Back to the default widths">
+                <Icon name="i-columns" size={11} />
+                <span style={{ marginLeft: 5 }}>Reset columns</span>
+              </button>
+            ) : null}
             <span className="jmsd-rowsummary">{rowSummary}</span>
           </div>
 
@@ -613,11 +925,11 @@ export function DesktopShell({
             {error ? (
               <div className="jmsd-empty">{error}</div>
             ) : body.view === 'dashboard' ? (
-              <DashboardView payload={body} onOpen={openPath} />
+              <DashboardView payload={body} onRun={runCommand} />
             ) : body.view === 'analytics' ? (
               <AnalyticsView payload={body} />
             ) : body.view === 'settings' ? (
-              <SettingsView payload={body} />
+              <SettingsView payload={body} onRun={runCommand} />
             ) : body.view === 'link' ? (
               <LinkView heading={section.heading} payload={body} onOpen={openPath} />
             ) : body.view === 'events' ? (
@@ -626,6 +938,9 @@ export function DesktopShell({
                 selected={selected}
                 onSelect={setSelected}
                 onOpen={openRow}
+                widths={sectionWidths}
+                onResize={resizeColumn}
+                onResetColumn={resetColumn}
               />
             ) : (
               <TableView
@@ -635,6 +950,9 @@ export function DesktopShell({
                 selected={selected}
                 onSelect={setSelected}
                 onOpen={openRow}
+                widths={sectionWidths}
+                onResize={resizeColumn}
+                onResetColumn={resetColumn}
                 emptyLabel={
                   allRows.length === 0
                     ? 'Nothing in this table yet.'
@@ -645,7 +963,7 @@ export function DesktopShell({
           </div>
         </main>
 
-        {inspectorOpen ? <Inspector data={inspectorData} onOpen={openPath} /> : null}
+        {inspectorOpen ? <Inspector data={inspectorData} onRun={runCommand} /> : null}
       </div>
 
       <footer className="jmsd-statusbar">
@@ -713,6 +1031,46 @@ export function DesktopShell({
                   </button>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {sheet ? (
+        <RecordSheet
+          request={sheet}
+          onClose={() => setSheet(null)}
+          onSaved={(message, recordId) => {
+            setSheet(null)
+            restoreRow.current = recordId
+            flash(message)
+            void reload()
+          }}
+        />
+      ) : null}
+
+      {confirming ? (
+        <div className="jmsd-scrim" role="presentation" onClick={() => setConfirming(null)}>
+          <div
+            className="jmsd-confirm"
+            role="alertdialog"
+            aria-label="Confirm"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="jmsd-confirm-text">{confirming.message}</div>
+            <div className="jmsd-sheet-buttons">
+              <button type="button" className="jmsd-action" onClick={() => setConfirming(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                autoFocus
+                className={`jmsd-action jmsd-action--primary ${confirming.command.danger ? 'jmsd-action--danger' : ''}`}
+                onClick={() => void runWrite(confirming.command)}
+                disabled={working}
+              >
+                {working ? 'Working…' : 'Yes, do it'}
+              </button>
             </div>
           </div>
         </div>

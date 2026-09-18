@@ -1,11 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import {
   SECTION_PERMISSION,
+  allowedPages,
   allowedSectionIds,
+  canSeePage,
   canSeeSection,
   fallbackSection,
 } from '@/lib/admin-desktop/access'
-import { DESKTOP_SECTIONS } from '@/lib/admin-desktop/sections'
+import {
+  DESKTOP_PAGES,
+  DESKTOP_SECTIONS,
+  findSection,
+  pagesFor,
+} from '@/lib/admin-desktop/sections'
+import { permissionDefinitions } from '@/lib/permissions-data'
 
 /**
  * The desktop shell is a second door onto the same data, so what it refuses has
@@ -83,5 +91,65 @@ describe('fallbackSection', () => {
     // Dashboard is ungated, so in practice this cannot happen — the test pins
     // the contract the page relies on rather than a reachable state.
     expect(fallbackSection([])).toBe('dashboard')
+  })
+})
+
+describe('canSeePage', () => {
+  const everything = [
+    ...new Set([
+      ...Object.values(SECTION_PERMISSION).filter((value): value is string => Boolean(value)),
+      ...DESKTOP_PAGES.map((entry) => entry.page.permission).filter((value): value is string => Boolean(value)),
+    ]),
+  ]
+
+  it('names only permissions the system actually defines', () => {
+    // A page gated on a permission nobody can hold is a page nobody can open,
+    // which reads in the window as a tab that is simply missing.
+    const known = new Set(permissionDefinitions.map((definition) => definition.name))
+    for (const { page } of DESKTOP_PAGES) {
+      if (!page.permission) continue
+      expect(known.has(page.permission), `${page.id} wants unknown ${page.permission}`).toBe(true)
+    }
+  })
+
+  it('refuses a page whose section is refused', () => {
+    // The vault sits inside Users, so a page permission alone must not be a way
+    // past the section's own gate.
+    expect(canSeePage('users.credentials', ['credentials:read'])).toBe(false)
+    expect(canSeePage('users.credentials', ['users:read', 'credentials:read'])).toBe(true)
+  })
+
+  it('refuses a page that asks for more than its section', () => {
+    expect(canSeeSection('users', ['users:read'])).toBe(true)
+    expect(canSeePage('users.credentials', ['users:read'])).toBe(false)
+
+    expect(canSeeSection('settings', ['settings:read'])).toBe(true)
+    expect(canSeePage('settings.integrations', ['settings:read'])).toBe(false)
+    expect(canSeePage('settings.payments', ['settings:read'])).toBe(true)
+  })
+
+  it('refuses an id that is not a page at all', () => {
+    expect(canSeePage('users.nonsense', everything)).toBe(false)
+    expect(canSeePage('', everything)).toBe(false)
+  })
+
+  it('opens every page to an account holding every permission', () => {
+    for (const { page } of DESKTOP_PAGES) {
+      expect(canSeePage(page.id, everything), `${page.id} is unreachable`).toBe(true)
+    }
+  })
+})
+
+describe('allowedPages', () => {
+  it('drops only the tabs the account cannot load', () => {
+    const email = findSection('email')!
+    const withoutLists = allowedPages(email, ['content:read', 'settings:read']).map((page) => page.id)
+    expect(withoutLists).not.toContain('email.lists')
+    expect(withoutLists).toContain('email.suppressions')
+  })
+
+  it('keeps a single-page section as one tab', () => {
+    const audit = findSection('audit')!
+    expect(allowedPages(audit, [])).toEqual(pagesFor(audit))
   })
 })

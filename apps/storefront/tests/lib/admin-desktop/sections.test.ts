@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import {
+  DESKTOP_PAGES,
   DESKTOP_SECTIONS,
   DESKTOP_SECTION_GROUPS,
+  defaultPageId,
+  findPage,
   findSection,
+  isDesktopPageId,
   isDesktopSectionId,
+  pageKind,
+  pagesFor,
 } from '@/lib/admin-desktop/sections'
 
 describe('desktop section registry', () => {
@@ -36,22 +42,57 @@ describe('desktop section registry', () => {
     }
   })
 
-  it('gives every link section somewhere to hand off to', () => {
-    // A link section that lists no views would render an empty card and a
-    // dead end, which is worse than not having the section at all.
+  it('opens every section at a page named after it', () => {
+    // The strip, the URL and every `section` command all resolve through this:
+    // a section whose first page were named something else would open at a tab
+    // that does not match the sidebar item that was clicked.
     for (const section of DESKTOP_SECTIONS) {
-      if (section.kind === 'link') {
-        expect(section.views?.length ?? 0).toBeGreaterThan(0)
-      }
+      expect(defaultPageId(section), `${section.id} does not open at itself`).toBe(section.id)
     }
   })
 
-  it('keeps every sub-view under /admin too', () => {
-    for (const section of DESKTOP_SECTIONS) {
-      for (const view of section.views ?? []) {
-        expect(view.path.startsWith('/admin')).toBe(true)
-      }
+  it('gives every page a unique id namespaced by its section', () => {
+    const ids = DESKTOP_PAGES.map((entry) => entry.page.id)
+    expect(new Set(ids).size).toBe(ids.length)
+
+    for (const { section, page } of DESKTOP_PAGES) {
+      if (page.id === section.id) continue
+      expect(page.id.startsWith(`${section.id}.`), `${page.id} is not under ${section.id}`).toBe(true)
     }
+  })
+
+  it('keeps every page under /admin too', () => {
+    for (const { page } of DESKTOP_PAGES) {
+      expect(page.path.startsWith('/admin'), `${page.id} points outside /admin`).toBe(true)
+    }
+  })
+
+  it('falls back to the section kind when a page does not state one', () => {
+    for (const { section, page } of DESKTOP_PAGES) {
+      expect(pageKind(section, page)).toBe(page.kind ?? section.kind)
+    }
+  })
+
+  it('treats a section with no pages as one page — itself', () => {
+    const single = DESKTOP_SECTIONS.find((section) => !section.pages)
+    expect(single).toBeDefined()
+    expect(pagesFor(single!)).toEqual([
+      { id: single!.id, label: single!.label, path: single!.path, kind: single!.kind },
+    ])
+  })
+
+  it('resolves a page id back to its section', () => {
+    const entry = findPage('email.suppressions')
+    expect(entry?.section.id).toBe('email')
+    expect(entry?.page.label).toBe('Suppressions')
+    expect(findPage('email.nonsense')).toBeUndefined()
+  })
+
+  it('guards the API route against arbitrary page names', () => {
+    expect(isDesktopPageId('orders')).toBe(true)
+    expect(isDesktopPageId('orders.returns')).toBe(true)
+    expect(isDesktopPageId('orders.../../secrets')).toBe(false)
+    expect(isDesktopPageId('')).toBe(false)
   })
 
   it('resolves a known id and refuses an unknown one', () => {
