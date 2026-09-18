@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { ok, fail, parsePagination } from '@/lib/api'
@@ -76,6 +77,9 @@ export async function POST(req: NextRequest) {
       entityId: category.id,
       changes: data,
     })
+
+    // Invalidate categories cache
+    revalidateTag('categories', 'max')
 
     return ok({ category }, 201)
   } catch (error: any) {

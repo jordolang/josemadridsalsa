@@ -192,9 +192,11 @@ describe('VERSIONED_PACKAGE_FILES', () => {
   })
 
   it('includes the workspace the Windows installer is stamped from', () => {
-    // electron-builder reads the version from apps/windows-admin/package.json,
-    // not the root. Leaving it out cuts a release whose .exe still carries the
-    // previous number, so latest.yml advertises the old version and
+    // The desktop apps take their version from two different places: the
+    // macOS bundle from the root package.json (build-app.sh), the Windows
+    // installer and its latest.yml update feed from the windows-admin
+    // workspace. Leaving that one out cuts a release whose .exe still carries
+    // the previous number, so latest.yml advertises the old version and
     // electron-updater never offers the update to anyone already running it.
     expect(VERSIONED_PACKAGE_FILES).toContain('apps/windows-admin/package.json')
   })

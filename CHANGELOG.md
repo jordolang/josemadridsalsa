@@ -13,14 +13,83 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **An `Artifact Cleanup` workflow** (Actions tab, manual trigger), documented at
+  `deployment/ci-artifact-storage`. Retention settings stop future accumulation but never reclaim
+  what is already stored, and the UI deletes one artifact at a time — unworkable against 553 of
+  them. Takes an age threshold and an optional name filter, and defaults to a dry run that reports
+  what it would free before anything is deleted. A sweep continues past individual failures, but
+  a refusal that leaves storage occupied (403, rate limiting, 5xx) fails the run rather than
+  reporting a cleared quota that is still full; a 404 is the artifact expiring on its own and is
+  treated as success.
+
 ### Fixed
-- **Cutting a version left the Windows installer on the old number.** electron-builder stamps
-  the installer from `apps/windows-admin/package.json`, which `version:feature` did not update —
-  so a 2.1 release would have produced `JoseMadridSalsaAdmin-Setup-2.0.0.exe`, `latest.yml` would
-  have advertised 2.0.0, and electron-updater would never have offered the update to anyone
-  already running it. The workspace list moved to `lib/version.ts` as `VERSIONED_PACKAGE_FILES`
-  so it can be tested, and it now checks that every listed file exists, that they are all on one
-  version, and that the root's `version` and `projectVersion` still agree.
+- **Public pages no longer force a full server render on every request — mostly.** Nearly every
+  page under `(public)` carried `dynamic = 'force-dynamic'`, so each visit re-rendered the page and
+  re-queried PostgreSQL. Those exports are gone, replaced by a per-page `revalidate` window: 5
+  minutes for the homepage, product and collection listings and blog indexes; 15 minutes for
+  product, salsa and blog detail pages; an hour for recipes and locations; 2 hours for wholesale
+  and the gift-certificate receipt; 24 hours for legal, About and La Perla. Pages that must stay
+  per-request — account, checkout, order tracking, unsubscribe, the fundraiser participant
+  leaderboards, and the signed-in return-request page — keep `force-dynamic` explicitly rather
+  than inheriting it.
+
+  The `force-dynamic` on the `(public)` layout was the reason none of this had taken effect
+  previously: Next resolves route segment config parent-first, and a child that sets only
+  `revalidate` leaves the inherited `dynamic` in place, so every page migrated to ISR was still
+  rendered dynamically. Removing it means these routes are now genuinely prerendered, which in
+  turn exposed two latent bugs, both fixed here: `/find-us` and `/products/search` called
+  `useSearchParams()` without a Suspense boundary, which is only legal once a route is
+  prerendered.
+
+  Removing the layout export was necessary but not sufficient: `AnnouncementBar`, a server
+  component in the same layout, read `x-pathname` via `headers()`, and a dynamic API anywhere in
+  the tree opts the whole route out of static rendering — so even with the cascade gone, **no**
+  public route was prerendered. The bar now receives every live announcement and picks the one
+  targeted at the current path from `usePathname()` in the client, which is known at prerender
+  time. The build route table goes from 16 prerendered routes to 67: the homepage, the product,
+  salsa, recipe and blog detail pages, every listing and index, and the static content pages.
+  `/live` is pinned to `force-dynamic` — it reports whether the stream is on air right now.
+
+  One tier remains cosmetic: the layout fetches the events calendar with `next: { revalidate: 300 }`
+  and the shortest window in a tree wins, so every public route currently revalidates at 5 minutes
+  regardless of the hour or day it declares. Lifting that means fetching the event ticker's data
+  from the client, and is left as a follow-up.
+
+
+- **CI went red on a full artifact store rather than on a broken build.** A full inventory of the
+  553 stored artifacts found 4.06 GB, of which Playwright reports were 3.05 GB — 265 of them in a
+  single month at ~12 MB each, held for 30 days. Coverage reports added another 598 MB on the same
+  window. Both now expire after 7 days, matching the build artifacts that already used it. The
+  Desktop Apps workflow contributed 425 MB in four Windows installers kept for the repository's
+  90-day default, although the only consumer is the `publish` job in the same run, which uploads
+  the binaries to the rolling GitHub Release where they live permanently; both desktop uploads now
+  expire after three days — not one, because `publish` needs both platforms and each artifact's
+  clock starts at its own upload, so a queued macOS runner must not outlive the Windows installer. All three CI uploads are `continue-on-error`, so a full store can no longer
+  fail a run whose tests all passed.
+
+- **The site went down whenever the database password was rotated.** Provisioning wrote fresh
+  credentials into `POSTGRES_PRISMA_URL`/`POSTGRES_URL`, but the hand-set `DATABASE_URL` held the
+  previous password and won the precedence check in `lib/prisma.ts`, so every query failed with
+  "Authentication failed against database server" and the storefront returned 500s. The
+  provider-managed connection string is now preferred over the hand-set one, which keeps the app
+  on live credentials across a rotation.
+- **The contact form returned "Internal server error" and dropped the message.** Recording the
+  submission as a `Conversation` ran before the notification email and took the whole request down
+  with it when the database was unreachable. Filing the conversation is now best-effort, so the
+  email to the team goes out either way and the visitor gets a success response.
+- **Picante could not answer anything.** `/api/ai-chat` called OpenAI, whose account had no credits
+  remaining, even though the documented provider for this project is Anthropic. The route now
+  speaks to Claude through the Anthropic SDK (`ANTHROPIC_API_KEY`, `claude-opus-5` by default),
+  matching what `environment-variables.mdx` already specified; `AI_CHAT_PROVIDER=openai` still
+  selects the old path. The chat widget's "Powered by" label follows the new default.
+- **The version bump's workspace list is now asserted rather than trusted.** Adding
+  `apps/windows-admin` to it fixed one release; the next workspace to be added would have gone
+  the same way, because nothing failed when the list fell behind. The list moved out of
+  `scripts/version-bump.ts` into `lib/version.ts` as `VERSIONED_PACKAGE_FILES`, and the tests
+  now check that every listed file exists, that they are all on one version, and that the root's
+  `version` and `projectVersion` still agree — so a stale list is a red test rather than an
+  installer that never offers itself as an update.
 
 ## [2.1] — 2026-09-09
 
@@ -272,7 +341,6 @@ the root `package.json` is canonical.
   read the campaign's `defaultUnitPrice`, and the team editor links to the campaign's store.
 
 ### Fixed
-
 - **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
   `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset
   on disk is `abandoned-cart.png` — so the header rendered as a broken-image placeholder in the

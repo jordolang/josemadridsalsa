@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { CreditCard, Wallet, Banknote, Smartphone, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -70,8 +71,8 @@ export function PaymentMethodSelector({
   selectedMethod,
   onSelect,
 }: PaymentMethodSelectorProps) {
-  const enabledMethods = methods.filter((m) => m.enabled)
-  const disabledMethods = methods.filter((m) => !m.enabled)
+  const enabledMethods = useMemo(() => methods.filter((m) => m.enabled), [methods])
+  const disabledMethods = useMemo(() => methods.filter((m) => !m.enabled), [methods])
 
   // If only one method is enabled, skip the selector entirely
   if (enabledMethods.length <= 1 && disabledMethods.length === 0) {

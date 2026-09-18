@@ -1,0 +1,127 @@
+name: Artifact Cleanup
+
+# Actions artifacts count against the account's storage quota, and once it is
+# full every upload fails — which shows up as a red CI run whose tests all
+# passed. Retention settings stop future accumulation but never reclaim what is
+# already stored, and the UI only deletes one artifact at a time. This is the
+# bulk purge.
+#
+# Run it from the Actions tab. It defaults to a dry run, so the first click
+# always reports what it would delete without touching anything.
+
+on:
+  workflow_dispatch:
+    inputs:
+      older_than_days:
+        description: 'Delete artifacts older than this many days'
+        required: true
+        default: '7'
+      name_filter:
+        description: 'Only artifacts with this exact name (blank = every name)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Report what would be deleted without deleting it'
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  # Listing artifacts needs only read; deleting them is what requires write.
+  actions: write
+
+jobs:
+  cleanup:
+    name: Purge old artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const inputs = context.payload.inputs
+            const days = Number(inputs.older_than_days)
+            const nameFilter = inputs.name_filter || ''
+            // Unchecking the box sends the string 'false'; anything else stays safe.
+            const dryRun = inputs.dry_run !== 'false'
+
+            if (!Number.isFinite(days) || days < 0) {
+              core.setFailed(`older_than_days must be a non-negative number, got "${context.payload.inputs.older_than_days}"`)
+              return
+            }
+
+            const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+            const all = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            })
+
+            // Expired artifacts already occupy no storage, so deleting them
+            // frees nothing and only burns API calls.
+            const doomed = all.filter((a) => !a.expired
+              && new Date(a.created_at).getTime() < cutoff
+              && (nameFilter === '' || a.name === nameFilter))
+
+            const mb = (b) => (b / 1048576).toFixed(1)
+            const totalBytes = doomed.reduce((sum, a) => sum + a.size_in_bytes, 0)
+
+            const byName = {}
+            for (const a of doomed) {
+              byName[a.name] = byName[a.name] || { count: 0, bytes: 0 }
+              byName[a.name].count += 1
+              byName[a.name].bytes += a.size_in_bytes
+            }
+
+            core.summary.addHeading(dryRun ? 'Artifact cleanup (dry run)' : 'Artifact cleanup')
+            core.summary.addRaw(`Scanned **${all.length}** artifacts; **${doomed.length}** are unexpired and older than **${days}** day(s)`)
+            core.summary.addRaw(nameFilter ? ` named \`${nameFilter}\`.\n\n` : '.\n\n')
+            core.summary.addTable([
+              [{ data: 'Name', header: true }, { data: 'Count', header: true }, { data: 'MB', header: true }],
+              ...Object.entries(byName).map(([n, v]) => [n, String(v.count), mb(v.bytes)]),
+            ])
+
+            if (dryRun) {
+              core.summary.addRaw(`\n**Dry run** — nothing deleted. Would free ${mb(totalBytes)} MB. Re-run with \`dry_run\` unchecked to delete.`)
+              await core.summary.write()
+              core.info(`Dry run: would delete ${doomed.length} artifacts (${mb(totalBytes)} MB)`)
+              return
+            }
+
+            let deleted = 0
+            let freed = 0
+            const failures = []
+            for (const a of doomed) {
+              try {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: a.id,
+                })
+                deleted += 1
+                freed += a.size_in_bytes
+              } catch (error) {
+                // An artifact that expired mid-sweep is already gone, which is
+                // the outcome we wanted; anything else (403, rate limit, 5xx)
+                // means the quota is still occupied and the run must say so.
+                const benign = error.status === 404
+                failures.push({ text: `${a.name} (${a.id}): ${error.message}`, benign })
+              }
+            }
+
+            const real = failures.filter((f) => !f.benign)
+
+            core.summary.addRaw(`\nDeleted **${deleted}** artifacts, freeing **${mb(freed)} MB**.`)
+            if (failures.length) {
+              core.summary.addRaw(`\n\n${failures.length} could not be deleted (${real.length} not already expired):\n`)
+              core.summary.addList(failures.slice(0, 20).map((f) => f.text))
+            }
+            await core.summary.write()
+            core.info(`Deleted ${deleted} artifacts, freed ${mb(freed)} MB, ${failures.length} failures`)
+
+            // A sweep that the API refused frees nothing, so a green run would
+            // report the quota as cleared while it is still full.
+            if (real.length) {
+              core.setFailed(`${real.length} artifact(s) could not be deleted; storage was not fully reclaimed.`)
+            }

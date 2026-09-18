@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getIndexedContent } from '@/lib/ai-rag/content-cache'
@@ -32,7 +33,7 @@ const ChatRequestSchema = z.object({
     .max(50, 'Too many messages in conversation'),
 })
 
-const PROVIDER = process.env.AI_CHAT_PROVIDER?.toLowerCase() ?? 'openai'
+const PROVIDER = process.env.AI_CHAT_PROVIDER?.toLowerCase() ?? 'anthropic'
 const BASE_SYSTEM_PROMPT = PICANTE_SYSTEM_PROMPT
 
 function withSystemPrompt(messages: ChatMessage[], context?: string): ChatMessage[] {
@@ -51,6 +52,98 @@ function withSystemPrompt(messages: ChatMessage[], context?: string): ChatMessag
   }
   
   return [{ role: 'system', content: systemContent }, ...messages]
+}
+
+/**
+ * Claude takes the system prompt as a top-level field rather than a message, and requires the
+ * conversation to open on a user turn. The widget seeds the thread with Picante's greeting, so
+ * leading assistant turns are dropped here instead of being rejected by the API.
+ */
+function splitForAnthropic(messages: ChatMessage[]) {
+  const system = messages
+    .filter((message) => message.role === 'system')
+    .map((message) => message.content)
+    .join('\n\n')
+
+  const conversation = messages.filter((message) => message.role !== 'system')
+  const firstUserIndex = conversation.findIndex((message) => message.role === 'user')
+
+  return {
+    system,
+    conversation: (firstUserIndex === -1 ? [] : conversation.slice(firstUserIndex)).map((message) => ({
+      role: message.role as 'user' | 'assistant',
+      content: message.content,
+    })),
+  }
+}
+
+async function callAnthropic(messages: ChatMessage[]) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: 'ANTHROPIC_API_KEY is not configured. Add it to your environment variables.' },
+      { status: 400 },
+    )
+  }
+
+  const model = process.env.ANTHROPIC_MODEL ?? 'claude-opus-5'
+  const { system, conversation } = splitForAnthropic(messages)
+
+  if (conversation.length === 0) {
+    return NextResponse.json({ error: 'At least one user message is required.' }, { status: 400 })
+  }
+
+  try {
+    const message = await new Anthropic({ apiKey }).messages.create({
+      model,
+      max_tokens: 600,
+      system,
+      messages: conversation,
+    })
+
+    // On a policy decline the response is a 200 with no usable text, so check before reading it.
+    if (message.stop_reason === 'refusal') {
+      return NextResponse.json(
+        { error: 'Picante cannot help with that one. Try rephrasing, or tap “Talk to a human.”' },
+        { status: 422 },
+      )
+    }
+
+    const reply = message.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n')
+      .trim()
+
+    if (!reply) {
+      return NextResponse.json(
+        { error: 'The AI assistant did not return a response. Try again shortly.' },
+        { status: 502 },
+      )
+    }
+
+    return NextResponse.json({ reply })
+  } catch (error) {
+    if (error instanceof Anthropic.AuthenticationError) {
+      return NextResponse.json(
+        { error: 'The AI assistant is not configured correctly. Check ANTHROPIC_API_KEY.' },
+        { status: 500 },
+      )
+    }
+    if (error instanceof Anthropic.RateLimitError) {
+      return NextResponse.json(
+        { error: 'The AI assistant is busy right now. Try again in a moment.' },
+        { status: 429 },
+      )
+    }
+    if (error instanceof Anthropic.APIError) {
+      return NextResponse.json(
+        { error: error.message || 'Unable to reach the AI assistant right now.' },
+        { status: error.status ?? 502 },
+      )
+    }
+    throw error
+  }
 }
 
 async function callOpenAI(messages: ChatMessage[]) {
@@ -233,8 +326,10 @@ export async function POST(request: Request) {
     let response: NextResponse
     if (PROVIDER === 'smileyface') {
       response = await callSmileyFace(chatMessages)
-    } else {
+    } else if (PROVIDER === 'openai') {
       response = await callOpenAI(chatMessages)
+    } else {
+      response = await callAnthropic(chatMessages)
     }
 
     // Log AI chat usage for analytics and rate limiting

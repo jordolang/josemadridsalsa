@@ -9,7 +9,7 @@ export const metadata: Metadata = createMetadata({
   pathname: '/returns',
 });
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 86400; // 24 hours
 
 export default async function ReturnPolicyPage() {
   const settings = await getStoreSettings();

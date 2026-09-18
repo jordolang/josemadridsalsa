@@ -140,6 +140,7 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '2546527762445636');
+fbq('init', '1398300505576315');
 fbq('track', 'PageView');`,
           }}
         />
@@ -188,6 +189,10 @@ fbq('track', 'PageView');`,
             src="https://www.facebook.com/tr?id=2546527762445636&ev=PageView&noscript=1"
             alt=""
           />
+        </noscript>
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=1398300505576315&ev=PageView&noscript=1" alt="" />
         </noscript>
         <Providers>
           {children}

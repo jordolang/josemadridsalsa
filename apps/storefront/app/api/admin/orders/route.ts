@@ -11,7 +11,7 @@ import {
   parseQuery,
 } from '@/lib/api'
 import { logAuditWithRequest } from '@/lib/audit'
-import { adjustInventory } from '@/lib/inventory-manager'
+import { bulkAdjustInventoryInTx, checkAndUpdateAlerts } from '@/lib/inventory-manager'
 import { emitOrderCreated } from '@/lib/orders/events'
 import { deriveSalesChannel } from '@/lib/orders/sales-channel'
 import {
@@ -145,45 +145,62 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const order = await prisma.order.create({
-      data: {
-        orderNumber: generateManualOrderNumber(now, Math.random()),
-        guestEmail: input.customer.email.toLowerCase(),
-        guestPhone: input.customer.phone,
-        subtotal: new Prisma.Decimal(priced.subtotal.toFixed(2)),
-        discountAmount: new Prisma.Decimal(priced.discountAmount.toFixed(2)),
-        shippingCost: new Prisma.Decimal(priced.shippingCost.toFixed(2)),
-        tax: new Prisma.Decimal(priced.tax.toFixed(2)),
-        total: new Prisma.Decimal(priced.total.toFixed(2)),
-        paymentStatus: input.paymentStatus,
-        // Free text, because Payment.provider has no honest value for cash or a cheque.
-        paymentMethod: input.paymentMethod,
-        status: input.paymentStatus === 'PAID' ? 'CONFIRMED' : 'PENDING',
-        salesChannel: deriveSalesChannel({ explicitChannel: input.salesChannel }),
-        customerNotes: input.notes,
-        items: { create: priced.lines },
-      },
-      select: { id: true, orderNumber: true, total: true },
-    })
-
     // Stock is committed the moment it is promised, so it comes out whether or not the money
     // has arrived — a phone order awaiting a cheque still means those jars are spoken for.
-    // Deducted after the order commits because adjustInventory opens its own transaction.
-    for (const line of priced.lines) {
-      try {
-        await adjustInventory({
+    // Order creation and inventory deduction in a single transaction for atomicity.
+    const order = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          orderNumber: generateManualOrderNumber(now, Math.random()),
+          guestEmail: input.customer.email.toLowerCase(),
+          guestPhone: input.customer.phone,
+          subtotal: new Prisma.Decimal(priced.subtotal.toFixed(2)),
+          discountAmount: new Prisma.Decimal(priced.discountAmount.toFixed(2)),
+          shippingCost: new Prisma.Decimal(priced.shippingCost.toFixed(2)),
+          tax: new Prisma.Decimal(priced.tax.toFixed(2)),
+          total: new Prisma.Decimal(priced.total.toFixed(2)),
+          paymentStatus: input.paymentStatus,
+          // Free text, because Payment.provider has no honest value for cash or a cheque.
+          paymentMethod: input.paymentMethod,
+          status: input.paymentStatus === 'PAID' ? 'CONFIRMED' : 'PENDING',
+          salesChannel: deriveSalesChannel({ explicitChannel: input.salesChannel }),
+          customerNotes: input.notes,
+          items: { create: priced.lines },
+        },
+        select: { id: true, orderNumber: true, total: true },
+      })
+
+      // Bulk adjust inventory for all items in a single operation
+      await bulkAdjustInventoryInTx(
+        priced.lines.map((line) => ({
           productId: line.productId,
           quantity: -line.quantity,
-          type: 'SALE',
+          type: 'SALE' as const,
           reason: `Manual order ${order.orderNumber}`,
           orderId: order.id,
           userId: user.id,
-        })
-      } catch (error) {
-        console.error('[Manual Order] Inventory deduction failed:', {
+        })),
+        tx
+      )
+
+      return order
+    })
+
+    // Fire inventory alerts after the transaction commits (non-critical)
+    const productIds = priced.lines.map((line) => line.productId)
+    const updatedProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, inventory: true, lowStockThreshold: true },
+    })
+
+    for (const product of updatedProducts) {
+      try {
+        await checkAndUpdateAlerts(product.id, product.inventory, product.lowStockThreshold)
+      } catch (alertError) {
+        console.error('[Manual Order] Alert check failed:', {
           orderId: order.id,
-          productId: line.productId,
-          error,
+          productId: product.id,
+          error: alertError,
         })
       }
     }

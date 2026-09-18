@@ -177,6 +177,9 @@ function ExpressCheckout({ items, formState, total, discountCode, giftCertificat
   const router = useRouter()
   const [isProcessing, setIsProcessing] = useState(false)
 
+  // Memoize checkout items transformation to avoid recalculation on every render
+  const checkoutItems = useMemo(() => toCheckoutItems(items), [items])
+
   const handleExpressCheckoutConfirm = async (event: any) => {
     if (!stripe || items.length === 0) {
       return
@@ -194,7 +197,7 @@ function ExpressCheckout({ items, formState, total, discountCode, giftCertificat
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: toCheckoutItems(items),
+          items: checkoutItems,
           customer: {
             email: billingDetails?.email || formState.email || '',
             firstName: billingDetails?.name?.split(' ')[0] || formState.firstName || '',
@@ -350,6 +353,20 @@ function CheckoutForm() {
     [items]
   )
 
+  // Memoize checkout items transformation to avoid recalculation on every render
+  const checkoutItems = useMemo(() => toCheckoutItems(items), [items])
+
+  // Memoize tax calculation items transformation
+  const taxCalculationItems = useMemo(
+    () =>
+      items.map((item) => ({
+        productId: cartItemProductId(item),
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    [items]
+  )
+
   const hasCartItems = items.length > 0
 
   // Mirrors the server's arithmetic in /api/checkout: discount comes off the goods, then
@@ -470,11 +487,7 @@ function CheckoutForm() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: cartItemProductId(item),
-            quantity: item.quantity,
-            price: item.price,
-          })),
+          items: taxCalculationItems,
           shippingAddress: {
             address1: form.address1,
             address2: form.address2 || undefined,
@@ -526,7 +539,7 @@ function CheckoutForm() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          items: toCheckoutItems(items),
+          items: checkoutItems,
           shippingAddress: {
             address1: form.address1,
             address2: form.address2 || undefined,
@@ -710,7 +723,7 @@ function CheckoutForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: toCheckoutItems(items),
+          items: checkoutItems,
           customer: {
             email: selectedPaymentMethod === 'link' ? (linkEmail || formState.email) : formState.email,
             firstName: formState.firstName,

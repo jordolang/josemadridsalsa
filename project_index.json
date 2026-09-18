@@ -1,0 +1,46 @@
+{
+  "project_type": "monorepo",
+  "services": {
+    "storefront": {
+      "path": "apps/storefront",
+      "tech_stack": ["react", "nextjs", "typescript", "tailwindcss"],
+      "port": 3000,
+      "dev_command": "npm run dev",
+      "test_command": "npm run test"
+    },
+    "fundraising": {
+      "path": "apps/fundraising",
+      "tech_stack": ["react", "nextjs", "typescript"],
+      "port": 3001,
+      "dev_command": "npm run dev:fundraising",
+      "test_command": "npm run test"
+    },
+    "admin": {
+      "path": "apps/admin",
+      "tech_stack": ["react", "nextjs", "typescript"],
+      "port": 3003,
+      "dev_command": "npm run dev:admin",
+      "test_command": "npm run test"
+    },
+    "docs": {
+      "path": "apps/docs",
+      "tech_stack": ["react", "nextjs", "fumadocs"],
+      "port": 3002,
+      "dev_command": "npm run dev:docs",
+      "test_command": "npm run test"
+    }
+  },
+  "infrastructure": {
+    "docker": true,
+    "database": "postgresql",
+    "orm": "prisma"
+  },
+  "conventions": {
+    "linter": "eslint",
+    "formatter": "prettier",
+    "testing": "vitest",
+    "e2e": "playwright",
+    "client_components": "'use client' directive required",
+    "path_alias": "@/ maps to app root"
+  }
+}

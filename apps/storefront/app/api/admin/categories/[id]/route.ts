@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import prisma from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { ok, fail } from '@/lib/api'
@@ -57,6 +58,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       changes: data,
     })
 
+    // Invalidate categories cache
+    revalidateTag('categories', 'max')
+
     return ok({ category })
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -89,6 +93,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       entityId: id,
       changes: { name: existing.name },
     })
+
+    // Invalidate categories cache
+    revalidateTag('categories', 'max')
 
     return ok({ message: 'Category deleted' })
   } catch (error: any) {

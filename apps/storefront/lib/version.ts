@@ -161,10 +161,12 @@ export function suggestBump(changelogEntries: string[]): VersionBump {
 /**
  * The workspaces whose `package.json` carries the platform version.
  *
- * `apps/windows-admin` is here because electron-builder stamps the installer
- * from *its* `version`, not the root's. Leaving it out is not cosmetic: it
- * produces a release whose `.exe` still calls itself by the previous number, so
- * `latest.yml` advertises the old version and electron-updater never offers the
+ * The two desktop apps read their version from different places: the macOS
+ * bundle takes the root's (see `apps/macos-admin/build-app.sh`), while
+ * electron-builder stamps the Windows installer and its `latest.yml` update
+ * feed from `apps/windows-admin` instead. Leaving that one out is not cosmetic:
+ * it produces a release whose `.exe` still calls itself by the previous number,
+ * so the feed advertises the old version and electron-updater never offers the
  * update to anyone already running it.
  *
  * `apps/docs` and `apps/agent` version themselves and stay out on purpose.
