@@ -372,6 +372,44 @@ function bucketsFor(values: readonly string[], actual: string): number[] {
 const PRODUCT_FILTERS = ['All products', 'Active', 'Mild', 'Medium', 'Hot']
 const PRODUCT_FILTER_HEAT = ['', '', 'MILD', 'MEDIUM', 'HOT']
 
+/**
+ * What the edit sheet opens with.
+ *
+ * The row and the inspector both offer the same edit, so the values live here
+ * once rather than being written out beside each of them.
+ */
+function productEditValues(product: Prisma.ProductGetPayload<object>): FormValues {
+  return {
+    name: product.name,
+    slug: product.slug,
+    sku: product.sku,
+    barcode: textValue(product.barcode),
+    categoryId: product.categoryId,
+    heatLevel: product.heatLevel,
+    description: textValue(product.description),
+    ingredients: product.ingredients.join(', '),
+    price: moneyValue(product.price),
+    compareAtPrice: moneyValue(product.compareAtPrice),
+    costPrice: moneyValue(product.costPrice),
+    weight: moneyValue(product.weight),
+    inventory: numberValue(product.inventory),
+    // The same count, kept so the handler can tell a corrected field from an
+    // untouched one rather than diffing against a fresh read.
+    inventoryAt: numberValue(product.inventory),
+    lowStockThreshold: numberValue(product.lowStockThreshold),
+    unitsPerCase: numberValue(product.unitsPerCase),
+    sortOrder: numberValue(product.sortOrder),
+    isActive: product.isActive,
+    isFeatured: product.isFeatured,
+    featuredImage: textValue(product.featuredImage),
+    images: product.images,
+    metaTitle: textValue(product.metaTitle),
+    metaDescription: textValue(product.metaDescription),
+    ogImage: textValue(product.ogImage),
+    searchKeywords: product.searchKeywords.join(', '),
+  }
+}
+
 async function loadProducts(): Promise<TablePayload> {
   const products = await safe(
     () =>
@@ -410,26 +448,7 @@ async function loadProducts(): Promise<TablePayload> {
       open: form('product.edit', {
         recordId: product.id,
         title: product.name,
-        values: {
-          name: product.name,
-          slug: product.slug,
-          sku: product.sku,
-          categoryId: product.categoryId,
-          heatLevel: product.heatLevel,
-          description: textValue(product.description),
-          price: moneyValue(product.price),
-          compareAtPrice: moneyValue(product.compareAtPrice),
-          costPrice: moneyValue(product.costPrice),
-          weight: moneyValue(product.weight),
-          lowStockThreshold: numberValue(product.lowStockThreshold),
-          unitsPerCase: numberValue(product.unitsPerCase),
-          sortOrder: numberValue(product.sortOrder),
-          isActive: product.isActive,
-          isFeatured: product.isFeatured,
-          featuredImage: textValue(product.featuredImage),
-          metaTitle: textValue(product.metaTitle),
-          metaDescription: textValue(product.metaDescription),
-        },
+        values: productEditValues(product),
       }),
       search: `${product.name} ${product.sku} ${product.category.name}`,
       buckets: [
@@ -494,26 +513,7 @@ async function loadProducts(): Promise<TablePayload> {
             command: form('product.edit', {
               recordId: product.id,
               title: product.name,
-        values: {
-                name: product.name,
-                slug: product.slug,
-                sku: product.sku,
-                categoryId: product.categoryId,
-                heatLevel: product.heatLevel,
-                description: textValue(product.description),
-                price: moneyValue(product.price),
-                compareAtPrice: moneyValue(product.compareAtPrice),
-                costPrice: moneyValue(product.costPrice),
-                weight: moneyValue(product.weight),
-                lowStockThreshold: numberValue(product.lowStockThreshold),
-                unitsPerCase: numberValue(product.unitsPerCase),
-                sortOrder: numberValue(product.sortOrder),
-                isActive: product.isActive,
-                isFeatured: product.isFeatured,
-                featuredImage: textValue(product.featuredImage),
-                metaTitle: textValue(product.metaTitle),
-                metaDescription: textValue(product.metaDescription),
-              },
+              values: productEditValues(product),
             }),
           },
           {

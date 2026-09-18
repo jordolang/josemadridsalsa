@@ -41,7 +41,7 @@ import {
 import { generatePoNumber } from '@/lib/purchasing/receiving'
 import { insertRecipientsFromList } from '@/lib/email/recipients'
 import { checkPostSeo } from '@/lib/blog/schemas'
-import { slugify, type WriteOpId } from './forms'
+import { PRODUCT_IMAGE_LIMIT, slugify, type WriteOpId } from './forms'
 import type { DesktopSectionId } from './sections'
 
 // ---------------------------------------------------------------------------
@@ -241,6 +241,45 @@ const stringList = z
       .map((entry) => entry.trim().replace(/^#/, ''))
       .filter(Boolean)
   })
+
+/**
+ * The gallery as it should be stored.
+ *
+ * `images[0]` is the storefront's lead image, and the rest of the app treats the
+ * featured URL as a member of the list, so a featured image typed on its own is
+ * put at the front rather than left out of the gallery it belongs to — which
+ * means it counts against the limit like any other image. A full gallery plus a
+ * different featured URL is refused rather than silently trimmed, because the
+ * image that would be dropped is one somebody deliberately added.
+ */
+function galleryFor(images: string[], featuredImage: string | null): string[] {
+  const gallery = featuredImage
+    ? [featuredImage, ...images.filter((url) => url !== featuredImage)]
+    : images
+
+  if (gallery.length > PRODUCT_IMAGE_LIMIT) {
+    throw new WriteError(
+      `A product can carry ${PRODUCT_IMAGE_LIMIT} images, and the featured one counts. Remove an image and save again.`,
+      'images',
+    )
+  }
+
+  return gallery
+}
+
+/**
+ * A list of image URLs.
+ *
+ * `stringList` would take any string at all, and these end up in `src`
+ * attributes on the public product page, so each entry has to be a real
+ * http(s) URL before it is stored. The hostname is deliberately not checked
+ * here: `next.config.mjs` holds the list of hosts the image optimiser will
+ * serve, and a second copy of it in this file would be one to keep in step.
+ */
+const imageList = stringList.refine(
+  (urls) => urls.every((url) => /^https?:\/\//i.test(url) && URL.canParse(url)),
+  'Every image has to be an http or https URL',
+)
 
 const decimal = (value: number) => new Prisma.Decimal(value.toFixed(2))
 const optionalDecimal = (value: number | null) => (value === null ? null : decimal(value))
@@ -597,9 +636,11 @@ const productShape = {
   name: required('Name'),
   slug: required('Slug').regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and hyphens only'),
   sku: required('SKU'),
+  barcode: optionalText,
   categoryId: required('Category'),
   heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT']),
   description: optionalText,
+  ingredients: stringList,
   price: requiredNumber('Price').min(0, 'Price cannot be negative'),
   compareAtPrice: optionalNumber,
   costPrice: optionalNumber,
@@ -610,8 +651,11 @@ const productShape = {
   isActive: boolean,
   isFeatured: boolean,
   featuredImage: optionalText,
+  images: imageList,
   metaTitle: optionalText,
   metaDescription: optionalText,
+  ogImage: optionalText,
+  searchKeywords: stringList,
 }
 
 const productHandlers: Record<string, WriteHandler> = {
@@ -641,10 +685,13 @@ const productHandlers: Record<string, WriteHandler> = {
             isActive: values.isActive,
             isFeatured: values.isFeatured,
             featuredImage: values.featuredImage,
-            images: values.featuredImage ? [values.featuredImage] : [],
+            images: galleryFor(values.images, values.featuredImage),
             metaTitle: values.metaTitle,
             metaDescription: values.metaDescription,
-            ingredients: [],
+            ogImage: values.ogImage,
+            searchKeywords: values.searchKeywords,
+            barcode: values.barcode,
+            ingredients: values.ingredients,
           },
           select: { id: true, name: true, inventory: true },
         })
@@ -669,9 +716,49 @@ const productHandlers: Record<string, WriteHandler> = {
     permission: 'products:write',
     entity: 'Product',
     action: 'update',
-    schema: z.object(productShape),
+    schema: z.object({ ...productShape, inventory: optionalInt, inventoryAt: optionalInt }),
     async run(values, context) {
       const id = requireRecord(context)
+      const current = await prisma.product.findUnique({ where: { id }, select: { inventory: true } })
+      if (!current) throw new WriteError('That product no longer exists.')
+
+      // The sheet shows the count because that is what anyone opening a product
+      // wants to see, but a count is never written straight over: a change is
+      // applied as an adjustment below so it lands in the inventory ledger like
+      // every other movement.
+      //
+      // What counts as a change is measured against `inventoryAt` — the count
+      // the sheet opened on — and never against a fresh read. The whole seeded
+      // form is submitted on every save, so a count that still matches the one
+      // it was seeded with is a field nobody touched: comparing it to a fresh
+      // read would turn a sale that landed while the sheet was open into a
+      // correction and quietly reverse it, and would block an operator who may
+      // only edit products from saving a name.
+      const wanted = values.inventory
+      const opened = values.inventoryAt
+      const touched = wanted !== null && opened !== null && wanted !== opened
+
+      if (touched) {
+        // Editing a product and moving stock are two permissions in `/admin`,
+        // so they stay two here.
+        if (!(await context.can('inventory:write'))) {
+          throw new WriteError('Changing the count needs the inventory permission.', 'inventory')
+        }
+
+        // Refused before anything is written, rather than after the fields have
+        // been saved: the adjustment is a second write this handler cannot roll
+        // the first one back from, so the failures worth catching are caught
+        // while nothing has happened yet.
+        if (current.inventory !== opened) {
+          throw new WriteError(
+            `Stock moved while this was open (it was ${opened}, it is now ${current.inventory}). Reopen the product and set the count again.`,
+            'inventory',
+          )
+        }
+
+        if (wanted < 0) throw new WriteError('A count cannot be negative.', 'inventory')
+      }
+
       const product = await prisma.product
         .update({
           where: { id },
@@ -679,9 +766,11 @@ const productHandlers: Record<string, WriteHandler> = {
             name: values.name,
             slug: values.slug,
             sku: values.sku,
+            barcode: values.barcode,
             categoryId: values.categoryId,
             heatLevel: values.heatLevel,
             description: values.description,
+            ingredients: values.ingredients,
             price: decimal(values.price),
             compareAtPrice: optionalDecimal(values.compareAtPrice),
             costPrice: optionalDecimal(values.costPrice),
@@ -692,14 +781,41 @@ const productHandlers: Record<string, WriteHandler> = {
             isActive: values.isActive,
             isFeatured: values.isFeatured,
             featuredImage: values.featuredImage,
+            images: galleryFor(values.images, values.featuredImage),
             metaTitle: values.metaTitle,
             metaDescription: values.metaDescription,
+            ogImage: values.ogImage,
+            searchKeywords: values.searchKeywords,
           },
           select: { name: true },
         })
         .catch((error) => friendly(error, 'That product could not be saved.'))
 
-      return { message: `${product.name} saved`, recordId: id }
+      if (!touched) return { message: `${product.name} saved`, recordId: id }
+
+      try {
+        await adjustInventory({
+          productId: id,
+          quantity: wanted - opened,
+          type: 'ADJUSTMENT',
+          reason: 'Edited on the product sheet',
+          userId: context.actor.id,
+          // Checked again at the point of the write, because the gap between
+          // the read above and this call is small but not nothing.
+          expectedPreviousStock: opened,
+        })
+      } catch (error) {
+        if (error instanceof StaleInventoryError) throw new WriteError(error.message, 'inventory')
+        throw new WriteError(
+          error instanceof Error ? error.message : 'The count could not be changed.',
+          'inventory',
+        )
+      }
+
+      return {
+        message: `${product.name} saved, ${wanted} on hand`,
+        recordId: id,
+      }
     },
   }),
 

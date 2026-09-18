@@ -425,6 +425,173 @@ describe('rows that refuse to change', () => {
   })
 })
 
+describe('the product sheet', () => {
+  /** Everything the sheet sends for a product that is only being renamed. */
+  const productValues = {
+    name: 'Peach',
+    slug: 'peach',
+    sku: 'JMS-PCH-16',
+    barcode: '012345678905',
+    categoryId: 'cat1',
+    heatLevel: 'FRUIT',
+    description: 'Sweet, not hot.',
+    ingredients: 'Peaches, habanero, lime',
+    price: 11.95,
+    isActive: true,
+    isFeatured: false,
+    images: ['https://blob.example.com/peach.jpg', 'https://blob.example.com/peach-back.jpg'],
+    searchKeywords: 'peach, fruit salsa',
+    inventory: 40,
+    inventoryAt: 40,
+  }
+
+  it('keeps the lists the web product page edited as lists', async () => {
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 40 })
+    prismaMock.product.update.mockResolvedValue({ name: 'Peach' })
+
+    await WRITE_HANDLERS['product.edit'].execute(productValues, { ...actor, recordId: 'p1' })
+
+    expect(prismaMock.product.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          barcode: '012345678905',
+          ingredients: ['Peaches', 'habanero', 'lime'],
+          searchKeywords: ['peach', 'fruit salsa'],
+          images: ['https://blob.example.com/peach.jpg', 'https://blob.example.com/peach-back.jpg'],
+        }),
+      }),
+    )
+  })
+
+  it('puts the featured image at the front of the gallery it belongs to', async () => {
+    // The rest of the app reads `images[0]` as the lead, so a featured URL
+    // typed on its own cannot be left sitting outside the list.
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 40 })
+    prismaMock.product.update.mockResolvedValue({ name: 'Peach' })
+
+    await WRITE_HANDLERS['product.edit'].execute(
+      { ...productValues, featuredImage: 'https://blob.example.com/peach-back.jpg' },
+      { ...actor, recordId: 'p1' },
+    )
+
+    expect(prismaMock.product.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          images: ['https://blob.example.com/peach-back.jpg', 'https://blob.example.com/peach.jpg'],
+        }),
+      }),
+    )
+  })
+
+  it('writes a changed count as an adjustment rather than over the column', async () => {
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 40 })
+    prismaMock.product.update.mockResolvedValue({ name: 'Peach' })
+
+    const outcome = await WRITE_HANDLERS['product.edit'].execute(
+      { ...productValues, inventory: 46 },
+      { ...actor, recordId: 'p1' },
+    )
+
+    expect(prismaMock.product.update.mock.calls[0][0].data).not.toHaveProperty('inventory')
+    expect(adjustInventory).toHaveBeenCalledWith(
+      expect.objectContaining({ productId: 'p1', quantity: 6, type: 'ADJUSTMENT', expectedPreviousStock: 40 }),
+    )
+    expect(outcome.message).toContain('46 on hand')
+  })
+
+  it('leaves the ledger alone when the count was not touched', async () => {
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 40 })
+    prismaMock.product.update.mockResolvedValue({ name: 'Peach' })
+
+    await WRITE_HANDLERS['product.edit'].execute(
+      { ...productValues, inventory: 40 },
+      { ...actor, recordId: 'p1' },
+    )
+
+    expect(adjustInventory).not.toHaveBeenCalled()
+  })
+
+  it('does not read a sale that landed while the sheet was open as a correction', async () => {
+    // The whole seeded form is submitted on every save, so an untouched count
+    // still arrives. Diffing it against a fresh read would turn six jars sold
+    // in the meantime into a +6 adjustment and put them back.
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 34 })
+    prismaMock.product.update.mockResolvedValue({ name: 'Peach' })
+
+    const outcome = await WRITE_HANDLERS['product.edit'].execute(
+      { ...productValues, name: 'Peach Salsa', inventory: 40, inventoryAt: 40 },
+      { ...actor, recordId: 'p1' },
+    )
+
+    expect(adjustInventory).not.toHaveBeenCalled()
+    expect(outcome.message).toBe('Peach saved')
+  })
+
+  it('lets a products-only operator rename a product while stock is moving', async () => {
+    // The permission question is only asked of a count somebody actually typed.
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 34 })
+    prismaMock.product.update.mockResolvedValue({ name: 'Peach' })
+
+    await WRITE_HANDLERS['product.edit'].execute(
+      { ...productValues, name: 'Peach Salsa' },
+      { ...withoutExtraPermissions, recordId: 'p1' },
+    )
+
+    expect(prismaMock.product.update).toHaveBeenCalled()
+  })
+
+  it('refuses a typed count when stock moved under it, before writing anything', async () => {
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 34 })
+
+    await expect(
+      WRITE_HANDLERS['product.edit'].execute(
+        { ...productValues, inventory: 46, inventoryAt: 40 },
+        { ...actor, recordId: 'p1' },
+      ),
+    ).rejects.toThrow(/Stock moved while this was open/)
+    // The adjustment is a second write this handler cannot roll the first one
+    // back from, so nothing may be saved before it is known to be safe.
+    expect(prismaMock.product.update).not.toHaveBeenCalled()
+    expect(adjustInventory).not.toHaveBeenCalled()
+  })
+
+  it('refuses an image that is not an http URL', async () => {
+    await expect(
+      WRITE_HANDLERS['product.edit'].execute(
+        { ...productValues, images: ['not-a-url'] },
+        { ...actor, recordId: 'p1' },
+      ),
+    ).rejects.toThrow(/http or https URL/)
+  })
+
+  it('counts the featured image against the gallery limit rather than making an eleventh', async () => {
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 40 })
+    const full = Array.from({ length: 10 }, (_, index) => `https://blob.example.com/${index}.jpg`)
+
+    await expect(
+      WRITE_HANDLERS['product.edit'].execute(
+        { ...productValues, images: full, featuredImage: 'https://blob.example.com/lead.jpg' },
+        { ...actor, recordId: 'p1' },
+      ),
+    ).rejects.toThrow(/can carry 10 images/)
+  })
+
+  it('refuses to move stock for an operator who may only edit products', async () => {
+    // Editing a product and adjusting stock are two permissions in /admin, and
+    // a count on the same sheet must not merge them into one.
+    prismaMock.product.findUnique.mockResolvedValue({ inventory: 40 })
+
+    await expect(
+      WRITE_HANDLERS['product.edit'].execute(
+        { ...productValues, inventory: 46 },
+        { ...withoutExtraPermissions, recordId: 'p1' },
+      ),
+    ).rejects.toThrow(/inventory permission/)
+    expect(prismaMock.product.update).not.toHaveBeenCalled()
+    expect(adjustInventory).not.toHaveBeenCalled()
+  })
+})
+
 describe('stock adjustment', () => {
   it('turns "set the count to" into the delta that gets there', async () => {
     prismaMock.product.findUnique.mockResolvedValue({ name: 'Peach', inventory: 40 })
