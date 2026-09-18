@@ -50,6 +50,16 @@ the root `package.json` is canonical.
   was not enough: npm keeps a lockfile entry that nothing forces it to move, so the stale root
   entry had to be dropped before re-resolving.
 
+- **The `vitest` 5.0.0 bump is reverted to 4.1.4 until the rest of its family goes with it.**
+  Dependabot raised `vitest` alone in `apps/storefront` and `apps/windows-admin` and left
+  `@vitest/coverage-v8` and `@vitest/ui` on 4, so npm nested a `vitest@5` per workspace while
+  `@vitest/expect`, `@vitest/runner` and `@vitest/utils` stayed hoisted at 4. The 5.0.0 runner
+  driving the 4.1.4 matchers failed 57 tests with `Cannot read properties of undefined (reading
+  'indexOf')` — every one of them an `await expect(…).rejects.toThrow('message')`, which is to
+  say every test that asserts an error is raised. The bump merged against a CI run that never got
+  past installing, so nothing caught it. Moving the whole family to 5 is a real upgrade and wants
+  its own green run, not a rider on this one.
+
 - **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
   with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
   the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four
