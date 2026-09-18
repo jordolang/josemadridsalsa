@@ -261,9 +261,14 @@
   cursor: pointer;
 }
 
-.jmsd-icon-button:hover {
+.jmsd-icon-button:hover:not(:disabled) {
   color: var(--text);
   border-color: var(--gold);
+}
+
+.jmsd-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .jmsd-avatar {
@@ -1439,6 +1444,34 @@
   --sheet-width: 760px;
 }
 
+/*
+ * A sheet with a band across the top holds two columns of real content side by
+ * side, so it overrides whichever size it was given rather than pretending to
+ * be a fourth one.
+ */
+.jmsd-sheet--band {
+  --sheet-width: 900px;
+}
+
+.jmsd-sheet-band {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 0 20px;
+  align-items: start;
+}
+
+/* Sections in the band are siblings, not a stack, so drop the stack's spacing. */
+.jmsd-sheet-band .jmsd-sheet-section + .jmsd-sheet-section {
+  margin-top: 0;
+}
+
+/* Below a phone-width window the band is two rows, which is the same reading order. */
+@media (max-width: 720px) {
+  .jmsd-sheet-band {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Holds the title and subtitle, and is allowed to be narrower than its text. */
 .jmsd-sheet-heading {
   min-width: 0;
@@ -1571,6 +1604,80 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+/* ------------------------------------------------------------------ gallery */
+
+.jmsd-gallery-add {
+  display: flex;
+  gap: 6px;
+}
+
+.jmsd-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jmsd-gallery-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 5px 5px 6px;
+  border: 1px solid var(--hair);
+  border-radius: 7px;
+  background: var(--panel2);
+}
+
+.jmsd-gallery-thumb {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--field);
+  object-fit: cover;
+}
+
+.jmsd-gallery-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* The tail of a blob URL is the part that identifies it, so keep the end. */
+.jmsd-gallery-url {
+  overflow: hidden;
+  font-size: 10.5px;
+  color: var(--dim);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.jmsd-gallery-lead {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--goldt);
+}
+
+.jmsd-gallery-buttons {
+  flex: none;
+  display: flex;
+  gap: 2px;
+}
+
+.jmsd-gallery-empty {
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
 }
 
 .jmsd-lines {

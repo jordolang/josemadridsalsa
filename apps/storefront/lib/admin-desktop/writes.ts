@@ -242,6 +242,18 @@ const stringList = z
       .filter(Boolean)
   })
 
+/**
+ * The gallery as it should be stored.
+ *
+ * `images[0]` is the storefront's lead image, and the rest of the app treats the
+ * featured URL as a member of the list, so a featured image typed on its own is
+ * put at the front rather than left out of the gallery it belongs to.
+ */
+function galleryFor(images: string[], featuredImage: string | null): string[] {
+  if (!featuredImage) return images
+  return [featuredImage, ...images.filter((url) => url !== featuredImage)]
+}
+
 const decimal = (value: number) => new Prisma.Decimal(value.toFixed(2))
 const optionalDecimal = (value: number | null) => (value === null ? null : decimal(value))
 
@@ -597,9 +609,11 @@ const productShape = {
   name: required('Name'),
   slug: required('Slug').regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and hyphens only'),
   sku: required('SKU'),
+  barcode: optionalText,
   categoryId: required('Category'),
   heatLevel: z.enum(['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT']),
   description: optionalText,
+  ingredients: stringList,
   price: requiredNumber('Price').min(0, 'Price cannot be negative'),
   compareAtPrice: optionalNumber,
   costPrice: optionalNumber,
@@ -610,8 +624,11 @@ const productShape = {
   isActive: boolean,
   isFeatured: boolean,
   featuredImage: optionalText,
+  images: stringList,
   metaTitle: optionalText,
   metaDescription: optionalText,
+  ogImage: optionalText,
+  searchKeywords: stringList,
 }
 
 const productHandlers: Record<string, WriteHandler> = {
@@ -641,10 +658,13 @@ const productHandlers: Record<string, WriteHandler> = {
             isActive: values.isActive,
             isFeatured: values.isFeatured,
             featuredImage: values.featuredImage,
-            images: values.featuredImage ? [values.featuredImage] : [],
+            images: galleryFor(values.images, values.featuredImage),
             metaTitle: values.metaTitle,
             metaDescription: values.metaDescription,
-            ingredients: [],
+            ogImage: values.ogImage,
+            searchKeywords: values.searchKeywords,
+            barcode: values.barcode,
+            ingredients: values.ingredients,
           },
           select: { id: true, name: true, inventory: true },
         })
@@ -669,9 +689,23 @@ const productHandlers: Record<string, WriteHandler> = {
     permission: 'products:write',
     entity: 'Product',
     action: 'update',
-    schema: z.object(productShape),
+    schema: z.object({ ...productShape, inventory: optionalInt }),
     async run(values, context) {
       const id = requireRecord(context)
+      const current = await prisma.product.findUnique({ where: { id }, select: { inventory: true } })
+      if (!current) throw new WriteError('That product no longer exists.')
+
+      // The sheet shows the count because that is what anyone opening a product
+      // wants to see, but a count is never written straight over: the change is
+      // applied as an adjustment below so it lands in the inventory ledger like
+      // every other movement. Editing a product and moving stock are two
+      // permissions in `/admin`, so they stay two here.
+      const wanted = values.inventory
+      const delta = wanted === null ? 0 : wanted - current.inventory
+      if (delta !== 0 && !(await context.can('inventory:write'))) {
+        throw new WriteError('Changing the count needs the inventory permission.', 'inventory')
+      }
+
       const product = await prisma.product
         .update({
           where: { id },
@@ -679,9 +713,11 @@ const productHandlers: Record<string, WriteHandler> = {
             name: values.name,
             slug: values.slug,
             sku: values.sku,
+            barcode: values.barcode,
             categoryId: values.categoryId,
             heatLevel: values.heatLevel,
             description: values.description,
+            ingredients: values.ingredients,
             price: decimal(values.price),
             compareAtPrice: optionalDecimal(values.compareAtPrice),
             costPrice: optionalDecimal(values.costPrice),
@@ -692,14 +728,41 @@ const productHandlers: Record<string, WriteHandler> = {
             isActive: values.isActive,
             isFeatured: values.isFeatured,
             featuredImage: values.featuredImage,
+            images: galleryFor(values.images, values.featuredImage),
             metaTitle: values.metaTitle,
             metaDescription: values.metaDescription,
+            ogImage: values.ogImage,
+            searchKeywords: values.searchKeywords,
           },
           select: { name: true },
         })
         .catch((error) => friendly(error, 'That product could not be saved.'))
 
-      return { message: `${product.name} saved`, recordId: id }
+      if (delta === 0) return { message: `${product.name} saved`, recordId: id }
+
+      try {
+        await adjustInventory({
+          productId: id,
+          quantity: delta,
+          type: 'ADJUSTMENT',
+          reason: 'Edited on the product sheet',
+          userId: context.actor.id,
+          // The count came off the row read at the top of this handler, so a
+          // sale in between must not be quietly overwritten.
+          expectedPreviousStock: current.inventory,
+        })
+      } catch (error) {
+        if (error instanceof StaleInventoryError) throw new WriteError(error.message, 'inventory')
+        throw new WriteError(
+          error instanceof Error ? error.message : 'The count could not be changed.',
+          'inventory',
+        )
+      }
+
+      return {
+        message: `${product.name} saved, ${wanted} on hand`,
+        recordId: id,
+      }
     },
   }),
 

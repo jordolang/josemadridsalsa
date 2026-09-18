@@ -282,6 +282,131 @@ describe('line items', () => {
   })
 })
 
+describe('the product gallery', () => {
+  it('lays the product sheet out as a band over a stack', () => {
+    mockFetch(() => ({ options: [] }))
+
+    const { container } = render(
+      <RecordSheet request={{ form: 'product.create' }} onClose={vi.fn()} onSaved={vi.fn()} />,
+    )
+
+    const band = container.querySelector('.jmsd-sheet-band')
+    expect(band).not.toBeNull()
+    // The pictures on the left, the numbers on the right, and everything else
+    // full width underneath.
+    expect(band?.querySelectorAll('.jmsd-sheet-section')).toHaveLength(2)
+    expect(band?.textContent).toContain('Product images')
+    expect(band?.textContent).toContain('Pricing & inventory')
+    expect(container.querySelector('.jmsd-sheet--band')).not.toBeNull()
+  })
+
+  it('opens focused on the first typeable field, not the gallery', async () => {
+    mockFetch(() => ({ options: [] }))
+
+    render(<RecordSheet request={{ form: 'product.create' }} onClose={vi.fn()} onSaved={vi.fn()} />)
+
+    expect(screen.getByLabelText(/^Name/)).toHaveFocus()
+  })
+
+  it('adds an image by URL and counts it against the cap', async () => {
+    mockFetch(() => ({ options: [] }))
+    const user = userEvent.setup()
+
+    render(
+      <RecordSheet
+        request={{ form: 'product.edit', recordId: 'p1', values: { images: [] } }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('No images yet.')).toBeInTheDocument()
+
+    await user.type(
+      screen.getByLabelText('Add an image to Gallery'),
+      'https://blob.example.com/peach.jpg',
+    )
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(screen.getByText('https://blob.example.com/peach.jpg')).toBeInTheDocument()
+    expect(screen.getByText('(1/10)')).toBeInTheDocument()
+    // The first image is the one the storefront leads with, so it says so.
+    expect(screen.getByText('Lead image')).toBeInTheDocument()
+  })
+
+  it('reorders and removes without touching the rest of the sheet', async () => {
+    mockFetch(() => ({ options: [] }))
+    const user = userEvent.setup()
+
+    render(
+      <RecordSheet
+        request={{
+          form: 'product.edit',
+          recordId: 'p1',
+          values: { name: 'Peach', images: ['https://one.example/a.jpg', 'https://two.example/b.jpg'] },
+        }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Move image 2 first' }))
+    expect(screen.getAllByRole('listitem')[0].textContent).toContain('https://two.example/b.jpg')
+
+    await user.click(screen.getByRole('button', { name: 'Remove image 1' }))
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByLabelText(/Name/)).toHaveValue('Peach')
+  })
+
+  it('removes the row that was clicked when the same URL appears twice', async () => {
+    // `Product.images` is a plain string list, so a duplicate is possible and a
+    // URL-keyed remove would take both rows out at once.
+    mockFetch(() => ({ options: [] }))
+    const user = userEvent.setup()
+
+    render(
+      <RecordSheet
+        request={{
+          form: 'product.edit',
+          recordId: 'p1',
+          values: { images: ['https://one.example/a.jpg', 'https://one.example/a.jpg'] },
+        }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    await user.click(screen.getByRole('button', { name: 'Remove image 2' }))
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('does not submit the sheet when Enter adds an image', async () => {
+    // The gallery's own input sits inside the form, so Enter there has to mean
+    // "add this URL" rather than "save the product".
+    const fetchMock = mockFetch(() => ({ options: [] }))
+    const user = userEvent.setup()
+
+    render(
+      <RecordSheet
+        request={{ form: 'product.edit', recordId: 'p1', values: { images: [] } }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    await user.type(
+      screen.getByLabelText('Add an image to Gallery'),
+      'https://blob.example.com/peach.jpg{Enter}',
+    )
+
+    expect(screen.getByText('https://blob.example.com/peach.jpg')).toBeInTheDocument()
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes('/api/admin/desktop/write')),
+    ).toBe(false)
+  })
+})
+
 describe('closing', () => {
   it('closes on Escape without saving', async () => {
     mockFetch(() => ({ options: [] }))
