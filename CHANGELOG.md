@@ -14,6 +14,21 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The desktop admin's product sheet now carries everything the web product page edited, laid
+  out as a band over a stack.** The sheet that opens over the products table was a single
+  column of fields, and it was missing several the web page had — so the one record people edit
+  most was also the one the shell described least well. It now leads with the picture gallery
+  and the numbers side by side, the two things anyone opens a product to look at, and keeps the
+  description, ingredients, SEO fields and display switches full width underneath. Barcode,
+  ingredients, the image gallery, the social share image and the search keywords were not on the
+  sheet at all and are now, and the on-hand count is editable there but written as an inventory
+  adjustment, so a correction typed on the product sheet still lands in the ledger and still
+  needs the inventory permission. A count only counts as corrected when it differs from the one
+  the sheet opened on, so a sale that lands while somebody is editing a name is never read as a
+  correction and reversed, and a count typed against stock that has since moved is refused
+  before anything is saved. Alt text is deliberately not offered: `Product.images` is a
+  list of strings with nowhere to keep one.
+
 - **An `Artifact Cleanup` workflow** (Actions tab, manual trigger), documented at
   `deployment/ci-artifact-storage`. Retention settings stop future accumulation but never reclaim
   what is already stored, and the UI deletes one artifact at a time — unworkable against 553 of
@@ -22,6 +37,198 @@ the root `package.json` is canonical.
   a refusal that leaves storage occupied (403, rate limiting, 5xx) fails the run rather than
   reporting a cleared quota that is still full; a 404 is the artifact expiring on its own and is
   treated as success.
+
+### Fixed
+- **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
+  with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
+  the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four
+  variables that way, so anywhere the provider's managed variables are absent — CI, and any
+  local production build — `POSTGRES_URL` became `'undefined'`, which is truthy, which won the
+  precedence check below it. Prisma was handed a connection string that is not one and refused
+  every query with "the URL must start with the protocol `postgresql://`". Clearing is a
+  `delete` now. The existing tests could not have caught it: their `afterEach` assigned a plain
+  object over `process.env`, which loses the very coercion the bug depends on, so every case
+  after the first ran against a shim.
+
+- **The desktop shell's writes now obey the rules their `/admin` equivalents obey.** The write
+  route checked one permission per operation, which is right when the gate does not depend on
+  what was typed and wrong when it does — so `users:write` was enough to assign the DEVELOPER
+  role or to delete an account that the canonical route puts behind the owner, and
+  `social_media:compose` was enough to queue a post the cron would publish unattended or to
+  record one as already live. Handlers can now ask for a permission from the values, and the
+  three that need to, do. Alongside them: the options endpoint behind a picker is gated on the
+  permission its own section requires rather than on staff alone, which had left five hundred
+  customer and staff email addresses readable by any staff account; the audit row masks a
+  password instead of keeping the only plaintext copy of it; and ⌘K no longer offers pages an
+  account cannot load, which the sidebar and the tab strip already filtered.
+
+- **Writes that owed side effects now pay them.** Marking an order paid changed
+  `paymentStatus` and nothing else, so the fundraiser's half of the sale and the customer's
+  loyalty points — which every other payment path credits, exactly once, in the same
+  transaction — were never credited against an order that reads as paid forever after. Setting
+  an order to SHIPPED stamped the enums by hand rather than deriving them, so an order could
+  claim it had shipped while its items showed nothing fulfilled; fulfillment now comes from the
+  commercial status through the same helpers `/api/admin/orders/[id]/update-status` uses, and
+  the form no longer offers the field. A campaign could be scheduled with no recipient rows
+  behind it, which the cron turns into a campaign stuck in SENDING having sent nothing; the
+  recipients are written first, from the same paged inserter the campaign page uses, now shared
+  rather than trapped behind `'use server'`. And a "set stock to 20" adjustment computed its
+  delta against a count that a sale could move before the write landed — the count it was
+  figured on now rides along, and a changed one is refused rather than silently applied.
+
+- **Three things the shell could write that only another page can finish.** Completing a return
+  settles the refund, store credit or exchange, restocks what came back usable, and is
+  terminal — so stamping COMPLETED without that left the customer's refund stranded with no way
+  to re-drive it; the shell now hands off to `/admin/returns/[id]`. `PARTIALLY_RECEIVED` and
+  `RECEIVED` are derived from receipt quantities, so a purchase order can no longer be *set* to
+  them and claim stock that never arrived. A customer's email address is the key order sync,
+  import batches and mailing-list rows join on, and is no longer editable in place — the
+  canonical endpoint has always left it out for the same reason. A blog post or CMS page is now
+  held to both ends of the search-snippet budget on a public status rather than only the
+  maximum, using `checkPostSeo` itself.
+
+- **The record sheet's presentation moved into the stylesheet.** Widths, the repeater grid and
+  a handful of paddings were inline `style` props. Sheets now take one of three named sizes
+  rather than a pixel count per form, and the only value still passed from the component is the
+  one a stylesheet cannot know: how many columns a line-item repeater has.
+
+- **A version bump left `package-lock.json` behind.** npm keeps each workspace's version there
+  too, so a release was followed by a mystery diff the next time anyone ran `npm install`, and
+  anything reading package metadata out of the lock reported the previous version. The bump
+  carries them now, and a test fails when they drift.
+
+- **Public pages no longer force a full server render on every request — mostly.** Nearly every
+  page under `(public)` carried `dynamic = 'force-dynamic'`, so each visit re-rendered the page and
+  re-queried PostgreSQL. Those exports are gone, replaced by a per-page `revalidate` window: 5
+  minutes for the homepage, product and collection listings and blog indexes; 15 minutes for
+  product, salsa and blog detail pages; an hour for recipes and locations; 2 hours for wholesale
+  and the gift-certificate receipt; 24 hours for legal, About and La Perla. Pages that must stay
+  per-request — account, checkout, order tracking, unsubscribe, the fundraiser participant
+  leaderboards, and the signed-in return-request page — keep `force-dynamic` explicitly rather
+  than inheriting it.
+
+  The `force-dynamic` on the `(public)` layout was the reason none of this had taken effect
+  previously: Next resolves route segment config parent-first, and a child that sets only
+  `revalidate` leaves the inherited `dynamic` in place, so every page migrated to ISR was still
+  rendered dynamically. Removing it means these routes are now genuinely prerendered, which in
+  turn exposed two latent bugs, both fixed here: `/find-us` and `/products/search` called
+  `useSearchParams()` without a Suspense boundary, which is only legal once a route is
+  prerendered.
+
+  Removing the layout export was necessary but not sufficient: `AnnouncementBar`, a server
+  component in the same layout, read `x-pathname` via `headers()`, and a dynamic API anywhere in
+  the tree opts the whole route out of static rendering — so even with the cascade gone, **no**
+  public route was prerendered. The bar now receives every live announcement and picks the one
+  targeted at the current path from `usePathname()` in the client, which is known at prerender
+  time. The build route table goes from 16 prerendered routes to 67: the homepage, the product,
+  salsa, recipe and blog detail pages, every listing and index, and the static content pages.
+  `/live` is pinned to `force-dynamic` — it reports whether the stream is on air right now.
+
+  One tier remains cosmetic: the layout fetches the events calendar with `next: { revalidate: 300 }`
+  and the shortest window in a tree wins, so every public route currently revalidates at 5 minutes
+  regardless of the hour or day it declares. Lifting that means fetching the event ticker's data
+  from the client, and is left as a follow-up.
+
+
+- **CI went red on a full artifact store rather than on a broken build.** A full inventory of the
+  553 stored artifacts found 4.06 GB, of which Playwright reports were 3.05 GB — 265 of them in a
+  single month at ~12 MB each, held for 30 days. Coverage reports added another 598 MB on the same
+  window. Both now expire after 7 days, matching the build artifacts that already used it. The
+  Desktop Apps workflow contributed 425 MB in four Windows installers kept for the repository's
+  90-day default, although the only consumer is the `publish` job in the same run, which uploads
+  the binaries to the rolling GitHub Release where they live permanently; both desktop uploads now
+  expire after three days — not one, because `publish` needs both platforms and each artifact's
+  clock starts at its own upload, so a queued macOS runner must not outlive the Windows installer. All three CI uploads are `continue-on-error`, so a full store can no longer
+  fail a run whose tests all passed.
+
+- **The site went down whenever the database password was rotated.** Provisioning wrote fresh
+  credentials into `POSTGRES_PRISMA_URL`/`POSTGRES_URL`, but the hand-set `DATABASE_URL` held the
+  previous password and won the precedence check in `lib/prisma.ts`, so every query failed with
+  "Authentication failed against database server" and the storefront returned 500s. The
+  provider-managed connection string is now preferred over the hand-set one, which keeps the app
+  on live credentials across a rotation.
+- **The contact form returned "Internal server error" and dropped the message.** Recording the
+  submission as a `Conversation` ran before the notification email and took the whole request down
+  with it when the database was unreachable. Filing the conversation is now best-effort, so the
+  email to the team goes out either way and the visitor gets a success response.
+- **Picante could not answer anything.** `/api/ai-chat` called OpenAI, whose account had no credits
+  remaining, even though the documented provider for this project is Anthropic. The route now
+  speaks to Claude through the Anthropic SDK (`ANTHROPIC_API_KEY`, `claude-opus-5` by default),
+  matching what `environment-variables.mdx` already specified; `AI_CHAT_PROVIDER=openai` still
+  selects the old path. The chat widget's "Powered by" label follows the new default.
+- **The version bump's workspace list is now asserted rather than trusted.** Adding
+  `apps/windows-admin` to it fixed one release; the next workspace to be added would have gone
+  the same way, because nothing failed when the list fell behind. The list moved out of
+  `scripts/version-bump.ts` into `lib/version.ts` as `VERSIONED_PACKAGE_FILES`, and the tests
+  now check that every listed file exists, that they are all on one version, and that the root's
+  `version` and `projectVersion` still agree — so a stale list is a red test rather than an
+  installer that never offers itself as an update.
+
+## [2.1] — 2026-09-09
+
+### Added
+- **Every page the desktop shell used to hand to the web admin, it now draws itself.** A section
+  in `/admin-desktop` was one table, and anything beside it — returns, shipping labels, the
+  suppression list, the mileage log, the reconciliation, the credential vault — was a link that
+  left the window. Sections now have **pages**: a tab strip under the heading, a URL of its own
+  (`?section=email&page=email.suppressions`), and a name in the command palette. 35 new pages
+  were added across sixteen sections, 58 in all: Orders gained Returns & RMAs and Shipping
+  labels; Purchase Orders, Suppliers; Fundraisers, the Battle arena; Events & Shows, Packing
+  manifests; Wholesale, the Store locator; Financials, Reconciliation; Email Marketing gained
+  Templates, Automations, Lists & subscribers, Suppressions, the Send log and the Brand kit;
+  Social gained Connected accounts, Product feeds and Reach; Content & Blog gained Pages,
+  Banners, FAQs, Redirects and SEO; Lead Generation, Campaigns; Reviews, Forms; Analytics gained
+  Retention, Margin and Attribution; Media & Docs gained the Documents, Mileage and Show
+  archives; Messages gained Live chat and Notifications; Users & Roles, the Credential vault;
+  and Settings gained Payments, Shipping and Integrations. Every one reads live data through
+  Prisma, and the three analytics pages call the same `lib/analytics/*` reports the web pages do
+  rather than recomputing them, so the two never disagree. Around thirty-five new write
+  operations came with them — editing and stepping a return through approval and receipt,
+  suppliers and stockists, arena teams, manifests, automations, lists, subscribers,
+  suppressions, the brand kit, CMS pages, banners, FAQs, redirects, notifications, integrations
+  and shipping settings — all through the same form registry, write registry and audited route
+  as the rest. Permissions follow each page's own `/admin` equivalent rather than its section's,
+  so the vault needs `credentials:read` and Integrations needs `api_keys:manage`; a tab an
+  account cannot load is left out of the strip, and `?page=` is checked against the section in
+  the path so it is never a way to read one section's rows through another. What still leaves
+  the window now does so for a reason that is written down: a document to print, a file to
+  upload, an OAuth round trip, a streaming job, a live conversation, or a secret that is written
+  once and never shown back. The vault page is the sharpest case — it lists what is stored, who
+  it is for and when it was last rotated, and never reads the encrypted value.
+
+- **The desktop shell now does the work instead of handing it to the admin panel, and its
+  columns are yours to size.** Every button in `/admin-desktop` used to be a link: pressing
+  **New fundraiser** left the window and loaded an `/admin` page inside it, which made the shell
+  a launcher wearing an app's clothes. Actions are now *commands* — a create or an edit opens a
+  form over the table, a status change asks and then writes, and only the handful of jobs that
+  genuinely belong elsewhere still navigate. All 23 sections gained the work they were only
+  displaying: orders (create, status, tracking, mark paid, cancel), products (create, edit,
+  retire, delete, stock adjustment, reorder point), customers, fundraisers and their
+  participants, shows and their financials, purchase orders and suppliers (including receiving
+  everything outstanding into stock in one action), invoices, wholesale accounts, ledger
+  entries, email campaigns, social posts, blog posts, leads and lead campaigns, review
+  moderation, media, message and chat threads, staff accounts, and store and search settings —
+  around fifty operations in all. Rather than fifty screens, a form is a *description*:
+  `lib/admin-desktop/forms.ts` says what fields it has, `lib/admin-desktop/writes.ts` holds the
+  permission, the Zod schema and the write, keyed by the same id, and one renderer draws all of
+  them through one route, `POST /api/admin/desktop/write`, so every operation gets the same
+  staff check, the same permission check and the same audit row. Loaders send the record they
+  already read alongside the command, so a sheet opens filled in without a second query; what a
+  form needs beyond that — the product list behind a line item, the templates behind a campaign —
+  comes from `/api/admin/desktop/options/[source]` when the sheet opens, so a picker is never
+  stale. Paths with real logic behind them reuse it rather than restating it: a manual order is
+  priced, de-duplicated and deducted from stock by the same `lib/admin/manual-order.ts` and
+  `lib/inventory-manager.ts` that `/api/admin/orders` uses. Writes refuse with reasons rather
+  than error codes — a ledger row derived from an order says the order owns it, a product that
+  has been sold is retired rather than deleted, a campaign with orders against it is cancelled
+  rather than removed, a post whose title runs past the 60-character budget says how long it is,
+  and publishing one hands back the Search Console step no agent can do. Separately, every table
+  column now has a grab strip: drag to size it, double-click to reset it, or use `←`/`→` on a
+  focused strip to size it without a mouse. Widths are remembered per section and per column in
+  that window rather than on the account, because the same person on a laptop and on the shop
+  monitor wants different columns wide, and **Reset columns** appears once a section has any.
+  `F5` re-reads the current section, and a save reloads it with the row you were working on
+  still selected.
 
 - **A desktop shell at `/admin-desktop`, and both desktop apps now open on it.** The Windows and
   macOS apps were hardened windows onto the web admin panel; they still are, but the window they
@@ -52,9 +259,8 @@ the root `package.json` is canonical.
   Messages merges the support inbox, the contact form and the live-chat handoff into one list,
   because they are three tables but one job. Both windows are
   now frameless so the shell's title bar runs to the top edge: macOS floats its traffic lights
-  over the left of it, Windows paints its window buttons over the right. The shell is read-only —
-  editing still happens on the admin pages it opens. `/admin-desktop` is disallowed in
-  `robots.txt` and carries `noindex`, since it is a staff tool rather than a page.
+  over the left of it, Windows paints its window buttons over the right. `/admin-desktop` is
+  disallowed in `robots.txt` and carries `noindex`, since it is a staff tool rather than a page.
 
 - **Desktop admin apps for Windows 11 and macOS, and the guarded database console they carry.**
   Both apps are hardened windows onto the real admin panel rather than reimplementations of it:
@@ -208,33 +414,6 @@ the root `package.json` is canonical.
   read the campaign's `defaultUnitPrice`, and the team editor links to the campaign's store.
 
 ### Fixed
-
-- **CI went red on a full artifact store rather than on a broken build.** A full inventory of the
-  553 stored artifacts found 4.06 GB, of which Playwright reports were 3.05 GB — 265 of them in a
-  single month at ~12 MB each, held for 30 days. Coverage reports added another 598 MB on the same
-  window. Both now expire after 7 days, matching the build artifacts that already used it. The
-  Desktop Apps workflow contributed 425 MB in four Windows installers kept for the repository's
-  90-day default, although the only consumer is the `publish` job in the same run, which uploads
-  the binaries to the rolling GitHub Release where they live permanently; both desktop uploads now
-  expire after three days — not one, because `publish` needs both platforms and each artifact's
-  clock starts at its own upload, so a queued macOS runner must not outlive the Windows installer. All three CI uploads are `continue-on-error`, so a full store can no longer
-  fail a run whose tests all passed.
-
-- **The site went down whenever the database password was rotated.** Provisioning wrote fresh
-  credentials into `POSTGRES_PRISMA_URL`/`POSTGRES_URL`, but the hand-set `DATABASE_URL` held the
-  previous password and won the precedence check in `lib/prisma.ts`, so every query failed with
-  "Authentication failed against database server" and the storefront returned 500s. The
-  provider-managed connection string is now preferred over the hand-set one, which keeps the app
-  on live credentials across a rotation.
-- **The contact form returned "Internal server error" and dropped the message.** Recording the
-  submission as a `Conversation` ran before the notification email and took the whole request down
-  with it when the database was unreachable. Filing the conversation is now best-effort, so the
-  email to the team goes out either way and the visitor gets a success response.
-- **Picante could not answer anything.** `/api/ai-chat` called OpenAI, whose account had no credits
-  remaining, even though the documented provider for this project is Anthropic. The route now
-  speaks to Claude through the Anthropic SDK (`ANTHROPIC_API_KEY`, `claude-opus-5` by default),
-  matching what `environment-variables.mdx` already specified; `AI_CHAT_PROVIDER=openai` still
-  selects the old path. The chat widget's "Powered by" label follows the new default.
 - **Broken images in sent emails.** Eleven templates pointed at filenames that were never added to
   `public/email-templates` — the abandoned-cart header asked for `cart-reminder.png` when the asset
   on disk is `abandoned-cart.png` — so the header rendered as a broken-image placeholder in the

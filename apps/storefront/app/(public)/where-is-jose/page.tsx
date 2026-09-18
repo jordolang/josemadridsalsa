@@ -15,7 +15,7 @@ import { GoogleScheduleMap } from '@/components/store/google-schedule-map';
 import { getCalendarEvents } from '@/lib/server/google-data';
 import { createMetadata } from '@/lib/metadata';
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 export const metadata: Metadata = createMetadata({
   title: 'Where is Jose? - Jose Madrid Salsa',

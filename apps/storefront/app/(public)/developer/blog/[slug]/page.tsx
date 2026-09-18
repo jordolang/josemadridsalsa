@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { DeveloperBlogContent } from '@/components/developer/developer-blog-content'
 import prisma from '@/lib/prisma'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 
 interface BlogPostPageProps {

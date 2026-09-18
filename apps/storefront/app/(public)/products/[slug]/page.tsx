@@ -13,11 +13,47 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/rbac'
 import { Metadata } from 'next'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 900 // Revalidate every 15 minutes
 
 
 type Props = {
   params: Promise<{ slug: string }>
+}
+
+export async function generateStaticParams() {
+  // During build, prefer skipping database to avoid connection issues
+  if (process.env.VERCEL || process.env.CI || !process.env.DATABASE_URL) {
+    console.log('Build environment detected, skipping product static params generation')
+    return []
+  }
+
+  try {
+    // Add timeout to prevent hanging during build (5 second max)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Database query timeout')), 5000)
+    })
+
+    const products = await Promise.race([
+      prisma.product.findMany({
+        where: { isActive: true },
+        select: { slug: true },
+        take: 50, // Limit to top 50 products for build time
+        orderBy: [
+          { isFeatured: 'desc' },
+          { sortOrder: 'asc' },
+        ],
+      }),
+      timeoutPromise,
+    ])
+
+    if (products.length > 0) {
+      return products.map(({ slug }) => ({ slug }))
+    }
+  } catch (error) {
+    console.warn('Falling back to empty product static params:', error instanceof Error ? error.message : 'Unknown error')
+  }
+
+  return []
 }
 
 /**

@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button'
 import { ReturnRequestForm } from '@/components/account/ReturnRequestForm'
 import { isWithinReturnWindow, returnableQuantity, RETURN_WINDOW_DAYS } from '@/lib/orders/returns'
 
+// User-specific order data: must never be statically cached.
+export const dynamic = 'force-dynamic'
+
 export const metadata = { title: 'Request a return | Jose Madrid Salsa' }
 
 export default async function RequestReturnPage({

@@ -20,8 +20,7 @@ import {
   resolveFundraiserStore,
 } from '@/lib/fundraising/store.server'
 
-export const dynamic = 'force-dynamic'
-
+export const revalidate = 300 // 5 minutes
 
 interface PageProps {
   params: Promise<{ slug: string }>

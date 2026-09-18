@@ -7,6 +7,7 @@
  */
 
 import type { DesktopSectionId, DesktopViewKind } from './sections'
+import type { FormId, FormValues, WriteOpId } from './forms'
 
 /** Semantic colour roles, mapped to CSS variables by the renderer. */
 export type Tone = 'good' | 'warn' | 'bad' | 'muted' | 'neutral' | 'accent'
@@ -25,10 +26,14 @@ export interface Cell {
 }
 
 export interface Column {
+  /** Stable key for remembering a hand-set width. Falls back to the label. */
+  key?: string
   label: string
   /** Grid track for this column, e.g. `104px` or `minmax(0,1.5fr)`. */
   width: string
   right?: boolean
+  /** Narrowest the operator may drag this column, in pixels. */
+  minWidth?: number
 }
 
 export interface InspectorField {
@@ -53,18 +58,59 @@ export interface InspectorGroup {
 }
 
 /**
+ * What a button does.
+ *
+ * Everything the shell can do to a record is one of these. `form` opens a sheet
+ * described by the form registry; `write` is a mutation that needs no form, so
+ * a button and (where it matters) a confirmation is the whole interaction;
+ * `section` moves the window and `page` moves it to one page inside a
+ * section; `open` is the last resort for the handful of pages the shell does
+ * not draw itself — a printable document, a file upload, an outside URL.
+ *
+ * The point of the union is that the desktop window acts in place. A command
+ * never leaves the shell unless it says `open`, and the loaders no longer hand
+ * out `/admin` links for work the window can do.
+ */
+export type DesktopCommand =
+  | {
+      kind: 'form'
+      form: FormId
+      /** The record being edited. Absent for a create. */
+      recordId?: string
+      /** What the sheet opens with, supplied by the loader that read the row. */
+      values?: FormValues
+      /** Overrides the form spec's own title, e.g. to name the record. */
+      title?: string
+    }
+  | {
+      kind: 'write'
+      op: WriteOpId
+      recordId?: string
+      values?: FormValues
+      /** Shown in a confirmation dialog. Absent means act immediately. */
+      confirm?: string
+      /** The toast on success. */
+      success?: string
+      danger?: boolean
+    }
+  | { kind: 'section'; section: DesktopSectionId }
+  | { kind: 'page'; page: string }
+  | { kind: 'open'; href: string }
+
+/**
  * A button at the foot of the inspector.
  *
- * Every action is a navigation: it opens the web admin page where that job is
- * actually done. The shell reads and never writes, so a button here cannot
- * drift out of step with what `/admin` would have done — and a label that
- * ends in `…` says out loud that it opens a page rather than acting in place.
+ * A label that ends in `…` says out loud that it opens a sheet rather than
+ * acting in place; a bare label acts on the record as soon as it is pressed,
+ * after its confirmation if it has one.
  */
 export interface InspectorAction {
   label: string
-  href: string
+  command: DesktopCommand
   /** Shown right-aligned, and bound while this row is selected. `⌘E`, `F2`, `⌘⏎`. */
   shortcut?: string
+  /** Paint the button as destructive. */
+  danger?: boolean
 }
 
 export interface Inspector {
@@ -79,8 +125,8 @@ export interface Row {
   id: string
   cells: Cell[]
   inspector: Inspector
-  /** The `/admin` page this row opens with ⏎. */
-  href?: string
+  /** What ⏎ does on this row — usually the sheet that edits it. */
+  open?: DesktopCommand
   /** Free text the client matches the filter box and quick-find against. */
   search: string
   /** Index into the section's `filters`, for client-side chip filtering. */
@@ -104,9 +150,9 @@ export interface StatTile {
 export interface DashboardPayload {
   view: 'dashboard'
   stats: StatTile[]
-  todayOrders: { id: string; customer: string; channel: string; total: string; href: string }[]
-  lowStock: { name: string; available: string; gap: string }[]
-  nextEvents: { date: string; name: string; city: string }[]
+  todayOrders: { id: string; customer: string; channel: string; total: string; open: DesktopCommand }[]
+  lowStock: { name: string; available: string; gap: string; open?: DesktopCommand }[]
+  nextEvents: { date: string; name: string; city: string; open?: DesktopCommand }[]
   inspector: Inspector
 }
 
@@ -141,6 +187,8 @@ export interface AnalyticsPayload {
 export interface SettingsGroup {
   label: string
   rows: { label: string; value: string; tone?: Tone; mono?: boolean }[]
+  /** Opens the sheet that edits this group, when the shell can edit it. */
+  edit?: DesktopCommand
 }
 
 export interface SettingsPayload {
@@ -166,14 +214,18 @@ export type SectionBody =
 
 export interface SectionPayload {
   id: DesktopSectionId
+  /** The page on screen. Equals `id` when it is the section's own list. */
+  page: string
+  /** Every page in this section, for the strip under the heading. */
+  pages: { id: string; label: string }[]
   kind: DesktopViewKind
   eyebrow: string
   heading: string
   path: string
   /** Filter chips. The first is always the unfiltered view. */
   filters: string[]
-  /** Header buttons. `href` opens the matching web admin page. */
-  actions: { label: string; icon: string; href: string; primary?: boolean }[]
+  /** Header buttons. Each runs a command in the window. */
+  actions: { label: string; icon: string; command: DesktopCommand; primary?: boolean; danger?: boolean }[]
   body: SectionBody
   /** ISO timestamp of when this payload was built, shown in the sidebar footer. */
   loadedAt: string

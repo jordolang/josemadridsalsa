@@ -7,7 +7,7 @@ export const metadata: Metadata = createMetadata({
   pathname: '/shipping',
 });
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 86400; // 24 hours
 
 export default function ShippingPolicyPage() {
   return (

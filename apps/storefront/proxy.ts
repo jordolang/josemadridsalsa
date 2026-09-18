@@ -110,8 +110,10 @@ export default async function proxy(request: NextRequest) {
   }
 
   // Forward the pathname on the *request* so server components can read it
-  // through `headers()`; announcements and banners are targeted by path, and a
-  // layout has no other way to know which page it is rendering.
+  // through `headers()` (see lib/admin-auth.ts). Public-storefront components
+  // must not: a `headers()` call under app/(public) opts the whole route out of
+  // static rendering, which is why the announcement bar targets paths from
+  // `usePathname()` on the client instead.
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', pathname)
   return NextResponse.next({ request: { headers: requestHeaders } })
