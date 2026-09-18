@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser, hasPermission, isStaff } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
-import { findWriteHandler, WriteError } from '@/lib/admin-desktop/writes'
+import { findWriteHandler, redactForAudit, WriteError } from '@/lib/admin-desktop/writes'
 import { isWriteOpId } from '@/lib/admin-desktop/forms'
 
 /**
@@ -67,8 +67,11 @@ export async function POST(request: Request) {
 
   try {
     const outcome = await handler.execute(values, {
-      actor: { id: user.id, email: user.email },
+      actor: { id: user.id, email: user.email, role: user.role },
       recordId,
+      // Handlers whose gate depends on what was submitted ask for the extra
+      // permission themselves; the check is the same one the route just made.
+      can: (permission: string) => hasPermission(user, permission),
     })
 
     await logAuditWithRequest(
@@ -78,8 +81,9 @@ export async function POST(request: Request) {
         entityType: handler.entity,
         entityId: outcome.recordId ?? recordId ?? null,
         // The values, not a diff: the shell sends the whole record, and a diff
-        // would need a second read of the row it just overwrote.
-        changes: { op, values: values ?? null },
+        // would need a second read of the row it just overwrote. Secrets the
+        // handler hashes before storing are masked — see `redactForAudit`.
+        changes: { op, values: redactForAudit(values, handler.redact) },
       },
       request,
     )

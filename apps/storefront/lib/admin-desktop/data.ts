@@ -231,7 +231,6 @@ async function loadOrders(): Promise<TablePayload> {
         values: {
           status: order.status,
           paymentStatus: order.paymentStatus,
-          fulfillmentStatus: order.fulfillmentStatus,
           salesChannel: order.salesChannel,
           adminNotes: textValue(order.adminNotes),
         },
@@ -288,7 +287,6 @@ async function loadOrders(): Promise<TablePayload> {
               values: {
                 status: order.status,
                 paymentStatus: order.paymentStatus,
-                fulfillmentStatus: order.fulfillmentStatus,
                 salesChannel: order.salesChannel,
                 adminNotes: textValue(order.adminNotes),
               },
@@ -769,7 +767,6 @@ async function loadCustomers(): Promise<TablePayload> {
     return {
       id: customer.id,
       open: form('customer.edit', { recordId: customer.id, title: name, values: {
-          email: customer.email,
           firstName: textValue(customer.firstName),
           lastName: textValue(customer.lastName),
           phone: textValue(customer.phone),
@@ -837,7 +834,6 @@ async function loadCustomers(): Promise<TablePayload> {
               recordId: customer.id,
               title: name,
               values: {
-                email: customer.email,
                 firstName: textValue(customer.firstName),
                 lastName: textValue(customer.lastName),
                 phone: textValue(customer.phone),
@@ -853,7 +849,6 @@ async function loadCustomers(): Promise<TablePayload> {
             command: form('order.create', {
               title: `New order · ${name}`,
               values: {
-                email: customer.email,
                 firstName: textValue(customer.firstName),
                 lastName: textValue(customer.lastName),
                 phone: textValue(customer.phone),
@@ -1724,7 +1719,6 @@ async function loadDashboard(): Promise<DashboardPayload> {
         values: {
           status: order.status,
           paymentStatus: order.paymentStatus,
-          fulfillmentStatus: order.fulfillmentStatus,
           salesChannel: order.salesChannel,
           adminNotes: textValue(order.adminNotes),
         },
@@ -4486,11 +4480,15 @@ async function loadReturns(): Promise<TablePayload> {
           ...(request.status === 'RECEIVED'
             ? [
                 {
-                  label: 'Complete',
+                  // Completing a return is the moment money moves: the refund,
+                  // store credit or exchange is issued, eligible jars go back on
+                  // the shelf, and `order.returned` fires. COMPLETED is terminal
+                  // and cannot be re-driven afterwards, so stamping it here
+                  // would strand the customer's refund with no way back. The
+                  // settlement lives on the return's own page; this hands over.
+                  label: 'Settle & complete…',
                   shortcut: '⌘⇧K',
-                  command: write('return.complete', request.id, {
-                    confirm: `Complete ${request.rmaNumber}? The refund or credit is issued separately.`,
-                  }),
+                  command: link(`/admin/returns/${request.id}`),
                 },
               ]
             : []),

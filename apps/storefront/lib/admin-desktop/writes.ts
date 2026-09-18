@@ -19,8 +19,18 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { adjustInventory } from '@/lib/inventory-manager'
+import { adjustInventory, StaleInventoryError } from '@/lib/inventory-manager'
+import { canEraseData } from '@/lib/developer/constants'
 import { emitOrderCreated } from '@/lib/orders/events'
+import {
+  buildFulfillmentUpdate,
+  fulfillEntireOrder,
+  isDerivedTransition,
+  recordFulfillmentEvent,
+  transitionForOrderStatus,
+} from '@/lib/orders/fulfillment'
+import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { creditPurchaseLoyaltyPoints } from '@/lib/loyalty'
 import { deriveSalesChannel } from '@/lib/orders/sales-channel'
 import {
   duplicateWindowStart,
@@ -29,6 +39,8 @@ import {
   priceManualOrder,
 } from '@/lib/admin/manual-order'
 import { generatePoNumber } from '@/lib/purchasing/receiving'
+import { insertRecipientsFromList } from '@/lib/email/recipients'
+import { checkPostSeo } from '@/lib/blog/schemas'
 import { slugify, type WriteOpId } from './forms'
 import type { DesktopSectionId } from './sections'
 
@@ -39,12 +51,24 @@ import type { DesktopSectionId } from './sections'
 export interface WriteActor {
   id: string
   email: string
+  /** Needed where a rule is about the actor's own standing, not a permission. */
+  role: string
 }
 
 export interface WriteContext {
   actor: WriteActor
   /** The row this operation acts on. Absent for a create. */
   recordId?: string
+  /**
+   * Whether the actor holds a permission beyond the handler's own.
+   *
+   * The route checks `handler.permission` before a handler runs, which covers
+   * the operations whose gate is the same whatever the operator typed. It is
+   * not enough where the *values* decide which permission applies — scheduling
+   * a social post rather than drafting it, assigning the DEVELOPER role — so
+   * those handlers ask here instead of the route guessing for them.
+   */
+  can(permission: string): Promise<boolean>
 }
 
 export interface WriteOutcome {
@@ -76,8 +100,33 @@ export interface WriteHandler {
   action: 'create' | 'update' | 'delete'
   /** True when the operation is meaningless without a record to act on. */
   requiresRecord: boolean
+  /**
+   * Fields to strip from the audit row's copy of the submitted values.
+   *
+   * The audit row keeps what was sent so a change can be read back later, which
+   * is right for a name or a price and wrong for a secret: a password reaches
+   * the handler in the clear and is hashed before it touches the user row, so
+   * logging the payload verbatim would leave the only plaintext copy of it
+   * sitting in `AuditLog.changes` forever.
+   */
+  redact: readonly string[]
   /** Validates and runs. Throws `WriteError` for anything the operator caused. */
   execute(values: unknown, context: WriteContext): Promise<WriteOutcome>
+}
+
+/** The submitted values as the audit row should keep them. */
+export function redactForAudit(values: unknown, redact: readonly string[]): unknown {
+  if (redact.length === 0 || values === null || typeof values !== 'object' || Array.isArray(values)) {
+    return values ?? null
+  }
+
+  const out: Record<string, unknown> = { ...(values as Record<string, unknown>) }
+  for (const field of redact) {
+    // Only say it was set. Whether a password was part of the change is the
+    // thing an audit reader needs; the password itself never is.
+    if (out[field] !== undefined && out[field] !== null && out[field] !== '') out[field] = '[redacted]'
+  }
+  return out
 }
 
 function handler<Schema extends z.ZodTypeAny>(config: {
@@ -85,6 +134,7 @@ function handler<Schema extends z.ZodTypeAny>(config: {
   entity: string
   action: 'create' | 'update' | 'delete'
   requiresRecord?: boolean
+  redact?: readonly string[]
   schema: Schema
   run: (values: z.output<Schema>, context: WriteContext) => Promise<WriteOutcome>
 }): WriteHandler {
@@ -93,6 +143,7 @@ function handler<Schema extends z.ZodTypeAny>(config: {
     entity: config.entity,
     action: config.action,
     requiresRecord: config.requiresRecord ?? config.action !== 'create',
+    redact: config.redact ?? [],
     async execute(values, context) {
       const parsed = config.schema.safeParse(values ?? {})
       if (!parsed.success) {
@@ -378,7 +429,6 @@ const orderHandlers: Record<string, WriteHandler> = {
         'PARTIALLY_REFUNDED',
         'CANCELED',
       ]),
-      fulfillmentStatus: z.enum(['UNFULFILLED', 'PARTIALLY_FULFILLED', 'FULFILLED', 'DELIVERED', 'RETURNED']),
       salesChannel: z.enum([
         'WEBSITE',
         'POS',
@@ -394,22 +444,50 @@ const orderHandlers: Record<string, WriteHandler> = {
     }),
     async run(values, context) {
       const id = requireRecord(context)
-      const order = await prisma.order
+      const order = await prisma.order.findUnique({
+        where: { id },
+        select: { orderNumber: true, status: true, shippedAt: true, deliveredAt: true },
+      })
+      if (!order) throw new WriteError('That order no longer exists.')
+
+      // Fulfillment is derived from the commercial status, exactly as
+      // `/api/admin/orders/[id]/update-status` does it. Stamping the enums here
+      // by hand is what let an order claim it had shipped while its items still
+      // showed nothing fulfilled, so the form no longer offers the field and
+      // `buildFulfillmentUpdate` owns the timestamps.
+      const transition = transitionForOrderStatus(values.status, order)
+      const fulfillmentUpdate = transition
+        ? buildFulfillmentUpdate({ transition, current: order, syncOrderStatus: false })
+        : {}
+
+      await prisma.order
         .update({
           where: { id },
           data: {
             status: values.status,
             paymentStatus: values.paymentStatus,
-            fulfillmentStatus: values.fulfillmentStatus,
             salesChannel: values.salesChannel,
             adminNotes: values.adminNotes,
-            // Kept in step so the two do not disagree about when the box left.
-            shippedAt: values.status === 'SHIPPED' ? new Date() : undefined,
-            deliveredAt: values.status === 'DELIVERED' ? new Date() : undefined,
+            ...fulfillmentUpdate,
           },
-          select: { orderNumber: true },
         })
         .catch((error) => friendly(error, 'That order could not be updated.'))
+
+      // "Shipped" means every line shipped, so the item quantities are written
+      // from the order rather than asserted next to it.
+      if (transition && isDerivedTransition(transition)) {
+        await fulfillEntireOrder(prisma, id, { via: 'admin-desktop:order.status', createdById: context.actor.id })
+      }
+
+      if (transition) {
+        await recordFulfillmentEvent({
+          orderId: id,
+          transition,
+          current: order,
+          actorUserId: context.actor.id,
+          eventPayload: { orderNumber: order.orderNumber, via: 'admin-desktop:order.status' },
+        })
+      }
 
       return { message: `Order ${order.orderNumber} updated`, recordId: id }
     },
@@ -457,15 +535,37 @@ const orderHandlers: Record<string, WriteHandler> = {
     schema: z.object({}),
     async run(_values, context) {
       const id = requireRecord(context)
-      const order = await prisma.order
-        .update({
-          where: { id },
-          data: { paymentStatus: 'PAID', status: 'CONFIRMED' },
-          select: { orderNumber: true },
+
+      // Marking an order paid is a payment completion like any other, so it owes
+      // the same two side effects the checkout routes and the payment webhooks
+      // run: the fundraiser's half of the sale, and the customer's points. Both
+      // claim their own column first and are safe to call twice; skipping them
+      // left the group and the customer permanently short against an order that
+      // reads as paid. In the same transaction, so a failed credit takes the
+      // payment state back with it.
+      const result = await prisma
+        .$transaction(async (tx) => {
+          const order = await tx.order.update({
+            where: { id },
+            data: { paymentStatus: 'PAID', status: 'CONFIRMED' },
+            select: { orderNumber: true },
+          })
+
+          const commission = await creditFundraiserCommission(tx, id)
+          const points = await creditPurchaseLoyaltyPoints(tx, id)
+          return { orderNumber: order.orderNumber, commission, points }
         })
         .catch((error) => friendly(error, 'That order could not be marked paid.'))
 
-      return { message: `Order ${order.orderNumber} marked paid`, recordId: id }
+      const credited = [
+        result.commission.credited ? `$${result.commission.amount.toFixed(2)} credited to the fundraiser` : null,
+        result.points.awarded ? `${result.points.points} points awarded` : null,
+      ].filter(Boolean)
+
+      return {
+        message: `Order ${result.orderNumber} marked paid${credited.length ? ` · ${credited.join(' · ')}` : ''}`,
+        recordId: id,
+      }
     },
   }),
 
@@ -670,8 +770,16 @@ const productHandlers: Record<string, WriteHandler> = {
           type: 'ADJUSTMENT',
           reason: values.reason,
           userId: context.actor.id,
+          // "Set to 20" is a delta computed against the count read above. If a
+          // sale or a receipt moves stock before the adjustment lands, that
+          // delta produces the wrong total, so the count it was figured on is
+          // handed over and a changed one is refused rather than applied. A
+          // delta means what it says whatever the current count is, so it does
+          // not carry the guard.
+          expectedPreviousStock: values.mode === 'SET' ? product.inventory : undefined,
         })
       } catch (error) {
+        if (error instanceof StaleInventoryError) throw new WriteError(error.message, 'amount')
         throw new WriteError(error instanceof Error ? error.message : 'That adjustment could not be applied.', 'amount')
       }
 
@@ -750,7 +858,10 @@ const customerHandlers: Record<string, WriteHandler> = {
     entity: 'Customer',
     action: 'update',
     schema: z.object({
-      email: required('Email').email('That is not a valid email'),
+      // No `email`. It is the key order sync, import batches and mailing-list
+      // rows join a customer on, so changing it in place detaches the row from
+      // its own history and the next sync recreates the old address as a second
+      // customer. `/api/admin/customers/[id]` leaves it out for the same reason.
       firstName: optionalText,
       lastName: optionalText,
       phone: optionalText,
@@ -764,7 +875,6 @@ const customerHandlers: Record<string, WriteHandler> = {
         .update({
           where: { id },
           data: {
-            email: values.email.toLowerCase(),
             firstName: values.firstName,
             lastName: values.lastName,
             phone: values.phone,
@@ -1205,7 +1315,10 @@ const purchaseHandlers: Record<string, WriteHandler> = {
       poNumber: optionalText,
       expectedAt: optionalDate,
       shippingCost: optionalNumber,
-      status: z.enum(['DRAFT', 'SUBMITTED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED']),
+      // Not the received states: those are derived from receipt quantities by
+      // `lib/purchasing/receiving.ts`, and writing one here would leave the PO
+      // claiming stock that never arrived.
+      status: z.enum(['DRAFT', 'SUBMITTED', 'CANCELLED']),
       notes: optionalText,
       items: productLines,
     }),
@@ -1246,7 +1359,10 @@ const purchaseHandlers: Record<string, WriteHandler> = {
       supplierId: required('Supplier'),
       expectedAt: optionalDate,
       shippingCost: optionalNumber,
-      status: z.enum(['DRAFT', 'SUBMITTED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED']),
+      // Not the received states: those are derived from receipt quantities by
+      // `lib/purchasing/receiving.ts`, and writing one here would leave the PO
+      // claiming stock that never arrived.
+      status: z.enum(['DRAFT', 'SUBMITTED', 'CANCELLED']),
       notes: optionalText,
     }),
     async run(values, context) {
@@ -1824,6 +1940,14 @@ const campaignHandlers: Record<string, WriteHandler> = {
     action: 'create',
     schema: z.object(campaignShape),
     async run(values, { actor }) {
+      // A send date without recipients is a campaign that never sends: the cron
+      // reaches it, moves it to SENDING, finds nothing PENDING and leaves it
+      // there. So a scheduled campaign has to name the list it goes to, and the
+      // recipients are written before the status says it is going out.
+      if (values.scheduledAt && !values.listId) {
+        throw new WriteError('A scheduled campaign needs a mailing list to send to.', 'listId')
+      }
+
       const campaign = await prisma.emailCampaign
         .create({
           data: {
@@ -1835,8 +1959,8 @@ const campaignHandlers: Record<string, WriteHandler> = {
             fromName: values.fromName,
             fromEmail: values.fromEmail,
             scheduledAt: values.scheduledAt,
-            // Scheduling is what a send date means; without one it stays a draft.
-            status: values.scheduledAt ? 'SCHEDULED' : 'DRAFT',
+            // Stays a draft until its recipients exist, below.
+            status: 'DRAFT',
             trackOpens: values.trackOpens,
             trackClicks: values.trackClicks,
             notes: values.notes,
@@ -1846,7 +1970,39 @@ const campaignHandlers: Record<string, WriteHandler> = {
         })
         .catch((error) => friendly(error, 'That campaign could not be created.'))
 
-      return { message: `${campaign.name} created`, recordId: campaign.id }
+      if (!values.listId) return { message: `${campaign.name} created as a draft`, recordId: campaign.id }
+
+      let inserted = 0
+      try {
+        inserted = await insertRecipientsFromList(campaign.id, values.listId, {}, {})
+      } catch (error) {
+        // A campaign with a half-written recipient list would sit in the table
+        // looking sendable, so it goes with the failure — the same undo the
+        // campaign page does.
+        await prisma.emailCampaign.delete({ where: { id: campaign.id } }).catch(() => {})
+        throw new WriteError(
+          error instanceof Error ? error.message : 'Those recipients could not be built.',
+          'listId',
+        )
+      }
+
+      if (inserted === 0) {
+        await prisma.emailCampaign.delete({ where: { id: campaign.id } }).catch(() => {})
+        throw new WriteError('That list has no subscribed contacts to send to.', 'listId')
+      }
+
+      await prisma.emailCampaign.update({
+        where: { id: campaign.id },
+        data: {
+          totalRecipients: inserted,
+          status: values.scheduledAt ? 'SCHEDULED' : 'DRAFT',
+        },
+      })
+
+      return {
+        message: `${campaign.name} created · ${inserted.toLocaleString('en-US')} recipient${inserted === 1 ? '' : 's'}${values.scheduledAt ? ', scheduled' : ''}`,
+        recordId: campaign.id,
+      }
     },
   }),
 
@@ -1973,16 +2129,36 @@ const socialShape = {
   status: z.enum(['DRAFT', 'SCHEDULED', 'PUBLISHED', 'FAILED']),
 }
 
+/**
+ * Composing, queueing and going live are three different permissions.
+ *
+ * `/admin/social` gates its draft, schedule and publish intents separately, because a
+ * scheduled row is published unattended by the cron and a PUBLISHED row asserts that
+ * something already went out. The desktop form carries the same three intents in one
+ * `status` field, so the extra permission is checked from the value rather than by the
+ * route, which only ever sees `social_media:compose`.
+ */
+async function guardSocialStatus(status: string, context: WriteContext) {
+  if (status === 'SCHEDULED' && !(await context.can('social_media:schedule'))) {
+    throw new WriteError('You need scheduling permission to queue a post.', 'status')
+  }
+  if (status === 'PUBLISHED' && !(await context.can('social_media:publish'))) {
+    throw new WriteError('You need publishing permission to mark a post live.', 'status')
+  }
+}
+
 const socialHandlers: Record<string, WriteHandler> = {
   'social.create': handler({
     permission: 'social_media:compose',
     entity: 'SocialMediaPost',
     action: 'create',
     schema: z.object(socialShape),
-    async run(values, { actor }) {
+    async run(values, context) {
+      const { actor } = context
       if (values.status === 'SCHEDULED' && !values.scheduledAt) {
         throw new WriteError('A scheduled post needs a time to go out.', 'scheduledAt')
       }
+      await guardSocialStatus(values.status, context)
 
       const post = await prisma.socialMediaPost
         .create({
@@ -2015,6 +2191,7 @@ const socialHandlers: Record<string, WriteHandler> = {
       if (existing.status === 'PUBLISHED') {
         throw new WriteError('A published post is a record of what went out. Edit it on the platform itself.')
       }
+      await guardSocialStatus(values.status, context)
 
       await prisma.socialMediaPost
         .update({
@@ -2051,7 +2228,6 @@ const socialHandlers: Record<string, WriteHandler> = {
 // content
 // ---------------------------------------------------------------------------
 
-const SEO_TITLE_MAX = 60
 const SEO_DESCRIPTION_MAX = 160
 
 const postShape = {
@@ -2083,21 +2259,21 @@ function checkSeoLengths(values: {
   excerpt: string
   seoTitle: string | null
   seoDescription: string | null
+  status: string
 }) {
-  const title = values.seoTitle ?? values.title
-  if (title.length > SEO_TITLE_MAX) {
-    throw new WriteError(
-      `The title Google will show is ${title.length} characters. Keep it to ${SEO_TITLE_MAX} or set a shorter SEO title.`,
-      values.seoTitle ? 'seoTitle' : 'title',
-    )
-  }
-
-  const description = values.seoDescription ?? values.excerpt
-  if (description.length > SEO_DESCRIPTION_MAX) {
-    throw new WriteError(
-      `The description Google will show is ${description.length} characters. Keep it to ${SEO_DESCRIPTION_MAX} or set a shorter SEO description.`,
-      values.seoDescription ? 'seoDescription' : 'excerpt',
-    )
+  // `checkPostSeo` is the rule the blog schemas apply, and it has both ends of
+  // the title budget — a 21-character title wastes the snippet exactly as a
+  // 70-character one is truncated. Checking only the maximum here let a post go
+  // public through this window in a state `/admin/blog` would have refused.
+  const problem = checkPostSeo({
+    status: values.status,
+    title: values.title,
+    excerpt: values.excerpt,
+    seoTitle: values.seoTitle,
+    seoDescription: values.seoDescription,
+  })
+  if (problem) {
+    throw new WriteError(problem, values.seoTitle ? 'seoTitle' : 'title')
   }
 }
 
@@ -2570,11 +2746,28 @@ const messageHandlers: Record<string, WriteHandler> = {
 
 const USER_ROLES = ['CUSTOMER', 'STAFF', 'ADMIN', 'DEVELOPER', 'WHOLESALE', 'FUNDRAISER'] as const
 
+/**
+ * The DEVELOPER role is the platform super admin, and `users:write` is not enough
+ * to hand it out or to touch an account that already holds it — `/api/admin/users/[id]`
+ * has always required the actor to be a developer themselves. Without the same rule
+ * here, any account that could edit users could promote itself through the shell.
+ */
+function guardDeveloperRole(actorRole: string, target: { assigning?: string; existing?: string }) {
+  if (actorRole === 'DEVELOPER') return
+  if (target.assigning === 'DEVELOPER') {
+    throw new WriteError('Only a developer can assign the DEVELOPER role.', 'role')
+  }
+  if (target.existing === 'DEVELOPER') {
+    throw new WriteError('Only a developer can modify a DEVELOPER account.', 'role')
+  }
+}
+
 const userHandlers: Record<string, WriteHandler> = {
   'user.create': handler({
     permission: 'users:write',
     entity: 'User',
     action: 'create',
+    redact: ['password'],
     schema: z.object({
       name: required('Name'),
       email: required('Email').email('That is not a valid email'),
@@ -2582,7 +2775,9 @@ const userHandlers: Record<string, WriteHandler> = {
       role: z.enum(USER_ROLES),
       phone: optionalText,
     }),
-    async run(values) {
+    async run(values, context) {
+      guardDeveloperRole(context.actor.role, { assigning: values.role })
+
       const user = await prisma.user
         .create({
           data: {
@@ -2604,6 +2799,7 @@ const userHandlers: Record<string, WriteHandler> = {
     permission: 'users:write',
     entity: 'User',
     action: 'update',
+    redact: ['password'],
     schema: z.object({
       name: required('Name'),
       email: required('Email').email('That is not a valid email'),
@@ -2617,6 +2813,10 @@ const userHandlers: Record<string, WriteHandler> = {
       if (values.password !== null && values.password.length < 8) {
         throw new WriteError('A new password has to be at least 8 characters.', 'password')
       }
+
+      const existing = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+      if (!existing) throw new WriteError('That user no longer exists.')
+      guardDeveloperRole(context.actor.role, { assigning: values.role, existing: existing.role })
 
       const user = await prisma.user
         .update({
@@ -2647,6 +2847,17 @@ const userHandlers: Record<string, WriteHandler> = {
       // Deleting your own account would sign you out mid-task and leave the window
       // holding a session that no longer resolves.
       if (id === context.actor.id) throw new WriteError('You cannot delete the account you are signed in with.')
+
+      // Deleting a user cascades through everything they own, which is why
+      // `/api/admin/users/[id]` puts it behind the owner account rather than
+      // behind `users:write`. The shell is not a way around that.
+      if (!canEraseData(context.actor.email)) {
+        throw new WriteError('Only an owner account can delete records.')
+      }
+
+      const existing = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+      if (!existing) throw new WriteError('That user no longer exists.')
+      guardDeveloperRole(context.actor.role, { existing: existing.role })
 
       const user = await prisma.user
         .delete({ where: { id }, select: { email: true } })
@@ -2745,10 +2956,18 @@ const settingsHandlers: Record<string, WriteHandler> = {
 // returns & shipping
 // ---------------------------------------------------------------------------
 
-/** Moves an RMA to one status, and stamps the date that status is defined by. */
+/**
+ * Moves an RMA to one status, and stamps the date that status is defined by.
+ *
+ * Deliberately not COMPLETED. That transition settles the refund, store credit
+ * or exchange, restocks what came back in a usable condition and emits
+ * `order.returned` — and it is terminal, so a status written without the money
+ * behind it can never be re-driven. It stays on `/admin/returns/[id]`, which
+ * owns that orchestration; the shell links out to it.
+ */
 function returnStatusOp(
-  status: 'APPROVED' | 'RECEIVED' | 'COMPLETED' | 'REJECTED',
-  stamp: 'approvedAt' | 'receivedAt' | 'completedAt' | null,
+  status: 'APPROVED' | 'RECEIVED' | 'REJECTED',
+  stamp: 'approvedAt' | 'receivedAt' | null,
   past: string,
 ): WriteHandler {
   return handler({
@@ -2781,7 +3000,8 @@ const returnHandlers: Record<string, WriteHandler> = {
     entity: 'ReturnRequest',
     action: 'update',
     schema: z.object({
-      status: z.enum(['REQUESTED', 'APPROVED', 'REJECTED', 'RECEIVED', 'COMPLETED', 'CANCELLED']),
+      // No COMPLETED: see `returnStatusOp`. Settling is not a status change.
+      status: z.enum(['REQUESTED', 'APPROVED', 'REJECTED', 'RECEIVED', 'CANCELLED']),
       resolution: z.enum(['REFUND', 'EXCHANGE', 'STORE_CREDIT']),
       reason: z.enum([
         'DAMAGED',
@@ -2817,7 +3037,6 @@ const returnHandlers: Record<string, WriteHandler> = {
 
   'return.approve': returnStatusOp('APPROVED', 'approvedAt', 'approved'),
   'return.receive': returnStatusOp('RECEIVED', 'receivedAt', 'marked received'),
-  'return.complete': returnStatusOp('COMPLETED', 'completedAt', 'completed'),
   'return.reject': returnStatusOp('REJECTED', null, 'rejected'),
 }
 
@@ -3369,19 +3588,29 @@ const cmsPageShape = {
  * already enforces for articles, against the *effective* values rather than the
  * override alone.
  */
-function checkPageSeo(values: { title: string; seoTitle: string | null; seoDescription: string | null }) {
-  const title = values.seoTitle ?? values.title
-  if (title.length > SEO_TITLE_MAX) {
-    throw new WriteError(
-      `The title Google will show is ${title.length} characters. Keep it to ${SEO_TITLE_MAX} or set a shorter SEO title.`,
-      values.seoTitle ? 'seoTitle' : 'title',
-    )
-  }
-  if (values.seoDescription && values.seoDescription.length > SEO_DESCRIPTION_MAX) {
-    throw new WriteError(
-      `The meta description is ${values.seoDescription.length} characters. Keep it to ${SEO_DESCRIPTION_MAX}.`,
-      'seoDescription',
-    )
+function checkPageSeo(values: {
+  title: string
+  seoTitle: string | null
+  seoDescription: string | null
+  status: string
+  noIndex: boolean
+}) {
+  // A page kept out of the index has no snippet to fill, so the budget does not
+  // apply to it.
+  if (values.noIndex) return
+
+  // Otherwise the same rule as an article, including the minimum: a CMS page is
+  // a public URL with a search snippet like any other. A page has no excerpt, so
+  // the meta description stands alone.
+  const problem = checkPostSeo({
+    status: values.status,
+    title: values.title,
+    excerpt: values.seoDescription ?? '',
+    seoTitle: values.seoTitle,
+    seoDescription: values.seoDescription,
+  })
+  if (problem) {
+    throw new WriteError(problem, values.seoTitle ? 'seoTitle' : 'title')
   }
 }
 

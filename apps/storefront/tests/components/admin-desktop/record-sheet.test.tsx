@@ -40,7 +40,7 @@ describe('drawing a form from its description', () => {
           form: 'customer.edit',
           recordId: 'c1',
           title: 'Vera Ortiz',
-          values: { email: 'vera@example.com', firstName: 'Vera', accountType: 'WHOLESALE' },
+          values: { firstName: 'Vera', accountType: 'WHOLESALE' },
         }}
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -48,7 +48,6 @@ describe('drawing a form from its description', () => {
     )
 
     expect(screen.getByRole('dialog', { name: 'Vera Ortiz' })).toBeInTheDocument()
-    expect(screen.getByLabelText(/Email/)).toHaveValue('vera@example.com')
     expect(screen.getByLabelText(/First name/)).toHaveValue('Vera')
     expect(screen.getByLabelText(/Account type/)).toHaveValue('WHOLESALE')
     // A field the loader had nothing for opens blank rather than undefined.
@@ -210,8 +209,7 @@ describe('saving', () => {
     render(
       <RecordSheet
         request={{
-          form: 'customer.edit',
-          recordId: 'c1',
+          form: 'customer.create',
           values: { email: 'taken@example.com', accountType: 'STANDARD' },
         }}
         onClose={vi.fn()}
@@ -219,7 +217,7 @@ describe('saving', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Save customer' }))
+    await user.click(screen.getByRole('button', { name: 'Create customer' }))
 
     expect(await screen.findByText('Another record already uses that email.')).toBeInTheDocument()
     // The sheet stays open with what was typed still in it.

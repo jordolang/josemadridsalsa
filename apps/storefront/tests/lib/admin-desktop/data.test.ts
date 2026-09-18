@@ -533,9 +533,15 @@ describe('customers', () => {
       form: 'customer.edit',
       recordId: 'c1',
       // The sheet opens filled in without a second read, which is the whole
-      // reason the loader carries values at all.
-      values: { email: 'vera+shows@example.com', firstName: 'Vera', accountType: 'STANDARD' },
+      // reason the loader carries values at all. No email: it is the key every
+      // other system joins a customer on, so the edit form leaves it alone.
+      values: { firstName: 'Vera', accountType: 'STANDARD' },
     })
+
+    expect(
+      (row.open as { values: Record<string, unknown> }).values.email,
+      'the email is not editable, so the sheet should not carry it',
+    ).toBeUndefined()
   })
 })
 

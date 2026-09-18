@@ -218,6 +218,7 @@ Some jobs still open the web admin, and say so with a `…` that leads out of th
 | Revealing or entering a secret — payment keys, integration credentials, the vault | They are written once and never shown back |
 | Building a form or a report | Both are structure editors, not tables |
 | Refunds, and receiving against a partial count | Money and carrier calls, with their own confirmations |
+| Completing a return | It settles the refund, credit or exchange and restocks — and it is terminal |
 
 The credential vault page is the sharpest case: it lists what is stored, who it is for and when
 it was last rotated, and it never reads the encrypted value — the vault reveals a secret behind
@@ -225,8 +226,24 @@ its own confirmation, and that is deliberately the only place it happens.
 
 Everything a write can refuse, it refuses with a reason: a derived ledger row says the record it
 came from owns it, a product that has been sold is retired rather than deleted, a campaign with
-orders against it is cancelled rather than removed, and a blog post whose title runs past the
-60-character budget says how long it is before it will save.
+orders against it is cancelled rather than removed, and a blog post whose effective title falls
+outside the 30–60 character budget says how long it is before it will save.
+
+A few fields are deliberately absent from the sheet that would otherwise carry them, because the
+value is derived or is an identity rather than an attribute:
+
+| Not editable | Where it comes from instead |
+|---|---|
+| An order's fulfillment state | Derived from its status, which stamps shipping and delivery |
+| A purchase order's received state | Derived from receipt quantities — receive the stock |
+| A customer's email address | The key order sync, imports and mailing lists join on |
+| A return's COMPLETED state | The settlement on the return's own page |
+
+Two checks depend on what was typed rather than on which form is open, and are made against the
+operator's own permissions: queueing or publishing a social post needs `social_media:schedule`
+or `social_media:publish` on top of `social_media:compose`, and the DEVELOPER role can only be
+assigned — or an account holding it edited — by a developer. Deleting a staff account needs the
+owner account, not `users:write`, because it cascades through everything that account owns.
 
 ### Opening a page directly
 

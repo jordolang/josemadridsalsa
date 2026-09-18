@@ -104,9 +104,18 @@ export interface FormSpec {
   sections: FormSection[]
   /** Paint the submit button as destructive. */
   danger?: boolean
-  /** Sheet width in pixels. Wider for anything with a line-item repeater. */
-  width?: number
+  /**
+   * How wide the sheet opens.
+   *
+   * A size rather than a pixel count: the widths live in `desktop.css` with the
+   * rest of the sheet's presentation, and three of them cover what the forms
+   * actually need — a plain field list, something with two columns of real
+   * content, and anything carrying a line-item repeater.
+   */
+  size?: SheetSize
 }
+
+export type SheetSize = 'regular' | 'wide' | 'widest'
 
 // ---------------------------------------------------------------------------
 // shared field pieces
@@ -126,7 +135,6 @@ const enumOptions = (values: readonly string[], labels?: Record<string, string>)
 
 const ORDER_STATUS = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'] as const
 const PAYMENT_STATUS = ['PENDING', 'PROCESSING', 'PAID', 'SUCCEEDED', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'CANCELED'] as const
-const FULFILLMENT_STATUS = ['UNFULFILLED', 'PARTIALLY_FULFILLED', 'FULFILLED', 'DELIVERED', 'RETURNED'] as const
 /** The channels a person can pick by hand — see `lib/admin/manual-order.ts`. */
 const MANUAL_CHANNELS = ['MANUAL', 'PHONE', 'WHOLESALE', 'EVENT', 'MARKETPLACE'] as const
 const SALES_CHANNEL = ['WEBSITE', 'POS', 'FUNDRAISER', 'WHOLESALE', 'EVENT', 'MANUAL', 'MARKETPLACE', 'PHONE', 'IMPORT'] as const
@@ -134,7 +142,14 @@ const HEAT_LEVEL = ['MILD', 'MEDIUM', 'HOT', 'EXTRA_HOT', 'FRUIT'] as const
 const FUNDRAISER_STATUS = ['DRAFT', 'ACTIVE', 'ENDED', 'CANCELLED'] as const
 const PARTICIPANT_STATUS = ['ACTIVE', 'INACTIVE'] as const
 const BOOKING_STATUS = ['INTERESTED', 'APPLIED', 'WAITLISTED', 'ACCEPTED', 'CONFIRMED', 'DECLINED', 'CANCELLED'] as const
-const PO_STATUS = ['DRAFT', 'SUBMITTED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED'] as const
+/**
+ * The statuses a purchase order is *put* into by hand.
+ *
+ * `PARTIALLY_RECEIVED` and `RECEIVED` are missing on purpose: `lib/purchasing/receiving.ts`
+ * derives those from receipt quantities, so choosing one here would have written a status
+ * its own lines disagreed with and no stock behind it. Receiving is its own action.
+ */
+const PO_STATUS = ['DRAFT', 'SUBMITTED', 'CANCELLED'] as const
 const INVOICE_STATUS = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'] as const
 const WHOLESALE_STATUS = ['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED'] as const
 const BUSINESS_TYPE = ['RETAIL_STORE', 'RESTAURANT', 'DISTRIBUTOR', 'ONLINE_STORE', 'OTHER'] as const
@@ -172,7 +187,14 @@ const FULFILLMENT_METHOD = ['ORDER_FORMS_AND_BULK', 'ONLINE_ONLY'] as const
 const BROCHURE_OPTION = ['PRINT_YOUR_OWN', 'PROFESSIONAL_100'] as const
 const CONVERSATION_STATUS = ['OPEN', 'CLOSED'] as const
 const CHAT_STATUS = ['WAITING', 'ACTIVE', 'CLOSED', 'OFFLINE'] as const
-const RETURN_STATUS = ['REQUESTED', 'APPROVED', 'REJECTED', 'RECEIVED', 'COMPLETED', 'CANCELLED'] as const
+/**
+ * The statuses an RMA is moved to from this window.
+ *
+ * `COMPLETED` is not one of them: it settles the refund, credit or exchange and
+ * restocks, and it is terminal — so it belongs to `/admin/returns/[id]`, which
+ * does that work, rather than to a status dropdown that would only stamp it.
+ */
+const RETURN_STATUS = ['REQUESTED', 'APPROVED', 'REJECTED', 'RECEIVED', 'CANCELLED'] as const
 const RETURN_REASON = [
   'DAMAGED',
   'WRONG_ITEM',
@@ -216,7 +238,7 @@ export const DESKTOP_FORMS = {
     subtitle:
       'An order taken somewhere other than the website. Prices, shipping and tax are entered, not calculated — this records a deal already struck.',
     submitLabel: 'Create order',
-    width: 720,
+    size: 'widest',
     sections: [
       {
         label: 'Customer',
@@ -281,6 +303,7 @@ export const DESKTOP_FORMS = {
 
   'order.status': {
     title: 'Update order',
+    subtitle: 'Fulfillment follows the order status — shipping and delivery are stamped from it.',
     submitLabel: 'Save order',
     sections: [
       {
@@ -291,13 +314,6 @@ export const DESKTOP_FORMS = {
             label: 'Payment status',
             type: 'select',
             options: enumOptions(PAYMENT_STATUS),
-            required: true,
-          },
-          {
-            name: 'fulfillmentStatus',
-            label: 'Fulfillment',
-            type: 'select',
-            options: enumOptions(FULFILLMENT_STATUS),
             required: true,
           },
           {
@@ -335,7 +351,7 @@ export const DESKTOP_FORMS = {
   'product.create': {
     title: 'New product',
     submitLabel: 'Create product',
-    width: 680,
+    size: 'wide',
     sections: [
       {
         label: 'Identity',
@@ -384,7 +400,7 @@ export const DESKTOP_FORMS = {
   'product.edit': {
     title: 'Edit product',
     submitLabel: 'Save product',
-    width: 680,
+    size: 'wide',
     sections: [
       {
         label: 'Identity',
@@ -497,11 +513,11 @@ export const DESKTOP_FORMS = {
 
   'customer.edit': {
     title: 'Edit customer',
+    subtitle: 'The email address is the key their orders and list rows join on, so it is fixed here.',
     submitLabel: 'Save customer',
     sections: [
       {
         fields: [
-          { name: 'email', label: 'Email', type: 'email', required: true, span: 2 },
           { name: 'firstName', label: 'First name', type: 'text' },
           { name: 'lastName', label: 'Last name', type: 'text' },
           { name: 'phone', label: 'Phone', type: 'tel' },
@@ -524,7 +540,7 @@ export const DESKTOP_FORMS = {
     title: 'New fundraiser',
     subtitle: 'Each campaign is its own store. The price here is what its supporters are quoted.',
     submitLabel: 'Create fundraiser',
-    width: 700,
+    size: 'widest',
     sections: [
       {
         label: 'The group',
@@ -609,7 +625,7 @@ export const DESKTOP_FORMS = {
   'fundraiser.edit': {
     title: 'Edit fundraiser',
     submitLabel: 'Save fundraiser',
-    width: 700,
+    size: 'widest',
     sections: [
       {
         label: 'The group',
@@ -711,7 +727,7 @@ export const DESKTOP_FORMS = {
   'event.create': {
     title: 'New show',
     submitLabel: 'Create show',
-    width: 700,
+    size: 'widest',
     sections: [
       {
         label: 'The show',
@@ -752,7 +768,7 @@ export const DESKTOP_FORMS = {
   'event.edit': {
     title: 'Edit show',
     submitLabel: 'Save show',
-    width: 700,
+    size: 'widest',
     sections: [
       {
         label: 'The show',
@@ -807,7 +823,7 @@ export const DESKTOP_FORMS = {
   'purchase.create': {
     title: 'New purchase order',
     submitLabel: 'Create PO',
-    width: 720,
+    size: 'widest',
     sections: [
       {
         fields: [
@@ -847,7 +863,14 @@ export const DESKTOP_FORMS = {
           { name: 'supplierId', label: 'Supplier', type: 'select', optionsFrom: 'suppliers', required: true, span: 2 },
           { name: 'expectedAt', label: 'Expected', type: 'date' },
           { name: 'shippingCost', label: 'Freight', type: 'money', min: 0 },
-          { name: 'status', label: 'Status', type: 'select', options: enumOptions(PO_STATUS), required: true },
+          {
+            name: 'status',
+            label: 'Status',
+            type: 'select',
+            options: enumOptions(PO_STATUS),
+            required: true,
+            help: 'Received states come from receiving stock in, not from here.',
+          },
           { name: 'notes', label: 'Notes', type: 'textarea', span: 2, rows: 3 },
         ],
       },
@@ -880,7 +903,7 @@ export const DESKTOP_FORMS = {
   'invoice.create': {
     title: 'New invoice',
     submitLabel: 'Create invoice',
-    width: 720,
+    size: 'widest',
     sections: [
       {
         fields: [
@@ -917,7 +940,7 @@ export const DESKTOP_FORMS = {
   'invoice.edit': {
     title: 'Edit invoice',
     submitLabel: 'Save invoice',
-    width: 720,
+    size: 'widest',
     sections: [
       {
         fields: [
@@ -1086,7 +1109,7 @@ export const DESKTOP_FORMS = {
   'social.create': {
     title: 'New social post',
     submitLabel: 'Create post',
-    width: 660,
+    size: 'wide',
     sections: [
       {
         fields: [
@@ -1118,7 +1141,7 @@ export const DESKTOP_FORMS = {
   'social.edit': {
     title: 'Edit social post',
     submitLabel: 'Save post',
-    width: 660,
+    size: 'wide',
     sections: [
       {
         fields: [
@@ -1144,7 +1167,7 @@ export const DESKTOP_FORMS = {
   'post.create': {
     title: 'New blog post',
     submitLabel: 'Create post',
-    width: 760,
+    size: 'widest',
     sections: [
       {
         label: 'The article',
@@ -1205,7 +1228,7 @@ export const DESKTOP_FORMS = {
   'post.edit': {
     title: 'Edit blog post',
     submitLabel: 'Save post',
-    width: 760,
+    size: 'widest',
     sections: [
       {
         label: 'The article',
@@ -1421,7 +1444,7 @@ export const DESKTOP_FORMS = {
   'settings.store': {
     title: 'Store settings',
     submitLabel: 'Save settings',
-    width: 640,
+    size: 'wide',
     sections: [
       {
         label: 'Identity',
@@ -1446,7 +1469,7 @@ export const DESKTOP_FORMS = {
   'settings.seo': {
     title: 'Search settings',
     submitLabel: 'Save search settings',
-    width: 640,
+    size: 'wide',
     sections: [
       {
         fields: [
@@ -1484,7 +1507,14 @@ export const DESKTOP_FORMS = {
     sections: [
       {
         fields: [
-          { name: 'status', label: 'Status', type: 'select', options: enumOptions(RETURN_STATUS), required: true },
+          {
+            name: 'status',
+            label: 'Status',
+            type: 'select',
+            options: enumOptions(RETURN_STATUS),
+            required: true,
+            help: 'Completing a return issues its refund — do that on the return page.',
+          },
           {
             name: 'resolution',
             label: 'Resolution',
@@ -1712,7 +1742,7 @@ export const DESKTOP_FORMS = {
     title: 'Brand kit',
     subtitle: 'What every marketing email inherits when a template says nothing.',
     submitLabel: 'Save brand kit',
-    width: 640,
+    size: 'wide',
     sections: [
       {
         fields: [
@@ -1931,7 +1961,7 @@ export const DESKTOP_FORMS = {
     title: 'Shipping settings',
     subtitle: 'The origin the rates are quoted from, and the flat rates used when a carrier will not answer.',
     submitLabel: 'Save shipping',
-    width: 640,
+    size: 'wide',
     sections: [
       {
         label: 'Ship from',
@@ -2061,7 +2091,6 @@ export const DIRECT_OPS = [
   'user.delete',
   'return.approve',
   'return.receive',
-  'return.complete',
   'return.reject',
   'supplier.deactivate',
   'location.delete',

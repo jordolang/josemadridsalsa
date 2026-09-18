@@ -83,6 +83,7 @@ export function DesktopShell({
   badges,
   operator,
   visibleSections,
+  visiblePages,
 }: {
   initialSection: SectionPayload
   badges: DesktopBadges
@@ -93,6 +94,13 @@ export function DesktopShell({
    * sidebar and the palette rather than offered and then refused.
    */
   visibleSections?: DesktopSectionId[]
+  /**
+   * The page ids this account may load, resolved beside `visibleSections`. A
+   * page needing a permission its section does not — the credential vault, the
+   * integrations sheet — is absent, so ⌘K never offers a command that answers
+   * 403. Undefined means the caller did not filter, and every page is offered.
+   */
+  visiblePages?: string[]
 }) {
   const [section, setSection] = useState<SectionPayload>(initialSection)
   const [loading, setLoading] = useState(false)
@@ -139,6 +147,11 @@ export function DesktopShell({
   )
 
   const sections = useMemo(() => groups.flatMap((group) => group.items), [groups])
+  /** Undefined when the caller did not filter — then every page is offered. */
+  const allowedPageIds = useMemo(
+    () => (visiblePages ? new Set(visiblePages) : undefined),
+    [visiblePages],
+  )
   const allSections = useMemo(() => DESKTOP_SECTION_GROUPS.flatMap((group) => group.items), [])
   const currentSection = useMemo(
     () => allSections.find((item) => item.id === section.id) ?? allSections[0],
@@ -470,10 +483,13 @@ export function DesktopShell({
     }
 
     // Every page of every visible section, so a page two clicks in — the
-    // suppression list, the show archive — is still one ⌘K away.
+    // suppression list, the show archive — is still one ⌘K away. Filtered to
+    // what this account may actually load: the sidebar was already permission
+    // filtered, but a section can hold a page that needs more than it does.
     for (const item of sections) {
       for (const entry of pagesFor(item)) {
         if (entry.id === item.id) continue
+        if (allowedPageIds && !allowedPageIds.has(entry.id)) continue
         items.push({
           key: `page:${entry.id}`,
           label: `${item.label} · ${entry.label}`,
@@ -544,6 +560,7 @@ export function DesktopShell({
       .slice(0, 80)
   }, [
     sections,
+    allowedPageIds,
     section.actions,
     section.id,
     allRows,

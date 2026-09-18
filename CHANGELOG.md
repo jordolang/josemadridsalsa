@@ -24,6 +24,53 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Fixed
+- **The desktop shell's writes now obey the rules their `/admin` equivalents obey.** The write
+  route checked one permission per operation, which is right when the gate does not depend on
+  what was typed and wrong when it does — so `users:write` was enough to assign the DEVELOPER
+  role or to delete an account that the canonical route puts behind the owner, and
+  `social_media:compose` was enough to queue a post the cron would publish unattended or to
+  record one as already live. Handlers can now ask for a permission from the values, and the
+  three that need to, do. Alongside them: the options endpoint behind a picker is gated on the
+  permission its own section requires rather than on staff alone, which had left five hundred
+  customer and staff email addresses readable by any staff account; the audit row masks a
+  password instead of keeping the only plaintext copy of it; and ⌘K no longer offers pages an
+  account cannot load, which the sidebar and the tab strip already filtered.
+
+- **Writes that owed side effects now pay them.** Marking an order paid changed
+  `paymentStatus` and nothing else, so the fundraiser's half of the sale and the customer's
+  loyalty points — which every other payment path credits, exactly once, in the same
+  transaction — were never credited against an order that reads as paid forever after. Setting
+  an order to SHIPPED stamped the enums by hand rather than deriving them, so an order could
+  claim it had shipped while its items showed nothing fulfilled; fulfillment now comes from the
+  commercial status through the same helpers `/api/admin/orders/[id]/update-status` uses, and
+  the form no longer offers the field. A campaign could be scheduled with no recipient rows
+  behind it, which the cron turns into a campaign stuck in SENDING having sent nothing; the
+  recipients are written first, from the same paged inserter the campaign page uses, now shared
+  rather than trapped behind `'use server'`. And a "set stock to 20" adjustment computed its
+  delta against a count that a sale could move before the write landed — the count it was
+  figured on now rides along, and a changed one is refused rather than silently applied.
+
+- **Three things the shell could write that only another page can finish.** Completing a return
+  settles the refund, store credit or exchange, restocks what came back usable, and is
+  terminal — so stamping COMPLETED without that left the customer's refund stranded with no way
+  to re-drive it; the shell now hands off to `/admin/returns/[id]`. `PARTIALLY_RECEIVED` and
+  `RECEIVED` are derived from receipt quantities, so a purchase order can no longer be *set* to
+  them and claim stock that never arrived. A customer's email address is the key order sync,
+  import batches and mailing-list rows join on, and is no longer editable in place — the
+  canonical endpoint has always left it out for the same reason. A blog post or CMS page is now
+  held to both ends of the search-snippet budget on a public status rather than only the
+  maximum, using `checkPostSeo` itself.
+
+- **The record sheet's presentation moved into the stylesheet.** Widths, the repeater grid and
+  a handful of paddings were inline `style` props. Sheets now take one of three named sizes
+  rather than a pixel count per form, and the only value still passed from the component is the
+  one a stylesheet cannot know: how many columns a line-item repeater has.
+
+- **A version bump left `package-lock.json` behind.** npm keeps each workspace's version there
+  too, so a release was followed by a mystery diff the next time anyone ran `npm install`, and
+  anything reading package metadata out of the lock reported the previous version. The bump
+  carries them now, and a test fails when they drift.
+
 - **Public pages no longer force a full server render on every request — mostly.** Nearly every
   page under `(public)` carried `dynamic = 'force-dynamic'`, so each visit re-rendered the page and
   re-queried PostgreSQL. Those exports are gone, replaced by a per-page `revalidate` window: 5

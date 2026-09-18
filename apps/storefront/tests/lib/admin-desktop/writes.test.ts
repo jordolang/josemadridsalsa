@@ -19,27 +19,72 @@ const prismaMock = {
   fundraiserParticipant: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
   invoice: { create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   ledgerEntry: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
-  order: { create: vi.fn(), update: vi.fn(), findFirst: vi.fn() },
+  order: { create: vi.fn(), update: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn() },
   product: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
   purchaseOrder: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
   review: { update: vi.fn(), delete: vi.fn() },
   seoConfiguration: { create: vi.fn(), update: vi.fn(), findFirst: vi.fn() },
   storeSettings: { upsert: vi.fn() },
-  user: { create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  user: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
+  socialMediaPost: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
   notification: { updateMany: vi.fn() },
 }
 
 vi.mock('@/lib/prisma', () => ({ __esModule: true, default: prismaMock, prisma: prismaMock }))
 
 const adjustInventory = vi.fn()
-vi.mock('@/lib/inventory-manager', () => ({ adjustInventory }))
+/** Mirrors the real one closely enough that the handler's message survives. */
+class StaleInventoryError extends Error {
+  constructor(expected: number, actual: number) {
+    super(`Stock moved while this was being edited (expected ${expected} on hand, found ${actual}).`)
+    this.name = 'StaleInventoryError'
+  }
+}
+vi.mock('@/lib/inventory-manager', () => ({ adjustInventory, StaleInventoryError }))
 vi.mock('@/lib/orders/events', () => ({ emitOrderCreated: vi.fn() }))
 
-const { WRITE_HANDLERS, findWriteHandler, WriteError } = await import('@/lib/admin-desktop/writes')
+const insertRecipientsFromList = vi.fn()
+vi.mock('@/lib/email/recipients', () => ({ insertRecipientsFromList }))
+
+const creditFundraiserCommission = vi.fn(async () => ({ credited: false, amount: 0 }))
+const creditPurchaseLoyaltyPoints = vi.fn(async () => ({ awarded: false, points: 0 }))
+vi.mock('@/lib/fundraising/credit-commission', () => ({ creditFundraiserCommission }))
+vi.mock('@/lib/loyalty', () => ({ creditPurchaseLoyaltyPoints }))
+
+const recordFulfillmentEvent = vi.fn()
+vi.mock('@/lib/orders/fulfillment', () => ({
+  buildFulfillmentUpdate: vi.fn(() => ({ fulfillmentStatus: 'FULFILLED' })),
+  fulfillEntireOrder: vi.fn(),
+  isDerivedTransition: vi.fn(() => false),
+  recordFulfillmentEvent,
+  transitionForOrderStatus: vi.fn((status: string) => (status === 'SHIPPED' ? 'shipped' : null)),
+}))
+
+vi.mock('@/lib/developer/constants', () => ({
+  canEraseData: (email: string) => email === 'owner@josemadridsalsa.com',
+}))
+
+const { WRITE_HANDLERS, findWriteHandler, redactForAudit, WriteError } = await import(
+  '@/lib/admin-desktop/writes'
+)
 const { DESKTOP_FORMS, DIRECT_OPS } = await import('@/lib/admin-desktop/forms')
 const { permissionDefinitions } = await import('@/lib/permissions-data')
 
-const actor = { actor: { id: 'u1', email: 'mike@josemadridsalsa.com' } }
+/**
+ * A context standing in for the route's. `can` answers yes by default so a test
+ * about something else is not also a test about permissions; the cases that care
+ * pass their own.
+ */
+const actor = {
+  actor: { id: 'u1', email: 'mike@josemadridsalsa.com', role: 'ADMIN' },
+  can: async () => true,
+}
+
+/** The same, for an actor who holds nothing beyond the handler's own permission. */
+const withoutExtraPermissions = {
+  actor: { id: 'u1', email: 'mike@josemadridsalsa.com', role: 'ADMIN' },
+  can: async () => false,
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -102,7 +147,7 @@ describe('the handler registry', () => {
       expect(handler, `${op} is not registered`).toBeDefined()
       prismaMock.notification.updateMany.mockResolvedValue({ count: 2 })
       prismaMock.notification.updateMany.mockClear()
-      await handler.execute({}, { actor: mine })
+      await handler.execute({}, { actor: { ...mine, role: 'ADMIN' }, can: async () => true })
       const calls = prismaMock.notification.updateMany.mock.calls
       expect(calls.length, `${op} wrote nothing`).toBeGreaterThan(0)
       for (const [args] of calls) {
@@ -144,12 +189,14 @@ describe('dates', () => {
 
   it('keeps an instant from a datetime field exactly as it was sent', async () => {
     prismaMock.emailCampaign.create.mockResolvedValue({ id: 'c1', name: 'Autumn' })
+    insertRecipientsFromList.mockResolvedValue(12)
 
     await WRITE_HANDLERS['campaign.create'].execute(
       {
         name: 'Autumn',
         subject: 'Autumn heat',
         templateId: 't1',
+        listId: 'list-1',
         scheduledAt: '2026-10-01T14:30:00.000Z',
         trackOpens: true,
         trackClicks: true,
@@ -159,8 +206,9 @@ describe('dates', () => {
 
     const { scheduledAt, status } = prismaMock.emailCampaign.create.mock.calls[0][0].data
     expect(scheduledAt.toISOString()).toBe('2026-10-01T14:30:00.000Z')
-    // A send time is what makes it scheduled rather than a draft.
-    expect(status).toBe('SCHEDULED')
+    // It is written as a draft first and only becomes SCHEDULED once its
+    // recipients exist — see the campaign cases below.
+    expect(status).toBe('DRAFT')
   })
 
   it('leaves an empty optional date null instead of inventing 1970', async () => {
@@ -218,7 +266,7 @@ describe('validation', () => {
 
   it('measures the SEO budget against what Google would actually show', async () => {
     // A blank SEO title means the article's own title is the one that gets
-    // rendered, so that is the string the 60-character budget applies to.
+    // rendered, so that is the string the budget applies to.
     await expect(
       WRITE_HANDLERS['post.create'].execute(
         {
@@ -226,13 +274,53 @@ describe('validation', () => {
           slug: 'long-title',
           excerpt: 'Short enough.',
           content: 'Body.',
-          status: 'DRAFT',
+          status: 'PUBLISHED',
           layout: 'STANDARD',
           featured: false,
         },
         { ...actor },
       ),
-    ).rejects.toThrow(/Keep it to 60/)
+    ).rejects.toThrow(/truncated in search results/)
+  })
+
+  it('holds a public post to the minimum title length too, not just the maximum', async () => {
+    // `lib/blog/schemas.ts` has both ends of the budget: a 21-character title
+    // wastes the snippet exactly as a 70-character one is truncated. Checking
+    // only the maximum let a post go public in a state /admin/blog refuses.
+    await expect(
+      WRITE_HANDLERS['post.create'].execute(
+        {
+          title: 'Too short',
+          slug: 'too-short',
+          excerpt: 'Short enough.',
+          content: 'Body.',
+          status: 'PUBLISHED',
+          layout: 'STANDARD',
+          featured: false,
+        },
+        { ...actor },
+      ),
+    ).rejects.toThrow(/wastes search snippet space/)
+  })
+
+  it('lets a draft be saved while it is still being written', async () => {
+    // The rules bite on publish and schedule, not while the title is a stub.
+    prismaMock.blogPost.create.mockResolvedValue({ id: 'b1', title: 'Wip', slug: 'wip' })
+
+    await WRITE_HANDLERS['post.create'].execute(
+      {
+        title: 'Wip',
+        slug: 'wip',
+        excerpt: 'Short enough.',
+        content: 'Body.',
+        status: 'DRAFT',
+        layout: 'STANDARD',
+        featured: false,
+      },
+      { ...actor },
+    )
+
+    expect(prismaMock.blogPost.create).toHaveBeenCalled()
   })
 
   it('turns a unique-constraint collision into something the operator can fix', async () => {
@@ -535,5 +623,269 @@ describe('participants', () => {
     await expect(
       WRITE_HANDLERS['participant.delete'].execute({}, { ...actor, recordId: 'fp1' }),
     ).rejects.toThrow(/inactive instead/)
+  })
+})
+
+describe('the gates a permission alone does not cover', () => {
+  it('refuses to hand out DEVELOPER to anyone who is not one', async () => {
+    // `users:write` is enough to edit staff; it is not enough to mint a super
+    // admin. Without this an account that could edit users could promote itself.
+    await expect(
+      WRITE_HANDLERS['user.create'].execute(
+        { name: 'Pat', email: 'pat@example.com', password: 'longenough', role: 'DEVELOPER' },
+        { ...actor },
+      ),
+    ).rejects.toThrow(/Only a developer can assign/)
+
+    expect(prismaMock.user.create).not.toHaveBeenCalled()
+  })
+
+  it('lets a developer assign the role', async () => {
+    prismaMock.user.create.mockResolvedValue({ id: 'u9', email: 'pat@example.com' })
+
+    await WRITE_HANDLERS['user.create'].execute(
+      { name: 'Pat', email: 'pat@example.com', password: 'longenough', role: 'DEVELOPER' },
+      { ...actor, actor: { ...actor.actor, role: 'DEVELOPER' } },
+    )
+
+    expect(prismaMock.user.create).toHaveBeenCalled()
+  })
+
+  it('refuses to edit an existing DEVELOPER account from a lesser role', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'DEVELOPER' })
+
+    await expect(
+      WRITE_HANDLERS['user.edit'].execute(
+        {
+          name: 'Pat',
+          email: 'pat@example.com',
+          role: 'ADMIN',
+          isEmailVerified: true,
+        },
+        { ...actor, recordId: 'u9' },
+      ),
+    ).rejects.toThrow(/Only a developer can modify/)
+  })
+
+  it('keeps user deletion behind the owner account, not behind users:write', async () => {
+    // Deleting a user cascades through everything they own, which is why the
+    // canonical DELETE route asks for the owner rather than the permission.
+    await expect(
+      WRITE_HANDLERS['user.delete'].execute({}, { ...actor, recordId: 'u9' }),
+    ).rejects.toThrow(/Only an owner account/)
+
+    expect(prismaMock.user.delete).not.toHaveBeenCalled()
+  })
+
+  it('lets the owner delete a non-developer account', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ role: 'STAFF' })
+    prismaMock.user.delete.mockResolvedValue({ email: 'pat@example.com' })
+
+    await WRITE_HANDLERS['user.delete'].execute({}, {
+      ...actor,
+      actor: { ...actor.actor, email: 'owner@josemadridsalsa.com' },
+      recordId: 'u9',
+    })
+
+    expect(prismaMock.user.delete).toHaveBeenCalled()
+  })
+
+  it('needs scheduling permission to queue a social post, not just compose', async () => {
+    await expect(
+      WRITE_HANDLERS['social.create'].execute(
+        {
+          content: 'New batch',
+          platforms: ['FACEBOOK'],
+          status: 'SCHEDULED',
+          scheduledAt: '2026-10-01T14:30:00.000Z',
+          hashtags: [],
+        },
+        { ...withoutExtraPermissions },
+      ),
+    ).rejects.toThrow(/scheduling permission/)
+  })
+
+  it('needs publishing permission to record a post as live', async () => {
+    await expect(
+      WRITE_HANDLERS['social.create'].execute(
+        { content: 'New batch', platforms: ['FACEBOOK'], status: 'PUBLISHED', hashtags: [] },
+        { ...withoutExtraPermissions },
+      ),
+    ).rejects.toThrow(/publishing permission/)
+  })
+
+  it('still lets a composer save a draft', async () => {
+    prismaMock.socialMediaPost.create.mockResolvedValue({ id: 's1' })
+
+    await WRITE_HANDLERS['social.create'].execute(
+      { content: 'New batch', platforms: ['FACEBOOK'], status: 'DRAFT', hashtags: [] },
+      { ...withoutExtraPermissions },
+    )
+
+    expect(prismaMock.socialMediaPost.create).toHaveBeenCalled()
+  })
+})
+
+describe('writes that owe side effects', () => {
+  it('credits the fundraiser and the customer when an order is marked paid', async () => {
+    // Six payment paths run these two, each claiming its own column first. An
+    // order marked paid by hand is a seventh, and used to run neither — leaving
+    // the group and the customer permanently short against a paid order.
+    prismaMock.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => fn(prismaMock))
+    prismaMock.order.update.mockResolvedValue({ orderNumber: 'JMS-1001' })
+    creditFundraiserCommission.mockResolvedValue({ credited: true, amount: 25 })
+    creditPurchaseLoyaltyPoints.mockResolvedValue({ awarded: true, points: 50 })
+
+    const outcome = await WRITE_HANDLERS['order.markPaid'].execute({}, { ...actor, recordId: 'o1' })
+
+    expect(creditFundraiserCommission).toHaveBeenCalledWith(prismaMock, 'o1')
+    expect(creditPurchaseLoyaltyPoints).toHaveBeenCalledWith(prismaMock, 'o1')
+    expect(outcome.message).toContain('25.00')
+    expect(outcome.message).toContain('50 points')
+  })
+
+  it('refuses a set-to adjustment when the count moved underneath it', async () => {
+    // "Set to 20" is a delta figured against a count that was read a moment ago.
+    // If a sale lands in between, applying that delta lands somewhere else
+    // entirely, so the observed count rides along and a changed one refuses.
+    prismaMock.product.findUnique.mockResolvedValue({ name: 'Black Bean', inventory: 10 })
+    adjustInventory.mockRejectedValue(new StaleInventoryError(10, 15))
+
+    await expect(
+      WRITE_HANDLERS['inventory.adjust'].execute(
+        { mode: 'SET', amount: 20, reason: 'Count' },
+        { ...actor, recordId: 'p1' },
+      ),
+    ).rejects.toThrow(/Stock moved/)
+
+    expect(adjustInventory.mock.calls[0][0].expectedPreviousStock).toBe(10)
+  })
+
+  it('does not pin a plain delta to a count it never read', async () => {
+    prismaMock.product.findUnique.mockResolvedValue({ name: 'Black Bean', inventory: 10 })
+    adjustInventory.mockResolvedValue(undefined)
+
+    await WRITE_HANDLERS['inventory.adjust'].execute(
+      { mode: 'DELTA', amount: 5, reason: 'Found a case' },
+      { ...actor, recordId: 'p1' },
+    )
+
+    expect(adjustInventory.mock.calls[0][0].expectedPreviousStock).toBeUndefined()
+  })
+
+  it('builds a campaign recipient list before letting it be scheduled', async () => {
+    // The cron reaches a SCHEDULED campaign, flips it to SENDING, finds nothing
+    // PENDING and leaves it stuck having sent nothing.
+    prismaMock.emailCampaign.create.mockResolvedValue({ id: 'c1', name: 'Autumn' })
+    insertRecipientsFromList.mockResolvedValue(340)
+
+    await WRITE_HANDLERS['campaign.create'].execute(
+      {
+        name: 'Autumn',
+        subject: 'Autumn heat',
+        templateId: 't1',
+        listId: 'list-1',
+        scheduledAt: '2026-10-01T14:30:00.000Z',
+        trackOpens: true,
+        trackClicks: true,
+      },
+      { ...actor },
+    )
+
+    expect(insertRecipientsFromList).toHaveBeenCalledWith('c1', 'list-1', {}, {})
+    const update = prismaMock.emailCampaign.update.mock.calls[0][0].data
+    expect(update.totalRecipients).toBe(340)
+    expect(update.status).toBe('SCHEDULED')
+  })
+
+  it('will not schedule a campaign with no list to send to', async () => {
+    await expect(
+      WRITE_HANDLERS['campaign.create'].execute(
+        {
+          name: 'Autumn',
+          subject: 'Autumn heat',
+          templateId: 't1',
+          scheduledAt: '2026-10-01T14:30:00.000Z',
+          trackOpens: true,
+          trackClicks: true,
+        },
+        { ...actor },
+      ),
+    ).rejects.toThrow(/needs a mailing list/)
+
+    expect(prismaMock.emailCampaign.create).not.toHaveBeenCalled()
+  })
+
+  it('takes the campaign back out when its list turns out to be empty', async () => {
+    prismaMock.emailCampaign.create.mockResolvedValue({ id: 'c1', name: 'Autumn' })
+    prismaMock.emailCampaign.delete.mockResolvedValue({ id: 'c1' })
+    insertRecipientsFromList.mockResolvedValue(0)
+
+    await expect(
+      WRITE_HANDLERS['campaign.create'].execute(
+        {
+          name: 'Autumn',
+          subject: 'Autumn heat',
+          templateId: 't1',
+          listId: 'list-1',
+          trackOpens: true,
+          trackClicks: true,
+        },
+        { ...actor },
+      ),
+    ).rejects.toThrow(/no subscribed contacts/)
+
+    expect(prismaMock.emailCampaign.delete).toHaveBeenCalledWith({ where: { id: 'c1' } })
+  })
+
+  it('derives fulfillment from the order status instead of asserting it', async () => {
+    prismaMock.order.findUnique.mockResolvedValue({
+      orderNumber: 'JMS-1001',
+      status: 'PROCESSING',
+      shippedAt: null,
+      deliveredAt: null,
+    })
+    prismaMock.order.update.mockResolvedValue({ orderNumber: 'JMS-1001' })
+
+    await WRITE_HANDLERS['order.status'].execute(
+      { status: 'SHIPPED', paymentStatus: 'PAID', salesChannel: 'WEBSITE' },
+      { ...actor, recordId: 'o1' },
+    )
+
+    const data = prismaMock.order.update.mock.calls[0][0].data
+    expect(data.fulfillmentStatus).toBe('FULFILLED')
+    expect(recordFulfillmentEvent).toHaveBeenCalled()
+  })
+})
+
+describe('what the audit row keeps', () => {
+  it('masks a password rather than storing the only plaintext copy of it', () => {
+    // The handler hashes it before it reaches the user row; logging the payload
+    // verbatim would leave it readable in AuditLog.changes forever.
+    const kept = redactForAudit(
+      { name: 'Pat', email: 'pat@example.com', password: 'hunter2hunter2' },
+      WRITE_HANDLERS['user.create'].redact,
+    ) as Record<string, unknown>
+
+    expect(kept.password).toBe('[redacted]')
+    expect(kept.name).toBe('Pat')
+  })
+
+  it('says nothing at all when no password was part of the change', () => {
+    const kept = redactForAudit({ name: 'Pat', password: null }, ['password']) as Record<string, unknown>
+    expect(kept.password).toBeNull()
+  })
+
+  it('declares the redaction on every handler that takes a password', () => {
+    for (const [op, handler] of Object.entries(WRITE_HANDLERS)) {
+      const spec = DESKTOP_FORMS[op as keyof typeof DESKTOP_FORMS]
+      if (!spec) continue
+      const takesPassword = spec.sections.some((section) =>
+        section.fields.some((field) => field.type === 'password'),
+      )
+      if (takesPassword) {
+        expect(handler.redact, `${op} logs its password in the clear`).toContain('password')
+      }
+    }
   })
 })

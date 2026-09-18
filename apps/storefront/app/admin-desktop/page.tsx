@@ -1,7 +1,13 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getUserPermissions, isStaff } from '@/lib/rbac'
 import { loadBadges, loadSection } from '@/lib/admin-desktop/data'
-import { allowedSectionIds, canSeePage, canSeeSection } from '@/lib/admin-desktop/access'
+import {
+  allowedPages,
+  allowedSectionIds,
+  allowedSections,
+  canSeePage,
+  canSeeSection,
+} from '@/lib/admin-desktop/access'
 import { findPage, isDesktopSectionId } from '@/lib/admin-desktop/sections'
 import { DesktopShell } from '@/components/admin-desktop/desktop-shell'
 
@@ -53,6 +59,12 @@ export default async function DesktopAdminPage({
 
   const permissions = await getUserPermissions(user)
   const visible = allowedSectionIds(permissions)
+  // The pages behind those sections, filtered the same way. A page gated on a
+  // permission of its own — the credential vault, the integrations sheet — is
+  // left out here rather than offered in ⌘K and then refused by the route.
+  const visiblePages = allowedSections(permissions).flatMap((section) =>
+    allowedPages(section, permissions).map((page) => page.id),
+  )
 
   if (visible.length === 0) {
     redirect('/admin')
@@ -70,6 +82,7 @@ export default async function DesktopAdminPage({
       badges={badges}
       operator={{ name: user.name ?? user.email, email: user.email }}
       visibleSections={visible}
+      visiblePages={visiblePages}
     />
   )
 }

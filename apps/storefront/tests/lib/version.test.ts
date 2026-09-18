@@ -215,6 +215,29 @@ describe('VERSIONED_PACKAGE_FILES', () => {
     }
   })
 
+  it('keeps package-lock.json on the same version as the packages', () => {
+    // npm stores each workspace's version in the lockfile too. Left behind, the
+    // next `npm install` rewrites the tracked file right after a release commit,
+    // and anything reading package metadata out of the lock reports the previous
+    // version. `version-bump` carries them; this is what notices when it stops.
+    const lock = JSON.parse(readFileSync(join(ROOT, 'package-lock.json'), 'utf-8')) as {
+      version: string
+      packages: Record<string, { version?: string }>
+    }
+    const root = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')) as { version: string }
+
+    expect(lock.version, 'the lockfile version is behind the root package').toBe(root.version)
+    expect(lock.packages['']?.version, 'the lockfile root entry is behind').toBe(root.version)
+
+    for (const file of VERSIONED_PACKAGE_FILES) {
+      if (file === 'package.json') continue
+      const workspace = file.replace(/\/package\.json$/, '')
+      const entry = lock.packages[workspace]
+      if (!entry?.version) continue
+      expect(entry.version, `${workspace} is behind in package-lock.json`).toBe(root.version)
+    }
+  })
+
   it('agrees with the canonical projectVersion at the root', () => {
     const root = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')) as {
       version: string

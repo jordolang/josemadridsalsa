@@ -1,21 +1,48 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser, isStaff } from '@/lib/rbac'
+import { getCurrentUser, hasPermission, isStaff } from '@/lib/rbac'
 import type { FormOption, OptionSource } from '@/lib/admin-desktop/forms'
+import { SECTION_PERMISSION } from '@/lib/admin-desktop/access'
+import type { DesktopSectionId } from '@/lib/admin-desktop/sections'
 
 /**
  * The choices behind a picker whose options are rows rather than an enum.
  *
  * Fetched when a sheet opens rather than shipped with the page, so a product
- * list cannot be stale by the time somebody uses it. Everything returned here is
- * a name and an id the operator could already read in the section they came
- * from, which is why one staff gate is the whole check: there is no field below
- * that a staff account cannot already see in the list it belongs to.
+ * list cannot be stale by the time somebody uses it.
+ *
+ * A picker is not protected by the form that opens it — this endpoint is
+ * callable on its own — so each source is gated on the permission that guards
+ * the section the rows come from. `customers` and `staff` are the sharp cases:
+ * both carry email addresses, and without a gate any staff account could read
+ * five hundred of them without the permission the list itself requires.
  */
 
 export const dynamic = 'force-dynamic'
 
 const LIMIT = 500
+
+/**
+ * The section each source's rows belong to.
+ *
+ * The permission itself comes from `SECTION_PERMISSION`, so a picker is gated on
+ * exactly what the list it draws from is gated on and the two cannot drift
+ * apart. Keyed by every source in the union, so adding one without deciding who
+ * may read it is a type error rather than an open door.
+ */
+const SOURCE_SECTION: Record<OptionSource, DesktopSectionId> = {
+  products: 'products',
+  activeProducts: 'products',
+  categories: 'products',
+  suppliers: 'purchase',
+  customers: 'customers',
+  fundraisers: 'fundraisers',
+  staff: 'users',
+  emailTemplates: 'email',
+  mailingLists: 'email',
+  blogCategories: 'content',
+  leadCampaigns: 'leads',
+}
 
 const SOURCES: Record<OptionSource, () => Promise<FormOption[]>> = {
   products: async () => {
@@ -159,6 +186,11 @@ export async function GET(_request: Request, context: { params: Promise<{ source
   const load = SOURCES[source as OptionSource]
   if (!load) {
     return NextResponse.json({ error: 'Unknown option source' }, { status: 404 })
+  }
+
+  const permission = SECTION_PERMISSION[SOURCE_SECTION[source as OptionSource]]
+  if (permission && !(await hasPermission(user, permission))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   try {

@@ -1412,6 +1412,8 @@
 .jmsd-sheet {
   display: flex;
   flex-direction: column;
+  width: var(--sheet-width, 560px);
+  max-width: calc(100vw - 48px);
   max-height: calc(100vh - 128px);
   background: var(--panel);
   border: 1px solid var(--selline);
@@ -1419,6 +1421,27 @@
   box-shadow: var(--shadow);
   animation: jmsd-pop 0.14s ease-out;
   overflow: hidden;
+}
+
+/*
+ * Three sheet sizes, not a pixel count per form: a plain field list, two
+ * columns of real content, and anything carrying a line-item repeater.
+ */
+.jmsd-sheet--regular {
+  --sheet-width: 560px;
+}
+
+.jmsd-sheet--wide {
+  --sheet-width: 680px;
+}
+
+.jmsd-sheet--widest {
+  --sheet-width: 760px;
+}
+
+/* Holds the title and subtitle, and is allowed to be narrower than its text. */
+.jmsd-sheet-heading {
+  min-width: 0;
 }
 
 .jmsd-sheet-head {
@@ -1556,8 +1579,13 @@
   padding: 9px 10px 10px;
 }
 
+/*
+ * The repeater's columns. How many there are is per-form, so the component
+ * passes only that through `--jmsd-line-columns`; the grid itself is here.
+ */
 .jmsd-lines-head {
   display: grid;
+  grid-template-columns: var(--jmsd-line-columns) 28px;
   column-gap: 8px;
   padding-bottom: 6px;
   font-size: 9px;
@@ -1569,9 +1597,18 @@
 
 .jmsd-lines-row {
   display: grid;
+  grid-template-columns: var(--jmsd-line-columns) 28px;
   column-gap: 8px;
   align-items: center;
   padding: 4px 0;
+}
+
+.jmsd-lines-empty {
+  padding: 14px 0;
+}
+
+.jmsd-lines-add {
+  margin-top: 8px;
 }
 
 .jmsd-sheet-foot {

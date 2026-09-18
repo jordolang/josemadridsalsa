@@ -110,6 +110,55 @@ async function updatePackageFile(
 }
 
 /**
+ * Carry the new version into `package-lock.json`.
+ *
+ * npm keeps a copy of each workspace's version in the lockfile — once at the top,
+ * once in `packages[""]`, and once per workspace entry. Leaving them behind does
+ * not break a build, but the next `npm install` rewrites the tracked file, so the
+ * bump commit is followed by a mystery diff; and anything reading package
+ * metadata out of the lock reports the previous release.
+ *
+ * Edited as text for the same reason the package files are: re-serialising a
+ * 30,000-line lockfile to change six numbers would bury the release in noise.
+ */
+async function updateLockfile(
+  files: readonly string[],
+  semver: string,
+  dryRun: boolean
+): Promise<string | null> {
+  const path = join(ROOT, 'package-lock.json')
+
+  let raw: string
+  try {
+    raw = await readFile(path, 'utf-8')
+  } catch {
+    return null
+  }
+
+  // The two at the top: the lockfile's own version, and the root package entry.
+  let next = raw.replace(/^(\s*"version"\s*:\s*)"[^"]*"/m, `$1"${semver}"`)
+  next = next.replace(
+    /("": \{\n(?:\s+"name": "[^"]*",\n)?\s*"version": )"[^"]*"/,
+    `$1"${semver}"`
+  )
+
+  // Then one per versioned workspace, matched on its own path key so a
+  // dependency that happens to sit at the same version is left alone.
+  for (const file of files) {
+    if (file === 'package.json') continue
+    const workspace = file.replace(/\/package\.json$/, '')
+    const pattern = new RegExp(
+      `("${workspace.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}": \\{\\n(?:\\s+"name": "[^"]*",\\n)?\\s*"version": )"[^"]*"`
+    )
+    next = next.replace(pattern, `$1"${semver}"`)
+  }
+
+  if (next === raw) return null
+  if (!dryRun) await writeFile(path, next, 'utf-8')
+  return 'package-lock.json'
+}
+
+/**
  * Turn `## [Unreleased]` into the released heading and open a new empty one.
  *
  * Refuses when Unreleased has no entries under it: a version with an empty changelog section is
@@ -189,6 +238,9 @@ async function main() {
     const result = await updatePackageFile(file, semver, file === 'package.json' ? next : null, dryRun)
     if (result) updated.push(result)
   }
+
+  const lock = await updateLockfile(PACKAGE_FILES, semver, dryRun)
+  if (lock) updated.push(lock)
 
   console.log(`Updated: ${updated.join(', ')}`)
 

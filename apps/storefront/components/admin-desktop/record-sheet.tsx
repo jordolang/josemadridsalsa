@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   defaultValues,
   findForm,
@@ -204,13 +204,10 @@ export function RecordSheet({
 
   if (!spec) return null
 
-  const width = spec.width ?? 560
-
   return (
     <div className="jmsd-scrim" role="presentation" onMouseDown={onClose}>
       <form
-        className="jmsd-sheet"
-        style={{ width, maxWidth: 'calc(100vw - 48px)' }}
+        className={`jmsd-sheet jmsd-sheet--${spec.size ?? 'regular'}`}
         role="dialog"
         aria-modal="true"
         aria-label={request.title ?? spec.title}
@@ -218,7 +215,7 @@ export function RecordSheet({
         onSubmit={onSubmit}
       >
         <header className="jmsd-sheet-head">
-          <div style={{ minWidth: 0 }}>
+          <div className="jmsd-sheet-heading">
             <div className="jmsd-sheet-title">{request.title ?? spec.title}</div>
             {spec.subtitle ? <div className="jmsd-sheet-subtitle">{spec.subtitle}</div> : null}
           </div>
@@ -468,7 +465,11 @@ function LineRepeater({
   onChange: (value: FieldValue) => void
 }) {
   const columns = field.itemFields ?? []
-  const template = columns.map((column, index) => (index === 0 ? 'minmax(0,1fr)' : '90px')).join(' ')
+  // The only value a stylesheet cannot know: how many columns this repeater has.
+  // The grid rule that consumes it lives in desktop.css with the rest.
+  const columnTemplate = {
+    '--jmsd-line-columns': columns.map((_, index) => (index === 0 ? 'minmax(0,1fr)' : '90px')).join(' '),
+  } as CSSProperties
 
   const update = (index: number, name: string, next: string) => {
     onChange(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [name]: next } : row)))
@@ -482,7 +483,7 @@ function LineRepeater({
       </div>
 
       <div className="jmsd-lines">
-        <div className="jmsd-lines-head" style={{ gridTemplateColumns: `${template} 28px` }}>
+        <div className="jmsd-lines-head" style={columnTemplate}>
           {columns.map((column) => (
             <span key={column.name}>{column.label}</span>
           ))}
@@ -490,12 +491,12 @@ function LineRepeater({
         </div>
 
         {rows.length === 0 ? (
-          <div className="jmsd-empty" style={{ padding: '14px 0' }}>
+          <div className="jmsd-empty jmsd-lines-empty">
             No lines yet.
           </div>
         ) : (
           rows.map((row, index) => (
-            <div key={index} className="jmsd-lines-row" style={{ gridTemplateColumns: `${template} 28px` }}>
+            <div key={index} className="jmsd-lines-row" style={columnTemplate}>
               {columns.map((column) =>
                 column.type === 'select' ? (
                   <select
@@ -559,8 +560,7 @@ function LineRepeater({
 
         <button
           type="button"
-          className="jmsd-action"
-          style={{ marginTop: 8 }}
+          className="jmsd-action jmsd-lines-add"
           onClick={() => onChange([...rows, blankLine(field)])}
         >
           <Icon name="i-plus" size={12} />
