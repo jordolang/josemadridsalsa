@@ -9,7 +9,7 @@ export const metadata: Metadata = createMetadata({
   pathname: '/terms',
 });
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 86400; // 24 hours
 
 export default async function TermsOfServicePage() {
   const settings = await getStoreSettings();

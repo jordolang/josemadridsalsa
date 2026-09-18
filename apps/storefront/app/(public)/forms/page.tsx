@@ -14,7 +14,7 @@ export const metadata: Metadata = createMetadata({
   pathname: '/forms',
 })
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 1800
 
 type CatalogTemplate = BusinessFormTemplate & {
   source: 'library' | 'saved'

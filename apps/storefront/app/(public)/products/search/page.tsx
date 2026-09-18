@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -33,7 +33,7 @@ type SearchSuggestion = {
   heatLevel: string
 }
 
-export default function ProductSearchPage() {
+function ProductSearchContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get('q') || ''
@@ -46,8 +46,8 @@ export default function ProductSearchPage() {
   const [totalResults, setTotalResults] = useState(0)
 
   // Fetch autocomplete suggestions
-  const fetchSuggestions = useCallback(
-    debounce(async (searchQuery: string) => {
+  const fetchSuggestions = useMemo(
+    () => debounce(async (searchQuery: string) => {
       if (searchQuery.length < 2) {
         setSuggestions([])
         return
@@ -240,5 +240,15 @@ export default function ProductSearchPage() {
         </div>
       </section>
     </main>
+  )
+}
+
+// useSearchParams() needs a Suspense boundary above it now that this route is
+// prerendered instead of being forced dynamic by the public layout.
+export default function ProductSearchPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-12"><div className="h-96 animate-pulse rounded-2xl bg-muted" /></div>}>
+      <ProductSearchContent />
+    </Suspense>
   )
 }

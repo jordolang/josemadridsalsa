@@ -963,7 +963,6 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
               <div className="flex items-start gap-3">
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded border bg-muted">
                   {form.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.logoUrl} alt="Logo preview" className="h-full w-full object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -1006,7 +1005,6 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
               <div className="space-y-2">
                 {form.coverPhotoUrl && (
                   <div className="h-28 w-full overflow-hidden rounded border bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={form.coverPhotoUrl} alt="Cover preview" className="h-full w-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
                   </div>
                 )}

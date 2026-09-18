@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { DeveloperBlogContent } from '@/components/developer/developer-blog-content'
 import prisma from '@/lib/prisma'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 
 interface BlogPostPageProps {
@@ -74,7 +74,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     <div className="min-h-screen bg-background">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger -- JSON-LD with JSON.stringify, not raw HTML
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
       <article className="container mx-auto px-4 py-12 lg:py-20">

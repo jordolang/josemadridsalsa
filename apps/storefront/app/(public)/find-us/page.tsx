@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Metadata } from 'next'
 import { MapPin } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
@@ -18,7 +19,7 @@ export const metadata: Metadata = createMetadata({
 })
 
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 type FindUsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -61,7 +62,7 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
     }
 
     console.log('[FindUsPage] Normalizing filters...');
-    initialFilters = normalizeFilters(rawFilters)
+    initialFilters = normalizeFilters(rawFilters);
 
     const [rawLocations, dbFacets, filteredResult] = await Promise.all([
       getAllLocationsFromDB(),
@@ -71,14 +72,10 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
 
     allLocations = rawLocations || []
     initialResult = filteredResult
-
-    // Transform facets to match expected format
     facets = {
       states: dbFacets.states,
       citiesByState: dbFacets.cities.reduce((acc, city) => {
-        if (!acc[city.state]) {
-          acc[city.state] = []
-        }
+        if (!acc[city.state]) acc[city.state] = []
         acc[city.state].push(city.name)
         return acc
       }, {} as Record<string, string[]>),
@@ -88,19 +85,17 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
     ohioLocations = allLocations.filter((location) => location.state === 'OH').length
     uniqueStates = facets.states.length
     initialView = (extractParam(params, 'view') === 'map' ? 'map' : 'list') as "map" | "list"
-    
     console.log('[FindUsPage] Page render complete');
   } catch (error) {
     console.error('[FindUsPage] ERROR during page render:', error);
-    // Provide fallback values
-    allLocations = [];
-    facets = { states: [], citiesByState: {} };
-    initialFilters = normalizeFilters({});
-    initialResult = { locations: [], total: 0, appliedFilters: initialFilters };
-    totalLocations = 0;
-    ohioLocations = 0;
-    uniqueStates = 0;
-    initialView = 'list';
+    allLocations = []
+    facets = { states: [], citiesByState: {} }
+    initialFilters = normalizeFilters({})
+    initialResult = { locations: [], total: 0, appliedFilters: initialFilters }
+    totalLocations = 0
+    ohioLocations = 0
+    uniqueStates = 0
+    initialView = 'list'
   }
 
   return (
@@ -116,51 +111,24 @@ export default async function FindUsPage({ searchParams }: FindUsPageProps) {
               state{uniqueStates === 1 ? '' : 's'}.
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <article className="rounded-2xl bg-white/10 p-4 text-left">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/80">Total locations</p>
-                <p className="text-3xl font-semibold">{totalLocations}</p>
-              </article>
-              <article className="rounded-2xl bg-white/10 p-4 text-left">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/80">Ohio locations</p>
-                <p className="text-3xl font-semibold">{ohioLocations}</p>
-              </article>
-              <article className="rounded-2xl bg-white/10 p-4 text-left">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/80">States covered</p>
-                <p className="text-3xl font-semibold">{uniqueStates}</p>
-              </article>
-              <article className="rounded-2xl bg-white/10 p-4 text-left">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/80">Locations/page refresh</p>
-                <p className="text-3xl font-semibold">60 min</p>
-              </article>
+              <article className="rounded-2xl bg-white/10 p-4 text-left"><p className="text-xs uppercase tracking-[0.2em] text-white/80">Total locations</p><p className="text-3xl font-semibold">{totalLocations}</p></article>
+              <article className="rounded-2xl bg-white/10 p-4 text-left"><p className="text-xs uppercase tracking-[0.2em] text-white/80">Ohio locations</p><p className="text-3xl font-semibold">{ohioLocations}</p></article>
+              <article className="rounded-2xl bg-white/10 p-4 text-left"><p className="text-xs uppercase tracking-[0.2em] text-white/80">States covered</p><p className="text-3xl font-semibold">{uniqueStates}</p></article>
+              <article className="rounded-2xl bg-white/10 p-4 text-left"><p className="text-xs uppercase tracking-[0.2em] text-white/80">Locations/page refresh</p><p className="text-3xl font-semibold">60 min</p></article>
             </div>
           </div>
         </div>
       </section>
-
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-7xl space-y-16">
-            <FindLocationsExperience
-              initialFilters={initialResult.appliedFilters}
-              initialLocations={initialResult.locations}
-              facets={facets}
-              initialMeta={{ total: initialResult.total, appliedFilters: initialResult.appliedFilters }}
-              initialView={initialView}
-            />
-
+            <Suspense fallback={<div className="h-96 animate-pulse rounded-2xl bg-muted" />}>
+              <FindLocationsExperience initialFilters={initialResult.appliedFilters} initialLocations={initialResult.locations} facets={facets} initialMeta={{ total: initialResult.total, appliedFilters: initialResult.appliedFilters }} initialView={initialView} />
+            </Suspense>
             <div className="grid gap-6 rounded-2xl border border-border bg-muted/30 p-6 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Shareable filters</p>
-                <p className="mt-1 text-base text-foreground">Each search updates the URL so you can send tailored results to retail partners.</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Hourly refresh</p>
-                <p className="mt-1 text-base text-foreground">Location data is cached for one hour and automatically revalidated after admin updates.</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Map + list sync</p>
-                <p className="mt-1 text-base text-foreground">Selecting a card or pin keeps both views aligned so shoppers can navigate faster.</p>
-              </div>
+              <div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Shareable filters</p><p className="mt-1 text-base text-foreground">Each search updates the URL so you can send tailored results to retail partners.</p></div>
+              <div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Hourly refresh</p><p className="mt-1 text-base text-foreground">Location data is cached for one hour and automatically revalidated after admin updates.</p></div>
+              <div><p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Map + list sync</p><p className="mt-1 text-base text-foreground">Selecting a card or pin keeps both views aligned so shoppers can navigate faster.</p></div>
             </div>
           </div>
         </div>

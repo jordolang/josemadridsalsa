@@ -21,7 +21,7 @@ export function getMdxComponents(): MDXComponents {
     // Make all images zoomable
     img: (props) => {
       const { src, alt, ...rest } = props as React.ImgHTMLAttributes<HTMLImageElement>;
-      if (!src || typeof src !== 'string') return <img {...props} />;
+      if (!src || typeof src !== 'string') return <img {...props} alt={alt ?? ''} />;
       return <ImageZoom src={src} alt={alt ?? ''} {...rest} />;
     },
     // Register all fumadocs components for use in MDX

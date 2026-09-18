@@ -10,7 +10,7 @@ import { PollForm } from '@/components/polls/poll-form'
 import { PollResults } from '@/components/polls/poll-results'
 import { PollShare } from '@/components/polls/poll-share'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 type PageProps = {
   params: Promise<{ slug: string }>

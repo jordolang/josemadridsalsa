@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { getFundraiserTimeline, getFundraiserHeavyHitters, postSupportMessage } from '@/lib/actions/social-features'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +26,7 @@ export function FundraiserSocialBoard({ fundraiserSlug, currentUrl }: { fundrais
   const [enabled, setEnabled] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [{ timelineEvents, goal: g, currentTotal, enableSocialFeatures }, topParticipants] = await Promise.all([
         getFundraiserTimeline(fundraiserSlug),
@@ -42,14 +42,14 @@ export function FundraiserSocialBoard({ fundraiserSlug, currentUrl }: { fundrais
     } catch (error: unknown) {
       console.error('Failed to fetch fundraiser data:', getErrorMessage(error))
     }
-  }
+  }, [fundraiserSlug])
 
   useEffect(() => {
     fetchData()
     // Minimal polling for live feel without overloading (every 10 seconds)
     const interval = setInterval(fetchData, 10000)
     return () => clearInterval(interval)
-  }, [fundraiserSlug])
+  }, [fetchData])
 
   const progressPct = goal > 0 ? Math.min(100, (totalRevenue / goal) * 100) : 0
 

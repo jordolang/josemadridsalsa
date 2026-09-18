@@ -12,6 +12,7 @@ export function ScrollReveal({ children, className = '', delay = 0 }: ScrollReve
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const element = ref.current
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -29,13 +30,13 @@ export function ScrollReveal({ children, className = '', delay = 0 }: ScrollReve
       }
     )
 
-    if (ref.current) {
-      observer.observe(ref.current)
+    if (element) {
+      observer.observe(element)
     }
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current)
+      if (element) {
+        observer.unobserve(element)
       }
     }
   }, [delay])

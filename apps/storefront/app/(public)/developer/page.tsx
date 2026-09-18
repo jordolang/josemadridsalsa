@@ -4,7 +4,7 @@ import { DeveloperPageSections } from '@/components/developer/developer-page-sec
 import { parseChangelog } from '@/lib/developer/parse-changelog'
 import { getDeveloperPageContent } from '@/lib/developer/page-content'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 export const metadata = developerPageMetadata
 
@@ -30,9 +30,7 @@ export default async function DeveloperPage() {
   ])
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* eslint-disable-next-line react/no-danger -- static JSON-LD, no user input */}
-      <script
+    <div className="min-h-screen bg-background">      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />

@@ -1,8 +1,10 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 
 import {
+  VERSIONED_PACKAGE_FILES,
   bumpProjectVersion,
   formatProjectVersion,
   fromSemver,
@@ -180,28 +182,67 @@ function compareSemver(a: string, b: string): number {
   return 0
 }
 
-describe('release coverage', () => {
-  it('bumps every workspace whose version ships in an artifact', async () => {
-    // The desktop apps take their version from two different places: the macOS
-    // bundle from the root package.json (build-app.sh) and the Windows
-    // installer plus its `latest.yml` update feed from the windows-admin
-    // workspace. A workspace missing here keeps its old number through a
-    // release, and an installed app then never sees the build as an update.
-    const script = await readFile(
-      join(__dirname, '..', '..', 'scripts', 'version-bump.ts'),
-      'utf-8',
-    )
-    const list = script.slice(
-      script.indexOf('const PACKAGE_FILES'),
-      script.indexOf(']', script.indexOf('const PACKAGE_FILES')),
-    )
+describe('VERSIONED_PACKAGE_FILES', () => {
+  const ROOT = resolve(__dirname, '..', '..', '..', '..')
 
-    for (const file of [
-      'package.json',
-      'apps/storefront/package.json',
-      'apps/windows-admin/package.json',
-    ]) {
-      expect(list).toContain(`'${file}'`)
+  it('names files that actually exist', () => {
+    for (const file of VERSIONED_PACKAGE_FILES) {
+      expect(existsSync(join(ROOT, file)), `${file} is listed but not on disk`).toBe(true)
     }
+  })
+
+  it('includes the workspace the Windows installer is stamped from', () => {
+    // The desktop apps take their version from two different places: the
+    // macOS bundle from the root package.json (build-app.sh), the Windows
+    // installer and its latest.yml update feed from the windows-admin
+    // workspace. Leaving that one out cuts a release whose .exe still carries
+    // the previous number, so latest.yml advertises the old version and
+    // electron-updater never offers the update to anyone already running it.
+    expect(VERSIONED_PACKAGE_FILES).toContain('apps/windows-admin/package.json')
+  })
+
+  it('keeps every listed workspace on one version', () => {
+    // They are bumped together, so if they have drifted apart the next release
+    // will paper over it rather than anyone noticing.
+    const versions = VERSIONED_PACKAGE_FILES.map((file) => ({
+      file,
+      version: JSON.parse(readFileSync(join(ROOT, file), 'utf-8')).version as string,
+    }))
+
+    const root = versions[0].version
+    for (const entry of versions) {
+      expect(entry.version, `${entry.file} is out of step with the root`).toBe(root)
+    }
+  })
+
+  it('keeps package-lock.json on the same version as the packages', () => {
+    // npm stores each workspace's version in the lockfile too. Left behind, the
+    // next `npm install` rewrites the tracked file right after a release commit,
+    // and anything reading package metadata out of the lock reports the previous
+    // version. `version-bump` carries them; this is what notices when it stops.
+    const lock = JSON.parse(readFileSync(join(ROOT, 'package-lock.json'), 'utf-8')) as {
+      version: string
+      packages: Record<string, { version?: string }>
+    }
+    const root = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')) as { version: string }
+
+    expect(lock.version, 'the lockfile version is behind the root package').toBe(root.version)
+    expect(lock.packages['']?.version, 'the lockfile root entry is behind').toBe(root.version)
+
+    for (const file of VERSIONED_PACKAGE_FILES) {
+      if (file === 'package.json') continue
+      const workspace = file.replace(/\/package\.json$/, '')
+      const entry = lock.packages[workspace]
+      if (!entry?.version) continue
+      expect(entry.version, `${workspace} is behind in package-lock.json`).toBe(root.version)
+    }
+  })
+
+  it('agrees with the canonical projectVersion at the root', () => {
+    const root = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')) as {
+      version: string
+      projectVersion: string
+    }
+    expect(toSemver(root.projectVersion)).toBe(root.version)
   })
 })

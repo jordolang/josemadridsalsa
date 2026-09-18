@@ -20,9 +20,9 @@ already has.
 
 | Artifact | Workflow | Retention | Why |
 |---|---|---:|---|
-| `coverage-reports` | `ci.yml` | 7 days | Reporting only; read within days of a run |
-| `playwright-report` | `ci.yml` | 7 days | Same, and by far the largest recurring consumer |
-| `build-artifacts` | `ci.yml` | 7 days | Reporting only |
+| `coverage-reports` | `ci.yml` | 2 days | Reporting only; read within days of a run |
+| `playwright-report` | `ci.yml` | 2 days | Same, and by far the largest recurring consumer |
+| `build-artifacts` | `ci.yml` | 2 days | Reporting only |
 | `windows-installer` | `desktop-release.yml` | 3 days | Handed to `publish` in the same run |
 | `macos-app` | `desktop-release.yml` | 3 days | Handed to `publish` in the same run |
 
@@ -63,7 +63,7 @@ From **Actions → Artifact Cleanup → Run workflow**:
 It **defaults to a dry run**, so the first click is always safe: it writes a job
 summary table of what it would delete and how many MB that would free, and touches
 nothing. Read that table, then re-run with `dry_run` unchecked to perform the
-deletion.
+delete.
 
 To free the most space with the least risk, start with
 `name_filter: playwright-report` — on the measurement above that alone accounted for
@@ -101,4 +101,4 @@ by the previous attempt simply no longer appear in the listing.
 
 Deleting artifacts and shortening retention address consumption. If the repository
 legitimately needs more storage than the plan allows, the limit itself is raised in
-the account's billing settings, not in this repository.
+already has.

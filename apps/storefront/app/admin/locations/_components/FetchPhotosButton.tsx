@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Image, Loader2 } from 'lucide-react'
+import { Image as ImageIcon, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export function FetchPhotosButton() {
@@ -61,7 +61,7 @@ export function FetchPhotosButton() {
             </>
           ) : (
             <>
-              <Image className="mr-2 h-4 w-4" />
+              <ImageIcon className="mr-2 h-4 w-4" />
               Fetch Photos from Google
             </>
           )}
@@ -75,5 +75,4 @@ export function FetchPhotosButton() {
     </div>
   )
 }
-
 

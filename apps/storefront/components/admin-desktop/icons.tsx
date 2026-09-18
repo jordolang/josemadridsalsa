@@ -101,8 +101,23 @@ export function IconSprite() {
         <g id="i-down">
           <path d="M12 4v11M7 11l5 5 5-5M4.5 20h15" />
         </g>
+        <g id="i-up">
+          <path d="M12 20V6M6 12l6-6 6 6" />
+        </g>
         <g id="i-alert">
           <path d="M12 3.5L21 19.5H3L12 3.5zM12 9.5v4.5M12 16.6h.01" />
+        </g>
+        <g id="i-close">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </g>
+        <g id="i-pencil">
+          <path d="M4 20h4L19 9a2.1 2.1 0 10-3-3L5 17v3zM14.5 6.5l3 3" />
+        </g>
+        <g id="i-trash">
+          <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />
+        </g>
+        <g id="i-columns">
+          <path d="M4 4h16v16H4V4zM10 4v16M16 4v16" />
         </g>
       </defs>
     </svg>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { createMetadata } from '@/lib/metadata';
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 86400; // 24 hours
 
 export const metadata: Metadata = createMetadata({
   title: 'Accessibility Statement - Jose Madrid Salsa',

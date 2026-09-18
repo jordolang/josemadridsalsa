@@ -1,18 +1,20 @@
 import { cache } from 'react'
 import prisma from '@/lib/prisma'
 import { isMissingTableError } from '@/lib/prisma-errors'
+import { matchesPath } from './paths'
 import { parseBlockData } from './blocks'
 import { getSystemPage } from './system-pages'
 import type { SystemPageDefinition } from './system-pages'
+
+export { matchesPath }
 
 /**
  * Public read helpers for CMS content.
  *
  * Every export is wrapped in React's `cache()` so a request that renders the
  * navigation, the footer and the announcement bar issues one query each rather
- * than one per component. The public routes are already `force-dynamic`
- * (see app/(public)/layout.tsx), so this is request-level deduplication, not
- * cross-request caching.
+ * than one per component. That is request-level deduplication; cross-request
+ * caching comes from each public page's own `revalidate` window.
  *
  * These run on the public storefront, so they must never throw: a CMS table
  * that has not been migrated yet, or malformed section data, degrades to the
@@ -69,20 +71,6 @@ export function isLive(entity: {
   if (entity.startsAt && entity.startsAt > at) return false
   if (entity.endsAt && entity.endsAt < at) return false
   return true
-}
-
-/**
- * Whether a target-path list matches the current path.
- * An empty list means "everywhere"; otherwise entries are prefix-matched.
- */
-export function matchesPath(targetPaths: string[], pathname: string): boolean {
-  if (!targetPaths || targetPaths.length === 0) return true
-  return targetPaths.some((target) => {
-    const clean = target.trim()
-    if (!clean) return false
-    if (clean === '/') return pathname === '/'
-    return pathname === clean || pathname.startsWith(`${clean}/`)
-  })
 }
 
 function emptyPage(definition: SystemPageDefinition | undefined, slug: string): ResolvedPage {
@@ -252,21 +240,43 @@ export const getSitemapLandingPages = cache(async (): Promise<SitemapLandingPage
   }
 })
 
-/** The highest-priority live announcement for a path, if any. */
-export const getActiveAnnouncement = cache(async (pathname: string) => {
+/** The fields the announcement bar renders, plus the paths it targets. */
+export interface LiveAnnouncement {
+  id: string
+  message: string
+  variant: string
+  ctaText: string | null
+  ctaHref: string | null
+  dismissible: boolean
+  targetPaths: string[]
+}
+
+/**
+ * Every live announcement, highest priority first. Path targeting is applied by
+ * the caller rather than here: the bar picks its announcement from the client
+ * via `usePathname()`, because reading the path from `headers()` on the server
+ * opted every public route out of static rendering.
+ */
+export const getLiveAnnouncements = cache(async (): Promise<LiveAnnouncement[]> => {
   try {
     const announcements = await prisma.announcement.findMany({
       where: { status: { in: ['PUBLISHED', 'SCHEDULED'] } },
       orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
     })
-    return (
-      announcements.find((a) => isLive(a) && matchesPath(a.targetPaths, pathname)) ?? null
-    )
+    return announcements.filter(isLive).map((a) => ({
+      id: a.id,
+      message: a.message,
+      variant: a.variant,
+      ctaText: a.ctaText,
+      ctaHref: a.ctaHref,
+      dismissible: a.dismissible,
+      targetPaths: a.targetPaths,
+    }))
   } catch (error) {
     if (!isMissingTableError(error)) {
       console.error('[cms] failed to load announcements:', error)
     }
-    return null
+    return []
   }
 })
 

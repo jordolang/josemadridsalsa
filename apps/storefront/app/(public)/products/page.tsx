@@ -1,10 +1,10 @@
+import { Suspense } from 'react'
 import { ProductsClient } from './products-client'
 import type { Product } from '@/components/store/product-card'
 import { getProducts, getCategories } from '@/lib/db/products'
+import { logger } from '@/lib/logger'
 
-export const dynamic = 'force-dynamic'
-
-export const revalidate = 0
+export const revalidate = 300
 
 interface SearchParams {
   category?: string
@@ -54,20 +54,22 @@ export default async function ProductsPage({
     // Fetch categories for filter UI
     categories = await getCategories()
   } catch (error) {
-    console.error('[Products Page] Error loading products:', error)
+    logger.error('[Products Page] Error loading products', { error })
     // Return empty arrays on error - page will show "no products" message
     products = []
     categories = []
   }
 
   return (
-    <ProductsClient
-      initialProducts={products}
-      categories={categories}
-      initialCategory={params.category}
-      initialHeatLevel={params.heatLevel}
-      initialSearch={params.search}
-      initialView={params.view}
-    />
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <ProductsClient
+        initialProducts={products}
+        categories={categories}
+        initialCategory={params.category}
+        initialHeatLevel={params.heatLevel}
+        initialSearch={params.search}
+        initialView={params.view}
+      />
+    </Suspense>
   )
 }

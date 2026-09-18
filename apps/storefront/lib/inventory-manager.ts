@@ -17,6 +17,30 @@ export interface InventoryAdjustment {
   /** Set when the stock arrived by receiving a purchase order. */
   purchaseOrderId?: string;
   userId?: string;
+  /**
+   * The stock level the caller computed `quantity` against.
+   *
+   * Only meaningful to a caller that turned an absolute target into a delta:
+   * "set this to 20" read 10 and asked for +10, and if a sale lands in between
+   * this function's own read sees 15 and the product finishes on 25 rather than
+   * the 20 that was typed. Supplying the observed value makes the adjustment
+   * refuse instead, so the operator retries against a count they can see.
+   */
+  expectedPreviousStock?: number;
+}
+
+/** A stock adjustment refused because the count moved under it. */
+export class StaleInventoryError extends Error {
+  constructor(
+    readonly expected: number,
+    readonly actual: number,
+  ) {
+    super(
+      `Stock moved while this was being edited (expected ${expected} on hand, found ${actual}). ` +
+        `Reopen the adjustment and try again.`
+    );
+    this.name = 'StaleInventoryError';
+  }
 }
 
 export interface InventoryCheckResult {
@@ -68,7 +92,8 @@ async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): P
  * Adjust inventory for a product and create transaction record
  */
 export async function adjustInventory(adjustment: InventoryAdjustment) {
-  const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId } = adjustment;
+  const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId, expectedPreviousStock } =
+    adjustment;
 
   // Get current product
   const product = await prisma.product.findUnique({
@@ -88,6 +113,11 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
   }
 
   const previousStock = product.inventory;
+
+  if (expectedPreviousStock !== undefined && expectedPreviousStock !== previousStock) {
+    throw new StaleInventoryError(expectedPreviousStock, previousStock);
+  }
+
   const newStock = previousStock + quantity;
 
   if (newStock < 0) {
@@ -158,22 +188,145 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
 }
 
 /**
- * Adjust inventory for multiple products (bulk operation)
+ * Adjust inventory for multiple products (bulk operation).
+ * Provides atomic all-or-nothing behavior via a single transaction.
+ * After the transaction commits, fires alert checks for all affected products.
  */
 export async function bulkAdjustInventory(adjustments: InventoryAdjustment[]) {
-  const results = [];
+  const results = await withSerializableRetry(() =>
+    prisma.$transaction(
+      async (tx) => bulkAdjustInventoryInTx(adjustments, tx),
+      {
+        isolationLevel: 'Serializable',
+      }
+    )
+  );
 
-  for (const adjustment of adjustments) {
+  // Check if we need to create alerts after adjustments (non-critical — adjustments already committed)
+  for (const result of results) {
     try {
-      const result = await adjustInventory(adjustment);
-      results.push({ success: true, ...result });
-    } catch (error: any) {
-      results.push({
-        success: false,
-        productId: adjustment.productId,
-        error: error.message,
-      });
+      await checkAndUpdateAlerts(
+        result.product.id,
+        result.newStock,
+        result.product.lowStockThreshold
+      );
+    } catch (alertError) {
+      console.error(
+        `[bulkAdjustInventory] Alert sync failed for product ${result.product.id}:`,
+        alertError
+      );
     }
+  }
+
+  return results;
+}
+
+/**
+ * Adjust inventory for multiple products within a single transaction.
+ * Provides atomic all-or-nothing behavior for bulk adjustments.
+ * If any product validation fails, the entire operation rolls back.
+ *
+ * Does NOT trigger alert checks or emails — the caller is responsible
+ * for firing alerts after the enclosing transaction commits.
+ */
+export async function bulkAdjustInventoryInTx(
+  adjustments: InventoryAdjustment[],
+  tx: Prisma.TransactionClient
+) {
+  // Step 1: Fetch all products and validate in a single batch query
+  const productIds = adjustments.map(adj => adj.productId);
+  const products = await tx.product.findMany({
+    where: { id: { in: productIds } },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      inventory: true,
+      stockReserved: true,
+      lowStockThreshold: true,
+    },
+  });
+
+  // Create a map for O(1) lookup
+  const productMap = new Map(products.map(p => [p.id, p]));
+
+  // Step 2: Validate all adjustments BEFORE making any changes. Track the
+  // projected stock so repeated lines for one product are cumulative.
+  const validatedAdjustments = [];
+  const projectedStock = new Map(products.map(product => [product.id, product.inventory]));
+  for (const adjustment of adjustments) {
+    const { productId, quantity } = adjustment;
+    const product = productMap.get(productId);
+
+    if (!product) {
+      throw new Error(`Product not found: ${productId}`);
+    }
+
+    const previousStock = projectedStock.get(productId) ?? product.inventory;
+    const newStock = previousStock + quantity;
+
+    if (newStock < 0) {
+      throw new Error(
+        `Insufficient inventory for ${product.name} (SKU: ${product.sku}). ` +
+        `Current: ${previousStock}, Requested: ${Math.abs(quantity)}`
+      );
+    }
+
+    if (newStock < product.stockReserved) {
+      throw new Error(
+        `Cannot set inventory below reserved stock for ${product.name} (SKU: ${product.sku}). ` +
+        `New inventory: ${newStock}, Reserved: ${product.stockReserved}`
+      );
+    }
+
+    const newAvailable = newStock - product.stockReserved;
+    const newStockStatus = computeStockStatus(newAvailable, product.lowStockThreshold);
+
+    projectedStock.set(productId, newStock);
+
+    validatedAdjustments.push({
+      adjustment,
+      product,
+      previousStock,
+      newStock,
+      newStockStatus,
+    });
+  }
+
+  // Step 3: If ALL validations pass, update inventory for ALL products atomically
+  const results = [];
+  for (const { adjustment, product, previousStock, newStock, newStockStatus } of validatedAdjustments) {
+    const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId, expectedPreviousStock } =
+    adjustment;
+
+    // Update product inventory
+    const updatedProduct = await tx.product.update({
+      where: { id: productId },
+      data: { inventory: newStock, stockStatus: newStockStatus },
+    });
+
+    // Create inventory transaction record
+    const transaction = await tx.inventoryTransaction.create({
+      data: {
+        productId,
+        type,
+        quantity,
+        previousStock,
+        newStock,
+        reason,
+        notes,
+        orderId,
+        purchaseOrderId,
+        userId,
+      },
+    });
+
+    results.push({
+      product: updatedProduct,
+      transaction,
+      previousStock,
+      newStock,
+    });
   }
 
   return results;
@@ -643,6 +796,65 @@ export async function deductReservedInventoryOnceInTx(
   }
 
   return deductReservedInventoryInTx(reservation, tx);
+}
+
+/**
+ * Bulk idempotent version of {@link deductReservedInventoryInTx}.
+ *
+ * Deducts reserved inventory for multiple order items in a single transaction,
+ * skipping any items that already have an `ORDER_COMPLETION` transaction.
+ * Uses a single batched query to check all existing deductions, avoiding N+1.
+ *
+ * Returns an array of results in the same order as the input reservations:
+ * each element is either the deduction result, or `null` when already deducted.
+ *
+ * Must run inside the enclosing (Serializable) transaction. All reservations
+ * must have an `orderId` — the whole guard keys on it.
+ */
+export async function bulkDeductReservedInventoryOnceInTx(
+  reservations: InventoryReservation[],
+  tx: Prisma.TransactionClient
+) {
+  // Validate all reservations have orderIds
+  for (const reservation of reservations) {
+    if (!reservation.orderId) {
+      throw new Error('bulkDeductReservedInventoryOnceInTx requires an orderId on each reservation to guard against double-deduction');
+    }
+  }
+
+  // Batch check for existing deductions in a single query
+  const existingDeductions = await tx.inventoryTransaction.findMany({
+    where: {
+      OR: reservations.map(r => ({
+        productId: r.productId,
+        orderId: r.orderId,
+        reason: 'ORDER_COMPLETION',
+      })),
+    },
+    select: {
+      productId: true,
+      orderId: true,
+    },
+  });
+
+  // Create a Set of already-deducted product-order pairs for O(1) lookup
+  const deductedPairs = new Set(
+    existingDeductions.map(d => `${d.productId}:${d.orderId}`)
+  );
+
+  // Process each reservation, maintaining input order
+  const results = [];
+  for (const reservation of reservations) {
+    const key = `${reservation.productId}:${reservation.orderId}`;
+    if (deductedPairs.has(key)) {
+      results.push(null);
+    } else {
+      const result = await deductReservedInventoryInTx(reservation, tx);
+      results.push(result);
+    }
+  }
+
+  return results;
 }
 
 /**

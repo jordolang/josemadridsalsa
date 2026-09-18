@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card'
 import { SuccessContent } from './success-content'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 7200
 
 export default function GiftCertificateSuccessPage() {
   return (

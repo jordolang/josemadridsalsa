@@ -11,6 +11,11 @@ export const metadata: Metadata = createMetadata({
   pathname: '/live',
 })
 
+// Whether the stream is on air is a request-time fact: getLiveStatus() fetches
+// with `cache: 'no-store'`. Without this the route inherits the layout's
+// prerender and shows an up-to-five-minutes-stale "live now" state.
+export const dynamic = 'force-dynamic'
+
 export default async function LivePage() {
   const status = await getLiveStatus()
 
