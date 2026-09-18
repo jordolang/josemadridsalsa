@@ -6,7 +6,11 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasAnyPermission } from '@/lib/rbac'
 import { parseCSV, parseTextList } from '@/lib/email/sender'
 import { triggerCampaignContinuation } from '@/lib/email/queue'
-import { insertRecipients, insertRecipientsFromList } from '@/lib/email/recipients'
+import {
+  insertRecipients,
+  insertRecipientsFromList,
+  type NewRecipient,
+} from '@/lib/email/recipients'
 import {
   parseVariableMappings,
   resolveVariablesForRecipient,

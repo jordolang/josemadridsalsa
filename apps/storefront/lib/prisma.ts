@@ -5,14 +5,41 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient
 }
 
-const sanitizeUrl = (value?: string | null) => value?.trim()
+/**
+ * A usable connection string, or nothing.
+ *
+ * `'undefined'` is rejected as a value because that is what this file used to
+ * write into the environment: assigning `undefined` to a `process.env` key does
+ * not clear it, it stores the six-character string. Anything already carrying
+ * that string — a process that ran an older copy of this code first — is treated
+ * as unset rather than handed to Prisma.
+ */
+const sanitizeUrl = (value?: string | null) => {
+  const trimmed = value?.trim()
+  return trimmed && trimmed !== 'undefined' ? trimmed : undefined
+}
+
+/**
+ * Set or clear an environment variable.
+ *
+ * The clear has to be a `delete`. `process.env.X = undefined` coerces to the
+ * string `'undefined'`, which is truthy — which is how an unset `POSTGRES_URL`
+ * came to overwrite a perfectly good `DATABASE_URL` with `'undefined'` a few
+ * lines below, and why Prisma then reported "the URL must start with the
+ * protocol postgresql://" everywhere the managed variables are absent: CI, and
+ * any local production build.
+ */
+const setEnv = (key: string, value: string | undefined) => {
+  if (value === undefined) delete process.env[key]
+  else process.env[key] = value
+}
 
 export const resolveDatabaseUrl = () => {
   // Normalize env values (copy/paste into Vercel can leave trailing whitespace/newlines)
-  process.env.DATABASE_URL = sanitizeUrl(process.env.DATABASE_URL) || undefined
-  process.env.POSTGRES_PRISMA_URL = sanitizeUrl(process.env.POSTGRES_PRISMA_URL) || undefined
-  process.env.POSTGRES_URL = sanitizeUrl(process.env.POSTGRES_URL) || undefined
-  process.env.PRISMA_DATABASE_URL = sanitizeUrl(process.env.PRISMA_DATABASE_URL) || undefined
+  setEnv('DATABASE_URL', sanitizeUrl(process.env.DATABASE_URL))
+  setEnv('POSTGRES_PRISMA_URL', sanitizeUrl(process.env.POSTGRES_PRISMA_URL))
+  setEnv('POSTGRES_URL', sanitizeUrl(process.env.POSTGRES_URL))
+  setEnv('PRISMA_DATABASE_URL', sanitizeUrl(process.env.PRISMA_DATABASE_URL))
 
   // POSTGRES_PRISMA_URL/POSTGRES_URL are written and rotated by the database provider's Vercel
   // integration; DATABASE_URL is set by hand and goes stale the moment the password is rotated.
@@ -20,10 +47,10 @@ export const resolveDatabaseUrl = () => {
   // failing every query with "Authentication failed against database server".
   const managedUrl = process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL
   if (managedUrl && managedUrl !== process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = managedUrl
+    setEnv('DATABASE_URL', managedUrl)
     console.log('[Prisma] Using provider-managed connection string')
   } else if (!process.env.DATABASE_URL && process.env.PRISMA_DATABASE_URL) {
-    process.env.DATABASE_URL = process.env.PRISMA_DATABASE_URL
+    setEnv('DATABASE_URL', process.env.PRISMA_DATABASE_URL)
     console.log('[Prisma] DATABASE_URL not set, fell back to PRISMA_DATABASE_URL')
   }
 
