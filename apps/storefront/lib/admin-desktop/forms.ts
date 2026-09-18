@@ -34,6 +34,8 @@ export type FieldType =
   | 'datetime'
   | 'tags'
   | 'lines'
+  | 'images'
+  | 'hidden'
 
 export interface FormOption {
   value: string
@@ -83,8 +85,19 @@ export interface FormField {
   itemFields?: FormField[]
   /** Button label for a `lines` repeater's add row. */
   addLabel?: string
+  /** Ceiling for a repeating field — the gallery stops offering to add past it. */
+  maxItems?: number
   defaultValue?: FieldValue
 }
+
+/**
+ * How many images one product may carry.
+ *
+ * Read by the gallery to stop offering an add, and by the write handler to
+ * refuse a list that arrives over the limit anyway — one number so the two
+ * cannot drift.
+ */
+export const PRODUCT_IMAGE_LIMIT = 10
 
 export type FieldValue = string | number | boolean | string[] | LineValue[] | null
 export type LineValue = Record<string, string>
@@ -93,6 +106,17 @@ export type FormValues = Record<string, FieldValue>
 /** A titled run of fields inside one sheet. */
 export interface FormSection {
   label?: string
+  /**
+   * Put this section in the band across the top of the sheet rather than in the
+   * stack below it.
+   *
+   * Two sections side by side is the only arrangement any form has needed
+   * beyond a single column — a picture of the thing on the left and the numbers
+   * that describe it on the right — so it is a side rather than a layout
+   * engine. Sections without a side keep their own order underneath, full
+   * width, which is what every other form still gets.
+   */
+  column?: 'left' | 'right'
   fields: FormField[]
 }
 
@@ -348,41 +372,67 @@ export const DESKTOP_FORMS = {
   },
 
   // ---------------------------------------------------------------- products
+  //
+  // Both product sheets are laid out the same way: the pictures and the numbers
+  // side by side across the top — the two things anyone opens a product to look
+  // at — and then the prose, the search fields and the switches underneath, in
+  // the order somebody actually fills them in.
   'product.create': {
     title: 'New product',
     submitLabel: 'Create product',
-    size: 'wide',
     sections: [
       {
-        label: 'Identity',
+        label: 'Product images',
+        column: 'left',
+        fields: [
+          {
+            name: 'images',
+            label: 'Gallery',
+            type: 'images',
+            span: 2,
+            maxItems: PRODUCT_IMAGE_LIMIT,
+            help: 'The first image leads the storefront; a featured URL below always takes that spot.',
+          },
+          { name: 'featuredImage', label: 'Featured image URL', type: 'url', span: 2 },
+        ],
+      },
+      {
+        label: 'Pricing & inventory',
+        column: 'right',
         fields: [
           { name: 'name', label: 'Name', type: 'text', required: true, span: 2 },
           { name: 'slug', label: 'URL slug', type: 'slug', required: true, slugFrom: 'name' },
           { name: 'sku', label: 'SKU', type: 'text', required: true },
-          { name: 'categoryId', label: 'Category', type: 'select', optionsFrom: 'categories', required: true },
-          { name: 'heatLevel', label: 'Heat', type: 'select', options: enumOptions(HEAT_LEVEL), required: true },
-          { name: 'description', label: 'Description', type: 'textarea', span: 2, rows: 4 },
-        ],
-      },
-      {
-        label: 'Money & stock',
-        fields: [
+          { name: 'barcode', label: 'Barcode', type: 'text' },
           { name: 'price', label: 'Price', type: 'money', required: true, min: 0 },
           { name: 'compareAtPrice', label: 'Compare at', type: 'money', min: 0 },
           { name: 'costPrice', label: 'Unit cost', type: 'money', min: 0, help: 'What the jar costs us.' },
-          { name: 'weight', label: 'Weight (oz)', type: 'number', min: 0, help: 'Ounces, not pounds.' },
           { name: 'inventory', label: 'On hand', type: 'integer', min: 0, defaultValue: '0' },
           { name: 'lowStockThreshold', label: 'Reorder at', type: 'integer', min: 0, defaultValue: '5' },
+          { name: 'weight', label: 'Weight (oz)', type: 'number', min: 0, help: 'Ounces, not pounds.' },
           { name: 'unitsPerCase', label: 'Units per case', type: 'integer', min: 1, defaultValue: '12' },
-          { name: 'sortOrder', label: 'Sort order', type: 'integer', defaultValue: '0' },
         ],
       },
       {
-        label: 'Visibility',
+        label: 'Basic information',
         fields: [
-          { name: 'isActive', label: 'Active in the store', type: 'checkbox', defaultValue: true },
-          { name: 'isFeatured', label: 'Featured', type: 'checkbox', defaultValue: false },
-          { name: 'featuredImage', label: 'Featured image URL', type: 'url', span: 2 },
+          { name: 'categoryId', label: 'Category', type: 'select', optionsFrom: 'categories', required: true },
+          { name: 'heatLevel', label: 'Heat', type: 'select', options: enumOptions(HEAT_LEVEL), required: true },
+          { name: 'description', label: 'Description', type: 'textarea', span: 2, rows: 4 },
+          {
+            name: 'ingredients',
+            label: 'Ingredients',
+            type: 'textarea',
+            span: 2,
+            rows: 2,
+            placeholder: 'Tomatoes, onions, jalapeños, cilantro, lime',
+            help: 'Separated by commas.',
+          },
+        ],
+      },
+      {
+        label: 'SEO',
+        fields: [
           {
             name: 'metaTitle',
             label: 'Meta title',
@@ -392,6 +442,23 @@ export const DESKTOP_FORMS = {
             help: '30–60 characters, or Google rewrites it.',
           },
           { name: 'metaDescription', label: 'Meta description', type: 'textarea', span: 2, rows: 2, max: 160 },
+          { name: 'ogImage', label: 'Social share image URL', type: 'url', span: 2 },
+          {
+            name: 'searchKeywords',
+            label: 'Search keywords',
+            type: 'text',
+            span: 2,
+            placeholder: 'salsa, hot sauce, spicy',
+            help: 'Separated by commas. Site search only — not meta keywords.',
+          },
+        ],
+      },
+      {
+        label: 'Display settings',
+        fields: [
+          { name: 'isActive', label: 'Active in the store', type: 'checkbox', defaultValue: true },
+          { name: 'isFeatured', label: 'Featured', type: 'checkbox', defaultValue: false },
+          { name: 'sortOrder', label: 'Sort order', type: 'integer', defaultValue: '0', help: 'Lower numbers come first.' },
         ],
       },
     ],
@@ -400,39 +467,89 @@ export const DESKTOP_FORMS = {
   'product.edit': {
     title: 'Edit product',
     submitLabel: 'Save product',
-    size: 'wide',
     sections: [
       {
-        label: 'Identity',
+        label: 'Product images',
+        column: 'left',
+        fields: [
+          {
+            name: 'images',
+            label: 'Gallery',
+            type: 'images',
+            span: 2,
+            maxItems: PRODUCT_IMAGE_LIMIT,
+            help: 'The first image leads the storefront; a featured URL below always takes that spot.',
+          },
+          { name: 'featuredImage', label: 'Featured image URL', type: 'url', span: 2 },
+        ],
+      },
+      {
+        label: 'Pricing & inventory',
+        column: 'right',
         fields: [
           { name: 'name', label: 'Name', type: 'text', required: true, span: 2 },
           { name: 'slug', label: 'URL slug', type: 'slug', required: true },
           { name: 'sku', label: 'SKU', type: 'text', required: true },
-          { name: 'categoryId', label: 'Category', type: 'select', optionsFrom: 'categories', required: true },
-          { name: 'heatLevel', label: 'Heat', type: 'select', options: enumOptions(HEAT_LEVEL), required: true },
-          { name: 'description', label: 'Description', type: 'textarea', span: 2, rows: 4 },
-        ],
-      },
-      {
-        label: 'Money & stock',
-        fields: [
+          { name: 'barcode', label: 'Barcode', type: 'text' },
           { name: 'price', label: 'Price', type: 'money', required: true, min: 0 },
           { name: 'compareAtPrice', label: 'Compare at', type: 'money', min: 0 },
           { name: 'costPrice', label: 'Unit cost', type: 'money', min: 0 },
-          { name: 'weight', label: 'Weight (oz)', type: 'number', min: 0 },
+          {
+            name: 'inventory',
+            label: 'On hand',
+            type: 'integer',
+            min: 0,
+            help: 'Saved as a stock adjustment, so the count keeps its trail.',
+          },
           { name: 'lowStockThreshold', label: 'Reorder at', type: 'integer', min: 0 },
+          { name: 'weight', label: 'Weight (oz)', type: 'number', min: 0 },
           { name: 'unitsPerCase', label: 'Units per case', type: 'integer', min: 1 },
-          { name: 'sortOrder', label: 'Sort order', type: 'integer' },
+          // The count the sheet opened on. The handler compares the submitted
+          // count against this rather than against a fresh read, so a save that
+          // never touched the field cannot be read as a correction — and a
+          // movement that landed while the sheet was open is refused instead of
+          // being silently undone.
+          { name: 'inventoryAt', label: 'Stock when this sheet opened', type: 'hidden' },
         ],
       },
       {
-        label: 'Visibility',
+        label: 'Basic information',
+        fields: [
+          { name: 'categoryId', label: 'Category', type: 'select', optionsFrom: 'categories', required: true },
+          { name: 'heatLevel', label: 'Heat', type: 'select', options: enumOptions(HEAT_LEVEL), required: true },
+          { name: 'description', label: 'Description', type: 'textarea', span: 2, rows: 4 },
+          {
+            name: 'ingredients',
+            label: 'Ingredients',
+            type: 'textarea',
+            span: 2,
+            rows: 2,
+            placeholder: 'Tomatoes, onions, jalapeños, cilantro, lime',
+            help: 'Separated by commas.',
+          },
+        ],
+      },
+      {
+        label: 'SEO',
+        fields: [
+          { name: 'metaTitle', label: 'Meta title', type: 'text', span: 2, max: 60 },
+          { name: 'metaDescription', label: 'Meta description', type: 'textarea', span: 2, rows: 2, max: 160 },
+          { name: 'ogImage', label: 'Social share image URL', type: 'url', span: 2 },
+          {
+            name: 'searchKeywords',
+            label: 'Search keywords',
+            type: 'text',
+            span: 2,
+            help: 'Separated by commas. Site search only — not meta keywords.',
+          },
+        ],
+      },
+      {
+        label: 'Display settings',
         fields: [
           { name: 'isActive', label: 'Active in the store', type: 'checkbox' },
           { name: 'isFeatured', label: 'Featured', type: 'checkbox' },
-          { name: 'featuredImage', label: 'Featured image URL', type: 'url', span: 2 },
-          { name: 'metaTitle', label: 'Meta title', type: 'text', span: 2, max: 60 },
-          { name: 'metaDescription', label: 'Meta description', type: 'textarea', span: 2, rows: 2, max: 160 },
+          { name: 'sortOrder', label: 'Sort order', type: 'integer', help: 'Lower numbers come first.' },
         ],
       },
     ],
@@ -2016,6 +2133,8 @@ export function defaultValues(spec: FormSpec): FormValues {
     else if (field.type === 'checkbox') values[field.name] = false
     else if (field.type === 'tags') values[field.name] = []
     else if (field.type === 'lines') values[field.name] = []
+    else if (field.type === 'images') values[field.name] = []
+    else if (field.type === 'hidden') values[field.name] = null
     else values[field.name] = ''
   }
   return values

@@ -151,8 +151,20 @@ const productFixture = {
   name: 'Peach',
   slug: 'peach',
   sku: 'JMS-PCH-16',
+  barcode: null,
   categoryId: 'cat-fruit',
   heatLevel: 'FRUIT',
+  description: null,
+  ingredients: ['Peaches', 'Habanero'],
+  images: ['https://blob.example.com/peach.jpg'],
+  featuredImage: 'https://blob.example.com/peach.jpg',
+  ogImage: null,
+  searchKeywords: ['peach', 'fruit salsa'],
+  metaTitle: null,
+  metaDescription: null,
+  isFeatured: false,
+  sortOrder: 0,
+  weight: 16,
   price: 11.95,
   compareAtPrice: null,
   costPrice: null,
@@ -431,25 +443,7 @@ describe('inventory', () => {
 
 describe('products', () => {
   it('shows a dash rather than a zero margin when cost has never been set', async () => {
-    prismaMock.product.findMany.mockResolvedValue([
-      {
-        id: 'p3',
-        name: 'Peach',
-        sku: 'JMS-PCH-16',
-        heatLevel: 'FRUIT',
-        price: 11.95,
-        compareAtPrice: null,
-        costPrice: null,
-        inventory: 100,
-        stockReserved: 0,
-        lowStockThreshold: 12,
-        unitsPerCase: 12,
-        stockStatus: 'IN_STOCK',
-        isActive: true,
-        updatedAt: new Date('2026-09-10T12:00:00Z'),
-        category: { name: 'Fruit' },
-      },
-    ])
+    prismaMock.product.findMany.mockResolvedValue([productFixture])
 
     const payload = await loadSection('products')
     if (payload.body.view !== 'table') throw new Error('expected a table payload')

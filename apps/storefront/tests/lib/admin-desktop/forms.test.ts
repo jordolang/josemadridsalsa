@@ -132,6 +132,64 @@ describe('the form registry', () => {
     }
   })
 
+  it('carries every field the web product page edits', () => {
+    // The desktop sheet replaced `/admin/products/[id]/edit` rather than
+    // summarising it, so anything that page could set has to be here. Alt text
+    // is the one thing left out: `Product.images` is a list of strings with
+    // nowhere to keep one.
+    const names = new Set(formFields(DESKTOP_FORMS['product.edit']).map((field) => field.name))
+    for (const name of [
+      'name',
+      'slug',
+      'description',
+      'sku',
+      'barcode',
+      'price',
+      'compareAtPrice',
+      'costPrice',
+      'inventory',
+      'lowStockThreshold',
+      'weight',
+      'heatLevel',
+      'ingredients',
+      'categoryId',
+      'featuredImage',
+      'images',
+      'isActive',
+      'isFeatured',
+      'sortOrder',
+      'metaTitle',
+      'metaDescription',
+      'ogImage',
+      'searchKeywords',
+    ]) {
+      expect(names.has(name), `product.edit is missing ${name}`).toBe(true)
+    }
+  })
+
+  it('carries the count the edit sheet opened on, so a save can tell touched from untouched', () => {
+    const baseline = formFields(DESKTOP_FORMS['product.edit']).find(
+      (field) => field.name === 'inventoryAt',
+    )
+    expect(baseline?.type).toBe('hidden')
+  })
+
+  it('lays the product sheets out as a band over a stack', () => {
+    // The pictures and the numbers sit side by side across the top; everything
+    // else keeps its own order underneath, full width.
+    for (const id of ['product.create', 'product.edit'] as const) {
+      const sides = DESKTOP_FORMS[id].sections.map((section) => section.column)
+      expect(sides.slice(0, 2), id).toEqual(['left', 'right'])
+      expect(sides.slice(2).every((side) => side === undefined), id).toBe(true)
+    }
+  })
+
+  it('opens a gallery blank rather than undefined', () => {
+    // The sheet's gallery reads an array; a create that seeded `''` would draw
+    // the first typed URL as a list of characters.
+    expect(defaultValues(DESKTOP_FORMS['product.create']).images).toEqual([])
+  })
+
   it('keeps SEO length limits on the fields Google actually reads', () => {
     // The same 60/160 budget `lib/blog/schemas.ts` enforces, so the sheet warns
     // before the server refuses rather than after.

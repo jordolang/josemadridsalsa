@@ -11,6 +11,7 @@ import {
   type FormField,
   type FormId,
   type FormOption,
+  type FormSection,
   type FormSpec,
   type FormValues,
   type LineValue,
@@ -76,10 +77,22 @@ function asLines(value: FieldValue | undefined): LineValue[] {
   return value.filter((entry): entry is LineValue => typeof entry === 'object' && entry !== null)
 }
 
+/** A gallery's URLs, tolerant of the single string a hand-built value may carry. */
+function asImages(value: FieldValue | undefined): string[] {
+  if (Array.isArray(value)) return value.map((entry) => String(entry)).filter(Boolean)
+  if (typeof value === 'string' && value) return [value]
+  return []
+}
+
 function asList(value: FieldValue | undefined): string[] {
   if (Array.isArray(value)) return value.map((entry) => String(entry))
   if (typeof value === 'string' && value) return value.split(',').map((entry) => entry.trim()).filter(Boolean)
   return []
+}
+
+/** Whether a field renders a single input the sheet can open focused on. */
+function takesFocus(field: FormField): boolean {
+  return !['checkbox', 'tags', 'lines', 'images', 'hidden'].includes(field.type)
 }
 
 /** A blank row for a `lines` repeater, honouring each column's default. */
@@ -204,10 +217,55 @@ export function RecordSheet({
 
   if (!spec) return null
 
+  // Sections that claim a side sit in the band across the top; the rest keep
+  // their own order underneath. A form with a band needs the extra width for
+  // two columns of real content, so it asks for it here rather than in a size.
+  const band = spec.sections
+    .filter((section) => section.column)
+    .sort((a, b) => (a.column === b.column ? 0 : a.column === 'left' ? -1 : 1))
+  const stack = spec.sections.filter((section) => !section.column)
+  // Where the cursor lands. Not simply the first field: a product sheet leads
+  // with its gallery and the URL box beside it, and a window driven from the
+  // keyboard should open on the thing that has to be filled in rather than on
+  // nothing, or on an optional box somebody then has to tab out of.
+  const typeable = formFields(spec).filter(takesFocus)
+  const firstFieldName = (typeable.find((field) => field.required) ?? typeable[0])?.name
+
+  const renderSection = (section: FormSection, key: string) => (
+    <section key={key} className="jmsd-sheet-section">
+      {section.label ? <div className="jmsd-sheet-section-label">{section.label}</div> : null}
+      <div className="jmsd-sheet-grid">
+        {section.fields.map((field) => (
+          <Field
+            key={field.name}
+            field={field}
+            value={values[field.name]}
+            options={field.optionsFrom ? options[field.optionsFrom] : field.options}
+            optionsLoading={Boolean(field.optionsFrom) && loadingOptions}
+            invalid={fieldError === field.name}
+            inputRef={field.name === firstFieldName ? firstInput : undefined}
+            lineOptions={options}
+            onChange={(next) => {
+              touched.current.add(field.name)
+              set(field.name, next)
+
+              // A slug follows its source until somebody edits it by hand.
+              for (const other of formFields(spec)) {
+                if (other.slugFrom === field.name && !touched.current.has(other.name)) {
+                  set(other.name, slugify(String(next)))
+                }
+              }
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  )
+
   return (
     <div className="jmsd-scrim" role="presentation" onMouseDown={onClose}>
       <form
-        className={`jmsd-sheet jmsd-sheet--${spec.size ?? 'regular'}`}
+        className={`jmsd-sheet jmsd-sheet--${spec.size ?? 'regular'} ${band.length > 0 ? 'jmsd-sheet--band' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={request.title ?? spec.title}
@@ -225,36 +283,12 @@ export function RecordSheet({
         </header>
 
         <div className="jmsd-sheet-body">
-          {spec.sections.map((section, index) => (
-            <section key={section.label ?? index} className="jmsd-sheet-section">
-              {section.label ? <div className="jmsd-sheet-section-label">{section.label}</div> : null}
-              <div className="jmsd-sheet-grid">
-                {section.fields.map((field, fieldIndex) => (
-                  <Field
-                    key={field.name}
-                    field={field}
-                    value={values[field.name]}
-                    options={field.optionsFrom ? options[field.optionsFrom] : field.options}
-                    optionsLoading={Boolean(field.optionsFrom) && loadingOptions}
-                    invalid={fieldError === field.name}
-                    inputRef={index === 0 && fieldIndex === 0 ? firstInput : undefined}
-                    lineOptions={options}
-                    onChange={(next) => {
-                      touched.current.add(field.name)
-                      set(field.name, next)
-
-                      // A slug follows its source until somebody edits it by hand.
-                      for (const other of formFields(spec)) {
-                        if (other.slugFrom === field.name && !touched.current.has(other.name)) {
-                          set(other.name, slugify(String(next)))
-                        }
-                      }
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+          {band.length > 0 ? (
+            <div className="jmsd-sheet-band">
+              {band.map((section, index) => renderSection(section, `band-${section.label ?? index}`))}
+            </div>
+          ) : null}
+          {stack.map((section, index) => renderSection(section, `stack-${section.label ?? index}`))}
         </div>
 
         <footer className="jmsd-sheet-foot">
@@ -316,6 +350,14 @@ function Field({
         {field.help ? <div className="jmsd-field-help">{field.help}</div> : null}
       </div>
     )
+  }
+
+  // A value the sheet carries but nobody edits — round-tripped so the handler
+  // can compare what was submitted against what the sheet opened on.
+  if (field.type === 'hidden') return null
+
+  if (field.type === 'images') {
+    return <Gallery className={className} field={field} urls={asImages(value)} onChange={onChange} />
   }
 
   if (field.type === 'lines') {
@@ -447,6 +489,117 @@ function stepFor(type: FormField['type']): string | undefined {
   if (type === 'integer') return '1'
   if (type === 'money' || type === 'percent' || type === 'number') return '0.01'
   return undefined
+}
+
+// ------------------------------------------------------------------ gallery
+
+/**
+ * The image list for a product.
+ *
+ * A URL and a button, then the pictures themselves — the shell has no uploader
+ * of its own, and the images it is given already live in blob storage, so what
+ * this edits is the order and the membership of a list of URLs. The first entry
+ * is the one the storefront leads with, which is why it is labelled rather than
+ * left for somebody to remember — and a featured URL, when one is typed, is
+ * hoisted to that spot on save.
+ *
+ * There is deliberately no alt-text box: `Product.images` is a list of strings
+ * with nowhere to put one, so a field here would take the words and drop them.
+ */
+function Gallery({
+  className,
+  field,
+  urls,
+  onChange,
+}: {
+  className: string
+  field: FormField
+  urls: string[]
+  onChange: (value: FieldValue) => void
+}) {
+  const [draft, setDraft] = useState('')
+  const max = field.maxItems
+  const full = max !== undefined && urls.length >= max
+
+  const add = () => {
+    const url = draft.trim()
+    if (!url || full || urls.includes(url)) return
+    onChange([...urls, url])
+    setDraft('')
+  }
+
+  return (
+    <div className={className}>
+      <div className="jmsd-field-label">
+        {field.label}
+        {max ? <span className="jmsd-tone-muted"> ({urls.length}/{max})</span> : null}
+      </div>
+
+      <div className="jmsd-gallery-add">
+        <input
+          className="jmsd-input"
+          type="url"
+          aria-label={`Add an image to ${field.label}`}
+          placeholder="https://…"
+          value={draft}
+          disabled={full}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            // Enter belongs to the gallery here, not to the sheet's submit.
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            add()
+          }}
+        />
+        <button type="button" className="jmsd-action" onClick={add} disabled={full || !draft.trim()}>
+          <Icon name="i-plus" size={12} />
+          <span>Add</span>
+        </button>
+      </div>
+
+      {urls.length === 0 ? (
+        <div className="jmsd-empty jmsd-gallery-empty">No images yet.</div>
+      ) : (
+        <ul className="jmsd-gallery">
+          {urls.map((url, index) => (
+            // Keyed by position: `images` is a plain string list, so the same
+            // URL can legitimately appear twice and a URL key would collide.
+            <li key={`${index}-${url}`} className="jmsd-gallery-item">
+              {/* eslint-disable-next-line @next/next/no-img-element -- an operator-supplied URL on any host, inside a staff window */}
+              <img className="jmsd-gallery-thumb" src={url} alt="" loading="lazy" />
+              <div className="jmsd-gallery-meta">
+                <span className="jmsd-gallery-url jmsd-mono" title={url}>
+                  {url}
+                </span>
+                {index === 0 ? <span className="jmsd-gallery-lead">Lead image</span> : null}
+              </div>
+              <div className="jmsd-gallery-buttons">
+                <button
+                  type="button"
+                  className="jmsd-icon-button"
+                  aria-label={`Move image ${index + 1} first`}
+                  disabled={index === 0}
+                  onClick={() => onChange([url, ...urls.filter((_, at) => at !== index)])}
+                >
+                  <Icon name="i-up" size={12} />
+                </button>
+                <button
+                  type="button"
+                  className="jmsd-icon-button"
+                  aria-label={`Remove image ${index + 1}`}
+                  onClick={() => onChange(urls.filter((_, at) => at !== index))}
+                >
+                  <Icon name="i-close" size={12} />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {field.help ? <div className="jmsd-field-help">{field.help}</div> : null}
+    </div>
+  )
 }
 
 // ------------------------------------------------------------ line repeater
