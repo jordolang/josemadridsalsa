@@ -5,10 +5,12 @@ import { NextRequest } from 'next/server'
  * The abandoned-cart cron route — the email sequence that asks shoppers to complete their order.
  *
  * This sends real marketing emails to real people, so the parts that must be correct are:
- * - selecting the right template for the stage
+ * - selecting the right template for the stage, and sending that template's own subject
+ * - linking at the page that restores a cart rather than at the API that consumes the token
  * - never sending twice (skipping recovered carts, respecting the final stage)
  * - honouring unsubscribes
  * - updating the stage after sending so the next sweep sends the next template
+ * - leaving a per-send record the dashboard and the Resend webhook can both find
  */
 
 const abandonedCartFindMany = vi.fn()
@@ -17,6 +19,7 @@ const abandonedCartUpdate = vi.fn()
 const sendEmail = vi.fn()
 const substituteVariables = vi.fn()
 const checkUnsubscribed = vi.fn()
+const logEmailSend = vi.fn()
 const isAuthorizedCronRequest = vi.fn()
 
 vi.mock('@/lib/prisma', () => {
@@ -37,6 +40,7 @@ vi.mock('@/lib/email/sender', () => ({
 
 vi.mock('@/lib/email/logger', () => ({
   checkUnsubscribed,
+  logEmailSend,
 }))
 
 vi.mock('@/lib/cron/auth', () => ({
@@ -45,28 +49,35 @@ vi.mock('@/lib/cron/auth', () => ({
 
 vi.mock('@/lib/email/templates/abandoned-cart-stage-1', () => ({
   abandonedCartStage1Template: {
-    html: '<p>Stage 1 HTML {{stageIntro}}</p>',
-    text: 'Stage 1 Text {{stageIntro}}',
+    subject: 'Stage 1 Subject',
+    html: '<p>Stage 1 HTML</p>',
+    text: 'Stage 1 Text',
   },
 }))
 
 vi.mock('@/lib/email/templates/abandoned-cart-stage-2', () => ({
   abandonedCartStage2Template: {
-    html: '<p>Stage 2 HTML {{stageIntro}}</p>',
-    text: 'Stage 2 Text {{stageIntro}}',
+    subject: 'Stage 2 Subject',
+    html: '<p>Stage 2 HTML</p>',
+    text: 'Stage 2 Text',
   },
 }))
 
 vi.mock('@/lib/email/templates/abandoned-cart-stage-3', () => ({
   abandonedCartStage3Template: {
-    html: '<p>Stage 3 HTML {{stageIntro}}</p>',
-    text: 'Stage 3 Text {{stageIntro}}',
+    subject: 'Stage 3 Subject',
+    html: '<p>Stage 3 HTML</p>',
+    text: 'Stage 3 Text',
   },
 }))
 
 const { GET } = await import('@/app/api/cron/abandoned-cart/route')
 
 const NOW = new Date('2026-08-10T12:00:00Z')
+const HOUR = 60 * 60 * 1000
+/** Abandoned three hours ago, which is what the "waiting for N hours" line must report. */
+const CART_ABANDONED_AT = new Date(NOW.getTime() - 3 * HOUR)
+const CART_CREATED_AT = new Date(NOW.getTime() - 4 * HOUR)
 
 function cronRequest() {
   return new NextRequest('http://localhost:3000/api/cron/abandoned-cart')
@@ -80,9 +91,10 @@ beforeEach(() => {
   abandonedCartFindMany.mockResolvedValue([])
   abandonedCartFindUnique.mockResolvedValue({ recoveryToken: 'token_abc123' })
   abandonedCartUpdate.mockResolvedValue({})
-  sendEmail.mockResolvedValue({ success: true })
+  sendEmail.mockResolvedValue({ success: true, messageId: 'msg_1' })
   substituteVariables.mockImplementation((template: string) => template)
   checkUnsubscribed.mockResolvedValue(false)
+  logEmailSend.mockResolvedValue({ id: 'log_1' })
 })
 
 describe('GET /api/cron/abandoned-cart', () => {
@@ -111,6 +123,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -130,6 +144,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 1,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -148,6 +164,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 2,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -160,12 +178,14 @@ describe('GET /api/cron/abandoned-cart', () => {
     )
   })
 
-  it('sends email with the correct subject for each stage', async () => {
+  it("sends the selected template's own subject rather than a second copy of it", async () => {
     abandonedCartFindMany.mockResolvedValue([
       {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -175,7 +195,7 @@ describe('GET /api/cron/abandoned-cart', () => {
     expect(sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'user@example.com',
-        subject: expect.stringContaining('left something behind'),
+        subject: 'Stage 1 Subject',
       })
     )
   })
@@ -186,6 +206,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -209,6 +231,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         emailStage: 0,
         user: { email: 'user@example.com', name: 'Ada' },
         guestEmail: 'guest@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -230,6 +254,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'guest@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -246,6 +272,8 @@ describe('GET /api/cron/abandoned-cart', () => {
       {
         id: 'cart_1',
         emailStage: 0,
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -263,6 +291,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'unsubbed@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -281,6 +311,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -299,6 +331,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -316,6 +350,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -328,12 +364,14 @@ describe('GET /api/cron/abandoned-cart', () => {
     )
   })
 
-  it('includes the recovery URL in the email variables', async () => {
+  it('links at the checkout page, which is what restores a cart', async () => {
     abandonedCartFindMany.mockResolvedValue([
       {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -343,7 +381,7 @@ describe('GET /api/cron/abandoned-cart', () => {
     expect(substituteVariables).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
-        cartUrl: expect.stringContaining('token=token_abc123'),
+        cartUrl: expect.stringContaining('/checkout?recover=token_abc123'),
       })
     )
   })
@@ -354,6 +392,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         user: { email: 'ada@example.com', name: 'Ada' },
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -372,12 +412,16 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user1@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
       {
         id: 'cart_2',
         emailStage: 1,
         guestEmail: 'user2@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 30.0 },
       },
     ])
@@ -412,6 +456,8 @@ describe('GET /api/cron/abandoned-cart', () => {
         id: 'cart_1',
         emailStage: 0,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
@@ -426,24 +472,92 @@ describe('GET /api/cron/abandoned-cart', () => {
     )
   })
 
-  it('substitutes the stage intro into the template', async () => {
+  it('supplies the countdown variables the later templates read', async () => {
     abandonedCartFindMany.mockResolvedValue([
       {
         id: 'cart_1',
-        emailStage: 0,
+        emailStage: 1,
         guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
         cartData: { total: 42.5 },
       },
     ])
-    substituteVariables.mockImplementation((template: string) => template)
 
     await GET(cronRequest())
 
     expect(substituteVariables).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
-        stageIntro: expect.stringContaining('left some items in your cart'),
+        hoursWaiting: '3',
+        expiresIn: '30 days',
       })
     )
+  })
+
+  it('leaves a send record tagged with the stage and the cart', async () => {
+    abandonedCartFindMany.mockResolvedValue([
+      {
+        id: 'cart_1',
+        emailStage: 1,
+        guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
+        cartData: { total: 42.5 },
+      },
+    ])
+
+    await GET(cronRequest())
+
+    expect(logEmailSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientEmail: 'user@example.com',
+        subject: 'Stage 2 Subject',
+        status: 'SENT',
+        metadata: expect.objectContaining({
+          type: 'abandoned_cart',
+          stage: 2,
+          cartId: 'cart_1',
+          messageId: 'msg_1',
+        }),
+      })
+    )
+  })
+
+  it('does not un-send an email because the send record failed to write', async () => {
+    abandonedCartFindMany.mockResolvedValue([
+      {
+        id: 'cart_1',
+        emailStage: 0,
+        guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
+        cartData: { total: 42.5 },
+      },
+    ])
+    logEmailSend.mockRejectedValue(new Error('email_logs unavailable'))
+
+    const response = await GET(cronRequest())
+
+    expect(abandonedCartUpdate).toHaveBeenCalled()
+    await expect(response.json()).resolves.toMatchObject({ sent: 1, skipped: 0 })
+  })
+
+  it('sends nothing once the recovery link the email would advertise has expired', async () => {
+    abandonedCartFindMany.mockResolvedValue([
+      {
+        id: 'cart_expired',
+        emailStage: 1,
+        guestEmail: 'user@example.com',
+        createdAt: new Date(NOW.getTime() - 31 * 24 * HOUR),
+        updatedAt: CART_ABANDONED_AT,
+        cartData: { total: 42.5 },
+      },
+    ])
+
+    const response = await GET(cronRequest())
+
+    expect(sendEmail).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toMatchObject({ sent: 0, skipped: 1 })
   })
 })

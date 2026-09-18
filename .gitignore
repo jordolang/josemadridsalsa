@@ -231,3 +231,8 @@ apps/docs/imported/
 # publish staff-panel mockups at josemadrid.net/images/admin-panel/. Same rule
 # as the photo working files above — reference material belongs outside git.
 apps/storefront/public/images/admin-panel/
+
+# Scratch output from local tooling — email previews, rendered comparisons and the like.
+# A rendered preview is a picture of the template at one moment; the template itself is the
+# record, and a committed copy goes stale the first time anyone edits the real thing.
+apps/storefront/tmp/

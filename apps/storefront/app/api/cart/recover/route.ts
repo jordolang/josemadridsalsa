@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { RECOVERY_LINK_TTL_MS } from '@/lib/checkout/abandoned-cart'
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,9 +28,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if cart is too old (e.g., older than 30 days)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    if (abandonedCart.createdAt < thirtyDaysAgo) {
+    // Check if cart is too old. The same window is what the final recovery email counts down
+    // to, so both read it from one constant.
+    const expiresBefore = new Date(Date.now() - RECOVERY_LINK_TTL_MS)
+    if (abandonedCart.createdAt < expiresBefore) {
       return NextResponse.json(
         { error: 'Cart recovery link has expired' },
         { status: 410 }

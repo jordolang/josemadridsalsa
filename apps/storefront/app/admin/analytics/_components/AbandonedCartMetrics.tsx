@@ -28,8 +28,16 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
+/** A share of sends, or a dash where dividing by no sends would read as 0%. */
+function rate(part: number, whole: number): string {
+  return whole === 0 ? '—' : `${((part / whole) * 100).toFixed(0)}%`
+}
+
 export function AbandonedCartMetrics({ metrics }: AbandonedCartMetricsProps) {
   const { summary, chart, emailsByStage } = metrics
+  const totalStageSends = emailsByStage.reduce((sum, stage) => sum + stage.sent, 0)
+  // Bars are drawn relative to the busiest stage, so the divisor is never 0 once anything sent.
+  const mostSentInAStage = Math.max(1, ...emailsByStage.map((stage) => stage.sent))
 
   return (
     <div className="space-y-6">
@@ -127,13 +135,13 @@ export function AbandonedCartMetrics({ metrics }: AbandonedCartMetricsProps) {
           <CardHeader>
             <CardTitle>Emails by Stage</CardTitle>
             <p className="text-sm text-muted-foreground">
-              3-email recovery sequence breakdown
+              Sends, opens and clicks per step of the recovery sequence
             </p>
           </CardHeader>
           <CardContent>
-            {emailsByStage.length === 0 ? (
+            {totalStageSends === 0 ? (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                No email data available
+                No recovery emails sent in this range
               </div>
             ) : (
               <div className="space-y-4">
@@ -142,17 +150,19 @@ export function AbandonedCartMetrics({ metrics }: AbandonedCartMetricsProps) {
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{stage.label}</span>
                       <span className="text-sm text-muted-foreground">
-                        {stage.count} carts
+                        {stage.sent} sent
                       </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full bg-primary"
-                        style={{
-                          width: `${emailsByStage.length > 0 ? (stage.count / Math.max(...emailsByStage.map(s => s.count))) * 100 : 0}%`,
-                        }}
+                        style={{ width: `${(stage.sent / mostSentInAStage) * 100}%` }}
                       />
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {stage.opened} opened ({rate(stage.opened, stage.sent)}) ·{' '}
+                      {stage.clicked} clicked ({rate(stage.clicked, stage.sent)})
+                    </p>
                   </div>
                 ))}
               </div>

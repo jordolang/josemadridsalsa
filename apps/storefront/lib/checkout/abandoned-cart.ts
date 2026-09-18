@@ -20,22 +20,53 @@ const HOUR_MS = 60 * 60 * 1000
  */
 export const STAGE_DELAY_MS = [0, 1 * HOUR_MS, 24 * HOUR_MS, 48 * HOUR_MS]
 
+/**
+ * The `metadata.type` every abandoned-cart `EmailLog` row carries.
+ *
+ * The send path writes it and the analytics query reads it back, so it is defined once here
+ * rather than spelled out at both ends where a typo would silently empty the dashboard.
+ */
+export const ABANDONED_CART_EMAIL_TYPE = 'abandoned_cart'
+
 /** The last stage anyone is sent. A cart at this stage is finished with. */
 export const FINAL_STAGE = 3
 
-export const STAGE_SUBJECTS = [
-  '',
-  'You left something behind 🌶️',
-  'Your salsa is still waiting for you',
-  'Last chance — your cart expires soon',
-]
+/**
+ * How long a recovery link keeps working, and therefore the only deadline the emails may
+ * advertise. `app/api/cart/recover` refuses a cart older than this with a 410, so the countdown
+ * in the final email is read from here rather than restated — a promise the route does not keep
+ * is worse than no promise at all.
+ */
+export const RECOVERY_LINK_TTL_MS = 30 * 24 * HOUR_MS
 
-export const STAGE_INTROS = [
-  '',
-  "We noticed you left some items in your cart. Your taste in salsa is excellent — we'd hate for you to miss out!",
-  "Your cart is still here! Don't let your favorite salsas slip away.",
-  'This is your final reminder. Your cart will expire soon — complete your order today and save your selections.',
-]
+/**
+ * Whole hours a cart has been sitting, for the "waiting for N hours" line in stage 2.
+ *
+ * Measured from when the shopper last touched the cart, not from the previous email, because
+ * that is what the sentence claims. Never returns 0: a cart is only mailed an hour after it was
+ * abandoned, and "waiting for 0 hours" would read as a bug.
+ */
+export function hoursWaiting(abandonedAt: Date, now: Date): number {
+  return Math.max(1, Math.round((now.getTime() - abandonedAt.getTime()) / HOUR_MS))
+}
+
+/**
+ * How long is left on the recovery link, as a phrase for the final email.
+ *
+ * Days rather than hours: at stage 3 the link still has four weeks on it, and "expires in 668
+ * hours" reads as a machine talking. Returns null once the link has expired, which lets the
+ * caller leave the cart alone rather than send a deadline that has passed.
+ */
+export function recoveryLinkExpiresIn(cartCreatedAt: Date, now: Date): string | null {
+  const msLeft = cartCreatedAt.getTime() + RECOVERY_LINK_TTL_MS - now.getTime()
+  if (msLeft <= 0) return null
+
+  const hoursLeft = Math.ceil(msLeft / HOUR_MS)
+  if (hoursLeft <= 48) return hoursLeft === 1 ? '1 hour' : `${hoursLeft} hours`
+
+  const daysLeft = Math.ceil(hoursLeft / 24)
+  return daysLeft === 1 ? '1 day' : `${daysLeft} days`
+}
 
 /**
  * Carts due their next reminder.
@@ -107,12 +138,4 @@ export function customerName(
   if (userName) return userName
   if (guestEmail) return guestEmail.split('@')[0]
   return 'there'
-}
-
-/** Subject and intro for a stage, falling back rather than rendering an empty subject line. */
-export function stageCopy(stage: number): { subject: string; intro: string } {
-  return {
-    subject: STAGE_SUBJECTS[stage] || STAGE_SUBJECTS[1],
-    intro: STAGE_INTROS[stage] ?? '',
-  }
 }

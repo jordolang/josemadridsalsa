@@ -14,6 +14,21 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The abandoned-cart reminder is a three-email sequence, and the analytics page now shows what
+  it did.** One reminder went out an hour after a cart was left and that was the end of it. There
+  are now three — the existing reminder, an urgency follow-up a day later and a final note the
+  day after that — each its own template under `lib/email/templates/abandoned-cart-stage-*`,
+  with its own subject line and its own body copy, selected by the stage the cart has reached.
+  Every send writes an `EmailLog` row tagged with its stage, which is what the Resend webhook
+  already records opens and clicks against, so the Abandoned Carts card on `/admin/analytics`
+  reports sends, opens and clicks for each step rather than a count of carts.
+
+  Two claims the emails would have made are deliberately absent. There is no discount code in the
+  final email: nothing in the codebase issues one for an abandoned cart, and copy advertising an
+  offer that does not exist is worse than no offer. And the countdown in that email is read from
+  the recovery link's own 30-day lifetime, the deadline `app/api/cart/recover` actually enforces,
+  rather than a number chosen to sound urgent.
+
 - **The desktop admin's product sheet now carries everything the web product page edited, laid
   out as a band over a stack.** The sheet that opens over the products table was a single
   column of fields, and it was missing several the web page had — so the one record people edit
@@ -39,6 +54,20 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Fixed
+- **Every link in an abandoned-cart email went to a page of JSON and killed the cart it was
+  meant to restore.** The buttons pointed at `/api/cart/recover?token=…`, which answers with a
+  JSON body rather than a checkout page — and marks the cart recovered as it does, so the
+  sequence stopped there and the real recovery link, `/checkout?recover=…`, answered 410 from
+  then on. The checkout page is what restores a cart: it reads the token, calls that API itself
+  and puts the items back in the shopper's session. Both ends now read the link's lifetime from
+  one constant, so the deadline the final email advertises is the one the route enforces.
+
+- **The recovered line on the abandoned-cart chart was drawn against the wrong day.** Each
+  recovery was counted in the bucket for the day its cart was abandoned, so a cart left on Monday
+  and bought on Friday appeared as a Monday recovery, and a cart abandoned before the selected
+  range but bought inside it was missing from the chart altogether. Recoveries are now bucketed
+  by the order's own date, and a cart with more than one attributed order counts once.
+
 - **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
   with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
   the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four
