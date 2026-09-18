@@ -177,6 +177,7 @@ jobs:
       # this currently matches nothing and the "e2e" files are actually run by vitest.
       # Reported, not gating, until the suite is renamed and given a database.
       - name: Run Playwright E2E tests (reported, not gating)
+        timeout-minutes: 10
         run: npm run test:e2e
         continue-on-error: true
         env:
@@ -204,3 +205,4 @@ jobs:
             apps/fundraising/.next
             apps/admin/.next
           retention-days: 2
+
