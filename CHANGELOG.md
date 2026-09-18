@@ -24,6 +24,17 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Fixed
+- **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
+  with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
+  the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four
+  variables that way, so anywhere the provider's managed variables are absent — CI, and any
+  local production build — `POSTGRES_URL` became `'undefined'`, which is truthy, which won the
+  precedence check below it. Prisma was handed a connection string that is not one and refused
+  every query with "the URL must start with the protocol `postgresql://`". Clearing is a
+  `delete` now. The existing tests could not have caught it: their `afterEach` assigned a plain
+  object over `process.env`, which loses the very coercion the bug depends on, so every case
+  after the first ran against a shim.
+
 - **The desktop shell's writes now obey the rules their `/admin` equivalents obey.** The write
   route checked one permission per operation, which is right when the gate does not depend on
   what was typed and wrong when it does — so `users:write` was enough to assign the DEVELOPER
