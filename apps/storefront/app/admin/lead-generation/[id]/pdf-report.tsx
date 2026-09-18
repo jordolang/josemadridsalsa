@@ -6,7 +6,7 @@ import {
   Text,
   View,
   StyleSheet,
-  Image,
+  Image as PdfImage,
   Link,
 } from '@react-pdf/renderer'
 import type { LeadCampaign, Lead } from '@prisma/client'
@@ -406,7 +406,7 @@ export function PdfReport({ campaign, leads, options, activityLog }: PdfReportPr
             )}
 
             {options.includePhotos && group.url && (
-              <Image
+              <PdfImage
                 src={`https://image.thum.io/get/width/300/${encodeURIComponent(group.url)}`}
                 style={styles.previewImage}
               />

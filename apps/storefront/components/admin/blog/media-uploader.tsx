@@ -122,7 +122,6 @@ export function MediaPreview({ url, alt, onRemove, isVideo }: MediaPreviewProps)
       {looksVideo ? (
         <video src={url} className="w-full h-full object-cover" muted />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt={alt ?? ''} className="w-full h-full object-cover" />
       )}
       <div className="absolute top-2 left-2 inline-flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">

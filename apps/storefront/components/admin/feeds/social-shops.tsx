@@ -112,13 +112,13 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
   const hasFacebook = accounts.some((a) => a.platform === 'FACEBOOK')
   const hasTikTok = accounts.some((a) => a.platform === 'TIKTOK')
   // null = the platform syncs with server credentials, not a connected account.
-  const accountPlatformForShop: Record<ShopPlatform, SocialMediaPlatform | null> = {
+  const accountPlatformForShop = useMemo<Record<ShopPlatform, SocialMediaPlatform | null>>(() => ({
     FACEBOOK_SHOP: 'FACEBOOK',
     FACEBOOK_MARKETPLACE: 'FACEBOOK',
     TIKTOK_SHOP: 'TIKTOK',
     AMAZON: null,
     GOOGLE_SHOPPING: null,
-  }
+  }), [])
   const addPlatformNeedsAccount = accountPlatformForShop[addPlatform] !== null
   const isPlatformReady = (platform: ShopPlatform): boolean => {
     switch (accountPlatformForShop[platform]) {
@@ -132,7 +132,7 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
   }
   const matchingAccounts = useMemo(
     () => accounts.filter((account) => account.platform === accountPlatformForShop[addPlatform]),
-    [accounts, addPlatform],
+    [accounts, addPlatform, accountPlatformForShop],
   )
 
   useEffect(() => {

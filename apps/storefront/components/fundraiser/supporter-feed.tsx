@@ -127,7 +127,6 @@ export function SupporterFeed({
             {item.media && (
               <div className="overflow-hidden rounded-md border">
                 {item.media.type === 'image' ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={item.media.url}
                     alt={item.media.alt ?? ''}

@@ -3,8 +3,8 @@ import { POST } from '@/app/api/webhooks/stripe/route'
 import Stripe from 'stripe'
 
 // Mock dependencies
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/prisma', () => {
+  const prismaMock = {
     webhookEvent: {
       findUnique: vi.fn(),
       upsert: vi.fn(),
@@ -32,9 +32,22 @@ vi.mock('@/lib/prisma', () => ({
       findFirst: vi.fn(),
       create: vi.fn(),
     },
+    domainEvent: {
+      create: vi.fn(),
+    },
+    notification: {
+      upsert: vi.fn(),
+    },
+    user: {
+      findMany: vi.fn(() => Promise.resolve([])),
+    },
     $transaction: vi.fn(),
-  },
-}))
+  }
+  return {
+    default: prismaMock,
+    prisma: prismaMock,
+  }
+})
 
 vi.mock('@/lib/email/automation', () => ({
   sendOrderConfirmationEmail: vi.fn(() => Promise.resolve()),

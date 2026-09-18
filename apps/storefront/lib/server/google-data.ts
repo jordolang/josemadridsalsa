@@ -38,6 +38,9 @@ export type ScheduleEvent = {
   isAllDay: boolean
 }
 
+let warnedMissingReviewsConfig = false
+let warnedMissingCalendarConfig = false
+
 /**
  * Fetch Google reviews server-side using the legacy Places API (Place Details).
  *
@@ -58,7 +61,10 @@ export async function getReviewsData(): Promise<ReviewsData> {
       process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID
 
     if (!apiKey || !placeId) {
-      console.warn('[getReviewsData] Missing GOOGLE_PLACES_API_KEY or GOOGLE_PLACE_ID')
+      if (!warnedMissingReviewsConfig) {
+        console.warn('[getReviewsData] Missing GOOGLE_PLACES_API_KEY or GOOGLE_PLACE_ID')
+        warnedMissingReviewsConfig = true
+      }
       return { reviews: [], totalRating: 0, totalReviews: 0 }
     }
 
@@ -268,7 +274,10 @@ export async function getCalendarEvents(limit = 25): Promise<ScheduleEvent[]> {
     const calendarId = process.env.GOOGLE_CALENDAR_ID?.trim()
 
     if (!calendarId) {
-      console.warn('[getCalendarEvents] GOOGLE_CALENDAR_ID is not set')
+      if (!warnedMissingCalendarConfig) {
+        console.warn('[getCalendarEvents] GOOGLE_CALENDAR_ID is not set')
+        warnedMissingCalendarConfig = true
+      }
       return []
     }
 
