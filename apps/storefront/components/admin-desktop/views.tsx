@@ -1,11 +1,14 @@
 'use client'
 
+import { useCallback, useRef } from 'react'
 import { Icon } from './icons'
+import { clampWidth, columnKey, gridTemplate } from '@/lib/admin-desktop/columns'
 import type {
   AnalyticsPayload,
   Cell as CellData,
   Column,
   DashboardPayload,
+  DesktopCommand,
   EventsPayload,
   Inspector as InspectorData,
   LinkPayload,
@@ -42,10 +45,6 @@ function Cell({ cell }: { cell: CellData }) {
   )
 }
 
-function gridTemplate(columns: Column[]): string {
-  return columns.map((column) => column.width).join(' ')
-}
-
 // ---------------------------------------------------------------- table view
 
 export function TableView({
@@ -56,6 +55,9 @@ export function TableView({
   onSelect,
   onOpen,
   emptyLabel,
+  widths,
+  onResize,
+  onResetColumn,
 }: {
   columns: Column[]
   rows: Row[]
@@ -64,15 +66,32 @@ export function TableView({
   onSelect: (index: number) => void
   onOpen: (row: Row) => void
   emptyLabel: string
+  /** Hand-set widths for this section, by column key. */
+  widths?: Record<string, number>
+  onResize?: (key: string, width: number) => void
+  /** Double-clicking a handle puts that column back on the loader's track. */
+  onResetColumn?: (key: string) => void
 }) {
-  const template = gridTemplate(columns)
+  const template = gridTemplate(columns, widths)
 
   return (
     <div>
       <div className="jmsd-thead" style={{ gridTemplateColumns: template }}>
-        {columns.map((column) => (
-          <span key={column.label} style={{ textAlign: column.right ? 'right' : 'left' }}>
-            {column.label}
+        {columns.map((column, index) => (
+          <span
+            key={columnKey(column, index)}
+            className="jmsd-th"
+            style={{ textAlign: column.right ? 'right' : 'left' }}
+          >
+            <span className="jmsd-th-label">{column.label}</span>
+            {onResize ? (
+              <ResizeHandle
+                column={column}
+                columnKey={columnKey(column, index)}
+                onResize={onResize}
+                onReset={onResetColumn}
+              />
+            ) : null}
           </span>
         ))}
       </div>
@@ -123,14 +142,86 @@ export function TableView({
   )
 }
 
+/**
+ * The grab strip on a column's trailing edge.
+ *
+ * The width it starts from is measured rather than read from the column's
+ * declared track, because most of those tracks are flexible (`minmax(0,1.5fr)`)
+ * and have no pixel value until the browser has laid them out. Pointer capture
+ * keeps the drag alive when the cursor outruns the 5px strip, and the arrow keys
+ * do the same job for anyone not using a mouse.
+ */
+function ResizeHandle({
+  column,
+  columnKey: key,
+  onResize,
+  onReset,
+}: {
+  column: Column
+  columnKey: string
+  onResize: (key: string, width: number) => void
+  onReset?: (key: string) => void
+}) {
+  const drag = useRef<{ startX: number; startWidth: number } | null>(null)
+
+  const measure = useCallback((node: HTMLElement | null) => {
+    const header = node?.closest('.jmsd-th')
+    const width = header instanceof HTMLElement ? header.getBoundingClientRect().width : 0
+    // A header that has not been laid out yet measures zero, and resizing from
+    // zero would collapse the column on the first nudge.
+    return width || MIN_MEASURED
+  }, [])
+
+  return (
+    <span
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize ${column.label}`}
+      tabIndex={0}
+      className="jmsd-col-handle"
+      onPointerDown={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        drag.current = { startX: event.clientX, startWidth: measure(event.currentTarget) }
+        event.currentTarget.setPointerCapture(event.pointerId)
+      }}
+      onPointerMove={(event) => {
+        if (!drag.current) return
+        onResize(key, clampWidth(drag.current.startWidth + (event.clientX - drag.current.startX), column))
+      }}
+      onPointerUp={(event) => {
+        drag.current = null
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }}
+      onPointerCancel={() => {
+        drag.current = null
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation()
+        onReset?.(key)
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        const step = event.shiftKey ? 24 : 8
+        const width = measure(event.currentTarget)
+        onResize(key, clampWidth(width + (event.key === 'ArrowRight' ? step : -step), column))
+      }}
+    />
+  )
+}
+
+/** Stands in for a header that has no layout box yet. */
+const MIN_MEASURED = 120
+
 // ------------------------------------------------------------ dashboard view
 
 export function DashboardView({
   payload,
-  onOpen,
+  onRun,
 }: {
   payload: DashboardPayload
-  onOpen: (href: string) => void
+  onRun: (command: DesktopCommand) => void
 }) {
   return (
     <div className="jmsd-padded">
@@ -156,7 +247,7 @@ export function DashboardView({
                 type="button"
                 className="jmsd-listrow"
                 style={{ gridTemplateColumns: '96px minmax(0,1fr) 84px 80px' }}
-                onClick={() => onOpen(order.href)}
+                onClick={() => onRun(order.open)}
               >
                 <span className="jmsd-mono jmsd-cell--dim">{order.id}</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -183,10 +274,13 @@ export function DashboardView({
               <div className="jmsd-empty">Every SKU is above its reorder point.</div>
             ) : (
               payload.lowStock.map((item) => (
-                <div
+                <button
                   key={item.name}
+                  type="button"
                   className="jmsd-listrow"
-                  style={{ gridTemplateColumns: '1fr 54px 46px', cursor: 'default' }}
+                  style={{ gridTemplateColumns: '1fr 54px 46px', cursor: item.open ? 'pointer' : 'default' }}
+                  disabled={!item.open}
+                  onClick={() => item.open && onRun(item.open)}
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.name}
@@ -197,7 +291,7 @@ export function DashboardView({
                   <span className="jmsd-mono jmsd-tone-bad" style={{ textAlign: 'right' }}>
                     {item.gap}
                   </span>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -211,10 +305,13 @@ export function DashboardView({
               <div className="jmsd-empty">No upcoming shows on the calendar.</div>
             ) : (
               payload.nextEvents.map((event) => (
-                <div
+                <button
                   key={`${event.date}-${event.name}`}
+                  type="button"
                   className="jmsd-listrow"
-                  style={{ gridTemplateColumns: '66px 1fr auto', cursor: 'default' }}
+                  style={{ gridTemplateColumns: '66px 1fr auto', cursor: event.open ? 'pointer' : 'default' }}
+                  disabled={!event.open}
+                  onClick={() => event.open && onRun(event.open)}
                 >
                   <span className="jmsd-mono jmsd-cell--dim">{event.date}</span>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -223,7 +320,7 @@ export function DashboardView({
                   <span className="jmsd-cell--dim" style={{ fontSize: 10.5 }}>
                     {event.city}
                   </span>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -360,11 +457,17 @@ export function EventsView({
   selected,
   onSelect,
   onOpen,
+  widths,
+  onResize,
+  onResetColumn,
 }: {
   payload: EventsPayload
   selected: number
   onSelect: (index: number) => void
   onOpen: (row: Row) => void
+  widths?: Record<string, number>
+  onResize?: (key: string, width: number) => void
+  onResetColumn?: (key: string) => void
 }) {
   return (
     <div className="jmsd-padded">
@@ -411,6 +514,9 @@ export function EventsView({
           onSelect={onSelect}
           onOpen={onOpen}
           emptyLabel="No shows recorded yet."
+          widths={widths}
+          onResize={onResize}
+          onResetColumn={onResetColumn}
         />
       </div>
     </div>
@@ -419,12 +525,30 @@ export function EventsView({
 
 // ------------------------------------------------------------- settings view
 
-export function SettingsView({ payload }: { payload: SettingsPayload }) {
+export function SettingsView({
+  payload,
+  onRun,
+}: {
+  payload: SettingsPayload
+  onRun: (command: DesktopCommand) => void
+}) {
   return (
     <div className="jmsd-settings-grid">
       {payload.groups.map((group) => (
         <div key={group.label} className="jmsd-card">
-          <div className="jmsd-settings-head">{group.label}</div>
+          <div className="jmsd-settings-head">
+            <span>{group.label}</span>
+            {group.edit ? (
+              <button
+                type="button"
+                className="jmsd-action jmsd-action--tiny"
+                onClick={() => group.edit && onRun(group.edit)}
+              >
+                <Icon name="i-pencil" size={11} />
+                <span>Edit</span>
+              </button>
+            ) : null}
+          </div>
           {group.rows.map((row, index) => (
             <div key={`${row.label}-${index}`} className="jmsd-settings-row">
               <span>{row.label}</span>
@@ -488,10 +612,10 @@ export function LinkView({
 
 export function Inspector({
   data,
-  onOpen,
+  onRun,
 }: {
   data: InspectorData | null
-  onOpen: (href: string) => void
+  onRun: (command: DesktopCommand) => void
 }) {
   return (
     <aside className="jmsd-inspector">
@@ -555,8 +679,8 @@ export function Inspector({
               <button
                 key={action.label}
                 type="button"
-                className="jmsd-inspector-action"
-                onClick={() => onOpen(action.href)}
+                className={`jmsd-inspector-action ${action.danger ? 'jmsd-inspector-action--danger' : ''}`}
+                onClick={() => onRun(action.command)}
               >
                 <span>{action.label}</span>
                 {action.shortcut ? (
