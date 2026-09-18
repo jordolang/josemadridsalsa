@@ -1,15 +1,20 @@
 /**
- * The section registry for the desktop admin shell.
+ * The section and page registry for the desktop admin shell.
  *
- * This is the single source for the sidebar, the ⌘-number shortcuts and the
- * command palette. It is navigation, not permission: every section resolves to
- * a real `/admin` path, and the data behind it is loaded through the same RBAC
- * checks the web panel uses, so a STAFF account sees the same refusals here.
+ * This is the single source for the sidebar, the ⌘-number shortcuts, the page
+ * strip under each section heading and the command palette. It is navigation,
+ * not permission: every entry resolves to a real `/admin` path, and the data
+ * behind it is loaded through the same RBAC checks the web panel uses, so a
+ * STAFF account sees the same refusals here.
  *
- * `kind` records how the content pane draws a section. Every section here loads
- * its own data; `link` remains a supported kind so that a section added to this
- * registry before its loader exists degrades to a hand-off card rather than an
- * empty table.
+ * A section is a place in the sidebar; a **page** is one table, board or
+ * settings sheet inside it. The first page of a section is the section's own
+ * list — its id is the section id — and every page after it is one the window
+ * used to hand off to the web panel and now draws itself.
+ *
+ * `kind` records how the content pane draws a page. `link` remains a supported
+ * kind so that a page added to this registry before its loader exists degrades
+ * to a hand-off card rather than an empty table.
  */
 
 export type DesktopSectionId =
@@ -37,7 +42,7 @@ export type DesktopSectionId =
   | 'settings'
   | 'database'
 
-/** How the content pane renders a section. */
+/** How the content pane renders a page. */
 export type DesktopViewKind =
   | 'dashboard'
   | 'table'
@@ -45,6 +50,27 @@ export type DesktopViewKind =
   | 'analytics'
   | 'settings'
   | 'link'
+
+/**
+ * One page inside a section.
+ *
+ * Ids are unique across the whole registry and namespaced by their section
+ * (`email.campaigns`), so a command, a URL and a palette entry can all name a
+ * page with one string.
+ */
+export interface DesktopPage {
+  id: string
+  label: string
+  /** The `/admin` page this mirrors, shown in the title bar. */
+  path: string
+  /** How the pane draws it. Defaults to the section's own kind. */
+  kind?: DesktopViewKind
+  /**
+   * A permission this page needs on top of its section's, mirroring the check
+   * the matching `/admin` page makes. Absent means the section's is enough.
+   */
+  permission?: string
+}
 
 export interface DesktopSection {
   id: DesktopSectionId
@@ -57,11 +83,11 @@ export interface DesktopSection {
   /** Single digit used with ⌘/Ctrl, when the section has a shortcut. */
   digit?: string
   /**
-   * Sub-pages this section covers. They become command-palette entries, so a
-   * page the shell does not draw itself is still one ⌘K away, and they are the
-   * hand-off list if the section ever falls back to `link`.
+   * The pages this section draws, in strip order. The first is where the
+   * section opens and its id is always the section id. Omitted when the
+   * section is a single page.
    */
-  views?: { label: string; path: string }[]
+  pages?: DesktopPage[]
 }
 
 export interface DesktopSectionGroup {
@@ -74,7 +100,19 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
     label: 'OPERATIONS',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: 'i-gauge', path: '/admin', kind: 'dashboard', digit: '1' },
-      { id: 'orders', label: 'Orders', icon: 'i-receipt', path: '/admin/orders', kind: 'table', digit: '2' },
+      {
+        id: 'orders',
+        label: 'Orders',
+        icon: 'i-receipt',
+        path: '/admin/orders',
+        kind: 'table',
+        digit: '2',
+        pages: [
+          { id: 'orders', label: 'Orders', path: '/admin/orders' },
+          { id: 'orders.returns', label: 'Returns & RMAs', path: '/admin/returns' },
+          { id: 'orders.shipping', label: 'Shipping labels', path: '/admin/shipping' },
+        ],
+      },
       { id: 'products', label: 'Products', icon: 'i-package', path: '/admin/products', kind: 'table', digit: '3' },
       { id: 'inventory', label: 'Inventory', icon: 'i-boxes', path: '/admin/inventory', kind: 'table', digit: '4' },
       { id: 'customers', label: 'Customers', icon: 'i-users', path: '/admin/customers', kind: 'table', digit: '5' },
@@ -84,41 +122,55 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-truck',
         path: '/admin/purchase-orders',
         kind: 'table',
-        views: [
-          { label: 'Open POs', path: '/admin/purchase-orders' },
-          { label: 'New PO', path: '/admin/purchase-orders/new' },
-          { label: 'Receiving', path: '/admin/inventory' },
+        pages: [
+          { id: 'purchase', label: 'Purchase orders', path: '/admin/purchase-orders' },
+          { id: 'purchase.suppliers', label: 'Suppliers', path: '/admin/purchase-orders/suppliers' },
         ],
       },
-      {
-        id: 'invoices',
-        label: 'Invoices',
-        icon: 'i-file',
-        path: '/admin/invoices',
-        kind: 'table',
-        views: [
-          { label: 'All invoices', path: '/admin/invoices' },
-          { label: 'Returns & RMAs', path: '/admin/returns' },
-          { label: 'Shipping', path: '/admin/shipping' },
-        ],
-      },
+      { id: 'invoices', label: 'Invoices', icon: 'i-file', path: '/admin/invoices', kind: 'table' },
     ],
   },
   {
     label: 'PROGRAMS',
     items: [
-      { id: 'fundraisers', label: 'Fundraisers', icon: 'i-gift', path: '/admin/fundraisers', kind: 'table', digit: '7' },
-      { id: 'events', label: 'Events & Shows', icon: 'i-calendar', path: '/admin/events', kind: 'events', digit: '8' },
+      {
+        id: 'fundraisers',
+        label: 'Fundraisers',
+        icon: 'i-gift',
+        path: '/admin/fundraisers',
+        kind: 'table',
+        digit: '7',
+        pages: [
+          { id: 'fundraisers', label: 'Fundraisers', path: '/admin/fundraisers' },
+          { id: 'fundraisers.arena', label: 'Battle arena', path: '/admin/fundraisers/battle-arena' },
+        ],
+      },
+      {
+        id: 'events',
+        label: 'Events & Shows',
+        icon: 'i-calendar',
+        path: '/admin/events',
+        kind: 'events',
+        digit: '8',
+        pages: [
+          { id: 'events', label: 'Calendar', path: '/admin/events' },
+          { id: 'events.manifests', label: 'Packing manifests', path: '/admin/events', kind: 'table' },
+        ],
+      },
       {
         id: 'wholesale',
         label: 'Wholesale',
         icon: 'i-truck',
         path: '/admin/wholesale',
         kind: 'table',
-        views: [
-          { label: 'Accounts', path: '/admin/wholesale' },
-          { label: 'Locations', path: '/admin/locations' },
-          { label: 'Merchandise', path: '/admin/merchandise' },
+        pages: [
+          { id: 'wholesale', label: 'Accounts', path: '/admin/wholesale' },
+          {
+            id: 'wholesale.locations',
+            label: 'Store locator',
+            path: '/admin/locations',
+            permission: 'content:read',
+          },
         ],
       },
     ],
@@ -126,7 +178,22 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
   {
     label: 'MONEY',
     items: [
-      { id: 'ledger', label: 'Financials', icon: 'i-wallet', path: '/admin/financials/ledger', kind: 'table', digit: '6' },
+      {
+        id: 'ledger',
+        label: 'Financials',
+        icon: 'i-wallet',
+        path: '/admin/financials/ledger',
+        kind: 'table',
+        digit: '6',
+        pages: [
+          { id: 'ledger', label: 'Ledger', path: '/admin/financials/ledger' },
+          {
+            id: 'ledger.reconciliation',
+            label: 'Reconciliation',
+            path: '/admin/financials/reconciliation',
+          },
+        ],
+      },
     ],
   },
   {
@@ -139,13 +206,25 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         path: '/admin/email-marketing',
         kind: 'table',
         digit: '9',
-        views: [
-          { label: 'Dashboard', path: '/admin/email-marketing' },
-          { label: 'Campaigns', path: '/admin/email-campaigns' },
-          { label: 'Automations', path: '/admin/email-marketing/automations' },
-          { label: 'Lists & subscribers', path: '/admin/communications/lists' },
-          { label: 'Suppressions', path: '/admin/communications/suppressions' },
-          { label: 'Brand kit', path: '/admin/email-marketing/brand-kit' },
+        pages: [
+          { id: 'email', label: 'Campaigns', path: '/admin/email-marketing' },
+          { id: 'email.templates', label: 'Templates', path: '/admin/email-templates' },
+          { id: 'email.automations', label: 'Automations', path: '/admin/email-marketing/automations' },
+          {
+            id: 'email.lists',
+            label: 'Lists & subscribers',
+            path: '/admin/communications/lists',
+            permission: 'content:write',
+          },
+          { id: 'email.suppressions', label: 'Suppressions', path: '/admin/communications/suppressions' },
+          { id: 'email.logs', label: 'Send log', path: '/admin/email-marketing/logs' },
+          {
+            id: 'email.brand',
+            label: 'Brand kit',
+            path: '/admin/email-marketing/brand-kit',
+            kind: 'settings',
+            permission: 'settings:read',
+          },
         ],
       },
       {
@@ -154,10 +233,11 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-share',
         path: '/admin/social',
         kind: 'table',
-        views: [
-          { label: 'Scheduled posts', path: '/admin/social' },
-          { label: 'Social analytics', path: '/admin/analytics/social' },
-          { label: 'Feeds', path: '/admin/feeds' },
+        pages: [
+          { id: 'social', label: 'Posts', path: '/admin/social' },
+          { id: 'social.accounts', label: 'Connected accounts', path: '/admin/social' },
+          { id: 'social.feeds', label: 'Product feeds', path: '/admin/feeds' },
+          { id: 'social.analytics', label: 'Reach', path: '/admin/analytics/social' },
         ],
       },
       {
@@ -166,13 +246,13 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-file',
         path: '/admin/content',
         kind: 'table',
-        views: [
-          { label: 'Pages', path: '/admin/content/pages' },
-          { label: 'Blog posts', path: '/admin/blog/posts' },
-          { label: 'Banners', path: '/admin/content/banners' },
-          { label: 'FAQs', path: '/admin/content/faqs' },
-          { label: 'Redirects', path: '/admin/content/redirects' },
-          { label: 'SEO', path: '/admin/seo' },
+        pages: [
+          { id: 'content', label: 'Blog posts', path: '/admin/blog/posts' },
+          { id: 'content.pages', label: 'Pages', path: '/admin/content/pages' },
+          { id: 'content.banners', label: 'Banners', path: '/admin/content/banners' },
+          { id: 'content.faqs', label: 'FAQs', path: '/admin/content/faqs' },
+          { id: 'content.redirects', label: 'Redirects', path: '/admin/content/redirects' },
+          { id: 'content.seo', label: 'SEO', path: '/admin/seo', kind: 'settings' },
         ],
       },
       {
@@ -181,7 +261,10 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-target',
         path: '/admin/lead-generation',
         kind: 'table',
-        views: [{ label: 'Campaigns', path: '/admin/lead-generation' }],
+        pages: [
+          { id: 'leads', label: 'Leads', path: '/admin/lead-generation' },
+          { id: 'leads.campaigns', label: 'Campaigns', path: '/admin/lead-generation' },
+        ],
       },
       {
         id: 'reviews',
@@ -189,9 +272,9 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-star',
         path: '/admin/reviews',
         kind: 'table',
-        views: [
-          { label: 'Reviews', path: '/admin/reviews' },
-          { label: 'Forms', path: '/admin/forms' },
+        pages: [
+          { id: 'reviews', label: 'Reviews', path: '/admin/reviews' },
+          { id: 'reviews.forms', label: 'Forms', path: '/admin/forms', permission: 'content:read' },
         ],
       },
     ],
@@ -205,9 +288,16 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-chart',
         path: '/admin/analytics',
         kind: 'analytics',
-        views: [
-          { label: 'Overview', path: '/admin/analytics' },
-          { label: 'Report builder', path: '/admin/data' },
+        pages: [
+          { id: 'analytics', label: 'Overview', path: '/admin/analytics' },
+          { id: 'analytics.retention', label: 'Retention', path: '/admin/analytics/retention', kind: 'table' },
+          { id: 'analytics.margin', label: 'Margin', path: '/admin/analytics/margin', kind: 'table' },
+          {
+            id: 'analytics.attribution',
+            label: 'Attribution',
+            path: '/admin/analytics/attribution',
+            kind: 'table',
+          },
         ],
       },
       {
@@ -216,11 +306,26 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-image',
         path: '/admin/media',
         kind: 'table',
-        views: [
-          { label: 'Media library', path: '/admin/media' },
-          { label: 'Documents archive', path: '/admin/archive/documents' },
-          { label: 'Mileage log', path: '/admin/archive/mileage' },
-          { label: 'Show archive', path: '/admin/archive/shows' },
+        pages: [
+          { id: 'media', label: 'Media library', path: '/admin/media' },
+          {
+            id: 'media.documents',
+            label: 'Documents archive',
+            path: '/admin/archive/documents',
+            permission: 'analytics:read',
+          },
+          {
+            id: 'media.mileage',
+            label: 'Mileage log',
+            path: '/admin/archive/mileage',
+            permission: 'analytics:read',
+          },
+          {
+            id: 'media.shows',
+            label: 'Show archive',
+            path: '/admin/archive/shows',
+            permission: 'analytics:read',
+          },
         ],
       },
       {
@@ -229,9 +334,10 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-message',
         path: '/admin/messages',
         kind: 'table',
-        views: [
-          { label: 'Inbox', path: '/admin/messages' },
-          { label: 'Notifications', path: '/admin/notifications' },
+        pages: [
+          { id: 'messages', label: 'Inbox', path: '/admin/messages' },
+          { id: 'messages.live', label: 'Live chat', path: '/admin/messages/live' },
+          { id: 'messages.notifications', label: 'Notifications', path: '/admin/notifications' },
         ],
       },
       {
@@ -240,13 +346,36 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-shield',
         path: '/admin/users',
         kind: 'table',
-        views: [
-          { label: 'Staff accounts', path: '/admin/users' },
-          { label: 'Credentials', path: '/admin/credentials' },
+        pages: [
+          { id: 'users', label: 'Staff accounts', path: '/admin/users' },
+          {
+            id: 'users.credentials',
+            label: 'Credential vault',
+            path: '/admin/credentials',
+            permission: 'credentials:read',
+          },
         ],
       },
       { id: 'audit', label: 'Audit Logs', icon: 'i-history', path: '/admin/audit-logs', kind: 'table' },
-      { id: 'settings', label: 'Settings', icon: 'i-settings', path: '/admin/settings', kind: 'settings' },
+      {
+        id: 'settings',
+        label: 'Settings',
+        icon: 'i-settings',
+        path: '/admin/settings',
+        kind: 'settings',
+        pages: [
+          { id: 'settings', label: 'Store', path: '/admin/settings' },
+          { id: 'settings.payments', label: 'Payments', path: '/admin/settings/payments' },
+          { id: 'settings.shipping', label: 'Shipping', path: '/admin/settings/shipping' },
+          {
+            id: 'settings.integrations',
+            label: 'Integrations',
+            path: '/admin/settings/integrations',
+            kind: 'table',
+            permission: 'api_keys:manage',
+          },
+        ],
+      },
       {
         id: 'database',
         label: 'Database Console',
@@ -268,4 +397,40 @@ export function findSection(id: string): DesktopSection | undefined {
 
 export function isDesktopSectionId(value: string): value is DesktopSectionId {
   return BY_ID.has(value as DesktopSectionId)
+}
+
+/**
+ * Every page in a section, in strip order.
+ *
+ * A section with no `pages` is one page — itself — so callers never have to
+ * special-case the single-page sections.
+ */
+export function pagesFor(section: DesktopSection): DesktopPage[] {
+  return (
+    section.pages ?? [{ id: section.id, label: section.label, path: section.path, kind: section.kind }]
+  )
+}
+
+export const DESKTOP_PAGES: { section: DesktopSection; page: DesktopPage }[] = DESKTOP_SECTIONS.flatMap(
+  (section) => pagesFor(section).map((page) => ({ section, page })),
+)
+
+const PAGE_BY_ID = new Map(DESKTOP_PAGES.map((entry) => [entry.page.id, entry]))
+
+export function findPage(id: string): { section: DesktopSection; page: DesktopPage } | undefined {
+  return PAGE_BY_ID.get(id)
+}
+
+export function isDesktopPageId(value: string): boolean {
+  return PAGE_BY_ID.has(value)
+}
+
+/** The id of the page a section opens at. */
+export function defaultPageId(section: DesktopSection): string {
+  return pagesFor(section)[0].id
+}
+
+/** How the pane should draw a page — its own kind, or its section's. */
+export function pageKind(section: DesktopSection, page: DesktopPage): DesktopViewKind {
+  return page.kind ?? section.kind
 }

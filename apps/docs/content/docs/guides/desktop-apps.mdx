@@ -38,7 +38,8 @@ Both windows are frameless so the shell's own title bar runs to the top edge: ma
 traffic lights over the left of it, Windows paints its minimise/maximise/close buttons over the
 right.
 
-All 23 sections read live data in the shell:
+All 23 sections read live data in the shell, and a section that covers more than one thing draws
+a tab strip under its heading for the pages inside it — 58 pages in all:
 
 | Section | What it shows |
 |---|---|
@@ -63,8 +64,40 @@ All 23 sections read live data in the shell:
 | Messages | One inbox merging support conversations, the contact form and live chat |
 | Users & Roles | Staff accounts with role, two-factor state and last sign-in |
 | Audit Logs | Who did what, most recent first |
-| Settings | Live store, payment, shipping, QuickBooks and integration state (read only) |
+| Settings | Store identity, checkout rules and search settings — editable here; payment keys, carriers and integrations show live state |
 | Database Console | Row counts for the core tables |
+
+### The pages inside a section
+
+A section is a place in the sidebar; a **page** is one table, board or settings sheet inside it.
+The strip under the heading switches between them, every page is one `⌘K` away by name, and each
+has a URL of its own (see [Opening a page directly](#opening-a-page-directly)).
+
+| Section | Pages |
+|---|---|
+| Orders | Orders · Returns & RMAs · Shipping labels |
+| Purchase Orders | Purchase orders · Suppliers |
+| Fundraisers | Fundraisers · Battle arena |
+| Events & Shows | Calendar · Packing manifests |
+| Wholesale | Accounts · Store locator |
+| Financials | Ledger · Reconciliation |
+| Email Marketing | Campaigns · Templates · Automations · Lists & subscribers · Suppressions · Send log · Brand kit |
+| Social | Posts · Connected accounts · Product feeds · Reach |
+| Content & Blog | Blog posts · Pages · Banners · FAQs · Redirects · SEO |
+| Lead Generation | Leads · Campaigns |
+| Reviews | Reviews · Forms |
+| Analytics | Overview · Retention · Margin · Attribution |
+| Media & Docs | Media library · Documents archive · Mileage log · Show archive |
+| Messages | Inbox · Live chat · Notifications |
+| Users & Roles | Staff accounts · Credential vault |
+| Settings | Store · Payments · Shipping · Integrations |
+
+Dashboard, Products, Inventory, Customers, Invoices, Audit Logs and Database Console are one page
+each, and draw no strip.
+
+Retention, Margin and Attribution read the trailing year. The web reports take a range from the
+query string; the window has no place to put one, so it uses the widest and says so in the totals
+row rather than showing a shorter period that looks like the whole story.
 
 Some columns differ from the design they were drawn to, because the schema does not carry the
 field: Products shows unit cost rather than a wholesale price, Customers shows acquisition source
@@ -78,6 +111,22 @@ Content & Blog lists the blog. Pages, banners, FAQs and redirects are edited thr
 `/admin/content` but are not one queryable list, so they are reachable from the command palette
 rather than drawn as a table.
 
+### Adjustable columns
+
+Every table column has a grab strip on its trailing edge. Drag it to set that column's width;
+double-click it to put the column back on its default. Arrow keys resize a focused strip too —
+`←` and `→` in 8px steps, held with `Shift` in 24px steps — so a column can be sized without a
+mouse.
+
+A width you set is a property of your window, not your account: it is remembered in that
+browser or that desktop app, per section and per column, so the same person on a laptop and on
+the shop monitor keeps two different layouts. **Reset columns** appears in the filter bar once a
+section has hand-set widths, and the same command is in the palette.
+
+A column's default may be a share of the pane rather than a fixed size. Once you drag it, it
+becomes an absolute width — dragging a column is saying you want it *that* wide, not that share
+of whatever is left.
+
 ### What each section needs to open
 
 The shell is a second door onto the same data, so it refuses exactly what the web panel refuses.
@@ -85,6 +134,22 @@ Each section is gated on the permission its `/admin` page checks, and the sideba
 the sections the signed-in account may actually load — nothing is offered that would then be
 denied. Requesting a gated section directly returns `403` from
 `/api/admin/desktop/[section]`.
+
+A page inside a section can ask for more than the section does, mirroring the check its own
+`/admin` page makes, and the strip leaves out the tabs the account cannot load:
+
+| Page | Also needs |
+|---|---|
+| Users & Roles → Credential vault | `credentials:read` |
+| Settings → Integrations | `api_keys:manage` |
+| Email Marketing → Lists & subscribers | `content:write` |
+| Email Marketing → Brand kit | `settings:read` |
+| Wholesale → Store locator | `content:read` |
+| Reviews → Forms | `content:read` |
+| Media & Docs → the three archives | `analytics:read` |
+
+`?page=` is checked against the section in the path, so it is never a way to read one section's
+rows through another the account happens to hold.
 
 | Permission | Sections it opens |
 |---|---|
@@ -107,35 +172,100 @@ denied. Requesting a gated section directly returns `403` from
 | Key | Does |
 |---|---|
 | `J` / `K` or `↑` / `↓` | Move the selection |
-| `↵` | Open the selected row in the web admin |
+| `↵` | Edit the selected row, in the window |
 | `/` | Focus the filter box |
 | `F` | Cycle the filter chips |
 | `I` | Show or hide the inspector |
-| `Ctrl/⌘ K` | Command palette — jump to a section or a row, or run a command |
+| `F5` | Read this section's data again |
+| `Ctrl/⌘ K` | Command palette — jump to a section, a page or a row, or run a command |
 | letters or digits | Type-ahead: jump to the first row starting with what you typed |
 
 Selecting a row fills the inspector on the right, and the buttons at its foot are the jobs you
-can do with that row — each opens the admin page that performs it, on the key its label shows.
-A label ending in `…` is the promise that a page opens rather than something happening in place.
+can do with that row, on the key each label shows. A label ending in `…` opens a form; a bare
+label acts on the record as soon as you press it, after a confirmation if it is destructive.
 
 Those keys are checked against the native menus: a combination either window's menu bar already
 owns (`⌘R` reload, `⌘P` print, `⌘A`, `⌘V`, `⌘M` and the rest) is never advertised, because the
 menu handles it before the page ever sees the key.
 
-The shell is read-only. Editing still happens on the admin pages it opens — the header buttons,
-the inspector actions and `↵` are how you get there.
+### Creating and editing, in the window
 
-### Opening a section directly
+The shell writes. Creating a fundraiser, editing a product, adjusting stock, receiving a
+purchase order, approving a review, publishing a post — all of it happens in a sheet over the
+table, and the table reloads with the row you were working on still selected.
+
+The forms are descriptions rather than screens. `apps/storefront/lib/admin-desktop/forms.ts`
+says what fields a form has; `apps/storefront/lib/admin-desktop/writes.ts` holds the permission,
+the validation and the write itself, keyed by the same id. One renderer draws all of them, and
+one route — `POST /api/admin/desktop/write` — runs all of them, so every operation goes through
+the same staff check, the same permission check and the same audit row. Adding a way to create
+something is an entry in each file, not a new screen.
+
+What a form needs from the database it does not already have — the product list behind a line
+item, the categories behind a product, the templates behind a campaign — is fetched from
+`/api/admin/desktop/options/[source]` when the sheet opens, so a picker is never stale.
+
+Some jobs still open the web admin, and say so with a `…` that leads out of the window:
+
+| Job | Why it lives there |
+|---|---|
+| Sending a campaign | The audience is previewed and a test send offered first |
+| Connecting a social account | It is an OAuth round trip through the browser |
+| Running a lead campaign or a feed sync | The scrape streams its progress |
+| Replying to a message or a live chat | The thread is a conversation, not a record |
+| Uploading files, importing a CSV or a bank statement | The page owns the drop zone and its progress |
+| Printing a packing slip or an invoice | It is a document, not a record |
+| Revealing or entering a secret — payment keys, integration credentials, the vault | They are written once and never shown back |
+| Building a form or a report | Both are structure editors, not tables |
+| Refunds, and receiving against a partial count | Money and carrier calls, with their own confirmations |
+| Completing a return | It settles the refund, credit or exchange and restocks — and it is terminal |
+
+The credential vault page is the sharpest case: it lists what is stored, who it is for and when
+it was last rotated, and it never reads the encrypted value — the vault reveals a secret behind
+its own confirmation, and that is deliberately the only place it happens.
+
+Everything a write can refuse, it refuses with a reason: a derived ledger row says the record it
+came from owns it, a product that has been sold is retired rather than deleted, a campaign with
+orders against it is cancelled rather than removed, and a blog post whose effective title falls
+outside the 30–60 character budget says how long it is before it will save.
+
+A few fields are deliberately absent from the sheet that would otherwise carry them, because the
+value is derived or is an identity rather than an attribute:
+
+| Not editable | Where it comes from instead |
+|---|---|
+| An order's fulfillment state | Derived from its status, which stamps shipping and delivery |
+| A purchase order's received state | Derived from receipt quantities — receive the stock |
+| A customer's email address | The key order sync, imports and mailing lists join on |
+| A return's COMPLETED state | The settlement on the return's own page |
+
+Two checks depend on what was typed rather than on which form is open, and are made against the
+operator's own permissions: queueing or publishing a social post needs `social_media:schedule`
+or `social_media:publish` on top of `social_media:compose`, and the DEVELOPER role can only be
+assigned — or an account holding it edited — by a developer. Deleting a staff account needs the
+owner account, not `users:write`, because it cascades through everything that account owns.
+
+### Opening a page directly
 
 `/admin-desktop?section=<id>` opens the window at a section — `?section=invoices`,
-`?section=ledger`, and so on, using the ids in
-`apps/storefront/lib/admin-desktop/sections.ts`. Both menu bars navigate this way, so choosing
-**Orders** from the menu stays in the shell instead of leaving it for the web page, and the
-shell keeps the query in step as you move so a reload comes back to the same section. The one
-exception is **Developer Console**, which has no view in the shell and opens the web page.
+`?section=ledger`, and so on — and `?page=<id>` names one page inside it,
+`?section=email&page=email.suppressions`. Both use the ids in
+`apps/storefront/lib/admin-desktop/sections.ts`, where a page id is always its section's id plus
+a dot. Both menu bars navigate this way, so choosing **Orders** from the menu stays in the shell
+instead of leaving it for the web page, and the shell keeps the query in step as you move so a
+reload comes back to the same page. The one exception is **Developer Console**, which has no view
+in the shell and opens the web page.
 
-A section id that is unknown, or one the account may not open, falls back to the first section
-it can see rather than erroring — a menu item or an old bookmark should not be a dead end.
+A section or page id that is unknown, or one the account may not open, falls back rather than
+erroring — an unknown page opens its section, and an unknown section opens the first one the
+account can see. A menu item or an old bookmark should not be a dead end.
+
+<Callout type="warn" title="Publishing from the shell is not the whole job">
+Publishing a blog post from the shell adds its URL to the sitemap, because
+`app/sitemap.ts` reads published posts from the database. Search Console is a separate
+step nobody here can do for you: run **URL Inspection** on the new URL, and check a few
+weeks later that the indexed-page count is rising.
+</Callout>
 
 ## Installing
 
@@ -258,12 +388,32 @@ cd apps/macos-admin && ./build-app.sh
 ```
 
 The script first compiles and runs the endpoint checks in `Tests/main.swift` — the rules for
-where the app may point and what it hands to the browser — then builds the bundle into `dist/`.
+where the app may point and what it hands to the browser — then builds the bundle into `dist/`
+and packages it as `dist/JoseMadridSalsaAdmin-<version>.dmg`, the app beside an `/Applications`
+symlink so the whole install is one drag. The version is read from the root `package.json`, so
+the disk image and the Windows installer always carry the same number.
 
 **A full Xcode installation is required.** The standalone Command Line Tools do not ship the
 SwiftUI macro plugins that `@State` expands through, and the build fails with
-`plugin for module 'SwiftUIMacros' not found`. The pure-logic files still compile without
-Xcode, which is why the endpoint checks run first.
+`plugin for module 'SwiftUIMacros' not found` followed by a cascade of
+`cannot assign to property: 'self' is immutable`. Only the first error is real; the rest are
+fallout from `@State` never expanding. Install Xcode from the App Store and point the toolchain
+at it:
+
+```bash
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+xcode-select -p   # should no longer say /Library/Developer/CommandLineTools
+```
+
+The pure-logic files still compile without Xcode, which is why the endpoint checks run first —
+`swiftc Sources/JoseMadridAdmin/AdminEndpoint.swift Sources/JoseMadridAdmin/AdminSections.swift
+Tests/main.swift -o .build/endpoint-check` verifies the endpoint and menu rules on a machine
+that cannot build the app at all.
+
+<Callout type="info" title="No Xcode? Let CI build it">
+The **Desktop Apps** workflow runs on a `macos-15` runner, which has a full Xcode. Running it
+is the supported way to get a `.dmg` without installing Xcode locally.
+</Callout>
 
 ### Releasing both
 

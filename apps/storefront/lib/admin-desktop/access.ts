@@ -15,6 +15,9 @@
 
 import {
   DESKTOP_SECTIONS,
+  findPage,
+  pagesFor,
+  type DesktopPage,
   type DesktopSection,
   type DesktopSectionId,
 } from './sections'
@@ -79,4 +82,28 @@ export function allowedSectionIds(permissions: Iterable<string>): DesktopSection
  */
 export function fallbackSection(permissions: Iterable<string>): DesktopSectionId | undefined {
   return allowedSectionIds(permissions)[0]
+}
+
+/**
+ * Whether an account may load one page inside a section.
+ *
+ * Two gates, in the order the web panel applies them: the section's permission,
+ * then the page's own where it needs more than its section does. A page whose
+ * `/admin` equivalent checks something extra — the credential vault, the
+ * integrations sheet — is refused here on the same permission, so the page
+ * strip never offers a tab that would answer 403.
+ */
+export function canSeePage(pageId: string, permissions: Iterable<string>): boolean {
+  const entry = findPage(pageId)
+  if (!entry) return false
+
+  const held = permissions instanceof Set ? permissions : new Set(permissions)
+  if (!canSeeSection(entry.section.id, held)) return false
+  return !entry.page.permission || held.has(entry.page.permission)
+}
+
+/** The pages of a section this permission set may load, in strip order. */
+export function allowedPages(section: DesktopSection, permissions: Iterable<string>): DesktopPage[] {
+  const held = new Set(permissions)
+  return pagesFor(section).filter((page) => !page.permission || held.has(page.permission))
 }

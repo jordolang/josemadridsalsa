@@ -17,6 +17,30 @@ export interface InventoryAdjustment {
   /** Set when the stock arrived by receiving a purchase order. */
   purchaseOrderId?: string;
   userId?: string;
+  /**
+   * The stock level the caller computed `quantity` against.
+   *
+   * Only meaningful to a caller that turned an absolute target into a delta:
+   * "set this to 20" read 10 and asked for +10, and if a sale lands in between
+   * this function's own read sees 15 and the product finishes on 25 rather than
+   * the 20 that was typed. Supplying the observed value makes the adjustment
+   * refuse instead, so the operator retries against a count they can see.
+   */
+  expectedPreviousStock?: number;
+}
+
+/** A stock adjustment refused because the count moved under it. */
+export class StaleInventoryError extends Error {
+  constructor(
+    readonly expected: number,
+    readonly actual: number,
+  ) {
+    super(
+      `Stock moved while this was being edited (expected ${expected} on hand, found ${actual}). ` +
+        `Reopen the adjustment and try again.`
+    );
+    this.name = 'StaleInventoryError';
+  }
 }
 
 export interface InventoryCheckResult {
@@ -68,7 +92,8 @@ async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): P
  * Adjust inventory for a product and create transaction record
  */
 export async function adjustInventory(adjustment: InventoryAdjustment) {
-  const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId } = adjustment;
+  const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId, expectedPreviousStock } =
+    adjustment;
 
   // Get current product
   const product = await prisma.product.findUnique({
@@ -88,6 +113,11 @@ export async function adjustInventory(adjustment: InventoryAdjustment) {
   }
 
   const previousStock = product.inventory;
+
+  if (expectedPreviousStock !== undefined && expectedPreviousStock !== previousStock) {
+    throw new StaleInventoryError(expectedPreviousStock, previousStock);
+  }
+
   const newStock = previousStock + quantity;
 
   if (newStock < 0) {
@@ -266,7 +296,8 @@ export async function bulkAdjustInventoryInTx(
   // Step 3: If ALL validations pass, update inventory for ALL products atomically
   const results = [];
   for (const { adjustment, product, previousStock, newStock, newStockStatus } of validatedAdjustments) {
-    const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId } = adjustment;
+    const { productId, quantity, type, reason, notes, orderId, purchaseOrderId, userId, expectedPreviousStock } =
+    adjustment;
 
     // Update product inventory
     const updatedProduct = await tx.product.update({
