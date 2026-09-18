@@ -39,6 +39,17 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Fixed
+- **Production has not deployed since the `next` 16.3.3 bump, and CI has not installed at all.**
+  Dependabot raised `next` from 16.3.1 to 16.3.3 in all four app workspaces but left
+  `package-lock.json` at 16.3.1, so `npm ci` refused the tree outright — every CI run since has
+  died at "Install dependencies" — and Vercel, which falls back to `npm install`, resolved the
+  gap by keeping the hoisted 16.3.1 for the root packages that peer-depend on Next and nesting a
+  second copy at 16.3.3 under `apps/storefront`. Two copies mean two `NextRequest` types, and the
+  build failed type-checking the generated route validator with "Property `[Internal]` is
+  missing". The lockfile now resolves a single hoisted `next@16.3.3`. Regenerating it in place
+  was not enough: npm keeps a lockfile entry that nothing forces it to move, so the stale root
+  entry had to be dropped before re-resolving.
+
 - **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
   with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
   the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four
