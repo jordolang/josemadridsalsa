@@ -4,6 +4,8 @@ import { useRef, useState } from 'react'
 import { Upload, Loader2, Image as ImageIcon, Film, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { getErrorMessage } from '@/lib/errors'
+import { planUpload, readUploadResponse, recompressImage } from '@/lib/images/browser-upload'
 
 interface UploadResult {
   url: string
@@ -33,26 +35,39 @@ export function MediaUploader({
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return
     setUploading(true)
+    let uploaded = 0
     try {
-      for (const file of Array.from(files)) {
+      for (const picked of Array.from(files)) {
+        // Vercel refuses an oversized request body before the route runs, so the size and the
+        // type are settled here. A file the browser can shrink is shrunk rather than refused.
+        const plan = planUpload(picked)
+        if (plan.action === 'reject') {
+          toast.error(plan.reason)
+          continue
+        }
+
+        const file = plan.action === 'recompress' ? await recompressImage(picked) : picked
+
         const fd = new FormData()
         fd.append('file', file)
         const res = await fetch('/api/admin/blog/upload', {
           method: 'POST',
           body: fd,
         })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+        const data = await readUploadResponse(res)
         onUploaded({
           url: data.url,
           isVideo: data.isVideo,
           filename: data.media.filename,
           mimeType: data.media.mimeType,
         })
+        uploaded += 1
       }
-      toast.success(files.length === 1 ? 'Uploaded' : `Uploaded ${files.length} files`)
+      if (uploaded > 0) {
+        toast.success(uploaded === 1 ? 'Uploaded' : `Uploaded ${uploaded} files`)
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed')
+      toast.error(getErrorMessage(err))
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''

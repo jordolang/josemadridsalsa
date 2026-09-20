@@ -1,27 +1,22 @@
 import { put } from '@vercel/blob'
+import {
+  BLOB_IMAGE_TYPES as IMAGE_TYPES,
+  BLOB_UPLOAD_TYPES,
+  SERVERLESS_BODY_LIMIT_BYTES,
+  type BlobUploadMimeType,
+} from '@/lib/images/browser-upload'
 
-const IMAGE_TYPES = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'image/svg+xml': 'svg',
-} as const
+// The accepted types live with the browser-side check so the two cannot drift; the browser needs
+// them and cannot import this module, which pulls in `@vercel/blob`.
+export { BLOB_UPLOAD_TYPES }
+export type { BlobUploadMimeType }
 
-const VIDEO_TYPES = {
-  'video/mp4': 'mp4',
-  'video/webm': 'webm',
-  'video/quicktime': 'mov',
-} as const
-
-export const BLOB_UPLOAD_TYPES = {
-  ...IMAGE_TYPES,
-  ...VIDEO_TYPES,
-} as const
-
-export const VERCEL_SERVER_UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024
-
-export type BlobUploadMimeType = keyof typeof BLOB_UPLOAD_TYPES
+/**
+ * The route-level ceiling. A backstop rather than the effective limit: Vercel refuses a larger
+ * request body before the function starts, so the browser has to keep uploads under it
+ * (`UPLOAD_BUDGET_BYTES` in `lib/images/browser-upload.ts`).
+ */
+export const VERCEL_SERVER_UPLOAD_MAX_BYTES = SERVERLESS_BODY_LIMIT_BYTES
 
 export interface BlobUploadResult {
   url: string
