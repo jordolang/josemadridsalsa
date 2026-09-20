@@ -10,6 +10,43 @@ type PublishResult = {
 }
 
 /**
+ * Ask Facebook to re-read a URL's Open Graph tags, discarding what it cached.
+ *
+ * A Page feed post that carries a `link` renders its preview card purely from
+ * Facebook's own cached scrape of that URL — since Graph API v2.9 the `picture`,
+ * `name` and `description` overrides are gone, so the post request cannot say
+ * what the card should show. Facebook keeps that cache for weeks and populates
+ * it from whoever scraped the URL first, which is routinely a render made before
+ * the article had its cover image. The result is a card stuck on the site's
+ * default og:image no matter how often the article is re-shared.
+ *
+ * Scraping immediately before the post refreshes that cache, so the card is
+ * built from the page's current og:image — the article's own cover.
+ *
+ * Best effort: a refusal here only risks a stale card, so the post still goes.
+ */
+async function refreshLinkPreview(accessToken: string, linkUrl: string): Promise<void> {
+  try {
+    const response = await fetch('https://graph.facebook.com/v21.0/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: linkUrl, scrape: 'true', access_token: accessToken }),
+    })
+    const data = await response.json()
+    if (data?.error) {
+      console.warn(
+        `[social/publisher] could not refresh Facebook's link preview for ${linkUrl}, so the card may show a previously cached image: ${data.error.message}`,
+      )
+    }
+  } catch (error) {
+    console.warn(
+      `[social/publisher] could not refresh Facebook's link preview for ${linkUrl}, so the card may show a previously cached image:`,
+      error,
+    )
+  }
+}
+
+/**
  * Publish a post to Facebook Page via Graph API
  */
 async function publishToFacebook(
@@ -29,6 +66,9 @@ async function publishToFacebook(
 
     if (linkUrl) {
       body.link = linkUrl
+      // Refresh the cached Open Graph data first so the preview card is built
+      // from the page as it stands now, not from an earlier scrape of it.
+      await refreshLinkPreview(accessToken, linkUrl)
     }
 
     // If we have images, post as photos
