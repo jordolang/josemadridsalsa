@@ -39,6 +39,24 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Fixed
+- **Uploading a photo to a Heat Index post failed with "The string did not match the expected
+  pattern."** Vercel caps a serverless request body at 4.5 MB and refuses anything larger at the
+  edge, so `POST /api/admin/blog/upload` never ran for a normal phone photo — there are no logs
+  for it, because there was no invocation. What came back was the platform's HTML error page, and
+  the uploader called `res.json()` on it before checking the status, so the author saw Safari's
+  message for a failed parse rather than anything about the picture. The route's own
+  `VERCEL_SERVER_UPLOAD_MAX_BYTES` guard could never fire for the case it was written for.
+  The browser now settles size and type before sending: an over-budget JPEG, PNG or WebP is
+  redrawn on a canvas at progressively smaller sizes until it fits (as a JPEG, on white, so
+  transparency does not turn black), which is what makes a camera photo upload at all; a GIF, SVG
+  or video that cannot be redrawn is refused by name with both sizes; and a HEIC pick — what an
+  iPhone saves under "High Efficiency" — says how to get JPEGs instead. A failed response is read
+  as text and only then parsed, so no error body can produce a parser error again, and a 413 or an
+  expired session now reads as itself. The budget is 4 MB rather than the full 4.5, leaving room
+  for the multipart framing that a file of exactly the cap would push over it. One bad pick in a
+  multi-file selection no longer abandons the files after it, and the success toast counts what
+  actually uploaded.
+
 - **Production has not deployed since the `next` 16.3.3 bump, and CI has not installed at all.**
   Dependabot raised `next` from 16.3.1 to 16.3.3 in all four app workspaces but left
   `package-lock.json` at 16.3.1, so `npm ci` refused the tree outright — every CI run since has
