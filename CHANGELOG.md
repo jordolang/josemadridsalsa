@@ -57,6 +57,7 @@ the root `package.json` is canonical.
   stale card, so the post still goes out. Existing posts keep the card Facebook already cached
   until the article is re-shared or re-scraped from the Sharing Debugger.
 
+- Fixed Twitter blog cross-posts uploading Google Business cover images; empty or invalid X responses now report the HTTP status instead of a JSON parsing error.
 - **Uploading a photo to a Heat Index post failed with "The string did not match the expected
   pattern."** Vercel caps a serverless request body at 4.5 MB and refuses anything larger at the
   edge, so `POST /api/admin/blog/upload` never ran for a normal phone photo — there are no logs
