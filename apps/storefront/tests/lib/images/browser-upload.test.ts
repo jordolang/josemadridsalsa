@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   UPLOAD_BUDGET_BYTES,
   formatMb,
   jpegFileName,
   planUpload,
   readUploadResponse,
+  recompressImage,
   scaledDimensions,
   uploadFailureMessage,
 } from '@/lib/images/browser-upload'
@@ -154,5 +155,100 @@ describe('readUploadResponse', () => {
   it('reports a success body missing the fields the editor needs', async () => {
     const res = jsonResponse(201, { url: 'https://example.test/a.jpg' })
     await expect(readUploadResponse(res)).rejects.toThrow('unexpected result')
+  })
+})
+
+/**
+ * `recompressImage` is the part that makes a camera photo upload at all, and jsdom has neither
+ * `createImageBitmap` nor a canvas that encodes. Both are stubbed so the decisions around them —
+ * which attempt wins, what happens when none does, what the result is named — can be asserted.
+ */
+describe('recompressImage', () => {
+  interface Drawn {
+    width: number
+    height: number
+    quality: number
+  }
+
+  /** Install the stubs and report every encode attempt, sized by `sizeFor`. */
+  function stubCanvas(sizeFor: (attempt: Drawn) => number) {
+    const drawn: Drawn[] = []
+    let closed = false
+
+    vi.stubGlobal('createImageBitmap', async () => ({
+      width: 4032,
+      height: 3024,
+      close: () => {
+        closed = true
+      },
+    }))
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      fillStyle: '',
+      fillRect: () => {},
+      drawImage: () => {},
+    } as unknown as CanvasRenderingContext2D)
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (
+      this: HTMLCanvasElement,
+      callback: BlobCallback,
+      _type?: string,
+      quality?: number
+    ) {
+      const attempt = { width: this.width, height: this.height, quality: quality ?? 0 }
+      drawn.push(attempt)
+      callback(new Blob([new Uint8Array(sizeFor(attempt))], { type: 'image/jpeg' }))
+    })
+
+    return { drawn, wasClosed: () => closed }
+  }
+
+  const photo = () =>
+    new File([new Uint8Array(16)], 'IMG_4821.HEIC.jpeg', { type: 'image/jpeg' })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('stops at the first attempt that fits, and returns a JPEG', async () => {
+    const { drawn, wasClosed } = stubCanvas(() => 500)
+
+    const out = await recompressImage(photo(), 1000)
+
+    expect(out.type).toBe('image/jpeg')
+    expect(out.name).toBe('IMG_4821.HEIC.jpg')
+    expect(out.size).toBe(500)
+    // One encode only — it fit, so the smaller attempts are never run.
+    expect(drawn).toHaveLength(1)
+    expect(drawn[0]).toEqual({ width: 2400, height: 1800, quality: 0.82 })
+    expect(wasClosed()).toBe(true)
+  })
+
+  it('keeps shrinking until something fits', async () => {
+    // Only the third attempt (1600px) lands under the budget.
+    const { drawn } = stubCanvas((a) => (a.width <= 1600 ? 900 : 5000))
+
+    const out = await recompressImage(photo(), 1000)
+
+    expect(out.size).toBe(900)
+    expect(drawn.map((a) => a.width)).toEqual([2400, 2000, 1600])
+  })
+
+  it('refuses rather than sending something still too large', async () => {
+    const { drawn, wasClosed } = stubCanvas(() => 9 * 1024 * 1024)
+
+    await expect(recompressImage(photo(), 1000)).rejects.toThrow('9.0 MB after resizing')
+    // Every attempt was spent before giving up, and the bitmap is still released.
+    expect(drawn).toHaveLength(4)
+    expect(wasClosed()).toBe(true)
+  })
+
+  it('says so plainly when the browser cannot decode the pick', async () => {
+    vi.stubGlobal('createImageBitmap', async () => {
+      throw new Error('unsupported')
+    })
+
+    await expect(recompressImage(photo(), 1000)).rejects.toThrow('could not resize it')
   })
 })
