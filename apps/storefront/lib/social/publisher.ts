@@ -1,4 +1,5 @@
 import type { SocialMediaPlatform } from '@prisma/client'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getValidAccessToken } from './platforms'
 
@@ -163,10 +164,20 @@ async function publishToTwitter(
       },
       body: JSON.stringify(tweetBody),
     })
-    const data = await response.json()
+    const parsed = z.object({
+      data: z.object({ id: z.string().min(1) }).optional(),
+      detail: z.string().optional(),
+      title: z.string().optional(),
+      errors: z.array(z.object({ message: z.string().optional() })).optional(),
+    }).safeParse(await response.json().catch(() => null))
+    const data = parsed.success ? parsed.data : undefined
 
-    if (data.errors) {
-      return { success: false, error: data.errors[0]?.message || 'Twitter API error' }
+    if (!response.ok || !data?.data?.id || data.errors?.length) {
+      const detail = data?.detail || data?.errors?.[0]?.message || data?.title
+      return {
+        success: false,
+        error: `X/Twitter publish failed (HTTP ${response.status}): ${detail || 'Empty or invalid API response. Check the post on X before retrying.'}`,
+      }
     }
 
     return {
@@ -533,7 +544,8 @@ export async function publishToAccount(
       result = await publishToFacebook(accessToken, account.accountId, content, mediaUrls, post.linkUrl)
       break
     case 'TWITTER':
-      result = await publishToTwitter(accessToken, content, mediaUrls)
+      // Blog covers are attached for Google Business; X uses the article link.
+      result = await publishToTwitter(accessToken, content, post.blogPostId ? [] : mediaUrls)
       break
     case 'INSTAGRAM':
       result = await publishToInstagram(accessToken, account.accountId, content, mediaUrls)
