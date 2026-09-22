@@ -2228,6 +2228,8 @@ export const DIRECT_OPS = [
   'redirect.toggle',
   'notification.markRead',
   'notification.markAllRead',
+  'inboundEmail.completeStep',
+  'inboundEmail.reopenStep',
   'integration.enable',
   'integration.disable',
 ] as const

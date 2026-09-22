@@ -7,6 +7,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/lib/notifications/dispatch'
+import { UnresolvedEmailError } from '@/lib/inbox/resolution'
 
 const PatchSchema = z.object({
   /** Omit to clear everything unread for the current operator. */
@@ -49,6 +50,15 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
+    }
+    // A customer-email alert that still has work attached refuses to clear. 409 rather
+    // than 400: the request was well formed, the resource is simply not in a state where
+    // it can be dismissed yet.
+    if (error instanceof UnresolvedEmailError) {
+      return NextResponse.json(
+        { error: error.message, outstanding: error.outstanding },
+        { status: 409 },
+      )
     }
     console.error('Notification update error:', error)
     return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 })

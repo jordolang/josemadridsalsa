@@ -27,7 +27,7 @@ const prismaMock = {
   storeSettings: { upsert: vi.fn() },
   user: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
   socialMediaPost: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
-  notification: { updateMany: vi.fn() },
+  notification: { updateMany: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
 }
 
 vi.mock('@/lib/prisma', () => ({ __esModule: true, default: prismaMock, prisma: prismaMock }))
@@ -145,6 +145,12 @@ describe('the handler registry', () => {
     for (const op of BULK_OPS) {
       const handler = WRITE_HANDLERS[op]
       expect(handler, `${op} is not registered`).toBeDefined()
+      // "Mark all read" now reads the candidates first, so that a customer-email alert
+      // with open steps can be left behind — see lib/inbox/resolution.ts.
+      prismaMock.notification.findMany.mockResolvedValue([
+        { id: 'n1', entityType: null, entityId: null },
+        { id: 'n2', entityType: null, entityId: null },
+      ])
       prismaMock.notification.updateMany.mockResolvedValue({ count: 2 })
       prismaMock.notification.updateMany.mockClear()
       await handler.execute({}, { actor: { ...mine, role: 'ADMIN' }, can: async () => true })
