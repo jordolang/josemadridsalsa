@@ -61,6 +61,15 @@ the root `package.json` is canonical.
   reporting a cleared quota that is still full; a 404 is the artifact expiring on its own and is
   treated as success.
 
+### Changed
+- **The macOS admin app builds on the standalone Command Line Tools again.** `ConnectionSettings`
+  held its editable endpoint in `@State`, which is a macro in the current SDK and expands through
+  a plugin that ships only with a full Xcode install — so the bundle could not be built on a
+  machine that had only the CLT. The view-local state now lives in a small `ObservableObject`
+  held with `@StateObject`, which is an ordinary property wrapper, and the build comment in
+  `build-app.sh` records the constraint so the next person does not reintroduce `@State` and
+  quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
+
 ### Fixed
 - Fixed Twitter blog cross-posts uploading Google Business cover images; empty or invalid X responses now report the HTTP status instead of a JSON parsing error.
 - **Uploading a photo to a Heat Index post failed with "The string did not match the expected

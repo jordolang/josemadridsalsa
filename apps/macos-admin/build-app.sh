@@ -1,9 +1,10 @@
 #!/bin/zsh
 set -euo pipefail
 
-# Builds the macOS admin app bundle. Requires a full Xcode toolchain: the
-# SwiftUI macro plugins that @State and friends expand through are not shipped
-# with the standalone Command Line Tools, and the compile fails without them.
+# Builds the macOS admin app bundle. The standalone Command Line Tools are
+# enough: they ship no SwiftUI macro plugin, so the sources stay clear of
+# `@State` and the other SwiftUI macros and use property wrappers instead.
+# Reintroducing `@State` breaks this build on any machine without full Xcode.
 
 SCRIPT_DIR=${0:A:h}
 APP_NAME="Jose Madrid Salsa Admin"
