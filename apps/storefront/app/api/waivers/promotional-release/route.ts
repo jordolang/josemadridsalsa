@@ -64,12 +64,17 @@ export async function POST(request: NextRequest) {
         addRandomSuffix: true,
         token,
       }),
-      put(`${pathname}.json`, JSON.stringify(record, null, 2), {
-        access: 'public',
-        contentType: 'application/json',
-        addRandomSuffix: true,
-        token,
-      }),
+      put(
+        `${pathname}.json`,
+        // The drawn signature lives in the PDF; keep the JSON record small and searchable.
+        JSON.stringify({ ...record, signature: undefined, signed: Boolean(record.signature) }, null, 2),
+        {
+          access: 'public',
+          contentType: 'application/json',
+          addRandomSuffix: true,
+          token,
+        },
+      ),
     ])
 
     return ok(

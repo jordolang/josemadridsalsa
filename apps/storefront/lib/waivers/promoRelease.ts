@@ -19,29 +19,36 @@ const optionalText = (max: number) =>
     .optional()
     .transform((value) => (value ? value : undefined))
 
+/** Largest drawn signature we accept, as a base64 PNG data URL (~375 KB of image). */
+export const PROMO_RELEASE_SIGNATURE_MAX_LENGTH = 500_000
+const SIGNATURE_DATA_URL = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/
+
 export const promoReleaseSubmissionSchema = z
   .object({
-    fullName: z.string().trim().min(2, 'Please enter your full name').max(100),
+    fullName: optionalText(100).refine((value) => !value || value.length >= 2, 'Please enter your full name'),
     email: z
       .union([z.literal(''), z.string().trim().toLowerCase().email('Please enter a valid email').max(200)])
       .optional()
       .transform((value) => (value ? value : undefined)),
     decision: z.enum(PROMO_RELEASE_DECISIONS),
+    signature: z
+      .string()
+      .max(PROMO_RELEASE_SIGNATURE_MAX_LENGTH, 'Signature is too large')
+      .regex(SIGNATURE_DATA_URL, 'Signature must be a PNG image')
+      .optional(),
     signingForMinor: z.boolean().default(false),
     minorName: optionalText(100),
     event: optionalText(80),
   })
   .superRefine((data, ctx) => {
-    if (data.signingForMinor && (!data.minorName || data.minorName.length < 2)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['minorName'],
-        message: "Please enter the child's full name",
-      })
+    if (data.decision === 'agree' && !data.signature) {
+      ctx.addIssue({ code: 'custom', path: ['signature'], message: 'Please sign to agree' })
     }
   })
   .transform((data) => ({
     ...data,
+    // A decline needs no signature; never keep one that came along anyway.
+    signature: data.decision === 'agree' ? data.signature : undefined,
     minorName: data.signingForMinor ? data.minorName : undefined,
   }))
 
@@ -108,7 +115,7 @@ function easternDateParts(iso: string): { year: string; month: string; day: stri
 export function buildPromoReleasePathname(record: PromoReleaseRecord): string {
   const { year, month, day } = easternDateParts(record.submittedAt)
   const shortId = record.id.replace(/-/g, '').slice(0, 8)
-  return `${PROMO_RELEASE_BLOB_DIRECTORY}/${year}/${month}/${year}-${month}-${day}-${record.decision}-${slugify(record.fullName)}-${shortId}`
+  return `${PROMO_RELEASE_BLOB_DIRECTORY}/${year}/${month}/${year}-${month}-${day}-${record.decision}-${record.fullName ? slugify(record.fullName) : 'anonymous'}-${shortId}`
 }
 
 export function formatPromoReleaseTimestamp(iso: string): string {
@@ -151,7 +158,7 @@ const VERDE = rgb(0.086, 0.396, 0.204)
 /** Renders the signed record as a one-page Letter PDF for the Blob archive. */
 export async function buildPromoReleasePdf(record: PromoReleaseRecord): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
-  pdf.setTitle(`${PROMO_RELEASE_TITLE} - ${toPdfSafeText(record.fullName)}`)
+  pdf.setTitle(`${PROMO_RELEASE_TITLE} - ${toPdfSafeText(record.fullName ?? 'Anonymous')}`)
   pdf.setAuthor('Jose Madrid Salsa')
   pdf.setSubject(`Promotional release ${record.id}`)
   pdf.setCreationDate(new Date(record.submittedAt))
@@ -209,11 +216,11 @@ export async function buildPromoReleasePdf(record: PromoReleaseRecord): Promise<
   y -= boxHeight + 20
 
   const fields: Array<[string, string]> = [
-    ['Name', record.fullName],
+    ['Name', record.fullName ?? 'Not provided (anonymous)'],
     ['Email', record.email ?? 'Not provided'],
   ]
   if (record.signingForMinor) {
-    fields.push(['Signing for minor', record.minorName ?? ''])
+    fields.push(['Signing for minor', record.minorName ?? 'Name not provided'])
     fields.push(['Relationship', 'Parent or legal guardian (confirmed)'])
   }
   fields.push(['Event', record.event ?? 'Not specified'])
@@ -229,6 +236,26 @@ export async function buildPromoReleasePdf(record: PromoReleaseRecord): Promise<
     y -= Math.max(1, valueLines.length) * 15 + 4
   }
 
+  if (record.signature) {
+    const image = await pdf.embedPng(record.signature)
+    const maxWidth = 260
+    const maxHeight = 90
+    const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1)
+    const drawn = { width: image.width * scale, height: image.height * scale }
+    ensureRoom(maxHeight + 40)
+    y -= 8
+    page.drawText('Signature', { x: margin, y: y - 10.5, size: 10.5, font: bold, color: MUTED })
+    page.drawImage(image, { x: margin + 130, y: y - drawn.height, width: drawn.width, height: drawn.height })
+    y -= drawn.height + 6
+    page.drawLine({
+      start: { x: margin + 130, y },
+      end: { x: margin + 130 + maxWidth, y },
+      thickness: 0.75,
+      color: MUTED,
+    })
+    y -= 10
+  }
+
   y -= 12
   write('Release terms shown to the signer', { font: bold, size: 12, gap: 4 })
   write(PROMO_RELEASE_INTRO, { gap: 6 })
@@ -238,7 +265,9 @@ export async function buildPromoReleasePdf(record: PromoReleaseRecord): Promise<
 
   y -= 12
   write(
-    `By tapping "${agreed ? 'Yes, feature me' : "No, please don't"}" and Submit on the Jose Madrid Salsa waiver kiosk, the signer made this election electronically.`,
+    agreed
+      ? 'The signer tapped "Yes, feature me", drew the signature above, and tapped Submit on the Jose Madrid Salsa waiver kiosk.'
+      : 'The signer tapped "No, please don\'t" and Submit on the Jose Madrid Salsa waiver kiosk.',
     { size: 9.5, color: MUTED, gap: 10 },
   )
 

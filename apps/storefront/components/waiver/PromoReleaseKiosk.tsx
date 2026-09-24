@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import Image from 'next/image'
-import { Check, Loader2, RotateCcw, X } from 'lucide-react'
+import { Check, ChevronDown, Loader2, RotateCcw, X } from 'lucide-react'
+import { SignaturePad } from '@/components/waiver/SignaturePad'
 import { cn } from '@/lib/utils'
 import {
   PROMO_RELEASE_INTRO,
@@ -18,26 +19,35 @@ const RESET_SECONDS = 8
 type Status = 'form' | 'submitting' | 'done'
 
 interface FormState {
-  fullName: string
-  email: string
+  decision: PromoReleaseDecision | null
+  signature: string | null
   signingForMinor: boolean
   minorName: string
-  decision: PromoReleaseDecision | null
+  fullName: string
+  email: string
 }
 
 const EMPTY_FORM: FormState = {
-  fullName: '',
-  email: '',
+  decision: null,
+  signature: null,
   signingForMinor: false,
   minorName: '',
-  decision: null,
+  fullName: '',
+  email: '',
 }
 
 const inputClass =
   'h-14 w-full rounded-xl border-2 border-stone-200 bg-white px-4 text-xl text-stone-900 placeholder:text-stone-400 focus:border-salsa-600 focus:outline-none focus:ring-4 focus:ring-salsa-100'
 
+const textInputProps = {
+  autoComplete: 'off',
+  autoCorrect: 'off',
+  spellCheck: false,
+} as const
+
 export function PromoReleaseKiosk({ event }: { event?: string }) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [showDetails, setShowDetails] = useState(false)
   const [status, setStatus] = useState<Status>('form')
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState<{ firstName: string; decision: PromoReleaseDecision } | null>(null)
@@ -45,6 +55,7 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
 
   const reset = useCallback(() => {
     setForm(EMPTY_FORM)
+    setShowDetails(false)
     setSubmitted(null)
     setError(null)
     setStatus('form')
@@ -68,11 +79,26 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
     setError(null)
   }
 
+  // Stable so the pad's setup effect doesn't re-run on every keystroke.
+  const handleSignature = useCallback((signature: string | null) => {
+    setForm((current) => ({ ...current, signature }))
+    setError(null)
+  }, [])
+
+  const chooseDecision = (decision: PromoReleaseDecision) => {
+    setForm((current) => ({
+      ...current,
+      decision,
+      // Only a "yes" is signed; drop anything drawn before switching to "no".
+      signature: decision === 'agree' ? current.signature : null,
+      signingForMinor: decision === 'agree' ? current.signingForMinor : false,
+    }))
+    setError(null)
+  }
+
+  const agreed = form.decision === 'agree'
   const canSubmit =
-    form.fullName.trim().length >= 2 &&
-    form.decision !== null &&
-    (!form.signingForMinor || form.minorName.trim().length >= 2) &&
-    status === 'form'
+    status === 'form' && form.decision !== null && (form.decision === 'decline' || form.signature !== null)
 
   async function handleSubmit(eventArg: FormEvent<HTMLFormElement>) {
     eventArg.preventDefault()
@@ -85,11 +111,12 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          decision: form.decision,
+          signature: agreed ? form.signature ?? undefined : undefined,
+          signingForMinor: agreed && form.signingForMinor,
+          minorName: form.minorName,
           fullName: form.fullName,
           email: form.email,
-          decision: form.decision,
-          signingForMinor: form.signingForMinor,
-          minorName: form.minorName,
           event,
         }),
       })
@@ -114,13 +141,13 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
   }
 
   if (status === 'done' && submitted) {
-    const agreed = submitted.decision === 'agree'
+    const yes = submitted.decision === 'agree'
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center bg-chile-50 px-6 text-center">
         <div
           className={cn(
             'mb-8 flex h-28 w-28 items-center justify-center rounded-full',
-            agreed ? 'bg-verde-600' : 'bg-stone-700',
+            yes ? 'bg-verde-600' : 'bg-stone-700',
           )}
         >
           <Check className="h-16 w-16 text-white" strokeWidth={3} aria-hidden />
@@ -129,7 +156,7 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
           Thank you{submitted.firstName ? `, ${submitted.firstName}` : ''}!
         </h1>
         <p className="mt-4 max-w-xl text-2xl text-stone-600">
-          {agreed
+          {yes
             ? "You're all set. We can't wait to share the fun."
             : "Got it. We won't feature you in our photos or promotions."}
         </p>
@@ -170,81 +197,14 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
           </ol>
         </section>
 
-        <section className="flex flex-col gap-5">
-          <label className="flex flex-col gap-2">
-            <span className="text-lg font-semibold text-stone-800">Your full name</span>
-            <input
-              className={inputClass}
-              value={form.fullName}
-              onChange={(e) => update('fullName', e.target.value)}
-              autoComplete="off"
-              autoCapitalize="words"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="First and last name"
-              maxLength={100}
-              disabled={submitting}
-            />
-          </label>
-
-          <label className="flex flex-col gap-2">
-            <span className="text-lg font-semibold text-stone-800">
-              Email <span className="font-normal text-stone-500">(optional)</span>
-            </span>
-            <input
-              className={inputClass}
-              type="email"
-              inputMode="email"
-              value={form.email}
-              onChange={(e) => update('email', e.target.value)}
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="you@example.com"
-              maxLength={200}
-              disabled={submitting}
-            />
-          </label>
-
-          <label className="flex cursor-pointer items-center gap-4 rounded-xl border-2 border-stone-200 bg-white px-4 py-4">
-            <input
-              type="checkbox"
-              className="h-7 w-7 shrink-0 accent-salsa-700"
-              checked={form.signingForMinor}
-              onChange={(e) => update('signingForMinor', e.target.checked)}
-              disabled={submitting}
-            />
-            <span className="text-lg text-stone-800">I&apos;m a parent or guardian signing for a child under 18</span>
-          </label>
-
-          {form.signingForMinor ? (
-            <label className="flex flex-col gap-2">
-              <span className="text-lg font-semibold text-stone-800">Child&apos;s full name</span>
-              <input
-                className={inputClass}
-                value={form.minorName}
-                onChange={(e) => update('minorName', e.target.value)}
-                autoComplete="off"
-                autoCapitalize="words"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="First and last name"
-                maxLength={100}
-                disabled={submitting}
-              />
-            </label>
-          ) : null}
-        </section>
-
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-stone-800">
-            May we feature {form.signingForMinor ? 'your child' : 'you'} on our website and in promotional materials?
+          <h2 className="mb-3 text-2xl font-semibold text-stone-900">
+            May we feature you on our website and in promotional materials?
           </h2>
           <div role="radiogroup" aria-label="Your choice" className="grid gap-4 sm:grid-cols-2">
             <ChoiceCard
               selected={form.decision === 'agree'}
-              onSelect={() => update('decision', 'agree')}
+              onSelect={() => chooseDecision('agree')}
               disabled={submitting}
               tone="yes"
               title="Yes, feature me"
@@ -252,7 +212,7 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
             />
             <ChoiceCard
               selected={form.decision === 'decline'}
-              onSelect={() => update('decision', 'decline')}
+              onSelect={() => chooseDecision('decline')}
               disabled={submitting}
               tone="no"
               title="No, please don't"
@@ -260,6 +220,84 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
             />
           </div>
         </section>
+
+        {agreed ? (
+          <section className="flex flex-col gap-4">
+            <h2 className="text-2xl font-semibold text-stone-900">Sign to agree</h2>
+            <SignaturePad onChange={handleSignature} disabled={submitting} />
+            <label className="flex cursor-pointer items-center gap-4 rounded-xl border-2 border-stone-200 bg-white px-4 py-4">
+              <input
+                type="checkbox"
+                className="h-7 w-7 shrink-0 accent-salsa-700"
+                checked={form.signingForMinor}
+                onChange={(e) => update('signingForMinor', e.target.checked)}
+                disabled={submitting}
+              />
+              <span className="text-lg text-stone-800">I&apos;m a parent or guardian signing for my child under 18</span>
+            </label>
+            {form.signingForMinor ? (
+              <input
+                className={inputClass}
+                aria-label="Child's name (optional)"
+                value={form.minorName}
+                onChange={(e) => update('minorName', e.target.value)}
+                {...textInputProps}
+                autoCapitalize="words"
+                placeholder="Child's name (optional)"
+                maxLength={100}
+                disabled={submitting}
+              />
+            ) : null}
+          </section>
+        ) : null}
+
+        {form.decision ? (
+          <section className="rounded-2xl border-2 border-stone-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setShowDetails((open) => !open)}
+              aria-expanded={showDetails}
+              className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+            >
+              <span>
+                <span className="block text-lg font-semibold text-stone-800">Add your name and email</span>
+                <span className="block text-base text-stone-500">Optional. Skip this to stay anonymous.</span>
+              </span>
+              <ChevronDown
+                className={cn('h-6 w-6 shrink-0 text-stone-500 transition-transform', showDetails && 'rotate-180')}
+                aria-hidden
+              />
+            </button>
+            {showDetails ? (
+              <div className="flex flex-col gap-4 border-t border-stone-200 px-5 py-5">
+                <input
+                  className={inputClass}
+                  aria-label="Your name (optional)"
+                  value={form.fullName}
+                  onChange={(e) => update('fullName', e.target.value)}
+                  {...textInputProps}
+                  autoCapitalize="words"
+                  placeholder="Your name"
+                  maxLength={100}
+                  disabled={submitting}
+                />
+                <input
+                  className={inputClass}
+                  aria-label="Email (optional)"
+                  type="email"
+                  inputMode="email"
+                  value={form.email}
+                  onChange={(e) => update('email', e.target.value)}
+                  {...textInputProps}
+                  autoCapitalize="none"
+                  placeholder="Email"
+                  maxLength={200}
+                  disabled={submitting}
+                />
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {error ? (
           <p role="alert" className="rounded-xl bg-salsa-50 px-4 py-3 text-lg text-salsa-800">
@@ -273,7 +311,7 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
           className="flex h-16 items-center justify-center gap-3 rounded-2xl bg-salsa-700 text-xl font-bold text-white shadow-lg transition active:bg-salsa-800 disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
         >
           {submitting ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden /> : null}
-          {submitting ? 'Saving…' : 'Submit'}
+          {submitting ? 'Saving…' : agreed && !form.signature ? 'Sign above to submit' : 'Submit'}
         </button>
       </form>
     </main>

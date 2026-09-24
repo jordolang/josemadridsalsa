@@ -10,11 +10,13 @@ import {
 } from '@/lib/waivers/promoRelease'
 
 const FIXED_ID = '1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d'
+const SIGNATURE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 
 function record(overrides: Record<string, unknown> = {}, now = new Date('2026-09-24T16:30:00Z')) {
   const submission = promoReleaseSubmissionSchema.parse({
-    fullName: 'María López',
     decision: 'agree',
+    signature: SIGNATURE,
     ...overrides,
   })
   return createPromoReleaseRecord(submission, {
@@ -27,61 +29,64 @@ function record(overrides: Record<string, unknown> = {}, now = new Date('2026-09
 }
 
 describe('promoReleaseSubmissionSchema', () => {
-  it('accepts a minimal agree submission and drops empty optionals', () => {
+  it('accepts an anonymous signed agreement and drops empty optionals', () => {
     const parsed = promoReleaseSubmissionSchema.parse({
-      fullName: '  Maria Lopez ',
-      email: '',
       decision: 'agree',
+      signature: SIGNATURE,
+      fullName: '  ',
+      email: '',
       minorName: '',
       event: '',
     })
     expect(parsed).toEqual({
-      fullName: 'Maria Lopez',
-      email: undefined,
       decision: 'agree',
+      signature: SIGNATURE,
+      fullName: undefined,
+      email: undefined,
       signingForMinor: false,
       minorName: undefined,
       event: undefined,
     })
   })
 
-  it('normalizes email case', () => {
-    const parsed = promoReleaseSubmissionSchema.parse({
-      fullName: 'Maria Lopez',
-      email: 'Maria@Example.COM',
-      decision: 'decline',
-    })
-    expect(parsed.email).toBe('maria@example.com')
+  it('accepts an anonymous decline with no signature', () => {
+    const parsed = promoReleaseSubmissionSchema.parse({ decision: 'decline' })
+    expect(parsed.decision).toBe('decline')
+    expect(parsed.signature).toBeUndefined()
   })
 
-  it('rejects a missing decision, a short name, and a bad email', () => {
-    expect(promoReleaseSubmissionSchema.safeParse({ fullName: 'Maria Lopez' }).success).toBe(false)
-    expect(promoReleaseSubmissionSchema.safeParse({ fullName: 'M', decision: 'agree' }).success).toBe(false)
-    expect(
-      promoReleaseSubmissionSchema.safeParse({ fullName: 'Maria Lopez', email: 'nope', decision: 'agree' }).success,
-    ).toBe(false)
-  })
-
-  it("requires the child's name when signing for a minor", () => {
-    const result = promoReleaseSubmissionSchema.safeParse({
-      fullName: 'Maria Lopez',
-      decision: 'agree',
-      signingForMinor: true,
-    })
+  it('requires a signature to agree', () => {
+    const result = promoReleaseSubmissionSchema.safeParse({ decision: 'agree' })
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0]?.path).toEqual(['minorName'])
+    if (!result.success) expect(result.error.issues[0]?.path).toEqual(['signature'])
+  })
+
+  it('discards a signature sent with a decline', () => {
+    const parsed = promoReleaseSubmissionSchema.parse({ decision: 'decline', signature: SIGNATURE })
+    expect(parsed.signature).toBeUndefined()
+  })
+
+  it('rejects signatures that are not PNG data URLs', () => {
+    for (const signature of ['data:image/svg+xml;base64,PHN2Zz4=', 'https://example.com/sig.png', 'data:image/png;base64,<script>']) {
+      expect(promoReleaseSubmissionSchema.safeParse({ decision: 'agree', signature }).success).toBe(false)
     }
   })
 
-  it('discards a stray child name when not signing for a minor', () => {
-    const parsed = promoReleaseSubmissionSchema.parse({
-      fullName: 'Maria Lopez',
-      decision: 'agree',
-      signingForMinor: false,
-      minorName: 'Sofia Lopez',
-    })
-    expect(parsed.minorName).toBeUndefined()
+  it('normalizes an optional email and rejects a bad one or a one-letter name', () => {
+    expect(
+      promoReleaseSubmissionSchema.parse({ decision: 'decline', email: 'Maria@Example.COM' }).email,
+    ).toBe('maria@example.com')
+    expect(promoReleaseSubmissionSchema.safeParse({ decision: 'decline', email: 'nope' }).success).toBe(false)
+    expect(promoReleaseSubmissionSchema.safeParse({ decision: 'decline', fullName: 'M' }).success).toBe(false)
+  })
+
+  it("keeps the child's name optional and only when signing for a minor", () => {
+    expect(
+      promoReleaseSubmissionSchema.safeParse({ decision: 'agree', signature: SIGNATURE, signingForMinor: true }).success,
+    ).toBe(true)
+    expect(
+      promoReleaseSubmissionSchema.parse({ decision: 'agree', signature: SIGNATURE, minorName: 'Sofia Lopez' }).minorName,
+    ).toBeUndefined()
   })
 })
 
@@ -96,8 +101,14 @@ describe('createPromoReleaseRecord', () => {
 })
 
 describe('buildPromoReleasePathname', () => {
-  it('files by Eastern date with decision, ascii name slug, and short id', () => {
+  it('files anonymous records by Eastern date, decision, and short id', () => {
     expect(buildPromoReleasePathname(record())).toBe(
+      'waivers/promotional-release/2026/09/2026-09-24-agree-anonymous-1a2b3c4d',
+    )
+  })
+
+  it('uses an ascii slug of the name when one is given', () => {
+    expect(buildPromoReleasePathname(record({ fullName: 'María López' }))).toBe(
       'waivers/promotional-release/2026/09/2026-09-24-agree-maria-lopez-1a2b3c4d',
     )
   })
@@ -106,7 +117,7 @@ describe('buildPromoReleasePathname', () => {
     // 01:30 UTC on the 25th is 21:30 on the 24th in Ohio.
     const late = record({ decision: 'decline' }, new Date('2026-09-25T01:30:00Z'))
     expect(buildPromoReleasePathname(late)).toBe(
-      'waivers/promotional-release/2026/09/2026-09-24-decline-maria-lopez-1a2b3c4d',
+      'waivers/promotional-release/2026/09/2026-09-24-decline-anonymous-1a2b3c4d',
     )
   })
 
@@ -123,10 +134,11 @@ describe('toPdfSafeText', () => {
 })
 
 describe('buildPromoReleasePdf', () => {
-  it('renders a loadable PDF for agree, decline, and minor records', async () => {
+  it('renders a loadable PDF for anonymous, named, decline, and minor records', async () => {
     const variants = [
       record(),
-      record({ decision: 'decline', email: 'm@example.com', event: 'Zanesville Farmers Market' }),
+      record({ fullName: 'María López', email: 'm@example.com', event: 'Zanesville Farmers Market' }),
+      record({ decision: 'decline' }),
       record({ signingForMinor: true, minorName: 'Sofía López 🎉' }),
     ]
     for (const variant of variants) {
