@@ -19,10 +19,9 @@ import {
   getSeriesPostsOrdered,
   type PostDetail,
 } from '@/lib/blog/queries'
+import { SITE_URL } from '@/lib/site-url'
 
 export const revalidate = 900
-
-const SITE_URL = 'https://www.josemadrid.net'
 
 // Fallback share image for a post with no cover image. og:image must be set
 // unconditionally: Next.js only falls back to a file-based opengraph-image when

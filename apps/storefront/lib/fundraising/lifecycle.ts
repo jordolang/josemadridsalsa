@@ -13,6 +13,7 @@
  */
 import { prisma } from '@/lib/prisma'
 import { sendCampaignLaunchEmail, sendCampaignSummaryEmail } from '@/lib/email/automation'
+import { SITE_URL } from '@/lib/site-url'
 
 /** How many campaigns one tick will handle, so a backlog cannot stall the cron. */
 const SWEEP_LIMIT = 50
@@ -32,7 +33,7 @@ const SWEEP_LIMIT = 50
 const SUMMARY_WINDOW_DAYS = 30
 
 const appUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net'
+  process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? SITE_URL
 
 export interface LifecycleResult {
   launched: number

@@ -20,6 +20,7 @@ import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Loader2, Save, X } from 'lucide-react'
 import type { Fundraiser } from '@prisma/client'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 const fundraiserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -260,7 +261,7 @@ export default function FundraiserForm({ fundraiser }: FundraiserFormProps) {
           <div>
             <Label htmlFor="subdomain">Page URL Subdomain</Label>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-sm text-muted-foreground">josemadrid.net/f/</span>
+              <span className="text-sm text-muted-foreground">{SITE_DOMAIN}/f/</span>
               <Input
                 id="subdomain"
                 {...register('subdomain')}

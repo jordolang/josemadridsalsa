@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { StructuredDataType, Prisma } from '@prisma/client'
+import { SITE_URL } from '@/lib/site-url'
 
 export interface OrganizationSchema {
   '@context': 'https://schema.org'
@@ -107,7 +108,7 @@ export async function generateOrganizationSchema(): Promise<OrganizationSchema> 
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: seoConfig?.siteName || 'Jose Madrid Salsa',
-    url: seoConfig?.siteUrl || 'https://www.josemadrid.net',
+    url: seoConfig?.siteUrl || SITE_URL,
     logo: seoConfig?.defaultOgImage || undefined,
     contactPoint: {
       '@type': 'ContactPoint',
@@ -171,7 +172,7 @@ export async function generateProductSchema(productId: string): Promise<ProductS
  * Use this in server components where you already have the product loaded.
  */
 export function buildProductSchema(product: ProductSchemaInput): ProductSchema {
-  const siteUrl = 'https://www.josemadrid.net'
+  const siteUrl = SITE_URL
 
   const schema: ProductSchema = {
     '@context': 'https://schema.org',

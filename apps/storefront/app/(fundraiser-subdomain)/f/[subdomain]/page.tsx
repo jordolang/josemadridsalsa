@@ -13,6 +13,7 @@ import {
 import { FundraiserSocialBoard } from '@/components/social/fundraiser-board'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
+import { SITE_URL } from '@/lib/site-url'
 
 type Props = {
   params: Promise<{ subdomain: string }>
@@ -141,7 +142,7 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
         <p>
           Powered by{' '}
           <a
-            href="https://josemadrid.net"
+            href={SITE_URL}
             className="text-salsa-600 hover:text-salsa-700 font-medium"
             target="_blank"
             rel="noopener noreferrer"

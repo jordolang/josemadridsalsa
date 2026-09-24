@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
+import { SITE_URL } from '@/lib/site-url'
 
-const SITE_URL = 'https://www.josemadrid.net'
 const OG_IMAGE_BASE_PATH = '/images/opengraph'
 const DEFAULT_OG_IMAGE = `${SITE_URL}${OG_IMAGE_BASE_PATH}/josemadridhome.png`
 

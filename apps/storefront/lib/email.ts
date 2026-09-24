@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { SITE_URL } from '@/lib/site-url'
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -54,7 +55,7 @@ export async function sendAdminReplyEmail(
 const passwordResetBaseUrl = () =>
   process.env.NEXTAUTH_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
-  'https://www.josemadrid.net'
+  SITE_URL
 
 export async function sendPasswordResetEmail(email: string, token: string) {
   if (!resend) {

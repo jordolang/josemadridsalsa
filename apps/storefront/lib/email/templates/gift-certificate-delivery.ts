@@ -1,5 +1,6 @@
 import { EmailTemplateDefinition } from './index'
 import { baseStyles, headerImg, jmsFooter } from '../shared/components'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 export const giftCertificateDeliveryTemplate: EmailTemplateDefinition = {
   key: 'gift_certificate_delivery',
@@ -61,7 +62,7 @@ export const giftCertificateDeliveryTemplate: EmailTemplateDefinition = {
 
       <p style="font-size:13px;color:#9ca3af;text-align:center;margin-top:24px;">
         Gift certificates never expire. Check your balance anytime at
-        <a href="{{redeemUrl}}" style="color:#dc2626;">josemadrid.net/gift-certificates/balance</a>.
+        <a href="{{redeemUrl}}" style="color:#dc2626;">${SITE_DOMAIN}/gift-certificates/balance</a>.
       </p>
     </div>
     ${jmsFooter}

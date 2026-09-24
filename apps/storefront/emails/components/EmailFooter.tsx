@@ -1,4 +1,5 @@
 import { Section, Text, Link, Hr } from '@react-email/components';
+import { SITE_URL } from '@/lib/site-url'
 
 interface EmailFooterProps {
   companyName?: string;
@@ -14,8 +15,8 @@ export const EmailFooter = ({
   companyAddress = '123 Main Street, Austin, TX 78701',
   unsubscribeUrl,
   supportEmail = 'mike@josemadridsalsa.com',
-  privacyUrl = 'https://josemadrid.net/privacy',
-  termsUrl = 'https://josemadrid.net/terms',
+  privacyUrl = `${SITE_URL}/privacy`,
+  termsUrl = `${SITE_URL}/terms`,
 }: EmailFooterProps) => {
   return (
     <>

@@ -20,9 +20,10 @@ import type { RuleOrderContext } from '@/lib/notifications/order-rules'
 import { registerDomainEventHandler } from '../subscribe'
 import type { DomainEventRecord } from '../subscribe'
 import type { DomainEventType } from '../types'
+import { SITE_URL } from '@/lib/site-url'
 
 const appUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net'
+  process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? SITE_URL
 
 /**
  * Route one fact through the configured rules.

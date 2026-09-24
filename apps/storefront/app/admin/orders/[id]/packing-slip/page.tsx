@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import AutoPrint from '@/components/admin/AutoPrint'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 async function getOrder(id: string) {
   return prisma.order.findUnique({
@@ -37,7 +38,7 @@ export default async function PackingSlipPage({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #dc2626', paddingBottom: 16, marginBottom: 24 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#dc2626', margin: 0 }}>Jose Madrid Salsa</h1>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 12 }}>josemadrid.net</p>
+            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 12 }}>{SITE_DOMAIN}</p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>PACKING SLIP</h2>

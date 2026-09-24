@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import AutoPrint from '@/components/admin/AutoPrint'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 async function getOrder(id: string) {
   return prisma.order.findUnique({
@@ -48,7 +49,7 @@ export default async function InvoicePage({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 700, color: '#dc2626', margin: 0 }}>Jose Madrid Salsa</h1>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 13 }}>josemadrid.net</p>
+            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 13 }}>{SITE_DOMAIN}</p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>INVOICE</h2>
@@ -160,7 +161,7 @@ export default async function InvoicePage({
         {/* Footer */}
         <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16, textAlign: 'center' }}>
           <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>
-            Thank you for your business! Questions? Contact us at josemadrid.net
+            Thank you for your business! Questions? Contact us at {SITE_DOMAIN}
           </p>
         </div>
 

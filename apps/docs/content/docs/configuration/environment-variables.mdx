@@ -244,7 +244,13 @@ with nothing in the response to indicate it.
 | Variable | Required | Description |
 |---|---|---|
 | `SERVICE_API_KEY` | No | Shared secret for internal service-to-service API calls |
-| `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL. Defaults to `https://josemadrid.net`. |
+| `NEXT_PUBLIC_SITE_URL` | Production | The site's public origin, e.g. `https://www.josemadrid.net` (the default). Canonical links, the sitemap, structured data, feeds, email links and the domain printed on invoices and packing slips are all built from it (`lib/site-url.ts`). Build-time: redeploy after changing it. |
+| `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL used by some email links and product feeds. Falls back to `NEXT_PUBLIC_SITE_URL`. |
+| `NEXT_PUBLIC_APP_URL` | No | Base URL for share links and order-rule emails. Falls back to `NEXTAUTH_URL`, then `NEXT_PUBLIC_SITE_URL`. |
+
+**Moving the site to another domain:** set `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_BASE_URL`,
+`NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to the new origin in Vercel (production), update
+**Admin → SEO → Site URL** (`SeoConfiguration.siteUrl`), and redeploy. No code change is needed.
 
 ## Platform Agent (`apps/agent`)
 

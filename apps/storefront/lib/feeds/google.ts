@@ -1,4 +1,5 @@
 import type { FeedProduct } from './products'
+import { SITE_URL as DEFAULT_SITE_URL } from '@/lib/site-url'
 
 /**
  * Google Merchant Center product feed, in both supported flavors:
@@ -11,7 +12,7 @@ import type { FeedProduct } from './products'
  * Google-format feed, so those platforms reuse these builders.
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.josemadrid.net'
+const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? DEFAULT_SITE_URL
 
 function xmlEscape(value: string): string {
   return value

@@ -10,8 +10,9 @@ import {
   formatCartTotal,
   stageCopy,
 } from '@/lib/checkout/abandoned-cart'
+import { SITE_URL } from '@/lib/site-url'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://josemadrid.net'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? SITE_URL
 
 async function sendAbandonedCartEmail(
   cartId: string,

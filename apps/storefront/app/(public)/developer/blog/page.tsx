@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
 import { DeveloperBlogCard } from '@/components/developer/developer-blog-card'
 import prisma from '@/lib/prisma'
+import { SITE_URL } from '@/lib/site-url'
 
 export const revalidate = 3600
 
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     keywords: ['developer blog', 'Jose Madrid Salsa', 'web development', 'Next.js', 'tech blog'],
   }),
   alternates: {
-    canonical: 'https://www.josemadrid.net/developer/blog',
+    canonical: `${SITE_URL}/developer/blog`,
   },
 }
 

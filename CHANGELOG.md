@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Moving the site to josemadridsalsa.com is now a setting, not a code change.** The site's
+  address was typed out by hand in about forty places — canonical links, the sitemap,
+  structured data, product feeds, email footers and buttons, and the domain printed on invoices
+  and packing slips — so pointing a new domain here would have left Google and every email
+  still sending people to josemadrid.net. All of them now read one setting,
+  `NEXT_PUBLIC_SITE_URL`, which defaults to today's address. The few places that keep the old
+  name on purpose are left alone: calendar event ids (changing them would duplicate events in
+  people's calendars), the image-repair matcher for old logo URLs, and the launch history.
 - **Every old josemadridsalsa.com address now leads somewhere, for when the domain points here.**
   The BigCommerce store's product pages, its per-salsa info pages, categories, blog, and system
   pages like `cart.php`, `login.php` and `giftcertificates.php` each permanently redirect to

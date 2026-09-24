@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SITE_URL } from '@/lib/site-url'
 
 export default function FundraiserNotFound() {
   return (
@@ -12,7 +13,7 @@ export default function FundraiserNotFound() {
           moved or is no longer active.
         </p>
         <Link
-          href="https://josemadrid.net/fundraising"
+          href={`${SITE_URL}/fundraising`}
           className="inline-block rounded-md bg-salsa-500 px-6 py-3 text-white hover:bg-salsa-600"
         >
           Learn About Fundraising

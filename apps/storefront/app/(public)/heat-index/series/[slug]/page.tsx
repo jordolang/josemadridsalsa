@@ -8,6 +8,7 @@ import { PostCard } from '@/components/heat-index/post-card'
 import { SubscribeForm } from '@/components/heat-index/subscribe-form'
 import { getSeriesBySlug, getSeriesPostsOrdered } from '@/lib/blog/queries'
 import prisma from '@/lib/prisma'
+import { SITE_URL } from '@/lib/site-url'
 
 
 
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       pathname: `/heat-index/series/${series.slug}`,
     }),
     alternates: {
-      canonical: `https://www.josemadrid.net/heat-index/series/${series.slug}`,
+      canonical: `${SITE_URL}/heat-index/series/${series.slug}`,
     },
   }
 }

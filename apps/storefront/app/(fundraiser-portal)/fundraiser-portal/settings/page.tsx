@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 type SettingsState = {
   subdomain: string
@@ -136,7 +137,7 @@ export default function FundraiserSettingsPage() {
           <div className="space-y-2">
             <Label htmlFor="subdomain">Subdomain</Label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">josemadrid.net/f/</span>
+              <span className="text-sm text-gray-500">{SITE_DOMAIN}/f/</span>
               <Input
                 id="subdomain"
                 name="subdomain"

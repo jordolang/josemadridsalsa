@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader'
 import { EmailFooter } from './components/EmailFooter'
 import { Button } from './components/Button'
 import { bodyContent } from './styles'
+import { SITE_URL, SITE_DOMAIN } from '@/lib/site-url'
 
 interface AccountWelcomeEmailProps {
   name?: string
@@ -14,8 +15,8 @@ interface AccountWelcomeEmailProps {
 
 export const AccountWelcomeEmail = ({
   name = 'there',
-  shopUrl = 'https://josemadrid.net/products',
-  accountUrl = 'https://josemadrid.net/account',
+  shopUrl = `${SITE_URL}/products`,
+  accountUrl = `${SITE_URL}/account`,
   unsubscribeUrl = '#',
 }: AccountWelcomeEmailProps) => {
   const previewText = `Welcome to José Madrid Salsa, ${name}!`
@@ -56,7 +57,7 @@ export const AccountWelcomeEmail = ({
           <Text style={supportText}>
             You can manage your account at any time at{' '}
             <a href={accountUrl} style={link}>
-              josemadrid.net/account
+              {SITE_DOMAIN}/account
             </a>
             . Questions?{' '}
             <a href="mailto:mike@josemadridsalsa.com" style={link}>

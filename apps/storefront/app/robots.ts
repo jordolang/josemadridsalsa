@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
+import { SITE_URL } from '@/lib/site-url'
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   let seoConfig = null
@@ -63,6 +64,6 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         disallow: ['/admin/', '/admin-desktop', '/api/'],
       },
     ],
-    sitemap: `${seoConfig?.siteUrl || 'https://www.josemadrid.net'}/sitemap.xml`,
+    sitemap: `${seoConfig?.siteUrl || SITE_URL}/sitemap.xml`,
   }
 }

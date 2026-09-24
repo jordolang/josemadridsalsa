@@ -2,6 +2,7 @@ import type { SocialMediaPlatform } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { publishToAccount } from './publisher'
+import { SITE_URL as DEFAULT_SITE_URL } from '@/lib/site-url'
 
 /**
  * Validates the optional list of social account ids a blog save asks to
@@ -15,7 +16,7 @@ export const crosspostAccountIdsSchema = z.array(z.string().min(1)).default([])
 // fallback is applied AFTER normalization so a blank/whitespace value still
 // resolves to an absolute site URL rather than an empty (relative) one.
 const SITE_URL =
-  process.env.NEXTAUTH_URL?.trim().replace(/\/+$/, '') || 'https://www.josemadrid.net'
+  process.env.NEXTAUTH_URL?.trim().replace(/\/+$/, '') || DEFAULT_SITE_URL
 
 /**
  * Platforms a blog article can be cross-posted to. A cross-post is text + a link

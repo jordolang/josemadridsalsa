@@ -1,7 +1,8 @@
 import prisma from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
+import { SITE_URL as DEFAULT_SITE_URL } from '@/lib/site-url'
 
-const SITE_URL = process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net'
+const SITE_URL = process.env.NEXTAUTH_URL ?? DEFAULT_SITE_URL
 const GLOBAL_LIST_NAME = 'Heat Index'
 
 function escapeHtml(s: string): string {

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
+import { SITE_URL } from '@/lib/site-url'
 
 /**
  * Static metadata for the /developer page.
@@ -21,7 +22,7 @@ export const developerPageMetadata: Metadata = {
     ],
   }),
   alternates: {
-    canonical: 'https://www.josemadrid.net/developer',
+    canonical: `${SITE_URL}/developer`,
   },
   robots: {
     index: true,

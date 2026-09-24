@@ -7,6 +7,7 @@ import { SocialShare } from '@/components/ui/social-share'
 import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import type { ShareContent } from '@/types/sharing'
 import { ScrollToTopButton } from './scroll-to-top-button'
+import { SITE_URL } from '@/lib/site-url'
 
 export const revalidate = 300
 
@@ -14,7 +15,7 @@ export default async function BundlesPage() {
   const shareContent: ShareContent = {
     title: 'Bundle Deals - Create Your Perfect Gift Box',
     description: 'Mix and match your favorite Jose Madrid salsas! Choose from 3, 5, 6, or 12-pack gift boxes.',
-    url: 'https://www.josemadrid.net/bundles',
+    url: `${SITE_URL}/bundles`,
     contentType: 'page',
     hashtags: generateHashtags('product'),
     via: 'josemadridsalsa',

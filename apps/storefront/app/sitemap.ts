@@ -1,9 +1,10 @@
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getSitemapLandingPages } from '@/lib/cms/queries'
+import { SITE_URL } from '@/lib/site-url'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  let baseUrl = 'https://www.josemadrid.net'
+  let baseUrl = SITE_URL
   let seoConfig = null
   let priorities: Record<string, number> = {}
 

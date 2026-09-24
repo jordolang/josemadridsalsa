@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 const navItems = [
   { href: '/fundraiser-portal/dashboard', label: 'Dashboard', icon: 'chart' },
@@ -65,7 +66,7 @@ export function PortalNav({ fundraiserName, subdomain }: PortalNavProps) {
           </h2>
           {subdomain && (
             <p className="mt-1 truncate text-xs text-gray-500">
-              josemadrid.net/f/{subdomain}
+              {SITE_DOMAIN}/f/{subdomain}
             </p>
           )}
         </div>

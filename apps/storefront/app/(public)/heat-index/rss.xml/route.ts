@@ -1,11 +1,11 @@
 import { getPublishedPostsForFeed } from '@/lib/blog/queries'
+import { SITE_URL } from '@/lib/site-url'
 
 export const dynamic = 'force-dynamic'
 
 export const runtime = 'nodejs'
 export const revalidate = 600
 
-const SITE_URL = 'https://www.josemadrid.net'
 const FEED_TITLE = 'The Heat Index — Jose Madrid Salsa'
 const FEED_DESC =
   'Stories, recipes, road notes, and salsa lore from the team behind Jose Madrid Salsa.'

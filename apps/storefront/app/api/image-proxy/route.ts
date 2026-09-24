@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { SITE_URL } from '@/lib/site-url'
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-const FALLBACK_REFERER = 'https://www.josemadrid.net'
+const FALLBACK_REFERER = SITE_URL
 
 // Validation schema for query parameters
 const ImageProxyQuerySchema = z.object({

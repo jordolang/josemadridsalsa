@@ -12,6 +12,7 @@ import { createHash } from 'crypto'
 import { getTemplateByAlias } from './resend-templates'
 import type { OrderItem } from '@/emails/components/OrderItemsTable'
 import { colors, font } from './resend-templates/shared'
+import { SITE_URL } from '@/lib/site-url'
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -109,7 +110,7 @@ export async function sendWithTemplate({
 
   // Build unsubscribe URL for the header
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || 'https://josemadrid.net'
+    process.env.NEXT_PUBLIC_BASE_URL || SITE_URL
   const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`
 
   // Inject the built-in UNSUBSCRIBE_URL variable

@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site-url'
 /**
  * Shared Email Components
  * Reusable HTML components and utilities for email templates
@@ -11,7 +12,7 @@
  * instead of the storefront's own `public/email-templates` directory.
  */
 export function getImageBaseUrl(): string {
-  return process.env.EMAIL_IMAGE_BASE_URL || 'https://www.josemadrid.net/email-templates'
+  return process.env.EMAIL_IMAGE_BASE_URL || `${SITE_URL}/email-templates`
 }
 
 /**

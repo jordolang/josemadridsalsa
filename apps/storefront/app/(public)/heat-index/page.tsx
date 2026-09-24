@@ -12,6 +12,7 @@ import {
   getLatestPosts,
   type PostCard as PostCardData,
 } from '@/lib/blog/queries'
+import { SITE_URL } from '@/lib/site-url'
 
 export const revalidate = 300
 
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
     ],
   }),
   alternates: {
-    canonical: 'https://www.josemadrid.net/heat-index',
+    canonical: `${SITE_URL}/heat-index`,
     types: { 'application/rss+xml': '/heat-index/rss.xml' },
   },
 }

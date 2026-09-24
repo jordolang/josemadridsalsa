@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader'
 import { EmailFooter } from './components/EmailFooter'
 import { Button } from './components/Button'
 import { bodyContent } from './styles'
+import { SITE_URL } from '@/lib/site-url'
 
 interface OrderCancellationEmailProps {
   name?: string
@@ -49,7 +50,7 @@ export const OrderCancellationEmail = ({
           <Text style={paragraph}>
             Changed your mind? We&apos;d love to have you back.
           </Text>
-          <Button href="https://josemadrid.net/products" variant="primary" size="medium">
+          <Button href={`${SITE_URL}/products`} variant="primary" size="medium">
             Shop Again
           </Button>
         </Section>
