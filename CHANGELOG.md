@@ -100,6 +100,13 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Every product page at `/products/<salsa>` has been a server error in production since
+  10 September.** The page is cached as a static page, and it asked the server for the current
+  visitor's session only to decide whether the review form should say "sign in" — reading the
+  session on a cached page makes Next abort the render, so all 27 salsa pages returned a 500 to
+  shoppers and to Google, which the sitemap points at exactly those URLs. The review form now
+  checks sign-in in the browser. A test now fails any statically cached public page that reads
+  the session or request headers.
 - **Every link in an abandoned-cart email went to a page of JSON and killed the cart it was
   meant to restore.** The buttons pointed at `/api/cart/recover?token=…`, which answers with a
   JSON body rather than a checkout page — and marks the cart recovered as it does, so the
