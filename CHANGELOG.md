@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The admin says plainly what moved to BigCommerce.** Once the storefront sells through
+  BigCommerce, the Products, Inventory, Orders, Customers and Gift Certificates pages open with a
+  "Managed in BigCommerce" note saying which half of the record lives there — prices, stock and
+  retail orders — and which half is still edited here, such as photos, heat level and nutrition,
+  with a link straight to the matching BigCommerce screen. It prevents the obvious mistake of
+  changing a price here and waiting for the site to follow. The notes are hidden until the switch
+  is turned on.
 - **Moving the site to josemadridsalsa.com is now a setting, not a code change.** The site's
   address was typed out by hand in about forty places — canonical links, the sitemap,
   structured data, product feeds, email footers and buttons, and the domain printed on invoices

@@ -36,6 +36,7 @@ import { ProductImportButton } from '@/components/admin/ProductImportButton'
 import { formatHeatLevel, getHeatLevelClass } from '@/lib/heat-level'
 import { cn } from '@/lib/utils'
 import { LowStockAlert } from '@/components/admin/LowStockAlert'
+import { BigCommerceNotice } from '@/components/admin/BigCommerceNotice'
 
 interface SearchParams {
   search?: string
@@ -158,6 +159,7 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-6">
+      <BigCommerceNotice area="products" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

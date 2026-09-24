@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatPrice, getGiftCertificateThemeText } from '@/lib/utils'
+import { BigCommerceNotice } from '@/components/admin/BigCommerceNotice'
 
 interface SearchParams {
   search?: string
@@ -108,6 +109,7 @@ export default async function GiftCertificatesPage({
 
   return (
     <div className="space-y-6">
+      <BigCommerceNotice area="gift-certificates" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Gift Certificates</h1>
