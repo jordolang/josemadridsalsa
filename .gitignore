@@ -236,3 +236,6 @@ apps/storefront/public/images/admin-panel/
 # A rendered preview is a picture of the template at one moment; the template itself is the
 # record, and a committed copy goes stale the first time anyone edits the real thing.
 apps/storefront/tmp/
+
+# Agent driver screenshots (.claude/skills/run-storefront)
+.screenshots/

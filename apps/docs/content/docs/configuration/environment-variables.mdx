@@ -212,6 +212,20 @@ with nothing in the response to indicate it.
 | `OPENAI_API_KEY` | For `AI_CHAT_PROVIDER=openai` | OpenAI API key. Only read when the provider is set to `openai`. |
 | `OPENAI_MODEL` | No | Model used when the provider is `openai`. Defaults to `gpt-4o-mini`. |
 
+## Customer Email Triage
+
+The Gmail triage reuses the Google OAuth client and the Anthropic key; it adds no variables
+of its own. The mailbox grant itself is stored encrypted in the database, not in the
+environment — connect it at `/admin/inbox/settings`.
+
+| Variable | Purpose |
+| :--- | :--- |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | The OAuth client the Gmail grant is made against. Needs `gmail.modify` and `gmail.send` on its consent screen, and `/api/admin/inbox/google/callback` as a redirect URI. |
+| `ANTHROPIC_API_KEY` | Classifies each message and writes the reply. Without it every email escalates to a human rather than going unread. |
+| `ANTHROPIC_MODEL` | Optional override; defaults to `claude-opus-5`. |
+| `CRON_SECRET` | Guards `/api/cron/inbox-triage`, as it does every scheduled route. |
+| `MASTER_KEY` / `ENCRYPTION_KEY` | Encrypt the stored Gmail tokens at rest. |
+
 ## Internal
 
 | Variable | Required | Description |

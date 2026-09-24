@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { ok, fail, notFound, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
 import { crosspostBlogPost, getBlogCrosspostStatus } from '@/lib/social/blog-crosspost'
+import { revalidateBlogPost } from '@/lib/blog/revalidate'
 import prisma from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -55,6 +56,11 @@ export async function POST(
 
     const post = await prisma.blogPost.findUnique({ where: { slug }, select: { id: true } })
     if (!post) return notFound('Post not found')
+
+    // Drop the cached render first: the cross-post makes Facebook scrape the
+    // article for its preview card, and a stale render would hand it the cover
+    // image the page had fifteen minutes ago.
+    revalidateBlogPost(slug)
 
     const requestedIds = Array.from(new Set(parsed.data.accountIds))
     const { results } = await crosspostBlogPost(post.id, requestedIds)

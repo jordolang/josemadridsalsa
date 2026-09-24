@@ -40,6 +40,8 @@ import {
 } from '@/lib/admin/manual-order'
 import { generatePoNumber } from '@/lib/purchasing/receiving'
 import { insertRecipientsFromList } from '@/lib/email/recipients'
+import { canClearNotification, completeStep, reopenStep } from '@/lib/inbox/resolution'
+import { markAllNotificationsRead } from '@/lib/notifications/dispatch'
 import { checkPostSeo } from '@/lib/blog/schemas'
 import { PRODUCT_IMAGE_LIMIT, slugify, type WriteOpId } from './forms'
 import type { DesktopSectionId } from './sections'
@@ -4124,15 +4126,64 @@ const opsHandlers: Record<string, WriteHandler> = {
     schema: z.object({}),
     async run(_values, context) {
       const id = requireRecord(context)
+
       // Scoped to the actor: a notification belongs to one person, and marking
       // somebody else's as read would hide it from them.
-      const changed = await prisma.notification.updateMany({
+      const notification = await prisma.notification.findFirst({
         where: { id, userId: context.actor.id },
+        select: { id: true, entityType: true, entityId: true },
+      })
+      if (!notification) throw new WriteError('That notification is not yours to clear.')
+
+      // A customer-email alert clears only once its steps are done. The rule lives in
+      // lib/inbox/resolution.ts so this window and the web panel cannot disagree about
+      // whether something has been handled.
+      const verdict = await canClearNotification(notification)
+      if (!verdict.allowed) {
+        throw new WriteError(
+          `${verdict.reason} Still open: ${verdict.outstanding.slice(0, 3).join('; ')}`,
+        )
+      }
+
+      await prisma.notification.update({
+        where: { id: notification.id },
         data: { isRead: true, readAt: new Date() },
       })
-      if (changed.count === 0) throw new WriteError('That notification is not yours to clear.')
 
       return { message: 'Marked read', recordId: id }
+    },
+  }),
+
+  'inboundEmail.completeStep': handler({
+    permission: 'messaging:reply',
+    entity: 'InboundEmail',
+    action: 'update',
+    schema: z.object({}),
+    async run(_values, context) {
+      const stepId = requireRecord(context)
+      const email = await completeStep({ stepId, userId: context.actor.id })
+
+      const open = email.steps.filter((step) => !step.isOptional && step.completedAt === null)
+
+      return {
+        message:
+          open.length === 0
+            ? 'Step completed — everything is done, the alert is cleared.'
+            : `Step completed — ${open.length} still open.`,
+        recordId: email.id,
+      }
+    },
+  }),
+
+  'inboundEmail.reopenStep': handler({
+    permission: 'messaging:reply',
+    entity: 'InboundEmail',
+    action: 'update',
+    schema: z.object({}),
+    async run(_values, context) {
+      const stepId = requireRecord(context)
+      const email = await reopenStep({ stepId, userId: context.actor.id })
+      return { message: 'Step re-opened', recordId: email.id }
     },
   }),
 
@@ -4143,12 +4194,12 @@ const opsHandlers: Record<string, WriteHandler> = {
     requiresRecord: false,
     schema: z.object({}),
     async run(_values, context) {
-      const changed = await prisma.notification.updateMany({
-        where: { userId: context.actor.id, isRead: false },
-        data: { isRead: true, readAt: new Date() },
-      })
+      // Through the shared helper rather than a bulk update, so a "mark everything read"
+      // cannot do what a single click is refused: customer-email alerts with open steps
+      // are left behind, and the count says how many actually cleared.
+      const changed = await markAllNotificationsRead(context.actor.id)
 
-      return { message: changed.count === 0 ? 'Nothing left unread' : `${changed.count} marked read` }
+      return { message: changed === 0 ? 'Nothing left unread' : `${changed} marked read` }
     },
   }),
 

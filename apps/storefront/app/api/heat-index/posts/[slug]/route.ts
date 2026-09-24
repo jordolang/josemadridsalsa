@@ -3,6 +3,7 @@ import { ok, fail, notFound, serverError } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
 import { blogPostUpdateSchema, checkPostSeo } from '@/lib/blog/schemas'
 import { publishBlogPost } from '@/lib/blog/publish'
+import { revalidateBlogPost } from '@/lib/blog/revalidate'
 import { crosspostAccountIdsSchema, crosspostBlogPost } from '@/lib/social/blog-crosspost'
 import prisma from '@/lib/prisma'
 
@@ -84,6 +85,12 @@ export async function PATCH(
       data,
     })
 
+    // Purge the cached renders before anything advertises the article, so the
+    // cross-post crawler scrapes this version's cover image and not an older
+    // one. A rename leaves the old URL behind, so clear that entry too.
+    revalidateBlogPost(updated.slug)
+    if (updated.slug !== slug) revalidateBlogPost(slug)
+
     if (!wasPublished && willBePublished) {
       await publishBlogPost(updated.id).catch((err) => {
         console.error('Failed to send publish notifications:', err)
@@ -119,6 +126,7 @@ export async function DELETE(
     const existing = await prisma.blogPost.findUnique({ where: { slug } })
     if (!existing) return notFound('Post not found')
     await prisma.blogPost.delete({ where: { slug } })
+    revalidateBlogPost(slug)
     return ok({ deleted: true })
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('Unauthorized'))
