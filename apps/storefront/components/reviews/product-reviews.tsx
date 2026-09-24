@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import { CheckCircle2, Loader2, MessageSquarePlus, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,7 +30,6 @@ type Props = {
   productName: string
   initialAverageRating?: number
   initialReviewCount?: number
-  isSignedIn?: boolean
   signInHref?: string
 }
 
@@ -40,9 +40,11 @@ export function ProductReviews({
   productName,
   initialAverageRating = 0,
   initialReviewCount = 0,
-  isSignedIn = false,
   signInHref = '/auth/signin',
 }: Props) {
+  // Read in the browser: the product page is statically cached, and asking
+  // for the session on the server there fails every render.
+  const isSignedIn = useSession().status === 'authenticated'
   const [reviews, setReviews] = useState<PublicReview[]>([])
   const [average, setAverage] = useState<number>(initialAverageRating)
   const [total, setTotal] = useState<number>(initialReviewCount)
