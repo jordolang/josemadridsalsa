@@ -1,0 +1,66 @@
+---
+title: Photo & Video Release Kiosk
+description: The iPad waiver customers tap through at shows to agree or decline to be featured in our website and promotional materials.
+---
+
+# Photo & Video Release Kiosk
+
+`/waiver` is a full-screen, tablet-sized photo and video release. A staff member
+signs in on the iPad, opens the page, and hands the tablet over. The customer
+types their name, taps **Yes, feature me** or **No, please don't**, and taps
+**Submit**. A thank-you screen tells them to hand the iPad back, then the form
+clears itself after eight seconds for the next person.
+
+| Route | Purpose |
+|---|---|
+| `/waiver` | The kiosk form (staff sign-in required, `noindex`) |
+| `/waiver?event=Zanesville%20Farmers%20Market` | Same form, tagging every record with the event name |
+| `POST /api/waivers/promotional-release` | Validates the submission and stores the record |
+
+## What the customer fills in
+
+- **Full name** (required)
+- **Email** (optional)
+- **Signing for a child under 18** — reveals a required child's-name field; the
+  signer confirms they are the parent or legal guardian
+- **Yes / No** — the election itself
+
+The release wording lives in `lib/waivers/promoReleaseCopy.ts`. Whenever the
+wording changes, bump `PROMO_RELEASE_VERSION` there so every stored record says
+exactly which text the person saw.
+
+## Where the records go
+
+Each submission writes two files to the project's Vercel Blob store
+(`josemadridsalsa-blob`), filed by the Eastern-time date it was signed:
+
+```
+waivers/promotional-release/YYYY/MM/YYYY-MM-DD-<agree|decline>-<name>-<id>-<random>.pdf
+waivers/promotional-release/YYYY/MM/YYYY-MM-DD-<agree|decline>-<name>-<id>-<random>.json
+```
+
+- The **PDF** is the human-readable signed release: the decision in a colored
+  banner, the signer's details, the full terms they were shown, and an audit
+  block (record ID, UTC time, the staff account that collected it, IP address,
+  and device).
+- The **JSON** is the same record for search or import.
+
+Browse them in the admin at **Developer → File Explorer** (`/admin/developer/files`), or with
+`vercel blob list --prefix waivers/promotional-release/`. Because the start of each
+file name is the decision, a quick scan of a day's folder shows who declined.
+
+The store is public, so files get a random suffix that keeps their URLs
+unguessable, and nothing on the site links to or lists them. Treat the URLs as
+private: they contain names and, when given, email addresses.
+
+## Setting up the iPad
+
+1. Sign in at `/auth/signin` with a staff account and accept or dismiss the
+   cookie banner once.
+2. Open `/waiver` (add `?event=…` for the show) and add it to the Home Screen.
+3. Turn on **Guided Access** (Settings → Accessibility) so customers can't leave
+   the page.
+
+## Configuration
+
+Uses the existing `BLOB_READ_WRITE_TOKEN`. No new environment variables.
