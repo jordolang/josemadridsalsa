@@ -23,7 +23,10 @@ the root `package.json` is canonical.
   BigCommerce pack product with its "Jar N" dropdowns filled in, exactly as if it had been
   ordered on the old store. A product BigCommerce does not sell shows as out of stock rather
   than failing at checkout, and if BigCommerce cannot be reached the pages fall back to database
-  prices, since BigCommerce reprices the cart anyway. Fundraiser carts keep this site's checkout.
+  prices, since BigCommerce reprices the cart anyway. Fundraiser carts keep this site's checkout,
+  and so does a retail cart a student's referral link turns into a fundraiser sale — that sale is
+  priced by the campaign and credited to it, which BigCommerce knows nothing about, so sending it
+  there would have charged retail and credited the group nothing.
   Until the switch is set nothing changes, so this can ship ahead of the cutover.
 - **A BigCommerce connection for both stores, the first step of running the site headless on
   top of BigCommerce.** Staff already run the business from the BigCommerce admin, so the

@@ -4,12 +4,21 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import type { CartItem } from '@/lib/store/cart'
+import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
 
 /**
  * Sends a retail cart to BigCommerce's hosted checkout. The cart is rebuilt in
- * BigCommerce, which prices it, takes payment and creates the order.
+ * BigCommerce, which prices it, takes payment and creates the order. A cart
+ * that turns out to be a fundraiser sale (by referral) is handed back via
+ * `onSiteCheckout` to this site's own checkout.
  */
-export function BigCommerceCheckoutHandoff({ items }: { items: CartItem[] }) {
+export function BigCommerceCheckoutHandoff({
+  items,
+  onSiteCheckout,
+}: {
+  items: CartItem[]
+  onSiteCheckout: () => void
+}) {
   const [error, setError] = useState<string | null>(null)
   const started = useRef(false)
 
@@ -29,17 +38,23 @@ export function BigCommerceCheckoutHandoff({ items }: { items: CartItem[] }) {
           bundleId: item.bundleId,
           bundleGroupId: item.bundleGroupId,
         })),
+        referralCode: getReferralCodeFromCookie() || undefined,
       }),
     })
       .then(async (res) => {
-        const data = (await res.json().catch(() => ({}))) as { checkoutUrl?: string; error?: string }
+        const data = (await res.json().catch(() => ({}))) as {
+          checkoutUrl?: string
+          siteCheckout?: boolean
+          error?: string
+        }
+        if (res.ok && data.siteCheckout) return onSiteCheckout()
         if (!res.ok || !data.checkoutUrl) throw new Error(data.error || 'Checkout is unavailable right now.')
         window.location.assign(data.checkoutUrl)
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Checkout is unavailable right now.')
       })
-  }, [items])
+  }, [items, onSiteCheckout])
 
   if (items.length === 0) {
     return (

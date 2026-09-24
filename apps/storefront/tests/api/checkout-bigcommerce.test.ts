@@ -3,7 +3,13 @@ import { NextRequest } from 'next/server'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/tests/mocks/server'
 import { POST } from '@/app/api/checkout/bigcommerce/route'
+import { FundraiserStoreUnavailableError, resolveFundraiserStore } from '@/lib/fundraising/store.server'
 import fixtures from '../lib/bigcommerce/fixtures.json'
+
+vi.mock('@/lib/fundraising/store.server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/fundraising/store.server')>()),
+  resolveFundraiserStore: vi.fn(),
+}))
 
 const API = 'https://api.bigcommerce.com/stores/testhash'
 const [originalHot, , greenApple] = fixtures
@@ -25,6 +31,7 @@ describe('POST /api/checkout/bigcommerce', () => {
     vi.stubEnv('BIGCOMMERCE_CLIENT_ID', 'test-client')
     vi.stubEnv('BIGCOMMERCE_CLIENT_SECRET', 'test-secret')
     vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(resolveFundraiserStore).mockReset().mockResolvedValue(null)
     server.use(
       http.get(`${API}/v3/catalog/products`, () =>
         HttpResponse.json({
@@ -80,5 +87,30 @@ describe('POST /api/checkout/bigcommerce', () => {
     const res = await post({ items: [{ slug: 'original-hot', quantity: 1 }] })
     expect(res.status).toBe(502)
     expect((await res.json()).error).toMatch(/try again/)
+  })
+
+  it('keeps a cart a referral turns into a fundraiser sale on the site checkout', async () => {
+    vi.mocked(resolveFundraiserStore).mockResolvedValue({} as Awaited<ReturnType<typeof resolveFundraiserStore>>)
+    const res = await post({ items: [{ slug: 'original-hot', quantity: 1 }], referralCode: 'MAYA-123' })
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ siteCheckout: true })
+    expect(resolveFundraiserStore).toHaveBeenCalledWith({ referralCode: 'MAYA-123' })
+  })
+
+  it('sends a referral for a closed campaign to BigCommerce as retail', async () => {
+    server.use(
+      http.post(`${API}/v3/carts`, () =>
+        HttpResponse.json({ data: { id: 'cart-1', redirect_urls: { checkout_url: 'https://checkout.example/cart-1' } } }),
+      ),
+    )
+    const res = await post({ items: [{ slug: 'original-hot', quantity: 1 }], referralCode: 'OLD-CODE' })
+    expect(await res.json()).toEqual({ checkoutUrl: 'https://checkout.example/cart-1' })
+  })
+
+  it('refuses to guess when the fundraiser lookup fails', async () => {
+    vi.mocked(resolveFundraiserStore).mockRejectedValue(new FundraiserStoreUnavailableError())
+    const res = await post({ items: [{ slug: 'original-hot', quantity: 1 }], referralCode: 'MAYA-123' })
+    expect(res.status).toBe(503)
   })
 })

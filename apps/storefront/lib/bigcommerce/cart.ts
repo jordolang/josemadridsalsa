@@ -22,6 +22,8 @@ export const bigCommerceCheckoutRequestSchema = z.object({
     )
     .min(1)
     .max(100),
+  /** The fundraiser referral cookie, if any. See the checkout route. */
+  referralCode: z.string().min(1).max(100).optional(),
 })
 
 export type BigCommerceCheckoutLine = z.infer<typeof bigCommerceCheckoutRequestSchema>['items'][number]
