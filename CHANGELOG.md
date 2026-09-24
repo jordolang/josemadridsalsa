@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Every old josemadridsalsa.com address now leads somewhere, for when the domain points here.**
+  The BigCommerce store's product pages, its per-salsa info pages, categories, blog, and system
+  pages like `cart.php`, `login.php` and `giftcertificates.php` each permanently redirect to
+  their closest page on this site — so search rankings, bookmarks and old printed links carry
+  over instead of landing on a 404. Creating an account or checking a gift-card balance from an
+  old link goes to that exact page, seasonal flavors that are not sold right now go to the salsa
+  list, and a test checks every destination is a real page and that no redirect hides one.
 - **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls
   the site whenever a product is created, changed, deleted or restocked, and the cached catalog
   is dropped so the next visitor sees the new price, stock or bundle options — without it, a
