@@ -34,6 +34,7 @@ export function BigCommerceCheckoutHandoff({
       body: JSON.stringify({
         items: items.map((item) => ({
           slug: item.slug,
+          name: item.name,
           quantity: item.quantity,
           bundleId: item.bundleId,
           bundleGroupId: item.bundleGroupId,

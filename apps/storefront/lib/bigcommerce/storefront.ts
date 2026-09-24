@@ -1,4 +1,4 @@
-import { getBigCommerceProducts, type BigCommerceProduct } from './catalog'
+import { getBigCommerceProducts, normalizeProductName, type BigCommerceProduct } from './catalog'
 import { isBigCommerceConfigured } from './config'
 
 /**
@@ -33,17 +33,27 @@ export function toBigCommercePricing(product: BigCommerceProduct): BigCommercePr
   }
 }
 
-/** BigCommerce's price and stock for every product mapped to a site page, by slug. */
-export function pricingBySiteSlug(products: BigCommerceProduct[]): Map<string, BigCommercePricing> {
+export type BigCommercePricingIndex = {
+  /** Products mapped to a site page, by site slug. */
+  bySlug: Map<string, BigCommercePricing>
+  /** Products missing from the map, by normalized name. */
+  byName: Map<string, BigCommercePricing>
+}
+
+/** BigCommerce's price and stock for every product, keyed the ways a site product can match it. */
+export function indexBigCommercePricing(products: BigCommerceProduct[]): BigCommercePricingIndex {
   const bySlug = new Map<string, BigCommercePricing>()
+  const byName = new Map<string, BigCommercePricing>()
   for (const product of products) {
     if (product.siteSlug) bySlug.set(product.siteSlug, toBigCommercePricing(product))
+    else byName.set(normalizeProductName(product.name), toBigCommercePricing(product))
   }
-  return bySlug
+  return { bySlug, byName }
 }
 
 type PricedProduct = {
   slug: string
+  name?: string
   price: number
   compareAtPrice?: number | null
   inventory?: number
@@ -51,15 +61,18 @@ type PricedProduct = {
 
 /**
  * Replaces price, compare-at price and stock with BigCommerce's on every
- * product BigCommerce sells. A product it does not sell (no mapping) keeps its
- * price but shows no stock, because BigCommerce's checkout could not take it.
+ * product BigCommerce sells, matched by the product map or, failing that, by
+ * name. A product it does not sell keeps its price but shows no stock, because
+ * BigCommerce's checkout could not take it.
  */
 export function overlayBigCommercePricing<T extends PricedProduct>(
   products: T[],
-  pricing: Map<string, BigCommercePricing>,
+  pricing: BigCommercePricingIndex,
 ): T[] {
   return products.map((product) => {
-    const bc = pricing.get(product.slug)
+    const bc =
+      pricing.bySlug.get(product.slug) ??
+      (product.name ? pricing.byName.get(normalizeProductName(product.name)) : undefined)
     if (!bc) return 'inventory' in product ? { ...product, inventory: 0 } : product
     return {
       ...product,
@@ -79,7 +92,7 @@ export function overlayBigCommercePricing<T extends PricedProduct>(
 export async function applyBigCommercePricing<T extends PricedProduct>(products: T[]): Promise<T[]> {
   if (!isBigCommerceStorefrontEnabled() || products.length === 0) return products
   try {
-    return overlayBigCommercePricing(products, pricingBySiteSlug(await getBigCommerceProducts('main')))
+    return overlayBigCommercePricing(products, indexBigCommercePricing(await getBigCommerceProducts('main')))
   } catch (error) {
     console.error('[bigcommerce] catalog pricing unavailable; showing database prices', {
       message: error instanceof Error ? error.message : String(error),

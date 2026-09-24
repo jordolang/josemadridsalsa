@@ -36,6 +36,10 @@ the root `package.json` is canonical.
   over instead of landing on a 404. Creating an account or checking a gift-card balance from an
   old link goes to that exact page, seasonal flavors that are not sold right now go to the salsa
   list, and a test checks every destination is a real page and that no redirect hides one.
+  Once the old BigCommerce store moves to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`),
+  sign-in, account, gift-certificate and wishlist links — including the ones in past order
+  emails — go to the customer's real BigCommerce account there instead. The full cutover is
+  written up step by step in the new BigCommerce Cutover Runbook.
 - **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls
   the site whenever a product is created, changed, deleted or restocked, and the cached catalog
   is dropped so the next visitor sees the new price, stock or bundle options — without it, a
@@ -67,8 +71,9 @@ the root `package.json` is canonical.
   when one is active, purchasable only when visible, enabled and in stock, and the Choose-N
   bundles' jar dropdowns and order-notes field exposed as they are defined in BigCommerce. The
   27 salsas are mapped to this site's existing product pages so their heat ratings, nutrition
-  and recipes carry over; anything added in BigCommerce later still sells without a mapping.
-  Nothing renders from BigCommerce yet.
+  and recipes carry over, and a salsa added later in both BigCommerce and the site admin under
+  the same name is linked by that name, with no code change. Nothing renders from BigCommerce
+  yet.
 - **The abandoned-cart reminder is a three-email sequence, and the analytics page now shows what
   it did.** One reminder went out an hour after a cart was left and that was the end of it. There
   are now three — the existing reminder, an urgency follow-up a day later and a final note the

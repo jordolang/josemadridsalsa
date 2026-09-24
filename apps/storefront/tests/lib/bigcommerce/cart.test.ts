@@ -60,6 +60,13 @@ describe('buildBigCommerceLineItems', () => {
     ])
   })
 
+  it('links a loose jar missing from the map by its name', () => {
+    const unmapped = normalizeBigCommerceProduct({ ...originalHotRaw, id: 500, name: 'Smoky Peach Hot', custom_url: { url: '/smoky-peach-hot/' } })
+    expect(
+      buildBigCommerceLineItems([{ slug: 'smoky-peach-hot-salsa', name: 'Smoky Peach Hot', quantity: 2 }], [...products, unmapped]),
+    ).toEqual([{ product_id: 500, quantity: 2 }])
+  })
+
   it('turns a pack into one pack product with a jar per slot and a default note', () => {
     const [pack] = buildBigCommerceLineItems(
       [jar('original-hot', 4), jar('mango-mild-salsa', 2)],

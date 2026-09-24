@@ -3,9 +3,10 @@
  * page, which carries the heat rating, nutrition panel, ingredients and
  * recipes that BigCommerce does not hold.
  *
- * A BigCommerce product missing from this map still sells on the site; it just
- * renders from BigCommerce data alone. Add an entry only to attach the richer
- * page to it.
+ * A product missing from this map is still linked when the site product has the
+ * same name as the BigCommerce one (see `findBigCommerceProductBySlug`), so staff
+ * can add a new salsa in both places with no code change. An entry here is only
+ * needed when the two names differ.
  */
 export const BIGCOMMERCE_PRODUCT_SLUGS: Readonly<Record<number, string>> = {
   95: 'black-bean-corn-salsa',

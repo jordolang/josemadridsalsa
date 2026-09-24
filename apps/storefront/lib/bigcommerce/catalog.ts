@@ -200,15 +200,29 @@ export async function getBigCommerceProducts(
     .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
 }
 
-/** The product whose site page or legacy BigCommerce path matches `slug`. */
+/** Case- and punctuation-insensitive form of a product name, for matching across systems. */
+export function normalizeProductName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+/**
+ * The product a site page refers to: by its mapped site slug, then by its
+ * legacy BigCommerce path, then — for products missing from the map — by name.
+ * The name match is what lets staff add a new salsa in both BigCommerce and the
+ * site admin under the same name and have the two linked with no code change.
+ */
 export function findBigCommerceProductBySlug(
   products: BigCommerceProduct[],
   slug: string,
+  name?: string,
 ): BigCommerceProduct | null {
   const bare = slug.replace(/^\/+|\/+$/g, '')
+  const byName = name ? normalizeProductName(name) : null
   return (
     products.find((product) => product.siteSlug === bare) ??
     products.find((product) => product.legacyPath.replace(/^\/+|\/+$/g, '') === bare) ??
-    null
+    (byName
+      ? (products.find((product) => !product.siteSlug && normalizeProductName(product.name) === byName) ?? null)
+      : null)
   )
 }

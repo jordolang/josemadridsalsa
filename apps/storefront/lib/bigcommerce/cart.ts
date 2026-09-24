@@ -15,6 +15,8 @@ export const bigCommerceCheckoutRequestSchema = z.object({
     .array(
       z.object({
         slug: z.string().min(1).max(200),
+        /** Lets a product missing from the product map match BigCommerce by name. */
+        name: z.string().min(1).max(200).optional(),
         quantity: z.number().int().min(1).max(99),
         bundleId: z.string().max(50).optional(),
         bundleGroupId: z.string().max(100).optional(),
@@ -66,13 +68,13 @@ function packLineItem(
 
   const slots = pack.modifiers.filter((modifier) => modifier.type === 'dropdown')
   // One slot per jar: a salsa picked twice fills two slots.
-  const picked = jars.flatMap((jar) => Array.from({ length: jar.quantity }, () => jar.slug))
+  const picked = jars.flatMap((jar) => Array.from({ length: jar.quantity }, () => jar))
   if (picked.length !== slots.length) {
     throw new BigCommerceCartError(`${pack.name} holds ${slots.length} jars, but ${picked.length} were chosen.`)
   }
 
-  const selections: NonNullable<BigCommerceLineItem['option_selections']> = picked.map((slug, index) => {
-    const salsa = findBigCommerceProductBySlug(products, slug)
+  const selections: NonNullable<BigCommerceLineItem['option_selections']> = picked.map((jar, index) => {
+    const salsa = findBigCommerceProductBySlug(products, jar.slug, jar.name)
     if (!salsa) throw new BigCommerceCartError(`One of the salsas in ${pack.name} is not sold online right now.`)
     const value = slots[index].values.find((choice) => normalizeLabel(choice.label) === normalizeLabel(salsa.name))
     if (!value) throw new BigCommerceCartError(`${salsa.name} is not available in ${pack.name}.`)
@@ -112,7 +114,7 @@ export function buildBigCommerceLineItems(
       continue
     }
 
-    const product = requirePurchasable(findBigCommerceProductBySlug(products, line.slug), 'An item in your cart')
+    const product = requirePurchasable(findBigCommerceProductBySlug(products, line.slug, line.name), 'An item in your cart')
     const existing = loose.get(product.id)
     if (existing) existing.quantity += line.quantity
     else loose.set(product.id, { product_id: product.id, quantity: line.quantity })

@@ -139,4 +139,11 @@ describe('findBigCommerceProductBySlug', () => {
     expect(findBigCommerceProductBySlug(products, 'green-apple')?.id).toBe(130)
     expect(findBigCommerceProductBySlug(products, 'nope')).toBeNull()
   })
+
+  it('falls back to name for products missing from the map, never for mapped ones', () => {
+    // Choose-6 is unmapped, so its name links it.
+    expect(findBigCommerceProductBySlug(products, 'choose-six-pack', 'choose 6')?.id).toBe(121)
+    // Original Hot is mapped: a different page with the same name must not claim it.
+    expect(findBigCommerceProductBySlug(products, 'some-other-page', 'Original Hot')).toBeNull()
+  })
 })

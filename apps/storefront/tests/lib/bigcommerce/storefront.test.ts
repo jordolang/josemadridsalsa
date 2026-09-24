@@ -6,7 +6,7 @@ import {
   applyBigCommercePricing,
   isBigCommerceStorefrontEnabled,
   overlayBigCommercePricing,
-  pricingBySiteSlug,
+  indexBigCommercePricing,
   toBigCommercePricing,
 } from '@/lib/bigcommerce/storefront'
 import fixtures from './fixtures.json'
@@ -53,10 +53,21 @@ describe('toBigCommercePricing', () => {
 })
 
 describe('overlayBigCommercePricing', () => {
-  const pricing = pricingBySiteSlug([originalHot, chooseSix].map((raw) => normalizeBigCommerceProduct(raw)))
+  const pricing = indexBigCommercePricing([originalHot, chooseSix].map((raw) => normalizeBigCommerceProduct(raw)))
 
-  it('only indexes products mapped to a site page', () => {
-    expect([...pricing.keys()]).toEqual(['original-hot'])
+  it('indexes mapped products by site slug and the rest by name', () => {
+    expect([...pricing.bySlug.keys()]).toEqual(['original-hot'])
+    expect([...pricing.byName.keys()]).toEqual(['choose6'])
+  })
+
+  it('links a product missing from the map by name, so a new salsa needs no code change', () => {
+    const newSalsa = normalizeBigCommerceProduct({ ...originalHot, id: 999, name: 'Smoky Peach Hot', price: 8, calculated_price: 8 })
+    const index = indexBigCommercePricing([newSalsa])
+    const [product] = overlayBigCommercePricing(
+      [{ slug: 'smoky-peach-hot-salsa', name: 'Smoky Peach  HOT', price: 9, compareAtPrice: null, inventory: 0 }],
+      index,
+    )
+    expect(product).toMatchObject({ price: 8, inventory: 99 })
   })
 
   it('replaces price and stock on sold products and zeroes stock on unsold ones', () => {
