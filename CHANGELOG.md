@@ -85,6 +85,24 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **A Heat Index post cross-posted to Facebook showed the site's old Open Graph image instead of
+  the picture on the article.** A Page feed post that carries a link renders its preview card
+  purely from Facebook's own cached scrape of that URL — Graph API v2.9 removed the `picture`,
+  `name` and `description` overrides, so the publish request cannot say what the card should show.
+  Two things fed that cache the wrong picture. Nothing in the save path invalidated the article's
+  render, which is ISR-cached for fifteen minutes, so the crawler that arrives seconds after a
+  publish was served an older render and read whatever `og:image` it carried; Facebook then keeps
+  that result for weeks, which freezes the stale image onto every later share of the article. And
+  an article whose picture lives in the body rather than the cover field had no `og:image` of its
+  own to find at all, because the page fell straight from an empty cover to the site default —
+  the cover field is optional, so this was the ordinary outcome for a post written that way.
+  Publishing, editing or cross-posting a post now purges its page, the listing and the sitemap
+  before anything advertises it, the cross-post asks Facebook to re-scrape the link immediately
+  before the post is created, and the share image falls back through the gallery and then the
+  first image in the body before it reaches the site default. A failed re-scrape only risks a
+  stale card, so the post still goes out. Existing posts keep the card Facebook already cached
+  until the article is re-shared or re-scraped from the Sharing Debugger.
+
 - Fixed Twitter blog cross-posts uploading Google Business cover images; empty or invalid X responses now report the HTTP status instead of a JSON parsing error.
 - **Uploading a photo to a Heat Index post failed with "The string did not match the expected
   pattern."** Vercel caps a serverless request body at 4.5 MB and refuses anything larger at the

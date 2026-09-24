@@ -4,6 +4,7 @@ import { requirePermission } from '@/lib/rbac'
 import { blogPostSchema, checkPostSeo } from '@/lib/blog/schemas'
 import { postCardSelect } from '@/lib/blog/queries'
 import { publishBlogPost } from '@/lib/blog/publish'
+import { revalidateBlogPost } from '@/lib/blog/revalidate'
 import { crosspostAccountIdsSchema, crosspostBlogPost } from '@/lib/social/blog-crosspost'
 import prisma from '@/lib/prisma'
 
@@ -80,6 +81,10 @@ export async function POST(req: NextRequest) {
         publishedAt: data.status === 'PUBLISHED' ? new Date() : null,
       },
     })
+
+    // Purge the cached renders before anything advertises the article, so the
+    // cross-post crawler scrapes this version's cover image and not an older one.
+    revalidateBlogPost(post.slug)
 
     if (post.status === 'PUBLISHED') {
       await publishBlogPost(post.id).catch((err) => {
