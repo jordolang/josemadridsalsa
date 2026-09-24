@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import Image from 'next/image'
-import { Check, ChevronDown, Loader2, RotateCcw, X } from 'lucide-react'
+import { Check, ChevronDown, Loader2, MapPin, RotateCcw, X } from 'lucide-react'
 import { SignaturePad } from '@/components/waiver/SignaturePad'
+import { useDeviceLocation, type DeviceLocationStatus } from '@/components/waiver/useDeviceLocation'
 import { cn } from '@/lib/utils'
 import {
   PROMO_RELEASE_INTRO,
@@ -15,6 +16,28 @@ import {
 const LOGO_URL =
   'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/logo-image.webp'
 const RESET_SECONDS = 8
+/** Someone walked away mid-form: start fresh after this long without a touch. */
+const IDLE_RESET_MS = 90_000
+
+const clockFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  hour: 'numeric',
+  minute: '2-digit',
+  second: '2-digit',
+})
+
+/**
+ * Starts the next person on a freshly loaded page (picks up new deploys and
+ * re-checks the staff session). Offline at a market, a reload would land on
+ * Safari's error page, so fall back to clearing the form in place.
+ */
+function reloadOrReset(reset: () => void) {
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    window.location.reload()
+  } else {
+    reset()
+  }
+}
 
 type Status = 'form' | 'submitting' | 'done'
 
@@ -50,7 +73,14 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
   const [showDetails, setShowDetails] = useState(false)
   const [status, setStatus] = useState<Status>('form')
   const [error, setError] = useState<string | null>(null)
-  const [submitted, setSubmitted] = useState<{ firstName: string; decision: PromoReleaseDecision } | null>(null)
+  const [submitted, setSubmitted] = useState<{
+    firstName: string
+    decision: PromoReleaseDecision
+    code: string
+    submittedAt: string
+  } | null>(null)
+  const deviceLocation = useDeviceLocation()
+  const lastTouchRef = useRef(Date.now())
   const [countdown, setCountdown] = useState(RESET_SECONDS)
 
   const reset = useCallback(() => {
@@ -63,16 +93,36 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
     window.scrollTo({ top: 0 })
   }, [])
 
-  // Clear the thank-you screen on its own so the next person gets a blank form.
+  // Clear the thank-you screen on its own so the next person gets a fresh page.
   useEffect(() => {
     if (status !== 'done') return
     if (countdown <= 0) {
-      reset()
+      reloadOrReset(reset)
       return
     }
     const timer = window.setTimeout(() => setCountdown((value) => value - 1), 1000)
     return () => window.clearTimeout(timer)
   }, [status, countdown, reset])
+
+  // Reload a half-finished form nobody has touched for a while.
+  const dirty = form.decision !== null || form.fullName !== '' || form.email !== ''
+  useEffect(() => {
+    if (status !== 'form' || !dirty) return
+    const markTouch = () => {
+      lastTouchRef.current = Date.now()
+    }
+    markTouch()
+    window.addEventListener('pointerdown', markTouch)
+    window.addEventListener('keydown', markTouch)
+    const timer = window.setInterval(() => {
+      if (Date.now() - lastTouchRef.current > IDLE_RESET_MS) reloadOrReset(reset)
+    }, 5_000)
+    return () => {
+      window.removeEventListener('pointerdown', markTouch)
+      window.removeEventListener('keydown', markTouch)
+      window.clearInterval(timer)
+    }
+  }, [status, dirty, reset])
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
@@ -118,6 +168,8 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
           fullName: form.fullName,
           email: form.email,
           event,
+          clientSubmittedAt: new Date().toISOString(),
+          location: deviceLocation.getFix() ?? undefined,
         }),
       })
 
@@ -130,7 +182,16 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
         throw new Error(message)
       }
 
-      setSubmitted({ firstName: form.fullName.trim().split(/\s+/)[0] ?? '', decision: form.decision })
+      const saved: unknown = await response.json()
+      const savedRecord =
+        saved && typeof saved === 'object' && 'code' in saved && 'submittedAt' in saved
+          ? { code: String(saved.code), submittedAt: String(saved.submittedAt) }
+          : { code: '', submittedAt: new Date().toISOString() }
+      setSubmitted({
+        firstName: form.fullName.trim().split(/\s+/)[0] ?? '',
+        decision: form.decision,
+        ...savedRecord,
+      })
       setStatus('done')
     } catch (submitError) {
       setError(
@@ -161,9 +222,15 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
             : "Got it. We won't feature you in our photos or promotions."}
         </p>
         <p className="mt-10 text-xl font-semibold text-salsa-700">Please hand the iPad back to our team.</p>
+        <div className="mt-8 rounded-2xl border-2 border-stone-300 bg-white px-8 py-4">
+          <p className="font-mono text-4xl font-bold tracking-wider text-stone-900">{submitted.code}</p>
+          <p className="mt-1 font-mono text-xl text-stone-600">
+            {clockFormat.format(new Date(submitted.submittedAt))} · {yes ? 'AGREED' : 'DECLINED'}
+          </p>
+        </div>
         <button
           type="button"
-          onClick={reset}
+          onClick={() => reloadOrReset(reset)}
           className="mt-10 inline-flex h-14 items-center gap-2 rounded-full border-2 border-stone-300 bg-white px-8 text-lg font-semibold text-stone-700 active:bg-stone-100"
         >
           <RotateCcw className="h-5 w-5" aria-hidden />
@@ -179,6 +246,8 @@ export function PromoReleaseKiosk({ event }: { event?: string }) {
   return (
     <main className="min-h-dvh bg-chile-50 px-5 py-8 sm:px-10 sm:py-12">
       <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl flex-col gap-8" noValidate>
+        <KioskStatusBar locationStatus={deviceLocation.status} />
+
         <header className="flex flex-col items-center text-center">
           <Image src={LOGO_URL} alt="Jose Madrid Salsa" width={96} height={96} priority className="h-24 w-24 object-contain" />
           <h1 className="mt-4 font-serif text-4xl text-stone-900 sm:text-5xl">{PROMO_RELEASE_TITLE}</h1>
@@ -368,5 +437,32 @@ function ChoiceCard({
         <span className="mt-1 text-base text-stone-600">{detail}</span>
       </span>
     </button>
+  )
+}
+
+function KioskStatusBar({ locationStatus }: { locationStatus: DeviceLocationStatus }) {
+  const [now, setNow] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setNow(new Date())
+    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const locationLabel = { locating: 'Finding location…', on: 'Location on', off: 'Location off' }[locationStatus]
+
+  return (
+    <div className="-mb-4 flex items-center justify-between text-sm text-stone-500">
+      <span className="font-mono tabular-nums" aria-label="Current time">
+        {now ? clockFormat.format(now) : '\u00A0'}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <MapPin
+          className={cn('h-4 w-4', locationStatus === 'on' ? 'text-verde-600' : 'text-stone-400')}
+          aria-hidden
+        />
+        {locationLabel}
+      </span>
+    </div>
   )
 }

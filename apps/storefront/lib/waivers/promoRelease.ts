@@ -39,6 +39,17 @@ export const promoReleaseSubmissionSchema = z
     signingForMinor: z.boolean().default(false),
     minorName: optionalText(100),
     event: optionalText(80),
+    /** The iPad's own clock when Submit was tapped, kept beside the server time for footage sync. */
+    clientSubmittedAt: z.iso.datetime().optional(),
+    /** GPS fix from the iPad, when location permission was granted. */
+    location: z
+      .object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        accuracyMeters: z.number().min(0).max(100_000),
+        capturedAt: z.iso.datetime(),
+      })
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.decision === 'agree' && !data.signature) {
@@ -54,13 +65,57 @@ export const promoReleaseSubmissionSchema = z
 
 export type PromoReleaseSubmission = z.infer<typeof promoReleaseSubmissionSchema>
 
+export interface PromoReleaseNetworkLocation {
+  city: string | null
+  region: string | null
+  country: string | null
+}
+
 export interface PromoReleaseRecord extends PromoReleaseSubmission {
   id: string
+  /** Short code shown on the thank-you screen, so a camera can film it as a sync marker. */
+  code: string
   version: string
   submittedAt: string
   collectedBy: string
   ipAddress: string | null
   userAgent: string | null
+  /** Approximate place from the request's IP (Vercel geo headers); a fallback when GPS is off. */
+  networkLocation: PromoReleaseNetworkLocation | null
+}
+
+/** What the JSON log file holds: the record minus the signature image, plus where its PDF lives. */
+export type PromoReleaseLogEntry = Omit<PromoReleaseRecord, 'signature'> & {
+  signed: boolean
+  pdfUrl: string | null
+}
+
+export function promoReleaseCode(id: string): string {
+  return `JM-${id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+}
+
+function readHeader(headers: Headers, name: string): string | null {
+  const value = headers.get(name)
+  if (!value) return null
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+export function networkLocationFromHeaders(headers: Headers): PromoReleaseNetworkLocation | null {
+  const location = {
+    city: readHeader(headers, 'x-vercel-ip-city'),
+    region: readHeader(headers, 'x-vercel-ip-country-region'),
+    country: readHeader(headers, 'x-vercel-ip-country'),
+  }
+  return location.city || location.region || location.country ? location : null
+}
+
+export function toPromoReleaseLogEntry(record: PromoReleaseRecord, pdfUrl: string | null): PromoReleaseLogEntry {
+  const { signature, ...rest } = record
+  return { ...rest, signed: Boolean(signature), pdfUrl }
 }
 
 export function createPromoReleaseRecord(
@@ -69,18 +124,22 @@ export function createPromoReleaseRecord(
     collectedBy: string
     ipAddress?: string | null
     userAgent?: string | null
+    networkLocation?: PromoReleaseNetworkLocation | null
     now?: Date
     id?: string
   },
 ): PromoReleaseRecord {
+  const id = context.id ?? globalThis.crypto.randomUUID()
   return {
     ...submission,
-    id: context.id ?? globalThis.crypto.randomUUID(),
+    id,
+    code: promoReleaseCode(id),
     version: PROMO_RELEASE_VERSION,
     submittedAt: (context.now ?? new Date()).toISOString(),
     collectedBy: context.collectedBy,
     ipAddress: context.ipAddress ?? null,
     userAgent: context.userAgent ?? null,
+    networkLocation: context.networkLocation ?? null,
   }
 }
 
@@ -88,7 +147,7 @@ function slugify(value: string): string {
   return (
     value
       .normalize('NFKD')
-      .replace(/[̀-ͯ]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
@@ -96,26 +155,136 @@ function slugify(value: string): string {
   )
 }
 
-/** Eastern-time date parts, so folders match the day the waiver was signed at the booth. */
-function easternDateParts(iso: string): { year: string; month: string; day: string } {
+/** Eastern-time parts, so folders and file names match the booth's wall clock. */
+function easternParts(iso: string): Record<'year' | 'month' | 'day' | 'hour' | 'minute' | 'second', string> {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
   }).formatToParts(new Date(iso))
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00'
-  return { year: get('year'), month: get('month'), day: get('day') }
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+    second: get('second'),
+  }
+}
+
+/** YYYY-MM-DD in Eastern time. */
+export function easternDateKey(iso: string): string {
+  const { year, month, day } = easternParts(iso)
+  return `${year}-${month}-${day}`
+}
+
+/** Blob prefix holding every record signed on an Eastern-time day (YYYY-MM-DD). */
+export function promoReleaseDayPrefix(dateKey: string): string {
+  const [year, month] = dateKey.split('-')
+  return `${PROMO_RELEASE_BLOB_DIRECTORY}/${year}/${month}/${dateKey}-`
 }
 
 /**
- * Blob pathname (without extension) for a record, e.g.
- * waivers/promotional-release/2026/09/2026-09-24-agree-maria-lopez-1a2b3c4d
+ * Blob pathname (without extension) for a record. The Eastern time to the second
+ * leads, so a day's folder sorts in the order people signed, e.g.
+ * waivers/promotional-release/2026/09/2026-09-24-133012-agree-anonymous-jm-1a2b3c
  */
 export function buildPromoReleasePathname(record: PromoReleaseRecord): string {
-  const { year, month, day } = easternDateParts(record.submittedAt)
-  const shortId = record.id.replace(/-/g, '').slice(0, 8)
-  return `${PROMO_RELEASE_BLOB_DIRECTORY}/${year}/${month}/${year}-${month}-${day}-${record.decision}-${record.fullName ? slugify(record.fullName) : 'anonymous'}-${shortId}`
+  const { year, month, day, hour, minute, second } = easternParts(record.submittedAt)
+  const name = record.fullName ? slugify(record.fullName) : 'anonymous'
+  return `${PROMO_RELEASE_BLOB_DIRECTORY}/${year}/${month}/${year}-${month}-${day}-${hour}${minute}${second}-${record.decision}-${name}-${record.code.toLowerCase()}`
+}
+
+/** Wall-clock time to the second in Eastern time, e.g. "1:30:12 PM". */
+export function formatPromoReleaseClock(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(new Date(iso))
+}
+
+export function formatPromoReleaseLocation(record: Pick<PromoReleaseRecord, 'location' | 'networkLocation'>): string {
+  if (record.location) {
+    const { latitude, longitude, accuracyMeters } = record.location
+    return `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracyMeters)} m, GPS)`
+  }
+  const network = record.networkLocation
+  const place = network ? [network.city, network.region, network.country].filter(Boolean).join(', ') : ''
+  return place ? `${place} (approximate, from network)` : 'Not available'
+}
+
+export function promoReleaseMapUrl(record: Pick<PromoReleaseRecord, 'location'>): string | null {
+  return record.location
+    ? `https://maps.google.com/?q=${record.location.latitude},${record.location.longitude}`
+    : null
+}
+
+const CSV_COLUMNS = [
+  'time_eastern',
+  'submitted_utc',
+  'device_time_utc',
+  'code',
+  'decision',
+  'signed',
+  'name',
+  'email',
+  'minor',
+  'minor_name',
+  'event',
+  'latitude',
+  'longitude',
+  'accuracy_m',
+  'network_location',
+  'collected_by',
+  'pdf_url',
+  'record_id',
+] as const
+
+function csvCell(value: string | number | boolean | null | undefined): string {
+  const text = value === null || value === undefined ? '' : String(value)
+  // Typed text starting with =, +, -, @ would run as a formula in Excel/Sheets; numbers are safe.
+  const safe = typeof value === 'string' && /^[=+\-@]/.test(text) ? `'${text}` : text
+  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
+}
+
+/** One row per waiver, oldest first, for lining up against footage timestamps. */
+export function buildPromoReleaseCsv(entries: PromoReleaseLogEntry[]): string {
+  const rows = [...entries]
+    .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
+    .map((entry) => {
+      const network = entry.networkLocation
+      return [
+        formatPromoReleaseClock(entry.submittedAt),
+        entry.submittedAt,
+        entry.clientSubmittedAt,
+        entry.code,
+        entry.decision,
+        entry.signed,
+        entry.fullName,
+        entry.email,
+        entry.signingForMinor,
+        entry.minorName,
+        entry.event,
+        entry.location?.latitude,
+        entry.location?.longitude,
+        entry.location ? Math.round(entry.location.accuracyMeters) : null,
+        network ? [network.city, network.region, network.country].filter(Boolean).join(', ') : null,
+        entry.collectedBy,
+        entry.pdfUrl,
+        entry.id,
+      ]
+        .map(csvCell)
+        .join(',')
+    })
+  return [CSV_COLUMNS.join(','), ...rows].join('\r\n') + '\r\n'
 }
 
 export function formatPromoReleaseTimestamp(iso: string): string {
@@ -131,7 +300,7 @@ export function toPdfSafeText(value: string): string {
   return value
     .normalize('NFC')
     .replace(/[\r\n\t]+/g, ' ')
-    .replace(/[^\x20-\x7E -ÿ–—‘’“”•]/g, '?')
+    .replace(/[^\x20-\x7E\u00A0-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022]/g, '?')
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
@@ -225,6 +394,8 @@ export async function buildPromoReleasePdf(record: PromoReleaseRecord): Promise<
   }
   fields.push(['Event', record.event ?? 'Not specified'])
   fields.push(['Signed', formatPromoReleaseTimestamp(record.submittedAt)])
+  fields.push(['Record code', record.code])
+  fields.push(['Location', formatPromoReleaseLocation(record)])
 
   for (const [label, value] of fields) {
     ensureRoom(16)
@@ -273,7 +444,11 @@ export async function buildPromoReleasePdf(record: PromoReleaseRecord): Promise<
 
   write('Audit record', { font: bold, size: 10, color: MUTED, gap: 2 })
   write(`Record ID: ${record.id}`, { size: 8.5, color: MUTED })
-  write(`Submitted (UTC): ${record.submittedAt}`, { size: 8.5, color: MUTED })
+  write(`Submitted (UTC, server): ${record.submittedAt}`, { size: 8.5, color: MUTED })
+  write(`Submitted (UTC, iPad clock): ${record.clientSubmittedAt ?? 'unknown'}`, { size: 8.5, color: MUTED })
+  if (record.location) {
+    write(`GPS fix taken (UTC): ${record.location.capturedAt}`, { size: 8.5, color: MUTED })
+  }
   write(`Collected by: ${record.collectedBy}`, { size: 8.5, color: MUTED })
   write(`IP address: ${record.ipAddress ?? 'unknown'}`, { size: 8.5, color: MUTED })
   write(`Device: ${record.userAgent ?? 'unknown'}`, { size: 8.5, color: MUTED })

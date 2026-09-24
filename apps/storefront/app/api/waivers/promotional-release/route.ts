@@ -1,33 +1,21 @@
 import { put } from '@vercel/blob'
-import { cookies } from 'next/headers'
 import type { NextRequest } from 'next/server'
 import { fail, ok, serverError, unauthorized } from '@/lib/api'
-import { getCurrentUser, isStaff } from '@/lib/rbac'
 import {
   buildPromoReleasePathname,
   buildPromoReleasePdf,
   createPromoReleaseRecord,
+  networkLocationFromHeaders,
   promoReleaseSubmissionSchema,
+  toPromoReleaseLogEntry,
 } from '@/lib/waivers/promoRelease'
+import { resolveWaiverStaff } from '@/lib/waivers/staffCollector'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/** The kiosk runs on a staff-signed-in iPad; mirror requireAdminSession without the redirect. */
-async function resolveStaffCollector(): Promise<string | null> {
-  const cookieStore = await cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (process.env.ADMIN_SECRET_TOKEN && adminToken === process.env.ADMIN_SECRET_TOKEN) {
-    return 'admin-token'
-  }
-
-  const user = await getCurrentUser()
-  if (user && isStaff(user)) return user.email || user.id
-  return null
-}
-
 export async function POST(request: NextRequest) {
-  const collectedBy = await resolveStaffCollector()
+  const collectedBy = await resolveWaiverStaff()
   if (!collectedBy) return unauthorized('Sign in as staff to collect waivers')
 
   const token = process.env.BLOB_READ_WRITE_TOKEN
@@ -49,6 +37,7 @@ export async function POST(request: NextRequest) {
     collectedBy,
     ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
     userAgent: request.headers.get('user-agent'),
+    networkLocation: networkLocationFromHeaders(request.headers),
   })
 
   try {
@@ -57,32 +46,27 @@ export async function POST(request: NextRequest) {
 
     // The josemadridsalsa-blob store is public, so the random suffix keeps
     // these URLs unguessable; nothing on the site links to or lists them.
-    const [pdfBlob, jsonBlob] = await Promise.all([
-      put(`${pathname}.pdf`, Buffer.from(pdf), {
-        access: 'public',
-        contentType: 'application/pdf',
-        addRandomSuffix: true,
-        token,
-      }),
-      put(
-        `${pathname}.json`,
-        // The drawn signature lives in the PDF; keep the JSON record small and searchable.
-        JSON.stringify({ ...record, signature: undefined, signed: Boolean(record.signature) }, null, 2),
-        {
-          access: 'public',
-          contentType: 'application/json',
-          addRandomSuffix: true,
-          token,
-        },
-      ),
-    ])
+    // The PDF goes first so the JSON log entry can point at it.
+    const pdfBlob = await put(`${pathname}.pdf`, Buffer.from(pdf), {
+      access: 'public',
+      contentType: 'application/pdf',
+      addRandomSuffix: true,
+      token,
+    })
+    // The drawn signature lives in the PDF; the JSON stays small and searchable.
+    await put(`${pathname}.json`, JSON.stringify(toPromoReleaseLogEntry(record, pdfBlob.url), null, 2), {
+      access: 'public',
+      contentType: 'application/json',
+      addRandomSuffix: true,
+      token,
+    })
 
     return ok(
       {
         id: record.id,
+        code: record.code,
         decision: record.decision,
-        pdfPathname: pdfBlob.pathname,
-        jsonPathname: jsonBlob.pathname,
+        submittedAt: record.submittedAt,
       },
       201,
     )
