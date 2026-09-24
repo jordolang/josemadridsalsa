@@ -30,6 +30,7 @@ const eslintConfig = defineConfig([
       "lib/mdx-components.tsx",
     ],
     rules: {
+      "@next/next/no-img-element": "off",
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-empty-object-type": "off",
       "react-hooks/set-state-in-effect": "off",

@@ -9,6 +9,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/inbox-triage",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "path": "/api/cron/email-automation",
       "schedule": "*/5 * * * *"
     },

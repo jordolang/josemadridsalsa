@@ -30,9 +30,7 @@ export default async function DeveloperPage() {
   ])
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* eslint-disable-next-line react/no-danger -- static JSON-LD, no user input */}
-      <script
+    <div className="min-h-screen bg-background">      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />

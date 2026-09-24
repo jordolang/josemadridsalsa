@@ -14,6 +14,7 @@
 
 import type { Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
+import { gmailThreadUrl } from '@/lib/inbox/gmail'
 import { isMissingTableError } from '@/lib/prisma-errors'
 import {
   findPage,
@@ -8422,6 +8423,167 @@ async function loadLiveChat(): Promise<TablePayload> {
 }
 
 // ---------------------------------------------------------------------------
+// Messages · Customer email
+// ---------------------------------------------------------------------------
+
+const CUSTOMER_EMAIL_FILTERS = ['Everything', 'Needs action', 'Answered', 'Resolved']
+
+const INBOX_STATUS_TONE: Record<string, Tone> = {
+  NEEDS_ACTION: 'bad',
+  IN_PROGRESS: 'warn',
+  REPLY_DRAFTED: 'warn',
+  AUTO_ANSWERED: 'good',
+  RESOLVED: 'muted',
+  IGNORED: 'muted',
+}
+
+/**
+ * The customer-email worklist.
+ *
+ * The desktop shell shows the same rows as `/admin/inbox`, but its real job here is the
+ * checklist: the inspector lists every outstanding step as its own action, so the work can
+ * be ticked off without leaving the window. A row whose steps are not done offers no
+ * "clear" — that refusal lives in `lib/inbox/resolution.ts` and is enforced server-side
+ * whichever surface asks.
+ */
+async function loadCustomerEmail(): Promise<TablePayload> {
+  const emails = await safe(
+    () =>
+      prisma.inboundEmail.findMany({
+        where: { status: { not: 'IGNORED' } },
+        orderBy: [{ resolvedAt: { sort: 'asc', nulls: 'first' } }, { receivedAt: 'desc' }],
+        take: ROW_LIMIT,
+        include: { steps: { orderBy: { position: 'asc' } } },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'From', width: 'minmax(0,1.2fr)' },
+    { label: 'Subject', width: 'minmax(0,2fr)' },
+    { label: 'Category', width: 'minmax(0,1fr)' },
+    { label: 'Status', width: '124px' },
+    { label: 'Steps', width: '82px' },
+    { label: 'Received', width: '116px' },
+  ]
+
+  let outstanding = 0
+
+  const rows: Row[] = emails.map((email) => {
+    const open = email.steps.filter((step) => !step.isOptional && step.completedAt === null)
+    if (open.length > 0) outstanding += 1
+
+    const needsWork = email.status === 'NEEDS_ACTION' || email.status === 'IN_PROGRESS'
+    const buckets = [0]
+    if (needsWork || email.status === 'REPLY_DRAFTED') buckets.push(1)
+    if (email.status === 'AUTO_ANSWERED') buckets.push(2)
+    if (email.status === 'RESOLVED') buckets.push(3)
+
+    const who = email.fromName ?? email.fromEmail
+
+    return {
+      id: email.id,
+      open: link(`/admin/inbox/${email.id}`),
+      search: `${who} ${email.fromEmail} ${email.subject} ${email.summary}`,
+      buckets,
+      cells: [
+        text(who, { strong: open.length > 0 }),
+        text(excerpt(email.subject, 80), { dim: email.status === 'RESOLVED' }),
+        text(humanise(email.category), { dim: true }),
+        statusCell(humanise(email.status), INBOX_STATUS_TONE[email.status] ?? 'neutral'),
+        text(open.length > 0 ? `${open.length} open` : '—', {
+          tone: open.length > 0 ? 'warn' : 'muted',
+          strong: open.length > 0,
+        }),
+        text(stamp(email.receivedAt), { mono: true, dim: true }),
+      ],
+      inspector: {
+        title: email.subject,
+        tag: humanise(email.status),
+        tagTone: INBOX_STATUS_TONE[email.status] ?? 'neutral',
+        groups: [
+          {
+            label: 'MESSAGE',
+            fields: [
+              { label: 'From', value: `${who} <${email.fromEmail}>`, wrap: true },
+              { label: 'Wants', value: email.summary, wrap: true },
+              { label: 'Category', value: humanise(email.category) },
+              { label: 'Severity', value: humanise(email.severity) },
+              { label: 'Confidence', value: `${email.confidence}%` },
+              { label: 'Received', value: stamp(email.receivedAt), mono: true },
+            ],
+          },
+          {
+            label: 'HANDLING',
+            fields: [
+              {
+                label: 'Reply',
+                value: email.autoReplySent
+                  ? `Sent automatically ${email.autoReplyAt ? stamp(email.autoReplyAt) : ''}`.trim()
+                  : email.draftedReply
+                    ? 'Drafted in Gmail, unsent'
+                    : 'None written',
+                wrap: true,
+              },
+              { label: 'What is owed', value: email.actionSummary ?? '—', wrap: true },
+              { label: 'Gmail label', value: email.gmailLabel ?? '—' },
+              {
+                label: 'Resolved',
+                value: email.resolvedAt ? stamp(email.resolvedAt) : 'Not yet',
+                mono: true,
+              },
+            ],
+          },
+          ...(email.steps.length > 0
+            ? [
+                {
+                  label: 'STEPS',
+                  fields: email.steps.map((step, index) => ({
+                    label: `${index + 1}${step.isOptional ? ' (optional)' : ''}`,
+                    value: step.completedAt
+                      ? `✓ ${step.instruction}`
+                      : step.instruction,
+                    wrap: true,
+                  })),
+                },
+              ]
+            : []),
+        ],
+        actions: [
+          // One action per outstanding step, so the work is done from the row rather than
+          // by going and finding the web panel.
+          ...open.slice(0, 6).map((step) => ({
+            label: `Done: ${excerpt(step.instruction, 44)}`,
+            command: write('inboundEmail.completeStep', step.id, {
+              success: 'Step completed',
+            }),
+          })),
+          { label: 'Open the thread in Gmail…', shortcut: '⌘G', command: link(gmailThreadUrl(email.gmailThreadId)) },
+          { label: 'Open the full email…', shortcut: '⌘⏎', command: link(`/admin/inbox/${email.id}`) },
+          { label: 'Notifications', command: page('messages.notifications'), shortcut: '⌘N' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} emails`),
+      text(''),
+      text(''),
+      text(''),
+      text(outstanding ? `${count(outstanding)} outstanding` : 'all handled', {
+        tone: outstanding ? 'warn' : 'good',
+      }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Messages · Notifications
 // ---------------------------------------------------------------------------
 
@@ -9638,6 +9800,15 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
           { label: 'Reconciliation', icon: 'i-wallet', command: page('ledger.reconciliation') },
         ],
       }
+    case 'messages.email':
+      return {
+        eyebrow,
+        filters: CUSTOMER_EMAIL_FILTERS,
+        actions: [
+          { label: 'Triage settings', icon: 'i-settings', command: link('/admin/inbox/settings') },
+          { label: 'Notifications', icon: 'i-alert', command: page('messages.notifications') },
+        ],
+      }
     case 'messages.live':
       return {
         eyebrow,
@@ -9766,6 +9937,8 @@ async function loadPageBody(pageId: string): Promise<SectionPayload['body'] | nu
       return loadMileage()
     case 'media.shows':
       return loadShowArchive()
+    case 'messages.email':
+      return loadCustomerEmail()
     case 'messages.live':
       return loadLiveChat()
     case 'messages.notifications':

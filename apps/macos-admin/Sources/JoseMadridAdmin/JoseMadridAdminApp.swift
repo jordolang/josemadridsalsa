@@ -115,25 +115,33 @@ private struct AdminWorkspace: View {
   }
 }
 
+/// Editable copy of the stored endpoint. `@State` would be its natural home,
+/// but `State` is a macro in the current SDK and its plugin ships only with a
+/// full Xcode install, so view-local state lives in an `ObservableObject` and
+/// the shell keeps building against the standalone Command Line Tools.
+private final class ConnectionDraft: ObservableObject {
+  @Published var url = ""
+  @Published var validationMessage: String?
+}
+
 private struct ConnectionSettings: View {
   @AppStorage("adminEndpoint") private var endpoint = AdminEndpoint.production.absoluteString
-  @State private var draft = ""
-  @State private var validationMessage: String?
+  @StateObject private var draft = ConnectionDraft()
 
   var body: some View {
     Form {
-      TextField("Admin URL", text: $draft)
+      TextField("Admin URL", text: $draft.url)
         .textFieldStyle(.roundedBorder)
       Text("HTTPS is required except for localhost development.")
         .font(.caption)
         .foregroundStyle(.secondary)
-      if let validationMessage {
+      if let validationMessage = draft.validationMessage {
         Text(validationMessage).foregroundStyle(.red)
       }
       HStack {
         Spacer()
         Button("Use Production") {
-          draft = AdminEndpoint.production.absoluteString
+          draft.url = AdminEndpoint.production.absoluteString
           save()
         }
         Button("Save") { save() }
@@ -144,16 +152,16 @@ private struct ConnectionSettings: View {
     .frame(width: 500)
     // Show what the app is actually pointed at, which may have been migrated
     // forward from the pre-shell default.
-    .onAppear { draft = AdminEndpoint.migratingLegacyDefault(endpoint) }
+    .onAppear { draft.url = AdminEndpoint.migratingLegacyDefault(endpoint) }
   }
 
   private func save() {
-    guard let url = AdminEndpoint.validated(draft) else {
-      validationMessage = "Enter an HTTPS URL or a localhost HTTP URL."
+    guard let url = AdminEndpoint.validated(draft.url) else {
+      draft.validationMessage = "Enter an HTTPS URL or a localhost HTTP URL."
       return
     }
     endpoint = url.absoluteString
-    draft = endpoint
-    validationMessage = nil
+    draft.url = endpoint
+    draft.validationMessage = nil
   }
 }

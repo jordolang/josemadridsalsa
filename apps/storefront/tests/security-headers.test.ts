@@ -265,9 +265,21 @@ describe('Security Headers Configuration', () => {
     it('should apply headers to all routes via catch-all pattern', async () => {
       const headers = await getHeadersConfig('development')
 
-      // Verify the route pattern is a catch-all
-      expect(headers).toHaveLength(1)
+      // The catch-all carries every security header and comes first.
       expect(headers[0].source).toBe('/(.*)')
+    })
+
+    it('limits later rules to the /waiver geolocation exception', async () => {
+      const headers = await getHeadersConfig('development')
+
+      // The photo-release kiosk location-stamps waivers, so /waiver alone may
+      // use geolocation. Anything else here would widen permissions silently.
+      expect(headers.slice(1)).toEqual([
+        {
+          source: '/waiver',
+          headers: [{ key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' }],
+        },
+      ])
     })
   })
 

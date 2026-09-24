@@ -734,7 +734,6 @@ function SourceUrl({ url }: { url: string }) {
             {url}
           </p>
           <div className="relative aspect-square w-full overflow-hidden rounded border bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewSrc}
               alt={`Preview of ${host}`}

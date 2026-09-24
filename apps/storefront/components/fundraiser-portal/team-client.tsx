@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -19,11 +19,7 @@ export function TeamClient({ fundraiserId }: { fundraiserId: string }) {
   const [isAdding, setIsAdding] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  useEffect(() => {
-    fetchTeam()
-  }, [fundraiserId])
-
-  async function fetchTeam() {
+  const fetchTeam = useCallback(async () => {
     try {
       const res = await fetch(`/api/fundraisers/${fundraiserId}/team`)
       if (res.ok) {
@@ -35,7 +31,11 @@ export function TeamClient({ fundraiserId }: { fundraiserId: string }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [fundraiserId])
+
+  useEffect(() => {
+    fetchTeam()
+  }, [fetchTeam])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()

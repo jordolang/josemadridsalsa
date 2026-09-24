@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useActionState, useCallback, useEffect, useMemo, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import {
   Facebook,
@@ -165,15 +165,15 @@ export function SocialComposer({
     })
   }
 
-  const getContentForPlatform = (platform: SocialMediaPlatform) => {
+  const getContentForPlatform = useCallback((platform: SocialMediaPlatform) => {
     return platformOverrides[platform] || content
-  }
+  }, [content, platformOverrides])
 
-  const getCharCount = (platform: SocialMediaPlatform) => {
+  const getCharCount = useCallback((platform: SocialMediaPlatform) => {
     const text = getContentForPlatform(platform)
     const hashtagText = hashtags ? '\n\n' + hashtags.split(',').map((h) => h.trim()).filter(Boolean).map((h) => h.startsWith('#') ? h : `#${h}`).join(' ') : ''
     return text.length + hashtagText.length
-  }
+  }, [getContentForPlatform, hashtags])
 
   const charWarnings = useMemo(() => {
     const warnings: Partial<Record<SocialMediaPlatform, { count: number; max: number; over: boolean }>> = {}
@@ -183,7 +183,7 @@ export function SocialComposer({
       warnings[platform] = { count, max: config.maxChars, over: count > config.maxChars }
     }
     return warnings
-  }, [content, selectedPlatforms, hashtags, platformOverrides])
+  }, [content, selectedPlatforms, hashtags, platformOverrides, getCharCount])
 
   const hasOverLimit = Object.values(charWarnings).some((w) => w?.over)
 

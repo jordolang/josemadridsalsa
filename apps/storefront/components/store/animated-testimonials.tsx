@@ -220,7 +220,6 @@ export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps)
               rather than covering them. Filter flips the black source fill:
               - light mode → white silhouette with dark drop-shadow
               - dark mode  → dark silhouette with bright glow */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/shared/leaning-silhouette.svg"
             alt=""

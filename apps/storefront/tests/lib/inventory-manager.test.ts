@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { InventoryTransactionType } from '@prisma/client';
 
 // Mock Prisma - must be hoisted to top
-vi.mock('@/lib/prisma', () => ({
-  default: {
+vi.mock('@/lib/prisma', () => {
+  const prismaMock = {
     product: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -27,6 +27,15 @@ vi.mock('@/lib/prisma', () => ({
       create: vi.fn(),
       findMany: vi.fn(),
     },
+    domainEvent: {
+      create: vi.fn(),
+    },
+    notification: {
+      upsert: vi.fn(),
+    },
+    user: {
+      findMany: vi.fn(() => Promise.resolve([])),
+    },
     $transaction: vi.fn((operations) => {
       if (Array.isArray(operations)) {
         return Promise.all(operations);
@@ -36,8 +45,12 @@ vi.mock('@/lib/prisma', () => ({
         inventoryTransaction: { create: vi.fn() },
       });
     }),
-  },
-}));
+  };
+  return {
+    default: prismaMock,
+    prisma: prismaMock,
+  };
+});
 
 // Mock email sending - must be hoisted to top
 vi.mock('@/lib/email', () => ({

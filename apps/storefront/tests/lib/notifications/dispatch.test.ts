@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const userFindMany = vi.fn()
 const notificationCreate = vi.fn()
 const notificationUpsert = vi.fn()
+const notificationUpdate = vi.fn()
 const notificationUpdateMany = vi.fn()
+const notificationFindFirst = vi.fn()
+const notificationFindMany = vi.fn()
 const notificationCount = vi.fn()
+const inboundEmailFindUnique = vi.fn()
 
 vi.mock('@/lib/prisma', () => {
   const client = {
@@ -12,9 +16,13 @@ vi.mock('@/lib/prisma', () => {
     notification: {
       create: notificationCreate,
       upsert: notificationUpsert,
+      update: notificationUpdate,
       updateMany: notificationUpdateMany,
+      findFirst: notificationFindFirst,
+      findMany: notificationFindMany,
       count: notificationCount,
     },
+    inboundEmail: { findUnique: inboundEmailFindUnique },
   }
   return { prisma: client, default: client }
 })
@@ -130,18 +138,94 @@ describe('read state', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     notificationUpdateMany.mockResolvedValue({ count: 3 })
+    notificationUpdate.mockResolvedValue({})
     notificationCount.mockResolvedValue(7)
+    // An ordinary notification: no entity, so nothing gates it.
+    notificationFindFirst.mockResolvedValue({ id: 'n1', entityType: null, entityId: null })
+    notificationFindMany.mockResolvedValue([
+      { id: 'n1', entityType: null, entityId: null },
+      { id: 'n2', entityType: null, entityId: null },
+      { id: 'n3', entityType: null, entityId: null },
+    ])
   })
 
   it('scopes marking read to the owner, so one operator cannot clear another list', async () => {
     await markNotificationRead('n1', 'u1')
 
-    expect(notificationUpdateMany.mock.calls[0][0].where).toEqual({ id: 'n1', userId: 'u1' })
+    expect(notificationFindFirst.mock.calls[0][0].where).toEqual({ id: 'n1', userId: 'u1' })
+    expect(notificationUpdate.mock.calls[0][0].where).toEqual({ id: 'n1' })
+  })
+
+  it('does nothing when the notification is not the caller\'s', async () => {
+    notificationFindFirst.mockResolvedValue(null)
+
+    await markNotificationRead('n1', 'u1')
+
+    expect(notificationUpdate).not.toHaveBeenCalled()
+  })
+
+  it('refuses to clear a customer-email alert that still has open steps', async () => {
+    notificationFindFirst.mockResolvedValue({
+      id: 'n1',
+      entityType: 'InboundEmail',
+      entityId: 'e1',
+    })
+    inboundEmailFindUnique.mockResolvedValue({
+      id: 'e1',
+      status: 'NEEDS_ACTION',
+      steps: [
+        { id: 's1', isOptional: false, completedAt: null, instruction: 'Refund the broken jar' },
+      ],
+    })
+
+    await expect(markNotificationRead('n1', 'u1')).rejects.toThrow(/still open/i)
+    expect(notificationUpdate).not.toHaveBeenCalled()
+  })
+
+  it('clears a customer-email alert once every required step is done', async () => {
+    notificationFindFirst.mockResolvedValue({
+      id: 'n1',
+      entityType: 'InboundEmail',
+      entityId: 'e1',
+    })
+    inboundEmailFindUnique.mockResolvedValue({
+      id: 'e1',
+      status: 'IN_PROGRESS',
+      steps: [
+        { id: 's1', isOptional: false, completedAt: new Date(), instruction: 'Refund' },
+        { id: 's2', isOptional: true, completedAt: null, instruction: 'Send a coupon' },
+      ],
+    })
+
+    await markNotificationRead('n1', 'u1')
+
+    expect(notificationUpdate).toHaveBeenCalled()
   })
 
   it('marks only unread ones when clearing all', async () => {
     expect(await markAllNotificationsRead('u1')).toBe(3)
-    expect(notificationUpdateMany.mock.calls[0][0].where).toEqual({ userId: 'u1', isRead: false })
+    expect(notificationFindMany.mock.calls[0][0].where).toEqual({ userId: 'u1', isRead: false })
+    expect(notificationUpdateMany.mock.calls[0][0].where).toEqual({
+      userId: 'u1',
+      id: { in: ['n1', 'n2', 'n3'] },
+      isRead: false,
+    })
+  })
+
+  it('leaves a blocked customer-email alert behind when clearing all', async () => {
+    notificationFindMany.mockResolvedValue([
+      { id: 'n1', entityType: null, entityId: null },
+      { id: 'n2', entityType: 'InboundEmail', entityId: 'e1' },
+    ])
+    inboundEmailFindUnique.mockResolvedValue({
+      id: 'e1',
+      status: 'NEEDS_ACTION',
+      steps: [{ id: 's1', isOptional: false, completedAt: null, instruction: 'Call them' }],
+    })
+    notificationUpdateMany.mockResolvedValue({ count: 1 })
+
+    expect(await markAllNotificationsRead('u1')).toBe(1)
+    expect(notificationUpdateMany.mock.calls[0][0].where.id).toEqual({ in: ['n1'] })
   })
 
   it('counts unread, and reports zero if the count fails', async () => {

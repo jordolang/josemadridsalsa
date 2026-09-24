@@ -28,11 +28,37 @@ faithful plain text:
 - Headings and bold/italic/code markers are stripped to their text.
 - Links become `text (url)`.
 - The `[[youtube:…]]`, `[[vimeo:…]]` and `[[video:…]]` embeds become plain URLs.
-- Inline images are dropped from the text — the **cover image** is carried by the
-  link preview card instead.
+- Inline images are dropped from the text — the article's picture is carried by
+  the link preview card instead.
 
 The post is the article title, optional subtitle, then the converted body, with a
 link back to `…/heat-index/<slug>` attached.
+
+### The link preview image
+
+Facebook builds the preview card from its own cached scrape of the article URL:
+since Graph API v2.9 a post cannot specify the card's picture, so whatever the
+page's `og:image` says when Facebook reads it is what everyone sees, for weeks.
+Two things keep that honest.
+
+The article's share image is chosen in this order:
+
+1. The **cover image**, which is what the field is for — set it if you care which
+   picture shows up.
+2. The first **gallery image**, for a post laid out as a gallery.
+3. The first image in the **body**, so an article that only ever embedded its
+   picture in the prose still shares that picture.
+4. The site's default Open Graph image, only when the article has no picture at
+   all.
+
+And publishing, editing or cross-posting a post clears its cached page and asks
+Facebook to re-read the link right before the post goes out, so the card is built
+from the article as it stands rather than from an earlier render of it.
+
+An article shared **before** this was in place keeps whatever card Facebook
+already cached. To correct one, re-run the cross-post, or paste the URL into
+Facebook's [Sharing Debugger](https://developers.facebook.com/tools/debug/) and
+press **Scrape Again**.
 
 ### Eligible channels
 
@@ -40,7 +66,7 @@ Only channels that accept a text-plus-link post are offered:
 
 | Platform | What's posted |
 |---|---|
-| **Facebook** (Page) | Full article text + link preview card (cover image) |
+| **Facebook** (Page) | Full article text + link preview card (the article's picture) |
 | **X / Twitter** | A trimmed hook (title + excerpt) + link, kept within 280 characters |
 | **Google Business** | Article text summary + a "Learn more" link |
 
@@ -61,6 +87,13 @@ Connect the Facebook Page you want to post to there first (for example the
 4. **On demand** — use **Cross-post now** to post immediately (for example to an
    already-published article, or to retry a channel that failed). The panel shows
    each channel's status and a link to the live post.
+
+### Twitter failures
+
+X blog cross-posts send text and the article link. Cover images attached for Google
+Business are not uploaded to X. Failed X responses show the HTTP status and API
+error when available. If X returns an empty or invalid response, check the account
+on X before retrying to avoid duplicating a post that may have been accepted.
 
 ## Permissions
 

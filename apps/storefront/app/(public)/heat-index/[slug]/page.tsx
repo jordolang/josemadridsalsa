@@ -13,6 +13,7 @@ import { CommentsSection } from '@/components/heat-index/comments-section'
 import { SubscribeForm } from '@/components/heat-index/subscribe-form'
 import { JsonLd } from '@/components/heat-index/json-ld'
 import prisma from '@/lib/prisma'
+import { resolveShareImage } from '@/lib/blog/share-image'
 import {
   getPostBySlug,
   getRelatedPosts,
@@ -23,12 +24,6 @@ import { SITE_URL } from '@/lib/site-url'
 
 export const revalidate = 900
 
-// Fallback share image for a post with no cover image. og:image must be set
-// unconditionally: Next.js only falls back to a file-based opengraph-image when
-// the page's own metadata has no `openGraph.images` key at all, so leaving it
-// off for cover-less posts silently swaps in a different image.
-const DEFAULT_OG_IMAGE =
-  'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/opengraph/josemadridhome.png'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -55,8 +50,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = post.seoTitle ?? `${post.title} | The Heat Index`
   const description = post.seoDescription ?? post.excerpt
   const url = `${SITE_URL}/heat-index/${post.slug}`
-  // The post's own cover image is the share image; never a generated card.
-  const ogImage = post.coverImage ?? DEFAULT_OG_IMAGE
+  // The post's own picture is the share image; never a generated card. This is
+  // what Facebook reads to build the link card when the article is cross-posted.
+  const ogImage = resolveShareImage(post)
 
   return {
     title,

@@ -382,7 +382,6 @@ function CaptureCard({
               className="block overflow-hidden rounded-md border"
             >
               {/* The photo is the evidence; a reviewer must be able to see it beside the numbers. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={capture.fileUrl}
                 alt={`Photographed ${capture.formType.toLowerCase().replace(/_/g, ' ')}`}

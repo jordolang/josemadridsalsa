@@ -1,4 +1,5 @@
 import type { SocialMediaPlatform } from '@prisma/client'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getValidAccessToken } from './platforms'
 
@@ -7,6 +8,43 @@ type PublishResult = {
   externalPostId?: string
   externalUrl?: string
   error?: string
+}
+
+/**
+ * Ask Facebook to re-read a URL's Open Graph tags, discarding what it cached.
+ *
+ * A Page feed post that carries a `link` renders its preview card purely from
+ * Facebook's own cached scrape of that URL — since Graph API v2.9 the `picture`,
+ * `name` and `description` overrides are gone, so the post request cannot say
+ * what the card should show. Facebook keeps that cache for weeks and populates
+ * it from whoever scraped the URL first, which is routinely a render made before
+ * the article had its cover image. The result is a card stuck on the site's
+ * default og:image no matter how often the article is re-shared.
+ *
+ * Scraping immediately before the post refreshes that cache, so the card is
+ * built from the page's current og:image — the article's own cover.
+ *
+ * Best effort: a refusal here only risks a stale card, so the post still goes.
+ */
+async function refreshLinkPreview(accessToken: string, linkUrl: string): Promise<void> {
+  try {
+    const response = await fetch('https://graph.facebook.com/v21.0/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: linkUrl, scrape: 'true', access_token: accessToken }),
+    })
+    const data = await response.json()
+    if (data?.error) {
+      console.warn(
+        `[social/publisher] could not refresh Facebook's link preview for ${linkUrl}, so the card may show a previously cached image: ${data.error.message}`,
+      )
+    }
+  } catch (error) {
+    console.warn(
+      `[social/publisher] could not refresh Facebook's link preview for ${linkUrl}, so the card may show a previously cached image:`,
+      error,
+    )
+  }
 }
 
 /**
@@ -29,6 +67,9 @@ async function publishToFacebook(
 
     if (linkUrl) {
       body.link = linkUrl
+      // Refresh the cached Open Graph data first so the preview card is built
+      // from the page as it stands now, not from an earlier scrape of it.
+      await refreshLinkPreview(accessToken, linkUrl)
     }
 
     // If we have images, post as photos
@@ -163,10 +204,20 @@ async function publishToTwitter(
       },
       body: JSON.stringify(tweetBody),
     })
-    const data = await response.json()
+    const parsed = z.object({
+      data: z.object({ id: z.string().min(1) }).optional(),
+      detail: z.string().optional(),
+      title: z.string().optional(),
+      errors: z.array(z.object({ message: z.string().optional() })).optional(),
+    }).safeParse(await response.json().catch(() => null))
+    const data = parsed.success ? parsed.data : undefined
 
-    if (data.errors) {
-      return { success: false, error: data.errors[0]?.message || 'Twitter API error' }
+    if (!response.ok || !data?.data?.id || data.errors?.length) {
+      const detail = data?.detail || data?.errors?.[0]?.message || data?.title
+      return {
+        success: false,
+        error: `X/Twitter publish failed (HTTP ${response.status}): ${detail || 'Empty or invalid API response. Check the post on X before retrying.'}`,
+      }
     }
 
     return {
@@ -533,7 +584,8 @@ export async function publishToAccount(
       result = await publishToFacebook(accessToken, account.accountId, content, mediaUrls, post.linkUrl)
       break
     case 'TWITTER':
-      result = await publishToTwitter(accessToken, content, mediaUrls)
+      // Blog covers are attached for Google Business; X uses the article link.
+      result = await publishToTwitter(accessToken, content, post.blogPostId ? [] : mediaUrls)
       break
     case 'INSTAGRAM':
       result = await publishToInstagram(accessToken, account.accountId, content, mediaUrls)

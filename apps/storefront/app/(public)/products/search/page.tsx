@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -46,8 +46,8 @@ function ProductSearchContent() {
   const [totalResults, setTotalResults] = useState(0)
 
   // Fetch autocomplete suggestions
-  const fetchSuggestions = useCallback(
-    debounce(async (searchQuery: string) => {
+  const fetchSuggestions = useMemo(
+    () => debounce(async (searchQuery: string) => {
       if (searchQuery.length < 2) {
         setSuggestions([])
         return

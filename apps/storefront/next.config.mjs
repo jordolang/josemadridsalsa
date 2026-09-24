@@ -99,6 +99,17 @@ const nextConfig = {
         source: '/(.*)',
         headers,
       },
+      {
+        // The photo-release kiosk location-stamps each waiver, so it alone may
+        // ask for GPS. Listed after the site-wide rule so this value wins.
+        source: '/waiver',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(self)',
+          },
+        ],
+      },
     ]
   },
   images: {

@@ -182,7 +182,6 @@ fbq('track', 'PageView');`,
           />
         </noscript>
         <noscript>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             height="1"
             width="1"
@@ -192,7 +191,6 @@ fbq('track', 'PageView');`,
           />
         </noscript>
         <noscript>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
         <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=1398300505576315&ev=PageView&noscript=1" alt="" />
         </noscript>
         <Providers>
