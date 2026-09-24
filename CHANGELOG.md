@@ -44,6 +44,13 @@ the root `package.json` is canonical.
   signature) plus a JSON record, stamped with the release wording version, the time, the event
   (from `?event=`), and the staff account that collected it. The form clears itself after each
   person.
+- **The waiver kiosk is time- and location-stamped, with a live log at `/waiver/log`.** Each
+  record carries the server time and the iPad's clock, the iPad's GPS fix (or the network
+  location when GPS is off), and a short code like `JM-1A2B3C` shown with the time on the
+  thank-you screen, so filming it gives each camera a sync point. `/waiver/log` lists a day's
+  waivers to the second as USE / DO NOT USE, refreshes itself during an event, and downloads as
+  CSV. The kiosk now reloads itself after each person and after 90 idle seconds (clearing in
+  place when offline). Geolocation stays blocked site-wide except on `/waiver`.
 - **The desktop admin's product sheet now carries everything the web product page edited, laid
   out as a band over a stack.** The sheet that opens over the products table was a single
   column of fields, and it was missing several the web page had — so the one record people edit
