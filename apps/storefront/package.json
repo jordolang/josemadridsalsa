@@ -10,6 +10,7 @@
     "create-admin": "tsx scripts/create-admin.ts",
     "create-developer": "tsx scripts/promote-developer.ts",
     "credentials:grant-access": "tsx scripts/grant-credential-access.ts",
+    "bigcommerce:webhooks": "tsx scripts/bigcommerce-webhooks.ts",
     "db:cleanup:fundraiser": "tsx scripts/cleanup-fundraiser-demo.ts",
     "db:deploy": "prisma migrate deploy",
     "db:diagnose": "node scripts/diagnose-db-connection.cjs",

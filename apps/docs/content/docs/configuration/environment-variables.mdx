@@ -177,9 +177,9 @@ variables unset is treated as not configured.
 | `BIGCOMMERCE_FUNDRAISING_ACCESS_TOKEN` | For fundraising orders | Fundraising store API account access token. |
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_ID` | For fundraising orders | Fundraising store API account client ID. |
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET` | For fundraising orders | Fundraising store API account client secret. |
-
 | `NEXT_PUBLIC_COMMERCE_BACKEND` | At cutover | Set to `bigcommerce` to switch the storefront over: product prices and stock come from BigCommerce, and retail carts check out in BigCommerce's hosted checkout. Unset, the site prices and checks out as before. Fundraiser carts keep this site's checkout either way. Build-time: redeploy after changing it. |
 | `BIGCOMMERCE_CHANNEL_ID` | No | BigCommerce channel carts are created in. Defaults to `1`, the existing storefront, whose checkout is served on josemadridsalsa.com — correct while that domain still points at BigCommerce. Once the domain points at this site, set it to the headless channel whose checkout domain is a subdomain. |
+| `BIGCOMMERCE_WEBHOOK_SECRET` | For live catalog updates | Shared secret BigCommerce sends in a header on every webhook; `/api/webhooks/bigcommerce` refuses calls without it (and refuses everything when it is unset). Any long random string. Register the hooks after deploying with `npm run bigcommerce:webhooks --workspace @jose-madrid/storefront -- https://<site-origin>`, run with production's values; re-run it to revive hooks BigCommerce disabled after an outage. |
 
 The API accounts need **modify** on Products, Carts, Checkouts, Customers, Channel settings and
 Sites & routes, and **read-only** on Orders and Information & settings. A `403 You don't have a

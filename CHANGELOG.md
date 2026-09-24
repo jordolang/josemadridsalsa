@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls
+  the site whenever a product is created, changed, deleted or restocked, and the cached catalog
+  is dropped so the next visitor sees the new price, stock or bundle options — without it, a
+  price change could take up to five minutes to appear. BigCommerce does not sign its webhooks,
+  so each one is registered with a secret header and the site refuses any call without it.
+  `npm run bigcommerce:webhooks` registers the hooks, and re-running it revives any BigCommerce
+  switched off after failed deliveries.
 - **The storefront can now sell through BigCommerce, behind one switch.** With
   `NEXT_PUBLIC_COMMERCE_BACKEND=bigcommerce`, every product page, listing, collection, search
   result and the mix-and-match jar picker shows BigCommerce's price and stock, and checkout
