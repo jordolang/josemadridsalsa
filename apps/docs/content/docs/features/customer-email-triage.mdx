@@ -1,0 +1,116 @@
+---
+title: Customer Email Triage
+description: Reads the Gmail inbox, answers what it safely can, and raises an alert that cannot be cleared until the work is actually done.
+---
+
+Every message a customer sends to the shop mailbox is read, classified, and turned into
+something visible in both the admin panel and the desktop app. Simple questions are answered
+in the Gmail thread within minutes. Anything that needs a person becomes an alert carrying a
+checklist — and **that alert cannot be dismissed until every required step is ticked off**.
+
+The guarantee is not "nothing goes unanswered". It is "nothing goes unhandled".
+
+## What it does on each sweep
+
+Every ten minutes, `/api/cron/inbox-triage`:
+
+1. Reads messages matching the connection's Gmail search (default: `in:inbox -in:chats
+   -in:spam newer_than:7d`).
+2. Skips its own mail, Sent, Drafts, bounces and `no-reply@` senders — so it cannot answer
+   itself in a loop.
+3. Resolves the sender against `Customer` and `Order`, pulling verified facts: real order
+   status, real tracking number, real fundraiser.
+4. Classifies the message with Claude, which may only answer from those facts plus the same
+   site content the storefront assistant uses.
+5. Sends, drafts, or escalates — see below.
+6. Applies a Gmail label (`JMS/Answered`, `JMS/Reply drafted`, `JMS/Needs action`) **alongside**
+   whatever labels already exist. It never removes another system's filing.
+7. Raises a notification for every operator.
+
+The row in `inbound_emails` is written **before** anything is sent. A crash mid-sweep leaves a
+visible unhandled email, never a customer who was answered by a system that forgot.
+`gmailMessageId` is unique, so a message is never triaged — or answered — twice.
+
+## When it answers by itself
+
+A reply is sent automatically only when **all** of these hold:
+
+- The classifier judged every fact the reply needs to be present, not inferred.
+- Its confidence is at or above the connection's floor (default 80%).
+- Auto-reply is switched on.
+- The category is not one that is never answered automatically.
+
+### Never answered automatically
+
+Whatever the confidence, these always go to a person with a checklist:
+
+- **Returns and damage** — a broken or leaking jar, a short shipment
+- **Payments and billing** — charges, cards, duplicates, disputes
+- **Wholesale** — pricing and terms
+- Any message naming an order number the sender does not own
+- Anything the classifier could not resolve from verified facts
+
+A reply is still *written* for these — it waits in Gmail as a draft so you are not typing from
+scratch. Nothing is sent.
+
+If the model is unreachable the message escalates with a checklist rather than going quiet.
+A triage system whose AI is down must not fall silent.
+
+## The alert that will not clear
+
+This is the part that differs from every other notification. A low-stock warning clears when
+you have seen it. A customer-email alert clears when the work is **done**.
+
+Each escalated email carries steps written for someone who has not read the message — naming
+the order, the customer and the amount. Until every non-optional step carries a completion,
+`markNotificationRead` **refuses**, in the web panel (HTTP 409) and in the desktop shell
+(a refusal toast naming what is still open). "Mark everything read" skips them rather than
+failing — the point of these alerts is that they survive a tidy-up.
+
+Ticking the last required step resolves the email and releases the alert in one action. Re-open
+a step and the email drops back to in-progress and the alert blocks again.
+
+The rule lives in one place, `lib/inbox/resolution.ts`, so the two surfaces cannot disagree
+about whether something has been handled.
+
+## Where to find it
+
+| Surface | Path |
+| :--- | :--- |
+| Admin panel — worklist | `/admin/inbox` |
+| Admin panel — one email + checklist | `/admin/inbox/[id]` |
+| Admin panel — connection & settings | `/admin/inbox/settings` |
+| Desktop app | Messages → **Customer email** |
+| Notifications | Messages → Notifications, and the bell |
+
+In the desktop shell each outstanding step is its own inspector action, so the work can be
+ticked off without leaving the window.
+
+## Setting it up
+
+1. Set `ANTHROPIC_API_KEY`, and `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (the same OAuth
+   client the calendar sync uses).
+2. In Google Cloud, add `https://www.googleapis.com/auth/gmail.modify` and
+   `.../gmail.send` to the client's consent screen, and add
+   `https://www.josemadrid.net/api/admin/inbox/google/callback` as a redirect URI.
+3. Go to `/admin/inbox/settings` and click **Connect Gmail**. Sign in as the shop mailbox and
+   approve every box.
+4. Confirm `CRON_SECRET` is set so the sweep is not world-callable.
+
+The broader `https://mail.google.com/` scope — which also grants permanent deletion — is
+deliberately not requested. Nothing here can destroy mail.
+
+If the grant is revoked, or the sweep fails for any other reason, a `CRITICAL` notification is
+raised: a mailbox that has stopped being read is invisible by nature and has to announce its
+own silence.
+
+## Data
+
+| Model | Holds |
+| :--- | :--- |
+| `GmailConnection` | The mailbox, its encrypted tokens, the search, the auto-reply switch and floor |
+| `InboundEmail` | One triaged message: classification, what was sent or drafted, links to customer/order/fundraiser |
+| `InboundEmailStep` | One thing that must be done before the alert can clear |
+
+Tokens are encrypted at rest with the vault key, exactly as the calendar connection stores
+its own.

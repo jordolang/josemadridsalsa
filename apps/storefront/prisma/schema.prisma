@@ -2706,6 +2706,149 @@ enum NotificationSeverity {
   CRITICAL
 }
 
+/// The Gmail mailbox the customer-email triage runs against.
+///
+/// One row, one mailbox. Tokens are stored the same way the calendar connection stores
+/// its own — encrypted at rest with the vault key — because a Gmail grant that can send
+/// mail as the business is the most dangerous credential the platform holds.
+model GmailConnection {
+  id                     String    @id @default(cuid())
+  /// The mailbox being triaged, e.g. mike@josemadridsalsa.com.
+  mailbox                String    @unique
+  accessToken            String
+  accessTokenIv          String
+  refreshToken           String
+  refreshTokenIv         String
+  tokenExpiresAt         DateTime?
+  scopes                 String[]
+  /// Gmail search selecting the mail this automation owns. Narrowing it here is how an
+  /// operator hands the automation a subset of an already-labelled inbox.
+  searchQuery            String    @default("in:inbox -in:chats -in:spam newer_than:7d")
+  /// Send replies the classifier judged simple, rather than only leaving a draft.
+  autoReplyEnabled       Boolean   @default(true)
+  /// Confidence below which a reply is drafted for review even when auto-reply is on.
+  autoReplyMinConfidence Int       @default(80)
+  /// Kill switch for the whole sweep, independent of the OAuth grant being valid.
+  isActive               Boolean   @default(true)
+  lastSweepAt            DateTime?
+  lastSweepCount         Int       @default(0)
+  connectionError        String?
+  connectedById          String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  emails InboundEmail[]
+
+  @@map("gmail_connections")
+}
+
+/// One customer email the triage has seen, classified and acted on.
+///
+/// The row exists so that no message can be silently dropped: every message the sweep
+/// reads is written here before anything is sent, and `status` records what happened to
+/// it. `gmailMessageId` is unique, so a re-read of the same message updates one row
+/// rather than answering the customer twice.
+model InboundEmail {
+  id             String               @id @default(cuid())
+  connectionId   String
+  gmailMessageId String               @unique
+  gmailThreadId  String
+  fromEmail      String
+  fromName       String?
+  subject        String
+  snippet        String
+  /// Plain-text body, truncated to what the classifier was given.
+  body           String
+  receivedAt     DateTime
+  category       InboundEmailCategory @default(GENERAL_QUESTION)
+  severity       NotificationSeverity @default(INFO)
+  status         InboundEmailStatus   @default(NEEDS_ACTION)
+  /// The classifier's 0–100 confidence in its own category and answer.
+  confidence     Int                  @default(0)
+  /// One line describing what the customer actually wants.
+  summary        String
+  /// What the operator must do, when the message needs a human. Null when auto-answered.
+  actionSummary  String?
+  /// Gmail label the sweep applied, so a human can find the same message in Gmail.
+  gmailLabel     String?
+  autoReplySent  Boolean              @default(false)
+  autoReplyBody  String?
+  autoReplyAt    DateTime?
+  /// Set when the reply was written but held back — low confidence, or auto-reply off.
+  draftedReply   String?
+  /// Records that resolved facts were available to the classifier, and lets the alert
+  /// deep-link to the thing the customer is writing about.
+  customerId     String?
+  orderId        String?
+  fundraiserId   String?
+  resolvedAt     DateTime?
+  resolvedById   String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  connection GmailConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  steps      InboundEmailStep[]
+
+  @@index([status, receivedAt])
+  @@index([category])
+  @@index([gmailThreadId])
+  @@map("inbound_emails")
+}
+
+/// One thing that must actually be done before the alert for an email can be cleared.
+///
+/// The steps are what turns "an alert was raised" into "the concern was addressed": the
+/// notification stays unread, and the email stays unresolved, until every step that is
+/// not optional carries a `completedAt`.
+model InboundEmailStep {
+  id            String    @id @default(cuid())
+  emailId       String
+  /// Display order, 0-based, as the classifier produced them.
+  position      Int
+  instruction   String
+  /// A step an operator may skip. Everything else blocks resolution.
+  isOptional    Boolean   @default(false)
+  completedAt   DateTime?
+  completedById String?
+  /// What the operator did, recorded when they tick the step off.
+  note          String?
+  createdAt     DateTime  @default(now())
+
+  email InboundEmail @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId, position])
+  @@map("inbound_email_steps")
+}
+
+/// What a customer wrote in about. Drives severity, routing and whether a reply may be
+/// sent without a human reading it.
+enum InboundEmailCategory {
+  ORDER_STATUS
+  SHIPPING_DELIVERY
+  RETURN_OR_DAMAGE
+  PAYMENT_OR_BILLING
+  FUNDRAISER
+  WHOLESALE
+  PRODUCT_QUESTION
+  GENERAL_QUESTION
+  SPAM_OR_AUTOMATED
+}
+
+enum InboundEmailStatus {
+  /// Answered by the automation; nothing is owed.
+  AUTO_ANSWERED
+  /// A reply was written but not sent, and is waiting on a human.
+  REPLY_DRAFTED
+  /// Needs a person, and has steps that must be worked before it can be cleared.
+  NEEDS_ACTION
+  /// A person has started on it.
+  IN_PROGRESS
+  /// Every required step is done.
+  RESOLVED
+  /// Not a customer contact. Carries no steps and blocks nothing.
+  IGNORED
+}
+
 model TrainingDocumentCategory {
   id          String             @id @default(cuid())
   name        String             @unique
@@ -3930,6 +4073,7 @@ enum StructuredDataType {
 }
 
 enum NotificationType {
+  CUSTOMER_EMAIL
   ORDER_NEW
   ORDER_STATUS_CHANGE
   ORDER_HIGH_VALUE

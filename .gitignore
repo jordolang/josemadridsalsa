@@ -231,3 +231,6 @@ apps/docs/imported/
 # publish staff-panel mockups at josemadrid.net/images/admin-panel/. Same rule
 # as the photo working files above — reference material belongs outside git.
 apps/storefront/public/images/admin-panel/
+
+# Agent driver screenshots (.claude/skills/run-storefront)
+.screenshots/

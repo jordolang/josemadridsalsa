@@ -336,6 +336,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         kind: 'table',
         pages: [
           { id: 'messages', label: 'Inbox', path: '/admin/messages' },
+          { id: 'messages.email', label: 'Customer email', path: '/admin/inbox' },
           { id: 'messages.live', label: 'Live chat', path: '/admin/messages/live' },
           { id: 'messages.notifications', label: 'Notifications', path: '/admin/notifications' },
         ],

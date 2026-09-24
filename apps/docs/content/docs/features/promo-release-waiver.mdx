@@ -1,0 +1,110 @@
+---
+title: Photo & Video Release Kiosk
+description: The iPad waiver customers tap through at shows to agree or decline to be featured in our website and promotional materials.
+---
+
+# Photo & Video Release Kiosk
+
+`/waiver` is a full-screen, tablet-sized photo and video release built to take
+a few seconds. A staff member signs in on the iPad, opens the page, and hands
+the tablet over. The customer taps **Yes, feature me** or **No, please don't**;
+a "yes" asks them to sign with their finger, then they tap **Submit**. It is
+anonymous by default. A thank-you screen shows the record's code and the time
+to the second, tells them to hand the iPad back, then reloads the page after
+eight seconds for the next person.
+
+Every waiver is **time-stamped** (server time and the iPad's own clock) and
+**location-stamped** (the iPad's GPS, falling back to the network location),
+so the day's log lines up with event footage.
+
+| Route | Purpose |
+|---|---|
+| `/waiver` | The kiosk form (staff sign-in required, `noindex`) |
+| `/waiver?event=Zanesville%20Farmers%20Market` | Same form, tagging every record with the event name |
+| `/waiver/log` | Staff log of a day's waivers, to the second, with CSV download (refreshes itself) |
+| `POST /api/waivers/promotional-release` | Validates the submission and stores the record |
+| `GET /api/waivers/promotional-release/log?date=YYYY-MM-DD&event=…` | The day's log as CSV (`&format=json` for JSON) |
+
+## What the customer fills in
+
+1. **Yes / No** — the election itself, and the only required tap for a "no".
+2. **Signature** — drawn with a finger, required for a "yes" and not shown for a "no".
+3. **Signing for a child under 18** — optional checkbox under the signature; the
+   signer confirms they are the parent or legal guardian. The child's name is optional.
+4. **Add your name and email** — a collapsed, optional section at the end.
+   Skipping it keeps the record anonymous.
+
+The release wording lives in `lib/waivers/promoReleaseCopy.ts`. Whenever the
+wording changes, bump `PROMO_RELEASE_VERSION` there so every stored record says
+exactly which text the person saw.
+
+## Matching waivers to footage
+
+1. Open `/waiver/log` on a laptop or phone during the event. It lists every
+   waiver for the day in order, refreshing every 20 seconds: time (Eastern, to
+   the second), code, **USE** / **DO NOT USE**, name if given, event, location,
+   and a link to the PDF. Pick another day or event from the filters.
+2. Download the **CSV** to sort or filter it alongside your footage in a
+   spreadsheet or editor.
+3. For an exact sync point, film the thank-you screen: it shows the record's
+   code and time in large type, so a clip of it ties that camera's timeline to
+   the log. Camera clocks drift, so do this at least once per camera per event.
+
+Times come from the server when the record is saved, with the iPad's own clock
+kept beside it in the CSV (`device_time_utc`) and PDF.
+
+## Timing and resets
+
+- After each submission the page **reloads itself** (picking up new deploys and
+  re-checking the staff sign-in). If the iPad is offline, it clears the form in
+  place instead so it never lands on an error page.
+- A half-finished form left untouched for **90 seconds** reloads the same way.
+- A live clock and a **Location on / off** indicator sit at the top of the kiosk.
+
+## Location
+
+The kiosk asks for location permission the first time it opens; allow it. The
+site-wide `Permissions-Policy` blocks geolocation everywhere except `/waiver`
+(see `next.config.mjs`). Each record stores the GPS fix (latitude, longitude,
+accuracy in metres, and when it was taken). If location is off, the record
+still carries the city and region Vercel derives from the network.
+
+## Where the records go
+
+Each submission writes two files to the project's Vercel Blob store
+(`josemadridsalsa-blob`), filed by the Eastern-time date it was signed:
+
+```
+waivers/promotional-release/YYYY/MM/YYYY-MM-DD-HHMMSS-<agree|decline>-<name or anonymous>-<code>-<random>.pdf
+waivers/promotional-release/YYYY/MM/YYYY-MM-DD-HHMMSS-<agree|decline>-<name or anonymous>-<code>-<random>.json
+```
+
+- The **PDF** is the human-readable signed release: the decision in a colored
+  banner, any name or email they chose to give, their drawn signature, the full
+  terms they were shown, and an audit
+  block (record ID, UTC time, the staff account that collected it, IP address,
+  and device).
+- The **JSON** is the same record for search or import, minus the signature
+  image (it notes `signed: true` instead) and with a link to its PDF. The log
+  page and CSV are built from these.
+
+Browse them in the admin at **Developer → File Explorer** (`/admin/developer/files`), or with
+`vercel blob list --prefix waivers/promotional-release/`. File names lead with the
+Eastern time to the second, so a day's folder sorts in signing order.
+
+The store is public, so files get a random suffix that keeps their URLs
+unguessable, and nothing on the site links to or lists them. Treat the URLs as
+private: they contain signatures and, when given, names and email addresses.
+
+## Setting up the iPad
+
+1. Sign in at `/auth/signin` with a staff account and accept or dismiss the
+   cookie banner once.
+2. Open `/waiver` (add `?event=…` for the show), allow location when Safari
+   asks, and add it to the Home Screen.
+3. Turn on **Guided Access** (Settings → Accessibility) so customers can't leave
+   the page.
+
+## Configuration
+
+Uses the existing `BLOB_READ_WRITE_TOKEN`. No new environment variables.

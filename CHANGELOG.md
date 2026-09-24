@@ -14,6 +14,43 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Customer email is now triaged automatically, and its alerts cannot be dismissed until the
+  work is done.** Every ten minutes the connected Gmail mailbox is read: the sender is resolved
+  against `Customer` and `Order`, the message is classified against those verified facts plus the
+  same site content the storefront assistant answers from, and a reply is sent in-thread when —
+  and only when — every fact it depends on was supplied rather than inferred. Returns, damaged
+  jars, payments, wholesale, and any message naming an order the sender does not own are never
+  answered automatically however confident the classifier is; a reply is still written and left
+  in Gmail as an unsent draft. Everything else becomes an alert in the notification centre and in
+  the desktop app carrying a checklist written for someone who has not read the email, and
+  `markNotificationRead` **refuses** — 409 in the web panel, a refusal toast in the desktop shell
+  — until every required step carries a completion. "Mark everything read" skips those rather
+  than failing, because surviving a tidy-up is the entire point of them. The rule lives once, in
+  `lib/inbox/resolution.ts`, so the two surfaces cannot drift apart on whether something was
+  handled. The row is written before anything is sent, and `gmailMessageId` is unique, so a crash
+  mid-sweep leaves a visible unhandled email rather than a customer who was answered by a system
+  that then forgot. A drafted reply always carries the step that sends it, because an unsent
+  draft is an unanswered customer. If Claude is unreachable the message escalates with a
+  checklist instead of going quiet, and a sweep that fails raises a CRITICAL alert — a mailbox
+  that has stopped being read is invisible by nature and has to announce its own silence. New at
+  `/admin/inbox`, and in the desktop window under Messages → Customer email. The `gmail.send` and
+  `gmail.modify` scopes are requested; the broader `mail.google.com` scope, which also grants
+  permanent deletion, deliberately is not.
+- **An iPad photo and video release at `/waiver`.** Staff sign in, open the page, and hand the
+  tablet to a customer, who taps "Yes, feature me" or "No, please don't," signs with a finger
+  if they said yes, and submits. It is anonymous by default: name and email sit in an optional
+  section at the end, and parents can tick a box to sign for a child under 18. Every submission
+  is saved to Vercel Blob under `waivers/promotional-release/` as a signed PDF (with the drawn
+  signature) plus a JSON record, stamped with the release wording version, the time, the event
+  (from `?event=`), and the staff account that collected it. The form clears itself after each
+  person.
+- **The waiver kiosk is time- and location-stamped, with a live log at `/waiver/log`.** Each
+  record carries the server time and the iPad's clock, the iPad's GPS fix (or the network
+  location when GPS is off), and a short code like `JM-1A2B3C` shown with the time on the
+  thank-you screen, so filming it gives each camera a sync point. `/waiver/log` lists a day's
+  waivers to the second as USE / DO NOT USE, refreshes itself during an event, and downloads as
+  CSV. The kiosk now reloads itself after each person and after 90 idle seconds (clearing in
+  place when offline). Geolocation stays blocked site-wide except on `/waiver`.
 - **The desktop admin's product sheet now carries everything the web product page edited, laid
   out as a band over a stack.** The sheet that opens over the products table was a single
   column of fields, and it was missing several the web page had — so the one record people edit
@@ -37,6 +74,15 @@ the root `package.json` is canonical.
   a refusal that leaves storage occupied (403, rate limiting, 5xx) fails the run rather than
   reporting a cleared quota that is still full; a 404 is the artifact expiring on its own and is
   treated as success.
+
+### Changed
+- **The macOS admin app builds on the standalone Command Line Tools again.** `ConnectionSettings`
+  held its editable endpoint in `@State`, which is a macro in the current SDK and expands through
+  a plugin that ships only with a full Xcode install — so the bundle could not be built on a
+  machine that had only the CLT. The view-local state now lives in a small `ObservableObject`
+  held with `@StateObject`, which is an ordinary property wrapper, and the build comment in
+  `build-app.sh` records the constraint so the next person does not reintroduce `@State` and
+  quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
 - **A Heat Index post cross-posted to Facebook showed the site's old Open Graph image instead of
