@@ -1,0 +1,175 @@
+---
+title: BigCommerce Cutover Runbook
+description: Step-by-step plan for putting this site on josemadridsalsa.com in front of BigCommerce, with the soft launch, domain move, webhook updates and rollback
+---
+
+# BigCommerce Cutover Runbook
+
+This site runs **headless on BigCommerce**. BigCommerce stays the system of record for the
+catalog, prices, stock, checkout, payments, tax, shipping, order emails, retail customers and
+gift certificates, and staff keep using the BigCommerce admin they already know. This site is the
+storefront in front of it: product pages, heat ratings, recipes, fundraising, wholesale and the
+blog. When a shopper checks out, their cart is rebuilt in BigCommerce and they finish on
+BigCommerce's hosted checkout.
+
+There are two stores:
+
+| Store | Domain today | Store hash | Role after cutover |
+|---|---|---|---|
+| Main | josemadridsalsa.com | `dsk4gx4` | Checkout, orders, customers and gift certificates for retail |
+| Fundraising | josemadridsalsafundraising.com | `c034x363rd` | Unchanged |
+
+Fundraiser sales, including a retail cart that a student's referral link turns into a fundraiser
+sale, keep this site's own checkout. BigCommerce has no concept of campaign pricing or credit.
+
+<Callout type="warn" title="Order matters">
+Do the phases in order. Phase 1 changes nothing a shopper can see. Phase 2 can be undone in
+minutes. Phase 3 moves domains; it is reversible, but not instantly.
+</Callout>
+
+## Phase 0 — Before you start
+
+- **Rotate the BigCommerce API credentials.** They were shared during development. In each store,
+  go to **Settings → API → Store-level API accounts**, create a new account with the scopes listed
+  in [Environment Variables](/docs/configuration/environment-variables#bigcommerce), then delete
+  the old one.
+- **Settle prices in BigCommerce.** Once the switch is on, BigCommerce's price is the price. As of
+  September 2026 BigCommerce charges **$7** a jar while this site showed **$9**. Change it in
+  BigCommerce if $9 is correct.
+- **Anything sold only on this site** (merchandise, for example) shows as out of stock once the
+  switch is on, because BigCommerce's checkout cannot sell it. Add those products in BigCommerce
+  if they should stay for sale.
+
+## Phase 1 — Ship the code with the switch off
+
+1. Merge the headless work to `main`. With `NEXT_PUBLIC_COMMERCE_BACKEND` unset the site behaves
+   exactly as before, so this is safe at any time.
+2. In **Vercel → josemadridsalsa → Settings → Environment Variables (Production)** add:
+   - `BIGCOMMERCE_STORE_HASH`, `BIGCOMMERCE_ACCESS_TOKEN`, `BIGCOMMERCE_CLIENT_ID`,
+     `BIGCOMMERCE_CLIENT_SECRET` for the main store
+   - the four `BIGCOMMERCE_FUNDRAISING_*` values for the fundraising store
+   - `BIGCOMMERCE_WEBHOOK_SECRET`: any long random string (for example the output of
+     `openssl rand -hex 32`)
+
+## Phase 2 — Soft launch on josemadrid.net
+
+BigCommerce still serves josemadridsalsa.com during this phase, so its checkout keeps running on
+that domain. josemadrid.net starts sending carts there.
+
+1. Set `NEXT_PUBLIC_COMMERCE_BACKEND=bigcommerce` in Vercel (Production) and **redeploy**. The
+   setting is read at build time.
+2. Register the product webhooks so BigCommerce edits reach the site within seconds. Run this from
+   `apps/storefront`, with the production values of the variables above in your shell:
+
+   ```bash
+   npm run bigcommerce:webhooks -- https://www.josemadrid.net
+   ```
+
+3. Check it:
+   - A salsa page shows BigCommerce's price.
+   - Change a price in BigCommerce, reload the page a few seconds later, and see the new price.
+   - Add a jar and a Choose-6 to the cart and check out. You should land on BigCommerce's checkout
+     showing the same items, with Jar 1–6 filled in.
+   - Place one real low-value order, confirm it appears in **BigCommerce → Orders**, then refund
+     it there.
+   - Open a fundraiser referral link, add a jar, and check out. That cart must stay on this site's
+     checkout.
+
+**Rollback:** remove `NEXT_PUBLIC_COMMERCE_BACKEND` and redeploy.
+
+## Phase 3 — Move the domains
+
+### 3.1 Move the BigCommerce storefront to a subdomain (call BigCommerce)
+
+josemadridsalsa.com is about to point at this site, so BigCommerce's storefront and checkout need
+an address of their own. The recommended one is **`shop.josemadridsalsa.com`**. There, BigCommerce
+keeps serving checkout, customer accounts and order history, gift certificate purchase and
+balance, and the links in its order emails.
+
+Ask BigCommerce support:
+
+> Please change the primary URL **and** the checkout URL of our storefront channel
+> "Jose Madrid Salsa" (channel 1) from `josemadridsalsa.com` to `shop.josemadridsalsa.com`. We
+> are moving the main domain to a headless storefront. What DNS record should we add for the
+> subdomain?
+
+Add the DNS record they give you. Wait until `https://shop.josemadridsalsa.com` loads the old
+store over HTTPS, then continue.
+
+### 3.2 Point josemadridsalsa.com at Vercel
+
+1. The day before, lower the TTL on the `josemadridsalsa.com` and `www` DNS records to 300 seconds.
+2. In **Vercel → josemadridsalsa → Settings → Domains**, add `www.josemadridsalsa.com` and
+   `josemadridsalsa.com`, with the bare domain redirecting to `www`. Vercel shows the DNS records
+   to use.
+3. At the domain registrar, change the bare-domain and `www` records to Vercel's values.
+4. In Vercel, set `josemadrid.net` and `www.josemadrid.net` to **redirect (308)** to
+   `https://www.josemadridsalsa.com`, so there is one site in search results.
+
+### 3.3 Tell the site its new address
+
+1. In Vercel (Production) set **all four** to `https://www.josemadridsalsa.com`:
+   `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXTAUTH_URL`.
+2. Set `BIGCOMMERCE_STOREFRONT_URL` to `https://shop.josemadridsalsa.com`. Old links to
+   `login.php`, `account.php`, `giftcertificates.php` and `wishlist.php` (including those in
+   past BigCommerce emails) then go to the customer's real BigCommerce account instead of this
+   site.
+3. Set `BIGCOMMERCE_CHANNEL_ID` only if BigCommerce support moved checkout to a different channel.
+   Channel 1 is the default.
+4. In the site admin, **Admin → SEO → Site URL**: `https://www.josemadridsalsa.com`.
+5. Redeploy.
+6. Re-register the product webhooks at the new address:
+
+   ```bash
+   npm run bigcommerce:webhooks -- https://www.josemadridsalsa.com
+   ```
+
+### 3.4 Move every other callback that names the old domain
+
+Webhooks and sign-in callbacks do not follow redirects, so each one registered against
+josemadrid.net has to be updated to `https://www.josemadridsalsa.com/...`:
+
+| Service | Where | What to change |
+|---|---|---|
+| Stripe | Dashboard → Developers → Webhooks | `/api/webhooks/stripe` endpoint URL |
+| PayPal | Developer dashboard → App → Webhooks | `/api/webhooks/paypal` |
+| Square | Developer dashboard → Webhooks | `/api/webhooks/square`, **and** the `SQUARE_WEBHOOK_URL` variable in Vercel, which the signature check is computed against |
+| EasyPost | Dashboard → Webhooks | `/api/webhooks/easypost` |
+| Resend | Dashboard → Webhooks | `/api/webhooks/resend` |
+| Google sign-in | Google Cloud console → OAuth client | Add `/api/auth/callback/google` on the new domain |
+| Facebook / Apple / GitHub sign-in | Each provider's app settings | Add `/api/auth/callback/<provider>` on the new domain |
+| QuickBooks | Intuit developer app → Redirect URIs | Add `/api/integrations/quickbooks/callback` on the new domain |
+
+### 3.5 Check
+
+- `https://www.josemadridsalsa.com` loads this site.
+- Old addresses redirect: `/original-hot/`, `/choose-6/`, `/cart.php` and `/login.php` each land on
+  a real page (the full list is `apps/storefront/bigcommerce-redirects.mjs`).
+- A checkout lands on `shop.josemadridsalsa.com`.
+- Signing in with Google works.
+- A test Stripe webhook from the Stripe dashboard returns 200.
+
+### 3.6 Search Console (a person has to do these; no agent has access)
+
+1. Add or verify the `josemadridsalsa.com` property, and submit
+   `https://www.josemadridsalsa.com/sitemap.xml`.
+2. On the `josemadrid.net` property, run **Settings → Change of address** to
+   `josemadridsalsa.com`.
+3. Run **URL Inspection** on the home page, `/salsas`, and two product pages.
+4. A few weeks later, confirm the indexed-page count for `josemadridsalsa.com` is rising.
+
+**Rollback for Phase 3:** point the `josemadridsalsa.com` and `www` DNS records back at
+BigCommerce and ask BigCommerce support to restore channel 1's primary and checkout URL to
+`josemadridsalsa.com`. DNS changes take effect within the lowered TTL. The BigCommerce side
+depends on how quickly support can make the change.
+
+## After cutover: who to call
+
+- **Checkout, payments, order emails, the BigCommerce admin:** BigCommerce support. This is a
+  standard headless setup: a storefront channel with a custom checkout domain.
+- **This site (Vercel):** check Vercel → Deployments. The previous deployment can be promoted back
+  in one click.
+- **Product edits not showing on the site:** re-run
+  `npm run bigcommerce:webhooks -- https://www.josemadridsalsa.com`. BigCommerce switches a
+  webhook off after repeated failed deliveries, and re-running the command turns it back on.
+  Pages also refresh on their own within five minutes regardless.

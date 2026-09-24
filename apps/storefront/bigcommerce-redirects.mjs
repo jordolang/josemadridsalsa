@@ -114,8 +114,42 @@ const LEGACY_PATHS = {
   '/xmlsitemap.php': '/sitemap.xml',
 }
 
-/** @returns {Array<{source: string, destination: string, permanent: true, has?: unknown[]}>} */
-export function bigCommerceRedirects() {
+/**
+ * BigCommerce pages that stay BigCommerce's after cutover: customer sign-in,
+ * account and order history, gift certificates, and wishlists. Once the old
+ * storefront is moved to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`, e.g.
+ * https://shop.josemadridsalsa.com), links to them go there with their query
+ * string intact, so a customer reaches their real BigCommerce account.
+ */
+const BIGCOMMERCE_OWNED_PAGES = ['/login.php', '/account.php', '/giftcertificates.php', '/wishlist.php']
+
+function storefrontOrigin(value) {
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return null
+  }
+}
+
+/** @returns {Array<{source: string, destination: string, permanent: boolean, has?: unknown[]}>} */
+export function bigCommerceRedirects(storefrontUrl = process.env.BIGCOMMERCE_STOREFRONT_URL) {
+  const storefront = storefrontOrigin(storefrontUrl)
+  if (storefront) {
+    // Temporary: the subdomain is a choice that may change, and browsers cache
+    // permanent redirects indefinitely.
+    const owned = BIGCOMMERCE_OWNED_PAGES.map((source) => ({
+      source,
+      destination: `${storefront}${source}`,
+      permanent: false,
+    }))
+    return [
+      ...owned,
+      ...bigCommerceRedirects(null).filter((redirect) => !BIGCOMMERCE_OWNED_PAGES.includes(redirect.source)),
+    ]
+  }
+
   return [
     // Query-specific system pages first: Next applies the first match.
     {

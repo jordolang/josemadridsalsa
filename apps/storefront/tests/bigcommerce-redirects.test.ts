@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { bigCommerceRedirects } from '@/bigcommerce-redirects.mjs'
 import { BIGCOMMERCE_PRODUCT_SLUGS } from '@/lib/bigcommerce/product-map'
 
-const redirects = bigCommerceRedirects()
+const redirects = bigCommerceRedirects(null)
 const appDir = path.resolve(__dirname, '../app')
 
 /** Whether this app serves `pathname` from a static route. */
@@ -62,6 +62,25 @@ describe('legacy BigCommerce redirects', () => {
       '/gift-certificates/purchase',
     ])
     expect(redirects.at(-1)).toMatchObject({ source: '/blog/:path*', destination: '/heat-index' })
+  })
+
+  it('send account, sign-in, gift-certificate and wishlist links to the BigCommerce storefront once it has a subdomain', () => {
+    const withStorefront = bigCommerceRedirects('https://shop.josemadridsalsa.com/')
+    const owned = withStorefront.filter((redirect) => redirect.destination.startsWith('https://'))
+
+    expect(owned).toEqual([
+      { source: '/login.php', destination: 'https://shop.josemadridsalsa.com/login.php', permanent: false },
+      { source: '/account.php', destination: 'https://shop.josemadridsalsa.com/account.php', permanent: false },
+      { source: '/giftcertificates.php', destination: 'https://shop.josemadridsalsa.com/giftcertificates.php', permanent: false },
+      { source: '/wishlist.php', destination: 'https://shop.josemadridsalsa.com/wishlist.php', permanent: false },
+    ])
+    // Everything else still lands here, and nothing is redirected twice.
+    expect(withStorefront).toContainEqual({ source: '/cart.php', destination: '/cart', permanent: true })
+    expect(withStorefront.filter((redirect) => redirect.source === '/login.php')).toHaveLength(1)
+  })
+
+  it('ignore a storefront setting that is not a URL', () => {
+    expect(bigCommerceRedirects('shop')).toEqual(bigCommerceRedirects(null))
   })
 
   it('cover every legacy product and every mapped salsa', () => {
