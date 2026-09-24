@@ -72,6 +72,13 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Fixed
+- **Every product page at `/products/<salsa>` has been a server error in production since
+  10 September.** The page is cached as a static page, and it asked the server for the current
+  visitor's session only to decide whether the review form should say "sign in" — reading the
+  session on a cached page makes Next abort the render, so all 27 salsa pages returned a 500 to
+  shoppers and to Google, which the sitemap points at exactly those URLs. The review form now
+  checks sign-in in the browser. A test now fails any statically cached public page that reads
+  the session or request headers.
 - **CI has been failing since 7 September because a good `DATABASE_URL` was being overwritten
   with the string `undefined`.** `process.env.X = undefined` does not clear a key — Node coerces
   the value, so the key ends up holding the six characters. `resolveDatabaseUrl` normalised four

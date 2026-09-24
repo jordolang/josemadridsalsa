@@ -10,7 +10,6 @@ import { YouMayAlsoLike } from '@/components/store/product-recommendations'
 import { buildProductSchema } from '@/lib/seo/schema-generator'
 import { buildTemplatedMeta } from '@/lib/seo/metadata'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/rbac'
 import { Metadata } from 'next'
 
 export const revalidate = 900 // Revalidate every 15 minutes
@@ -131,13 +130,12 @@ export default async function ProductDetailPage({ params }: Props) {
   }
 
   // Fetch review stats for structured data (AggregateRating) and any admin-edited schema override
-  const [reviewStats, viewer, schemaOverride] = await Promise.all([
+  const [reviewStats, schemaOverride] = await Promise.all([
     prisma.review.aggregate({
       where: { productId: product.id, status: 'APPROVED' },
       _avg: { rating: true },
       _count: { rating: true },
     }),
-    getCurrentUser(),
     prisma.structuredData.findUnique({
       where: { entityType_entityId: { entityType: 'PRODUCT', entityId: product.id } },
     }),
@@ -349,7 +347,6 @@ export default async function ProductDetailPage({ params }: Props) {
           productName={product.name}
           initialAverageRating={reviewStats._avg.rating ?? 0}
           initialReviewCount={reviewStats._count.rating ?? 0}
-          isSignedIn={Boolean(viewer)}
         />
 
         {/* You May Also Like Recommendations */}
