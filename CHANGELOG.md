@@ -14,6 +14,18 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **A BigCommerce connection for both stores, the first step of running the site headless on
+  top of BigCommerce.** Staff already run the business from the BigCommerce admin, so the
+  cutover keeps BigCommerce as the system of record for catalog, checkout and orders and makes
+  this site the storefront over it. `lib/bigcommerce` reads either store (main and fundraising,
+  configured separately because product ids collide between them), follows BigCommerce's
+  pagination even when it silently shrinks the page size, waits out rate limits, and turns
+  BigCommerce errors into readable messages. The catalog comes back normalized: the sale price
+  when one is active, purchasable only when visible, enabled and in stock, and the Choose-N
+  bundles' jar dropdowns and order-notes field exposed as they are defined in BigCommerce. The
+  27 salsas are mapped to this site's existing product pages so their heat ratings, nutrition
+  and recipes carry over; anything added in BigCommerce later still sells without a mapping.
+  Nothing renders from BigCommerce yet.
 - **The desktop admin's product sheet now carries everything the web product page edited, laid
   out as a band over a stack.** The sheet that opens over the products table was a single
   column of fields, and it was missing several the web page had — so the one record people edit

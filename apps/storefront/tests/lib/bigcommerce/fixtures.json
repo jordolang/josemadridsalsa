@@ -1,0 +1,251 @@
+[
+  {
+    "id": 98,
+    "name": "Original Hot",
+    "type": "physical",
+    "description": "<p>The Clovis brand introduced Jose Madrid Salsa in 1989. The Clovis Medium salsa originated to serve in Zak's Restauran",
+    "price": 7,
+    "sale_price": 0,
+    "retail_price": 0,
+    "calculated_price": 7,
+    "is_visible": true,
+    "is_featured": false,
+    "availability": "available",
+    "inventory_tracking": "none",
+    "inventory_level": 0,
+    "order_quantity_minimum": 0,
+    "order_quantity_maximum": 0,
+    "categories": [
+      20,
+      30
+    ],
+    "sort_order": 0,
+    "weight": 1.5,
+    "page_title": "",
+    "meta_description": "",
+    "search_keywords": "",
+    "custom_url": {
+      "url": "/original-hot/"
+    },
+    "base_variant_id": 4,
+    "images": [
+      {
+        "url_standard": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/98/images/340/Hot_logo__74081.1531264620.490.588.jpg?c=2",
+        "url_zoom": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/98/images/340/Hot_logo__74081.1531264620.1000.1200.jpg?c=2",
+        "url_thumbnail": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/98/images/340/Hot_logo__74081.1531264620.195.234.jpg?c=2",
+        "description": "",
+        "is_thumbnail": false,
+        "sort_order": 0
+      },
+      {
+        "url_standard": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/98/images/402/Hot__33236.1598640149.490.588.jpg?c=2",
+        "url_zoom": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/98/images/402/Hot__33236.1598640149.1000.1200.jpg?c=2",
+        "url_thumbnail": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/98/images/402/Hot__33236.1598640149.195.234.jpg?c=2",
+        "description": "",
+        "is_thumbnail": true,
+        "sort_order": 1
+      }
+    ],
+    "modifiers": []
+  },
+  {
+    "id": 121,
+    "name": "Choose-6",
+    "type": "physical",
+    "description": "<!-- product description -->\r\n<h2>Mix and Match 6-pack:</h2>\r\n<p>Mix and Match 6 different jars of our award winning sal",
+    "price": 32,
+    "sale_price": 0,
+    "retail_price": 0,
+    "calculated_price": 32,
+    "is_visible": true,
+    "is_featured": true,
+    "availability": "available",
+    "inventory_tracking": "none",
+    "inventory_level": 0,
+    "order_quantity_minimum": 0,
+    "order_quantity_maximum": 0,
+    "categories": [
+      20,
+      27
+    ],
+    "sort_order": 5,
+    "weight": 9,
+    "page_title": "",
+    "meta_description": "",
+    "search_keywords": "gourmet salsa, vegan salsa, organic",
+    "custom_url": {
+      "url": "/choose-6/"
+    },
+    "base_variant_id": 29,
+    "images": [
+      {
+        "url_standard": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/121/images/345/pick-6__44091.1531284509.490.588.png?c=2",
+        "url_zoom": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/121/images/345/pick-6__44091.1531284509.1000.1200.png?c=2",
+        "url_thumbnail": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/121/images/345/pick-6__44091.1531284509.195.234.png?c=2",
+        "description": "",
+        "is_thumbnail": true,
+        "sort_order": 0
+      }
+    ],
+    "modifiers": [
+      {
+        "id": 203,
+        "display_name": "Order Notes",
+        "type": "multi_line_text",
+        "required": true,
+        "sort_order": 0,
+        "config": {
+          "default_value": "Please tell us any order details",
+          "text_characters_limited": false,
+          "text_min_length": 0,
+          "text_max_length": 0,
+          "text_lines_limited": true,
+          "text_max_lines": 500
+        },
+        "option_values": []
+      },
+      {
+        "id": 218,
+        "display_name": "Jar 1",
+        "type": "dropdown",
+        "required": false,
+        "sort_order": 1,
+        "config": [],
+        "option_values": [
+          {
+            "id": 238,
+            "label": "Original Mild",
+            "sort_order": 0,
+            "is_default": false,
+            "adjusters": {
+              "purchasing_disabled": {
+                "status": false,
+                "message": ""
+              }
+            }
+          },
+          {
+            "id": 239,
+            "label": "Original Hot",
+            "sort_order": 1,
+            "is_default": false,
+            "adjusters": {
+              "purchasing_disabled": {
+                "status": false,
+                "message": ""
+              }
+            }
+          },
+          {
+            "id": 240,
+            "label": "Original X Hot",
+            "sort_order": 2,
+            "is_default": false,
+            "adjusters": {
+              "purchasing_disabled": {
+                "status": false,
+                "message": ""
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 240,
+        "display_name": "Jar 2",
+        "type": "dropdown",
+        "required": true,
+        "sort_order": 2,
+        "config": [],
+        "option_values": [
+          {
+            "id": 238,
+            "label": "Original Mild",
+            "sort_order": 0,
+            "is_default": false,
+            "adjusters": {
+              "purchasing_disabled": {
+                "status": false,
+                "message": ""
+              }
+            }
+          },
+          {
+            "id": 239,
+            "label": "Original Hot",
+            "sort_order": 1,
+            "is_default": false,
+            "adjusters": {
+              "purchasing_disabled": {
+                "status": false,
+                "message": ""
+              }
+            }
+          },
+          {
+            "id": 240,
+            "label": "Original X Hot",
+            "sort_order": 2,
+            "is_default": false,
+            "adjusters": {
+              "purchasing_disabled": {
+                "status": false,
+                "message": ""
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 130,
+    "name": "Green Apple",
+    "type": "physical",
+    "description": "<p><span style=\"font-family: 'arial black', 'avant garde'; font-size: large;\"><strong>Perfect condiment for Turkey or Po",
+    "price": 7,
+    "sale_price": 0,
+    "retail_price": 0,
+    "calculated_price": 7,
+    "is_visible": false,
+    "is_featured": false,
+    "availability": "available",
+    "inventory_tracking": "none",
+    "inventory_level": 0,
+    "order_quantity_minimum": 0,
+    "order_quantity_maximum": 0,
+    "categories": [
+      20,
+      27,
+      30
+    ],
+    "sort_order": 0,
+    "weight": 1.5,
+    "page_title": "",
+    "meta_description": "",
+    "search_keywords": "",
+    "custom_url": {
+      "url": "/green-apple/"
+    },
+    "base_variant_id": 33,
+    "images": [
+      {
+        "url_standard": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/130/images/371/Green_Apple_Logo_only__23279.1588107511.490.588.jpg?c=2",
+        "url_zoom": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/130/images/371/Green_Apple_Logo_only__23279.1588107511.1000.1200.jpg?c=2",
+        "url_thumbnail": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/130/images/371/Green_Apple_Logo_only__23279.1588107511.195.234.jpg?c=2",
+        "description": "",
+        "is_thumbnail": false,
+        "sort_order": 0
+      },
+      {
+        "url_standard": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/130/images/380/Green_Apple__63013.1598636519.490.588.jpg?c=2",
+        "url_zoom": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/130/images/380/Green_Apple__63013.1598636519.1000.1200.jpg?c=2",
+        "url_thumbnail": "https://cdn11.bigcommerce.com/s-dsk4gx4/products/130/images/380/Green_Apple__63013.1598636519.195.234.jpg?c=2",
+        "description": "",
+        "is_thumbnail": true,
+        "sort_order": 1
+      }
+    ],
+    "modifiers": []
+  }
+]
