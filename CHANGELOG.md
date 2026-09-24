@@ -36,7 +36,14 @@ the root `package.json` is canonical.
   `/admin/inbox`, and in the desktop window under Messages → Customer email. The `gmail.send` and
   `gmail.modify` scopes are requested; the broader `mail.google.com` scope, which also grants
   permanent deletion, deliberately is not.
-
+- **An iPad photo and video release at `/waiver`.** Staff sign in, open the page, and hand the
+  tablet to a customer, who taps "Yes, feature me" or "No, please don't," signs with a finger
+  if they said yes, and submits. It is anonymous by default: name and email sit in an optional
+  section at the end, and parents can tick a box to sign for a child under 18. Every submission
+  is saved to Vercel Blob under `waivers/promotional-release/` as a signed PDF (with the drawn
+  signature) plus a JSON record, stamped with the release wording version, the time, the event
+  (from `?event=`), and the staff account that collected it. The form clears itself after each
+  person.
 - **The desktop admin's product sheet now carries everything the web product page edited, laid
   out as a band over a stack.** The sheet that opens over the products table was a single
   column of fields, and it was missing several the web page had — so the one record people edit
