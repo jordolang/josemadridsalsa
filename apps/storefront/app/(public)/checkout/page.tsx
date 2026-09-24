@@ -29,6 +29,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
 import { cartStoreContext } from '@/lib/store/cart'
+import { BigCommerceCheckoutHandoff } from '@/components/checkout/BigCommerceCheckoutHandoff'
 import {
   PaymentMethodSelector,
   DEFAULT_METHODS,
@@ -1425,6 +1426,12 @@ export default function CheckoutPage() {
   )
   // Stripe requires amount in cents; minimum 50 cents
   const totalAmount = Math.max(50, Math.round(subtotal * 100))
+
+  // Headless cutover: retail carts check out in BigCommerce. Fundraiser carts
+  // are priced by their campaign's own store here and keep this checkout.
+  if (process.env.NEXT_PUBLIC_COMMERCE_BACKEND === 'bigcommerce' && !cartStoreContext(items)) {
+    return <BigCommerceCheckoutHandoff items={items} />
+  }
 
   if (!stripePromise) {
     return (

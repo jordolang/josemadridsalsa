@@ -14,6 +14,17 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The storefront can now sell through BigCommerce, behind one switch.** With
+  `NEXT_PUBLIC_COMMERCE_BACKEND=bigcommerce`, every product page, listing, collection, search
+  result and the mix-and-match jar picker shows BigCommerce's price and stock, and checkout
+  hands a retail cart to BigCommerce's own hosted checkout — so payment, tax, live shipping
+  rates, order emails and the order itself are BigCommerce's, and the order lands in the admin
+  staff already use. Loose jars merge into one line; each mix-and-match pack becomes the
+  BigCommerce pack product with its "Jar N" dropdowns filled in, exactly as if it had been
+  ordered on the old store. A product BigCommerce does not sell shows as out of stock rather
+  than failing at checkout, and if BigCommerce cannot be reached the pages fall back to database
+  prices, since BigCommerce reprices the cart anyway. Fundraiser carts keep this site's checkout.
+  Until the switch is set nothing changes, so this can ship ahead of the cutover.
 - **A BigCommerce connection for both stores, the first step of running the site headless on
   top of BigCommerce.** Staff already run the business from the BigCommerce admin, so the
   cutover keeps BigCommerce as the system of record for catalog, checkout and orders and makes

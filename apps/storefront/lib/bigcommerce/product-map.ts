@@ -36,3 +36,14 @@ export const BIGCOMMERCE_PRODUCT_SLUGS: Readonly<Record<number, string>> = {
   135: 'cherry-hot',
   155: 'blueberry-mild-salsa',
 }
+
+/**
+ * Mix-and-match pack id (see `lib/bundles.ts`) → the BigCommerce product that
+ * sells it. Each carries one "Jar N" dropdown per jar plus an order-notes field.
+ */
+export const BIGCOMMERCE_BUNDLE_PRODUCT_IDS: Readonly<Record<string, number>> = {
+  'choose-3': 120,
+  'choose-5': 122,
+  'choose-6': 121,
+  'choose-12': 119,
+}

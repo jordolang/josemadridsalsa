@@ -178,6 +178,9 @@ variables unset is treated as not configured.
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_ID` | For fundraising orders | Fundraising store API account client ID. |
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET` | For fundraising orders | Fundraising store API account client secret. |
 
+| `NEXT_PUBLIC_COMMERCE_BACKEND` | At cutover | Set to `bigcommerce` to switch the storefront over: product prices and stock come from BigCommerce, and retail carts check out in BigCommerce's hosted checkout. Unset, the site prices and checks out as before. Fundraiser carts keep this site's checkout either way. Build-time: redeploy after changing it. |
+| `BIGCOMMERCE_CHANNEL_ID` | No | BigCommerce channel carts are created in. Defaults to `1`, the existing storefront, whose checkout is served on josemadridsalsa.com — correct while that domain still points at BigCommerce. Once the domain points at this site, set it to the headless channel whose checkout domain is a subdomain. |
+
 The API accounts need **modify** on Products, Carts, Checkouts, Customers, Channel settings and
 Sites & routes, and **read-only** on Orders and Information & settings. A `403 You don't have a
 required scope` on every call means the account was saved with no scopes; a `401` means the token

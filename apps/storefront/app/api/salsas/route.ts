@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { applyBigCommercePricing } from '@/lib/bigcommerce/storefront'
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
       searchKeywords: salsa.searchKeywords || [],
     }))
 
-    return NextResponse.json(parsedSalsas)
+    return NextResponse.json(await applyBigCommercePricing(parsedSalsas))
   } catch (error) {
     console.error('Error fetching salsas:', error)
     return NextResponse.json(
