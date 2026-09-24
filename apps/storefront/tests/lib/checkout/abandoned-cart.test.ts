@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import {
   FINAL_STAGE,
+  RECOVERY_LINK_TTL_MS,
   STAGE_DELAY_MS,
   abandonedCartWhere,
   customerName,
   formatCartTotal,
-  stageCopy,
+  hoursWaiting,
+  recoveryLinkExpiresIn,
 } from '@/lib/checkout/abandoned-cart'
 
 const NOW = new Date('2026-08-10T12:00:00Z')
@@ -98,15 +100,44 @@ describe('customerName', () => {
   })
 })
 
-describe('stageCopy', () => {
-  it('escalates across the three stages', () => {
-    expect(stageCopy(1).subject).toContain('left something behind')
-    expect(stageCopy(3).subject).toContain('Last chance')
+describe('hoursWaiting', () => {
+  it('counts from when the shopper last touched the cart', () => {
+    expect(hoursWaiting(new Date(NOW.getTime() - 25 * HOUR), NOW)).toBe(25)
   })
 
-  it('never returns an empty subject line', () => {
-    for (const stage of [0, 1, 2, 3, 99]) {
-      expect(stageCopy(stage).subject.length).toBeGreaterThan(0)
-    }
+  it('rounds to the nearest whole hour', () => {
+    expect(hoursWaiting(new Date(NOW.getTime() - 3.4 * HOUR), NOW)).toBe(3)
+    expect(hoursWaiting(new Date(NOW.getTime() - 3.6 * HOUR), NOW)).toBe(4)
+  })
+
+  it('never says a cart has been waiting for zero hours', () => {
+    expect(hoursWaiting(NOW, NOW)).toBe(1)
+  })
+})
+
+describe('recoveryLinkExpiresIn', () => {
+  it('counts down to the moment the recovery route starts refusing the link', () => {
+    const createdAt = new Date(NOW.getTime() - RECOVERY_LINK_TTL_MS + 2 * HOUR)
+
+    expect(recoveryLinkExpiresIn(createdAt, NOW)).toBe('2 hours')
+  })
+
+  it('speaks in days once there is more than a couple left', () => {
+    // A cart mailed at stage 3 is barely two days old, so this is the case that ships.
+    const createdAt = new Date(NOW.getTime() - 49 * HOUR)
+
+    expect(recoveryLinkExpiresIn(createdAt, NOW)).toBe('28 days')
+  })
+
+  it('has nothing to promise once the link has expired', () => {
+    const createdAt = new Date(NOW.getTime() - RECOVERY_LINK_TTL_MS)
+
+    expect(recoveryLinkExpiresIn(createdAt, NOW)).toBeNull()
+  })
+
+  it('never says "1 hours"', () => {
+    const createdAt = new Date(NOW.getTime() - RECOVERY_LINK_TTL_MS + 30 * 60 * 1000)
+
+    expect(recoveryLinkExpiresIn(createdAt, NOW)).toBe('1 hour')
   })
 })
