@@ -14,6 +14,22 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **BigCommerce retail orders are copied into this site, so its reports keep seeing retail
+  sales.** Once retail checks out in BigCommerce, those orders never reached this site's order
+  table — and the sales dashboards, product and margin reports and "verified buyer" reviews all
+  read it. Every BigCommerce order is now copied here as a read-only website order numbered
+  `BC-<number>`, linked to the customer's account when their email matches, with each
+  mix-and-match pack recorded as the jars in it (the pack price split to the cent, the way this
+  site records its own packs) and each jar's cost snapshotted for margin. The copy is made when
+  BigCommerce reports the order and kept current as it ships, is refunded or is cancelled; an
+  hourly sweep catches anything a missed notification left behind, and `npm run
+  bigcommerce:orders` copies history from a chosen date. Nothing about the copy emails the
+  customer, takes payment or moves stock, and the admin refuses to ship, refund or re-email a copy,
+  pointing to the order in BigCommerce instead. A dry run over the 120 most recent real orders
+  matched every salsa and pack line; the only thing not copied was a gift-certificate purchase,
+  which is noted on the order. Copies stay out of the QuickBooks sync unless
+  `BIGCOMMERCE_ORDERS_TO_QUICKBOOKS` is set, because online sales may already reach the books
+  through the payment deposits.
 - **The admin says plainly what moved to BigCommerce.** Once the storefront sells through
   BigCommerce, the Products, Inventory, Orders, Customers and Gift Certificates pages open with a
   "Managed in BigCommerce" note saying which half of the record lives there — prices, stock and

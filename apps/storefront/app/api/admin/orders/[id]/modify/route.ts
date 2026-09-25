@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/rbac'
 import { modifyOrder } from '@/lib/orders/modify'
 import { logAuditWithRequest } from '@/lib/audit'
 import { z } from 'zod'
+import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 
 const ModifyOrderSchema = z.object({
   items: z.array(z.object({
@@ -45,6 +46,8 @@ export async function PATCH(
 
     // Await params in Next.js 15+
     const { id } = await params
+    const locked = await bigCommerceOrderLock(id)
+    if (locked) return locked
 
     const result = await modifyOrder({
       orderId: id,
