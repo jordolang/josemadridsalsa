@@ -100,3 +100,20 @@ export async function applyBigCommercePricing<T extends PricedProduct>(products:
     return products
   }
 }
+
+/**
+ * Where a retail customer finds orders placed on BigCommerce's checkout: the
+ * order-status page of the BigCommerce storefront once it has its own address
+ * (`BIGCOMMERCE_STOREFRONT_URL`). Null until the storefront is switched over
+ * and that address is set.
+ */
+export function getBigCommerceOrderHistoryUrl(): string | null {
+  if (!isBigCommerceStorefrontEnabled()) return null
+  const raw = process.env.BIGCOMMERCE_STOREFRONT_URL?.trim()
+  if (!raw) return null
+  try {
+    return `${new URL(raw).origin}/account.php?action=order_status`
+  } catch {
+    return null
+  }
+}

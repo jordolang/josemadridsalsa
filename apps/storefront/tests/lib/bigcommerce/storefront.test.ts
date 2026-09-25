@@ -4,6 +4,7 @@ import { server } from '@/tests/mocks/server'
 import { normalizeBigCommerceProduct, type RawBigCommerceProduct } from '@/lib/bigcommerce/catalog'
 import {
   applyBigCommercePricing,
+  getBigCommerceOrderHistoryUrl,
   isBigCommerceStorefrontEnabled,
   overlayBigCommercePricing,
   indexBigCommercePricing,
@@ -121,5 +122,20 @@ describe('applyBigCommercePricing', () => {
     )
 
     await expect(applyBigCommercePricing(dbProducts)).resolves.toBe(dbProducts)
+  })
+})
+
+describe('getBigCommerceOrderHistoryUrl', () => {
+  it('points at the BigCommerce storefront order page once it has its own address', () => {
+    expect(getBigCommerceOrderHistoryUrl()).toBeNull()
+
+    enableStorefront()
+    expect(getBigCommerceOrderHistoryUrl()).toBeNull()
+
+    vi.stubEnv('BIGCOMMERCE_STOREFRONT_URL', 'https://shop.josemadridsalsa.com/')
+    expect(getBigCommerceOrderHistoryUrl()).toBe('https://shop.josemadridsalsa.com/account.php?action=order_status')
+
+    vi.stubEnv('BIGCOMMERCE_STOREFRONT_URL', 'not a url')
+    expect(getBigCommerceOrderHistoryUrl()).toBeNull()
   })
 })

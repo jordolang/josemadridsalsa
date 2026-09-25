@@ -39,7 +39,9 @@ the root `package.json` is canonical.
   Once the old BigCommerce store moves to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`),
   sign-in, account, gift-certificate and wishlist links — including the ones in past order
   emails — go to the customer's real BigCommerce account there instead. The full cutover is
-  written up step by step in the new BigCommerce Cutover Runbook.
+  written up step by step in the new BigCommerce Cutover Runbook. A signed-in customer's account
+  page also links to that BigCommerce order history, where retail orders placed on the new site
+  are tracked.
 - **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls
   the site whenever a product is created, changed, deleted or restocked, and the cached catalog
   is dropped so the next visitor sees the new price, stock or bundle options — without it, a

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { OrderCard } from "@/components/account/OrderCard";
 import { createMetadata } from "@/lib/metadata";
 import { UserRole } from "@prisma/client";
+import { getBigCommerceOrderHistoryUrl } from "@/lib/bigcommerce/storefront";
 
 export const dynamic = 'force-dynamic'
 
@@ -52,6 +53,10 @@ export default async function AccountPage() {
       total: true,
     },
   });
+
+  // Retail orders placed on BigCommerce's checkout live in the customer's
+  // BigCommerce account, not in this site's order table.
+  const bigCommerceOrdersUrl = getBigCommerceOrderHistoryUrl();
 
   const recentOrders = recentOrdersRaw.map(o => ({
     id: o.id,
@@ -119,6 +124,15 @@ export default async function AccountPage() {
               View all orders
             </Link>
           </div>
+          {bigCommerceOrdersUrl ? (
+            <p className="mt-4 border-t pt-4 text-sm text-muted-foreground">
+              Ordered salsa from our online store?{" "}
+              <a href={bigCommerceOrdersUrl} className="text-primary hover:underline">
+                See those orders and track shipping in your store account
+              </a>
+              .
+            </p>
+          ) : null}
         </Card>
 
         <Card className="p-4">
