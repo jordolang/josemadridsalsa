@@ -29,16 +29,14 @@ minutes. Phase 3 moves domains; it is reversible, but not instantly.
 
 ## Phase 0 — Before you start
 
-- **Rotate the BigCommerce API credentials.** They were shared during development. In each store,
-  go to **Settings → API → Store-level API accounts**, create a new account with the scopes listed
-  in [Environment Variables](/docs/configuration/environment-variables#bigcommerce), then delete
-  the old one.
-- **Settle prices in BigCommerce.** Once the switch is on, BigCommerce's price is the price. As of
-  September 2026 BigCommerce charges **$7** a jar while this site showed **$9**. Change it in
-  BigCommerce if $9 is correct.
-- **Anything sold only on this site** (merchandise, for example) shows as out of stock once the
-  switch is on, because BigCommerce's checkout cannot sell it. Add those products in BigCommerce
-  if they should stay for sale.
+- **Prices.** Once the switch is on, BigCommerce's price is the price. Jars are **$8** in
+  BigCommerce (set September 2026, up from $7) and packs are unchanged. The site's own database
+  should match, so josemadrid.net shows the same $8 before the switch too: **Admin → Products**,
+  or ask a developer to update it.
+- **Anything sold only on this site** shows as out of stock once the switch is on, because
+  BigCommerce's checkout cannot sell it. As of September 2026 every product on the site is a salsa
+  that BigCommerce also sells, so nothing is affected.
+- **API credentials stay as they are until the site is live.** Rotate them in Phase 4.
 
 ## Phase 1 — Ship the code with the switch off
 
@@ -85,6 +83,11 @@ josemadridsalsa.com is about to point at this site, so BigCommerce's storefront 
 an address of their own. The recommended one is **`shop.josemadridsalsa.com`**. There, BigCommerce
 keeps serving checkout, customer accounts and order history, gift certificate purchase and
 balance, and the links in its order emails.
+
+`shop.josemadridsalsa.com` does not exist yet; this step creates it. Today the old store's
+shopping pages (such as `/purchase-salsa`) live on josemadridsalsa.com itself. After this step,
+the old store's own pages are only used for checkout and accounts, and every old
+josemadridsalsa.com URL redirects to its page on the new site.
 
 Ask BigCommerce support:
 
@@ -162,6 +165,18 @@ josemadrid.net has to be updated to `https://www.josemadridsalsa.com/...`:
 BigCommerce and ask BigCommerce support to restore channel 1's primary and checkout URL to
 `josemadridsalsa.com`. DNS changes take effect within the lowered TTL. The BigCommerce side
 depends on how quickly support can make the change.
+
+## Phase 4 — After the site is live: rotate credentials
+
+The BigCommerce API credentials used during development have been shared, so replace them once
+the site is running on josemadridsalsa.com:
+
+1. In each store, go to **Settings → API → Store-level API accounts** and create a new account with
+   the scopes listed in [Environment Variables](/docs/configuration/environment-variables#bigcommerce).
+2. Put the new values into Vercel (`BIGCOMMERCE_*` for the main store,
+   `BIGCOMMERCE_FUNDRAISING_*` for the fundraising store) and redeploy.
+3. Check that a salsa page still shows its price and a test checkout still reaches BigCommerce.
+4. Delete the old API account in each store.
 
 ## After cutover: who to call
 
