@@ -43,6 +43,7 @@ import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
 import { CartIcon } from "@/components/store/cart-icon";
 import { LiveNavLink, LiveNavMobileLink } from "@/components/store/live-nav-link";
+import { SITE_URL } from '@/lib/site-url'
 
 interface NavSubItem {
   name: string;
@@ -327,7 +328,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
           {/* Wordmark — always returns to the main marketing site, regardless of
              which app/domain (e.g. the fundraiser deployment) is serving this header. */}
           <Link
-            href="https://www.josemadrid.net"
+            href={SITE_URL}
             className={cn("group flex items-center justify-self-start", isHome ? "gap-4" : "gap-3")}
             onClick={() => closeGroup()}
           >

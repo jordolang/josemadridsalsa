@@ -20,10 +20,10 @@ import {
   getSeriesPostsOrdered,
   type PostDetail,
 } from '@/lib/blog/queries'
+import { SITE_URL } from '@/lib/site-url'
 
 export const revalidate = 900
 
-const SITE_URL = 'https://www.josemadrid.net'
 
 interface PageProps {
   params: Promise<{ slug: string }>

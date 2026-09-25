@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentFundraiserAccount } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 export default async function FundraiserDashboardPage() {
   const account = await getCurrentFundraiserAccount()
@@ -100,7 +101,7 @@ export default async function FundraiserDashboardPage() {
                   rel="noopener noreferrer"
                   className="text-salsa-600 hover:text-salsa-700"
                 >
-                  josemadrid.net/f/{fundraiser.subdomain}
+                  {SITE_DOMAIN}/f/{fundraiser.subdomain}
                 </a>
               </dd>
             </div>

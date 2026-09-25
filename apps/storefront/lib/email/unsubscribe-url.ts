@@ -1,4 +1,5 @@
 import { createHmac } from 'crypto'
+import { SITE_URL } from '@/lib/site-url'
 
 /**
  * Shared builders for the outbound unsubscribe link.
@@ -11,7 +12,7 @@ import { createHmac } from 'crypto'
 
 /** Base URL for links in outbound email. Shared by the List-Unsubscribe header and email footers. */
 export function getEmailBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_BASE_URL || 'https://josemadrid.net'
+  return process.env.NEXT_PUBLIC_BASE_URL || SITE_URL
 }
 
 /**

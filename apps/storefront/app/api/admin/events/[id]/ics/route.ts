@@ -4,6 +4,7 @@ import { requirePermission } from '@/lib/rbac'
 import { failFromError, notFound } from '@/lib/api'
 import { getSeoConfiguration } from '@/lib/seo/configuration'
 import { buildIcs, toIcsEvent } from '@/lib/events/ics'
+import { SITE_URL } from '@/lib/site-url'
 
 /**
  * GET /api/admin/events/[id]/ics
@@ -23,7 +24,7 @@ export async function GET(
     if (!event) return notFound('Event not found')
 
     const seo = await getSeoConfiguration()
-    const ics = buildIcs([toIcsEvent(event, seo?.siteUrl || 'https://www.josemadrid.net')], {
+    const ics = buildIcs([toIcsEvent(event, seo?.siteUrl || SITE_URL)], {
       calendarName: event.title,
     })
 

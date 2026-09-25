@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
 import { ok, fail, serverError } from '@/lib/api'
+import { applyBigCommercePricing } from '@/lib/bigcommerce/storefront'
 
 // Validation schema for search params
 const searchParamsSchema = z.object({
@@ -177,7 +178,7 @@ export async function GET(request: NextRequest) {
 
     // Return results with pagination info
     return ok({
-      products: formattedProducts,
+      products: await applyBigCommercePricing(formattedProducts),
       pagination: {
         total: totalCount,
         limit,
@@ -247,7 +248,7 @@ export async function POST(request: NextRequest) {
       heatLevel: product.heatLevel,
     }))
 
-    return ok({ suggestions })
+    return ok({ suggestions: await applyBigCommercePricing(suggestions) })
   } catch (error: unknown) {
     return serverError('Failed to get suggestions', error)
   }

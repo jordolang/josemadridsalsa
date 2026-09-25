@@ -18,6 +18,7 @@ import { OrderFilters } from '@/components/admin/OrderFilters'
 import { buildOrderWhere, parseOrderFilters } from '@/lib/orders/order-filters'
 import { isNextControlFlowError } from '@/lib/next-errors'
 import { MobileOrdersList } from '@/components/admin/mobile/MobileOrdersList'
+import { BigCommerceNotice } from '@/components/admin/BigCommerceNotice'
 
 type SearchParams = Record<string, string | undefined>
 
@@ -116,6 +117,9 @@ export default async function OrdersPage({
 
     return (
     <>
+    <div className="mb-4 md:mb-6">
+      <BigCommerceNotice area="orders" />
+    </div>
     <MobileOrdersList
       className="md:hidden"
       orders={orderRows}

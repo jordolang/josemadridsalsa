@@ -21,6 +21,7 @@ import { generateHashtags } from '@/lib/sharing/metadata-extractor'
 import { RecentlyViewedProducts } from '@/components/store/recently-viewed'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
 import { formatIngredientStatement, toIngredientList } from '@/lib/ingredients'
+import { SITE_URL } from '@/lib/site-url'
 
 type NutritionalInfoData = {
   id: string
@@ -157,7 +158,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   // product.images normally already leads with featuredImage, so dedupe rather than show it twice
   const allImages = [...new Set([product.featuredImage, ...product.images])]
   const heatRating = getSalsaHeatRating(product.name, product.heatLevel)
-  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.josemadrid.net'}/salsas/${product.slug}`
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || SITE_URL}/salsas/${product.slug}`
   const shareContent: ShareContent = {
     title: product.name,
     description: product.description,

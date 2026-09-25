@@ -24,6 +24,7 @@ import { ShareStatusToast } from '@/components/arena/share-status-toast'
 import { ShareForShieldButton } from '@/components/arena/share-for-shield-button'
 import { sanitizeStoryHtml } from '@/lib/sanitize-story'
 import { StoryBody } from '@/components/fundraiser/story-body'
+import { SITE_URL } from '@/lib/site-url'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${team.name} is battling in the JMS Fundraiser Arena!`,
       description: `Every sale powers their warrior. Share to activate a 15-minute shield!`,
-      url: `https://josemadrid.net/fundraise/${slug}`,
+      url: `${SITE_URL}/fundraise/${slug}`,
     },
   }
 }

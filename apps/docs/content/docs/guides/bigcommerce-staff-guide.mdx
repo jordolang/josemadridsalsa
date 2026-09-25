@@ -1,0 +1,69 @@
+---
+title: Running the Store After the Switch
+description: Where staff do each everyday task once josemadridsalsa.com is the new site running on BigCommerce
+---
+
+# Running the Store After the Switch
+
+The new website sits in front of the same BigCommerce store you already use. **Anything to do
+with selling (prices, stock, orders, customers, coupons, gift certificates, shipping and
+payments) is still done in the BigCommerce admin, exactly as before.** The website's own admin
+handles the things BigCommerce never did: product stories and photos, fundraisers, recipes, the
+blog and events.
+
+## Where to do what
+
+| I want to… | Where | Notes |
+|---|---|---|
+| Change a price or put something on sale | **BigCommerce** → Products | The website shows the new price within seconds. |
+| Mark something out of stock or change stock | **BigCommerce** → Products | Out-of-stock products can't be added to a cart. |
+| Stop selling a product | **BigCommerce** → Products → untick Visible on storefront | The website then shows it as **Out of Stock**. To take its page off the website entirely, also deactivate it in the website admin. |
+| Add a new salsa | **Both**: BigCommerce and the website admin, with the **exact same name** | BigCommerce holds its price and stock; the website admin holds its page (photos, heat level, nutrition). The same name is what links them (see below). |
+| Change the jars offered in a Choose-5/6/12 pack | **BigCommerce** → the pack product → each "Jar" option | The website's pack picker offers every in-stock salsa. If a picked salsa isn't a choice in the BigCommerce Jar options, checkout tells the shopper it isn't available in that pack, so keep the Jar options listing every salsa you sell. |
+| Process, ship, refund or cancel an order | **BigCommerce** → Orders | Order emails to customers come from BigCommerce as before. |
+| Look up a customer or their order history | **BigCommerce** → Customers | |
+| Create a coupon code | **BigCommerce** → Marketing → Coupon codes | Shoppers enter it on BigCommerce's checkout page. |
+| Issue or look up a gift certificate | **BigCommerce** → Marketing → Gift certificates | |
+| Change shipping rates or tax settings | **BigCommerce** → Settings | |
+| Change product photos, descriptions, heat level, nutrition or ingredients | **Website admin** → Products | |
+| Run a fundraiser, see its sales and pay out the group | **Website admin** → Fundraisers | Fundraiser orders are placed and listed on the website, not in BigCommerce. |
+| Recipes, blog ("Heat Index"), events, store locations | **Website admin** | |
+
+In the website admin, the Products, Inventory, Orders, Customers and Gift Certificates pages open
+with a **"Managed in BigCommerce"** note and a link to the matching BigCommerce screen. If you
+see that note, the thing you're looking for is probably in BigCommerce.
+
+## Two kinds of orders
+
+- **Retail orders** (anyone buying salsa from the website) are in **BigCommerce → Orders**.
+- **Fundraiser orders** (bought from a fundraiser's page, or through a student's referral link)
+  are in the **website admin → Orders** and the fundraiser's own page, because they're priced by
+  the campaign and credited to the group.
+
+## When something looks wrong
+
+- **The website shows an old price.** Wait a minute and reload. Pages also refresh on their own
+  within five minutes. If it keeps happening, the BigCommerce-to-website connection needs
+  re-registering; the fix is in the
+  [cutover runbook](/docs/deployment/bigcommerce-cutover#after-cutover-who-to-call).
+- **A checkout or payment problem.** Call **BigCommerce support**. Checkout, payments and order
+  emails are theirs. Tell them the store uses a headless storefront with BigCommerce's hosted
+  checkout on channel 1.
+- **A website page is broken or down.** In Vercel → Deployments, the previous deployment can be
+  put back live in one click.
+
+## Adding a new salsa
+
+1. Add it in **BigCommerce → Products** with its price, and make it visible.
+2. Add it in the **website admin → Products** with its photos, description, heat level and
+   nutrition, and **give it exactly the same name** as in BigCommerce. Capital letters, spaces and
+   punctuation don't matter; the words do.
+3. Open its page on the website. It should show BigCommerce's price, and "Add to Cart" should
+   work.
+
+If the page shows **Out of Stock**, the names don't match, or the product isn't visible in
+BigCommerce. A product that is only in BigCommerce doesn't appear on the website at all, and one
+that is only in the website admin shows as out of stock.
+
+To add it to a mix-and-match pack, also add it as a choice in each **Jar** option on the pack
+products in BigCommerce, using the same name.

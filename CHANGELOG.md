@@ -14,6 +14,68 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The admin says plainly what moved to BigCommerce.** Once the storefront sells through
+  BigCommerce, the Products, Inventory, Orders, Customers and Gift Certificates pages open with a
+  "Managed in BigCommerce" note saying which half of the record lives there — prices, stock and
+  retail orders — and which half is still edited here, such as photos, heat level and nutrition,
+  with a link straight to the matching BigCommerce screen. It prevents the obvious mistake of
+  changing a price here and waiting for the site to follow. The notes are hidden until the switch
+  is turned on.
+- **Moving the site to josemadridsalsa.com is now a setting, not a code change.** The site's
+  address was typed out by hand in about forty places — canonical links, the sitemap,
+  structured data, product feeds, email footers and buttons, and the domain printed on invoices
+  and packing slips — so pointing a new domain here would have left Google and every email
+  still sending people to josemadrid.net. All of them now read one setting,
+  `NEXT_PUBLIC_SITE_URL`, which defaults to today's address. The few places that keep the old
+  name on purpose are left alone: calendar event ids (changing them would duplicate events in
+  people's calendars), the image-repair matcher for old logo URLs, and the launch history.
+- **Every old josemadridsalsa.com address now leads somewhere, for when the domain points here.**
+  The BigCommerce store's product pages, its per-salsa info pages, categories, blog, and system
+  pages like `cart.php`, `login.php` and `giftcertificates.php` each permanently redirect to
+  their closest page on this site — so search rankings, bookmarks and old printed links carry
+  over instead of landing on a 404. Creating an account or checking a gift-card balance from an
+  old link goes to that exact page, seasonal flavors that are not sold right now go to the salsa
+  list, and a test checks every destination is a real page and that no redirect hides one.
+  Once the old BigCommerce store moves to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`),
+  sign-in, account, gift-certificate and wishlist links — including the ones in past order
+  emails — go to the customer's real BigCommerce account there instead. The full cutover is
+  written up step by step in the new BigCommerce Cutover Runbook. A signed-in customer's account
+  page also links to that BigCommerce order history, where retail orders placed on the new site
+  are tracked.
+- **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls
+  the site whenever a product is created, changed, deleted or restocked, and the cached catalog
+  is dropped so the next visitor sees the new price, stock or bundle options — without it, a
+  price change could take up to five minutes to appear. BigCommerce does not sign its webhooks,
+  so each one is registered with a secret header and the site refuses any call without it.
+  `npm run bigcommerce:webhooks` registers the hooks, and re-running it revives any BigCommerce
+  switched off after failed deliveries.
+- **The storefront can now sell through BigCommerce, behind one switch.** With
+  `NEXT_PUBLIC_COMMERCE_BACKEND=bigcommerce`, every product page, listing, collection, search
+  result and the mix-and-match jar picker shows BigCommerce's price and stock, and checkout
+  hands a retail cart to BigCommerce's own hosted checkout — so payment, tax, live shipping
+  rates, order emails and the order itself are BigCommerce's, and the order lands in the admin
+  staff already use. Loose jars merge into one line; each mix-and-match pack becomes the
+  BigCommerce pack product with its "Jar N" dropdowns filled in, exactly as if it had been
+  ordered on the old store. A product BigCommerce does not sell shows as out of stock rather
+  than failing at checkout, and if BigCommerce cannot be reached the pages fall back to database
+  prices, since BigCommerce reprices the cart anyway. Fundraiser carts keep this site's checkout,
+  and so does a retail cart a student's referral link turns into a fundraiser sale — that sale is
+  priced by the campaign and credited to it, which BigCommerce knows nothing about, so sending it
+  there would have charged retail and credited the group nothing.
+  Until the switch is set nothing changes, so this can ship ahead of the cutover.
+- **A BigCommerce connection for both stores, the first step of running the site headless on
+  top of BigCommerce.** Staff already run the business from the BigCommerce admin, so the
+  cutover keeps BigCommerce as the system of record for catalog, checkout and orders and makes
+  this site the storefront over it. `lib/bigcommerce` reads either store (main and fundraising,
+  configured separately because product ids collide between them), follows BigCommerce's
+  pagination even when it silently shrinks the page size, waits out rate limits, and turns
+  BigCommerce errors into readable messages. The catalog comes back normalized: the sale price
+  when one is active, purchasable only when visible, enabled and in stock, and the Choose-N
+  bundles' jar dropdowns and order-notes field exposed as they are defined in BigCommerce. The
+  27 salsas are mapped to this site's existing product pages so their heat ratings, nutrition
+  and recipes carry over, and a salsa added later in both BigCommerce and the site admin under
+  the same name is linked by that name, with no code change. Nothing renders from BigCommerce
+  yet.
 - **The abandoned-cart reminder is a three-email sequence, and the analytics page now shows what
   it did.** One reminder went out an hour after a cart was left and that was the end of it. There
   are now three — the existing reminder, an urgency follow-up a day later and a final note the

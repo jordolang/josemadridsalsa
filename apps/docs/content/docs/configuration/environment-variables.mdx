@@ -159,6 +159,34 @@ and must be registered verbatim in the Intuit app. Sandbox and production keys a
 and credentials are stored per environment — production keys saved while the app is in sandbox mode
 are filed under `sandbox` and will not work.
 
+## BigCommerce
+
+BigCommerce is the system of record for catalog, carts, checkout and orders; this app is a
+headless storefront on top of it. Jose Madrid runs **two** BigCommerce stores, and each needs its
+own store-level API account (BigCommerce admin → **Settings → API → Store-level API accounts**).
+Product ids are per store, so the two sets must never be swapped. A store with any of its four
+variables unset is treated as not configured.
+
+| Variable | Required | Description |
+|---|---|---|
+| `BIGCOMMERCE_STORE_HASH` | For the storefront | Main store (josemadridsalsa.com) hash — the part after `/stores/` in the API path. |
+| `BIGCOMMERCE_ACCESS_TOKEN` | For the storefront | Main store API account access token. |
+| `BIGCOMMERCE_CLIENT_ID` | For the storefront | Main store API account client ID. |
+| `BIGCOMMERCE_CLIENT_SECRET` | For the storefront | Main store API account client secret; also signs customer-login tokens. |
+| `BIGCOMMERCE_FUNDRAISING_STORE_HASH` | For fundraising orders | Fundraising store (josemadridsalsafundraising.com) hash. |
+| `BIGCOMMERCE_FUNDRAISING_ACCESS_TOKEN` | For fundraising orders | Fundraising store API account access token. |
+| `BIGCOMMERCE_FUNDRAISING_CLIENT_ID` | For fundraising orders | Fundraising store API account client ID. |
+| `BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET` | For fundraising orders | Fundraising store API account client secret. |
+| `NEXT_PUBLIC_COMMERCE_BACKEND` | At cutover | Set to `bigcommerce` to switch the storefront over: product prices and stock come from BigCommerce, and retail carts check out in BigCommerce's hosted checkout. Unset, the site prices and checks out as before. Fundraiser carts keep this site's checkout either way. Build-time: redeploy after changing it. |
+| `BIGCOMMERCE_CHANNEL_ID` | No | BigCommerce channel carts are created in. Defaults to `1`, the existing storefront, whose checkout is served on josemadridsalsa.com — correct while that domain still points at BigCommerce. Once the domain points at this site, set it to the headless channel whose checkout domain is a subdomain. |
+| `BIGCOMMERCE_STOREFRONT_URL` | At domain cutover | Where the old BigCommerce storefront lives once josemadridsalsa.com points here, e.g. `https://shop.josemadridsalsa.com`. When set, legacy `login.php`, `account.php`, `giftcertificates.php` and `wishlist.php` links go there (temporary redirects, query string kept) so customers reach their BigCommerce account; unset, they go to this site's pages. Build-time. See the [cutover runbook](/docs/deployment/bigcommerce-cutover). |
+| `BIGCOMMERCE_WEBHOOK_SECRET` | For live catalog updates | Shared secret BigCommerce sends in a header on every webhook; `/api/webhooks/bigcommerce` refuses calls without it (and refuses everything when it is unset). Any long random string. Register the hooks after deploying with `npm run bigcommerce:webhooks --workspace @jose-madrid/storefront -- https://<site-origin>`, run with production's values; re-run it to revive hooks BigCommerce disabled after an outage. |
+
+The API accounts need **modify** on Products, Carts, Checkouts, Customers, Channel settings and
+Sites & routes, and **read-only** on Orders and Information & settings. A `403 You don't have a
+required scope` on every call means the account was saved with no scopes; a `401` means the token
+or store hash is wrong.
+
 ## Analytics
 
 | Variable | Required | Description |
@@ -231,7 +259,13 @@ environment — connect it at `/admin/inbox/settings`.
 | Variable | Required | Description |
 |---|---|---|
 | `SERVICE_API_KEY` | No | Shared secret for internal service-to-service API calls |
-| `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL. Defaults to `https://josemadrid.net`. |
+| `NEXT_PUBLIC_SITE_URL` | Production | The site's public origin, e.g. `https://www.josemadrid.net` (the default). Canonical links, the sitemap, structured data, feeds, email links and the domain printed on invoices and packing slips are all built from it (`lib/site-url.ts`). Build-time: redeploy after changing it. |
+| `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL used by some email links and product feeds. Falls back to `NEXT_PUBLIC_SITE_URL`. |
+| `NEXT_PUBLIC_APP_URL` | No | Base URL for share links and order-rule emails. Falls back to `NEXTAUTH_URL`, then `NEXT_PUBLIC_SITE_URL`. |
+
+**Moving the site to another domain:** set `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_BASE_URL`,
+`NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to the new origin in Vercel (production), update
+**Admin → SEO → Site URL** (`SeoConfiguration.siteUrl`), and redeploy. No code change is needed.
 
 ## Platform Agent (`apps/agent`)
 

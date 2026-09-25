@@ -15,6 +15,7 @@ import {
   supportBlurb,
 } from './shared'
 import type { ResendTemplateDefinition } from './types'
+import { SITE_URL } from '@/lib/site-url'
 
 function buildHtml(): string {
   const bodyRows = `
@@ -116,6 +117,6 @@ export const orderConfirmation: ResendTemplateDefinition = {
     { key: 'ORDER_TOTAL', type: 'string' },
     { key: 'SHIPPING_ADDRESS', type: 'string' },
     { key: 'ORDER_ITEMS_HTML', type: 'string', fallbackValue: '' },
-    { key: 'TRACKING_URL', type: 'string', fallbackValue: 'https://josemadrid.net/account/orders' },
+    { key: 'TRACKING_URL', type: 'string', fallbackValue: `${SITE_URL}/account/orders` },
   ],
 }

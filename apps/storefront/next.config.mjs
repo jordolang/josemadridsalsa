@@ -2,6 +2,7 @@ import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { withSentryConfig } from '@sentry/nextjs'
+import { bigCommerceRedirects } from './bigcommerce-redirects.mjs'
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 const workspaceRoot = path.resolve(projectRoot, '../..')
 const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
@@ -25,6 +26,8 @@ const nextConfig = {
       destination: '/laperla',
       permanent: true,
     },
+    // Old BigCommerce storefront URLs, for when josemadridsalsa.com points here
+    ...bigCommerceRedirects(),
   ],
   // Security headers applied to all routes
   headers: async () => {

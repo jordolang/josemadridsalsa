@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   CardElement,
@@ -29,6 +29,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
 import { cartStoreContext } from '@/lib/store/cart'
+import { BigCommerceCheckoutHandoff } from '@/components/checkout/BigCommerceCheckoutHandoff'
 import {
   PaymentMethodSelector,
   DEFAULT_METHODS,
@@ -1419,12 +1420,22 @@ function CheckoutForm() {
 
 export default function CheckoutPage() {
   const items = useCartStore((state) => state.items)
+  // Set when the BigCommerce handoff finds a fundraiser referral: that sale is
+  // priced and credited by this site's checkout, not BigCommerce's.
+  const [siteCheckout, setSiteCheckout] = useState(false)
+  const switchToSiteCheckout = useCallback(() => setSiteCheckout(true), [])
   const subtotal = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
     [items]
   )
   // Stripe requires amount in cents; minimum 50 cents
   const totalAmount = Math.max(50, Math.round(subtotal * 100))
+
+  // Headless cutover: retail carts check out in BigCommerce. Fundraiser carts,
+  // and retail carts a referral turns into fundraiser sales, keep this checkout.
+  if (process.env.NEXT_PUBLIC_COMMERCE_BACKEND === 'bigcommerce' && !cartStoreContext(items) && !siteCheckout) {
+    return <BigCommerceCheckoutHandoff items={items} onSiteCheckout={switchToSiteCheckout} />
+  }
 
   if (!stripePromise) {
     return (

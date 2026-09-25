@@ -6,6 +6,7 @@ import { Providers } from './providers'
 import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner'
 import { CartDrawer } from '@/components/cart/cart-drawer'
 import './globals.css'
+import { SITE_URL } from '@/lib/site-url'
 
 // Optimize font loading with next/font/google
 const montserrat = Montserrat({
@@ -30,7 +31,7 @@ const robotoMono = Roboto_Mono({
   preload: false, // Only preload critical fonts
 })
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.josemadrid.net'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? SITE_URL
 
 export const metadata: Metadata = {
   title: {

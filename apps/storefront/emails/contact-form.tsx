@@ -1,5 +1,6 @@
 import { Text, Section, Row, Column, Link, Img } from '@react-email/components';
 import { EmailLayout } from './components/EmailLayout';
+import { SITE_URL } from '@/lib/site-url'
 
 interface ContactFormEmailProps {
   name: string;
@@ -10,7 +11,7 @@ interface ContactFormEmailProps {
   storeName?: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.josemadrid.net';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || SITE_URL;
 
 export const ContactFormEmail = ({
   name,

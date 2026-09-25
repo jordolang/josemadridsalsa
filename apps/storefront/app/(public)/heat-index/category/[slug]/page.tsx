@@ -7,6 +7,7 @@ import { PostCard } from '@/components/heat-index/post-card'
 import { getCategoryBySlug } from '@/lib/blog/queries'
 import { postCardSelect } from '@/lib/blog/queries'
 import prisma from '@/lib/prisma'
+import { SITE_URL } from '@/lib/site-url'
 
 
 
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       pathname: `/heat-index/category/${cat.slug}`,
     }),
     alternates: {
-      canonical: `https://www.josemadrid.net/heat-index/category/${cat.slug}`,
+      canonical: `${SITE_URL}/heat-index/category/${cat.slug}`,
     },
   }
 }

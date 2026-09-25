@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader'
 import { EmailFooter } from './components/EmailFooter'
 import { Button } from './components/Button'
 import { bodyContent } from './styles'
+import { SITE_URL } from '@/lib/site-url'
 
 interface OrderReadyPickupEmailProps {
   name?: string
@@ -59,7 +60,7 @@ export const OrderReadyPickupEmail = ({
         </Section>
 
         <Section style={ctaSection}>
-          <Button href={`https://josemadrid.net/account/orders`} variant="primary" size="medium">
+          <Button href={`${SITE_URL}/account/orders`} variant="primary" size="medium">
             View Order Details
           </Button>
         </Section>

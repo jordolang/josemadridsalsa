@@ -14,8 +14,9 @@ import {
   hoursWaiting,
   recoveryLinkExpiresIn,
 } from '@/lib/checkout/abandoned-cart'
+import { SITE_URL } from '@/lib/site-url'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://josemadrid.net'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? SITE_URL
 
 const abandonedCartStageTemplates: Record<number, typeof abandonedCartStage1Template> = {
   1: abandonedCartStage1Template,

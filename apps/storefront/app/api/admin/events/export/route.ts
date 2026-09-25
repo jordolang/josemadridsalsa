@@ -7,6 +7,7 @@ import { fail, failFromError } from '@/lib/api'
 import { getSeoConfiguration } from '@/lib/seo/configuration'
 import { buildIcs, toIcsEvent } from '@/lib/events/ics'
 import { eventsToCsv } from '@/lib/events/event-export'
+import { SITE_URL } from '@/lib/site-url'
 
 /**
  * GET /api/admin/events/export
@@ -23,7 +24,7 @@ import { eventsToCsv } from '@/lib/events/event-export'
  * user is looking at.
  */
 
-const FALLBACK_SITE_URL = 'https://www.josemadrid.net'
+const FALLBACK_SITE_URL = SITE_URL
 
 const QuerySchema = z
   .object({

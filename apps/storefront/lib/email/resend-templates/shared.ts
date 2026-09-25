@@ -6,6 +6,7 @@
  */
 
 import { getImageBaseUrl, getLogoUrl } from '../shared/components'
+import { SITE_URL } from '@/lib/site-url'
 
 const IMAGE_BASE_URL = getImageBaseUrl()
 const LOGO_URL = getLogoUrl()
@@ -156,9 +157,9 @@ export function footer(): string {
     <p style="margin:16px 0 8px 0;font-size:12px;color:${colors.textLight};${font}line-height:1.5;text-align:center;">
       <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:${colors.link};text-decoration:none;">Unsubscribe</a>
       &middot;
-      <a href="https://josemadrid.net/privacy" style="color:${colors.link};text-decoration:none;">Privacy Policy</a>
+      <a href="${SITE_URL}/privacy" style="color:${colors.link};text-decoration:none;">Privacy Policy</a>
       &middot;
-      <a href="https://josemadrid.net/terms" style="color:${colors.link};text-decoration:none;">Terms of Service</a>
+      <a href="${SITE_URL}/terms" style="color:${colors.link};text-decoration:none;">Terms of Service</a>
     </p>
     <p style="margin:16px 0 0 0;font-size:12px;color:${colors.textLight};${font}text-align:center;">
       &copy; ${new Date().getFullYear()} Jose Madrid Salsa. All rights reserved.

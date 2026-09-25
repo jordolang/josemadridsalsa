@@ -4,6 +4,7 @@ import { EmailHeader } from './components/EmailHeader'
 import { EmailFooter } from './components/EmailFooter'
 import { Button } from './components/Button'
 import { bodyContent } from './styles'
+import { SITE_DOMAIN } from '@/lib/site-url'
 
 interface GiftCertificateDeliveryEmailProps {
   recipientName?: string
@@ -66,7 +67,7 @@ export const GiftCertificateDeliveryEmail = ({
 
         <Section style={howToSection}>
           <Text style={howToTitle}>How to use your gift certificate:</Text>
-          <Text style={howToStep}>1. Browse our full collection at josemadrid.net</Text>
+          <Text style={howToStep}>1. Browse our full collection at {SITE_DOMAIN}</Text>
           <Text style={howToStep}>2. Add your favorites to the cart</Text>
           <Text style={howToStep}>3. Enter code <strong>{code}</strong> at checkout</Text>
           <Text style={howToStep}>4. Enjoy! Gift certificates never expire.</Text>

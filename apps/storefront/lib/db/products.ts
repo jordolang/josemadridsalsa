@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache'
 import prisma from '@/lib/prisma'
 import { Prisma, HeatLevel } from '@prisma/client'
 import { getErrorMessage } from '@/lib/errors'
+import { applyBigCommercePricing } from '@/lib/bigcommerce/storefront'
 
 export interface ProductFilters {
   category?: string
@@ -28,7 +29,7 @@ function isValidHeatLevel(value: string): value is HeatLevel {
 /**
  * Get products with filtering, pagination, and search
  */
-export const getProducts = unstable_cache(
+const getProductsCached = unstable_cache(
   async (filters: ProductFilters = {}) => {
     const {
       category,
@@ -159,9 +160,18 @@ export const getProducts = unstable_cache(
 )
 
 /**
+ * Get products with filtering, pagination, and search, priced by BigCommerce
+ * once the storefront is switched to it. The price filters and sort still
+ * read the database price.
+ */
+export async function getProducts(filters: ProductFilters = {}) {
+  return applyBigCommercePricing(await getProductsCached(filters))
+}
+
+/**
  * Get a single product by slug with all relations
  */
-export const getProductBySlug = unstable_cache(
+const getProductBySlugCached = unstable_cache(
   async (slug: string) => {
     try {
       const product = await prisma.product.findUnique({
@@ -206,6 +216,15 @@ export const getProductBySlug = unstable_cache(
     tags: ['products'],
   }
 )
+
+/**
+ * Get a single product by slug with all relations, priced by BigCommerce once
+ * the storefront is switched to it.
+ */
+export async function getProductBySlug(slug: string) {
+  const product = await getProductBySlugCached(slug)
+  return product ? (await applyBigCommercePricing([product]))[0] : null
+}
 
 /**
  * Get all active categories with product counts
@@ -254,7 +273,7 @@ export const getCategories = unstable_cache(
  * straight into the same `ProductCard`. Returns null when the collection does not exist or is
  * inactive. Inactive products in the collection are filtered out rather than shown.
  */
-export const getCollectionBySlug = unstable_cache(
+const getCollectionBySlugCached = unstable_cache(
   async (slug: string) => {
     try {
       const collection = await prisma.collection.findFirst({
@@ -297,6 +316,12 @@ export const getCollectionBySlug = unstable_cache(
     tags: ['products'],
   }
 )
+
+/** `getCollectionBySlug` with BigCommerce pricing once the storefront is switched to it. */
+export async function getCollectionBySlug(slug: string) {
+  const result = await getCollectionBySlugCached(slug)
+  return result ? { ...result, products: await applyBigCommercePricing(result.products) } : null
+}
 
 /**
  * Get total count of products matching filters (for pagination)

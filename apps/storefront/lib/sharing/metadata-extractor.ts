@@ -1,11 +1,12 @@
 import { ShareMetadata, ContentType } from '@/types/sharing'
+import { SITE_URL as DEFAULT_SITE_URL } from '@/lib/site-url'
 
 /**
  * Extract and generate metadata for social sharing
  */
 
 const SITE_NAME = 'Jose Madrid Salsa'
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://josemadrid.net'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL
 const DEFAULT_IMAGE = `${SITE_URL}/images/og-default.jpg`
 const TWITTER_HANDLE = '@josemadridsalsa'
 

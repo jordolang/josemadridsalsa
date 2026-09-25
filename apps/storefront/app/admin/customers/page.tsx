@@ -35,6 +35,7 @@ import {
   resolveSortColumn,
   resolveSortDirection,
 } from '@/lib/customers/customer-list'
+import { BigCommerceNotice } from '@/components/admin/BigCommerceNotice'
 
 export const metadata: Metadata = createMetadata({
   title: 'Customers - Jose Madrid Salsa Admin',
@@ -162,6 +163,7 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-6">
+      <BigCommerceNotice area="customers" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>

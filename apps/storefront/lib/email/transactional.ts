@@ -4,8 +4,9 @@ import { refundProcessedTemplate } from './templates/refund-processed'
 import { reviewRequestTemplate } from './templates/review-request'
 import { giftCertificateDeliveryTemplate } from './templates/gift-certificate-delivery'
 import { orderReadyPickupTemplate } from './templates/order-ready-pickup'
+import { SITE_URL } from '@/lib/site-url'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://josemadrid.net'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? SITE_URL
 
 function footerVars(email: string) {
   return {

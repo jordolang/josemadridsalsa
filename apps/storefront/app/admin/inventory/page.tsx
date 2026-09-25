@@ -10,6 +10,7 @@ import { InventoryAdjustmentDialog } from '@/components/admin/inventory/Inventor
 import { InventoryAlertsTable } from '@/components/admin/inventory/InventoryAlertsTable';
 import { InventoryAlertStatus, InventoryAlertType } from '@prisma/client';
 import { InventoryClientActions } from '@/app/admin/inventory/client-page';
+import { BigCommerceNotice } from '@/components/admin/BigCommerceNotice'
 
 async function getInventoryData() {
   // Get low stock products
@@ -132,6 +133,7 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-6">
+      <BigCommerceNotice area="inventory" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
