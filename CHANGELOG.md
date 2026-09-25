@@ -162,6 +162,13 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **A mix-and-match pack holding any of five salsas would have been refused at the BigCommerce
+  checkout.** The handoff matched each chosen jar to BigCommerce's "Jar" choices by name, but five
+  of the 27 choices are worded differently from their product ("Garden Fresh Cilantro Mild" for
+  Garden Fresh Cilantro Salsa Mild, "Spanish Verde XX (Stupid) Hot", "Cherry Hot (Habanero)",
+  "Roasted Pineapple Habanero", "Garden Fresh Cilantro Hot"), so those packs failed with "not
+  available in this pack". The known exceptions are now mapped, and every choice in the live
+  catalog resolves. Found before the switch was turned on, so no customer saw it.
 - **Customers who paid on BigCommerce will not be sent "you left something in your cart"
   emails.** This site's three-email reminder sequence stops as soon as a cart is paid for on this
   site's own checkout — but once retail checks out in BigCommerce, nothing here ever learns the
