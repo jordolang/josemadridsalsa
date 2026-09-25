@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/cart/track/route'
 
@@ -17,6 +17,10 @@ import { POST } from '@/app/api/cart/track/route'
 // Mock internal dependencies
 vi.mock('@/lib/rbac', () => ({
   getCurrentUser: vi.fn(),
+}))
+
+vi.mock('@/lib/fundraising/store.server', () => ({
+  resolveFundraiserStore: vi.fn(),
 }))
 
 vi.mock('@/lib/prisma', () => ({
@@ -285,6 +289,77 @@ describe('Cart Track API', () => {
           guestEmail: 'test@example.com',
         }),
       })
+    })
+  })
+
+  describe('once retail checks out in BigCommerce', () => {
+    const retailCart = {
+      guestEmail: 'buyer@example.com',
+      items: [
+        { id: 'p1', name: 'Original Hot', slug: 'original-hot', price: 8, image: '/x.jpg', quantity: 1, sku: 'OH', heatLevel: 'HOT' },
+      ],
+    }
+
+    const track = (body: unknown, cookie?: string) =>
+      POST(
+        new NextRequest('http://localhost/api/cart/track', {
+          method: 'POST',
+          body: JSON.stringify(body),
+          headers: { 'Content-Type': 'application/json', ...(cookie ? { cookie } : {}) },
+        }),
+      )
+
+    beforeEach(async () => {
+      vi.stubEnv('NEXT_PUBLIC_COMMERCE_BACKEND', 'bigcommerce')
+      vi.stubEnv('BIGCOMMERCE_STORE_HASH', 'testhash')
+      vi.stubEnv('BIGCOMMERCE_ACCESS_TOKEN', 'test-token')
+      vi.stubEnv('BIGCOMMERCE_CLIENT_ID', 'test-client')
+      vi.stubEnv('BIGCOMMERCE_CLIENT_SECRET', 'test-secret')
+      const { getCurrentUser } = await import('@/lib/rbac')
+      vi.mocked(getCurrentUser).mockResolvedValue(null)
+      const { prisma } = await import('@/lib/prisma')
+      vi.mocked(prisma.abandonedCart.findFirst).mockResolvedValue(null)
+    })
+    afterEach(() => vi.unstubAllEnvs())
+
+    it('does not track a retail cart, so a BigCommerce buyer is never chased', async () => {
+      const { prisma } = await import('@/lib/prisma')
+      const res = await track(retailCart)
+
+      expect((await res.json()).message).toBe('Checked out in BigCommerce, not tracked')
+      expect(prisma.abandonedCart.create).not.toHaveBeenCalled()
+    })
+
+    it('tracks a fundraiser cart and stamps it for this site\'s checkout', async () => {
+      const { prisma } = await import('@/lib/prisma')
+      await track({ ...retailCart, items: [{ ...retailCart.items[0], fundraiserSlug: 'lincoln-band' }] })
+
+      const created = vi.mocked(prisma.abandonedCart.create).mock.calls[0][0]
+      expect(created.data.cartData).toMatchObject({ checkout: 'site' })
+      expect((created.data.cartData as { items: Array<{ fundraiserSlug?: string }> }).items[0].fundraiserSlug).toBe('lincoln-band')
+    })
+
+    it('tracks a retail cart whose referral turns it into a fundraiser sale', async () => {
+      const { resolveFundraiserStore } = await import('@/lib/fundraising/store.server')
+      vi.mocked(resolveFundraiserStore).mockResolvedValue({} as Awaited<ReturnType<typeof resolveFundraiserStore>>)
+      const { prisma } = await import('@/lib/prisma')
+
+      await track(retailCart, 'fundraiser_referral_code=MAYA-123')
+
+      expect(resolveFundraiserStore).toHaveBeenCalledWith({ referralCode: 'MAYA-123' })
+      expect(prisma.abandonedCart.create).toHaveBeenCalled()
+    })
+
+    it('does not track when the referral names no open campaign, or the lookup fails', async () => {
+      const { resolveFundraiserStore } = await import('@/lib/fundraising/store.server')
+      const { prisma } = await import('@/lib/prisma')
+
+      vi.mocked(resolveFundraiserStore).mockResolvedValue(null)
+      await track(retailCart, 'fundraiser_referral_code=OLD')
+      vi.mocked(resolveFundraiserStore).mockRejectedValue(new Error('db down'))
+      await track(retailCart, 'fundraiser_referral_code=MAYA-123')
+
+      expect(prisma.abandonedCart.create).not.toHaveBeenCalled()
     })
   })
 })

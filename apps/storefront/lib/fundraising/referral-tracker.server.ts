@@ -4,7 +4,7 @@ import type { ReferralInfo } from './referral-tracker.client'
 
 export type { ReferralInfo }
 
-const REFERRAL_COOKIE_NAME = 'fundraiser_referral_code'
+export const REFERRAL_COOKIE_NAME = 'fundraiser_referral_code'
 
 /**
  * Get referral info from cookie (server-side only)

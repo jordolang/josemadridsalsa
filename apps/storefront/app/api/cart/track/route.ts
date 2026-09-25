@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
+import { SITE_CHECKOUT } from '@/lib/checkout/abandoned-cart'
+import { isBigCommerceStorefrontEnabled } from '@/lib/bigcommerce/storefront'
+import { REFERRAL_COOKIE_NAME } from '@/lib/fundraising/referral-tracker.server'
+import { resolveFundraiserStore } from '@/lib/fundraising/store.server'
 
 const CartItemSchema = z.object({
   id: z.string(),
@@ -20,6 +24,7 @@ const CartItemSchema = z.object({
   bundleId: z.string().optional(),
   bundleGroupId: z.string().optional(),
   bundleName: z.string().optional(),
+  fundraiserSlug: z.string().optional(),
 })
 
 const TrackCartSchema = z.object({
@@ -51,6 +56,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Cart not tracked yet, waiting for email' })
     }
 
+    // Once retail sells through BigCommerce, a retail cart is paid for there, and nothing on
+    // this site ever learns it was bought — tracking it would send "you left something in your
+    // cart" emails to people who already paid. BigCommerce runs its own reminders for those.
+    // Only carts that finish on this site's checkout are tracked: a fundraiser's store, or a
+    // retail cart that the shopper's referral code turns into a fundraiser sale.
+    if (isBigCommerceStorefrontEnabled() && !(await checksOutOnThisSite(request, items))) {
+      return NextResponse.json({ success: true, message: 'Checked out in BigCommerce, not tracked' })
+    }
+
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
     const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -58,6 +72,7 @@ export async function POST(request: NextRequest) {
       items,
       totalItems,
       totalPrice,
+      checkout: SITE_CHECKOUT,
     }
 
     // Check if there's an existing abandoned cart for this user
@@ -95,5 +110,20 @@ export async function POST(request: NextRequest) {
       { error: 'Unable to track cart' },
       { status: 500 }
     )
+  }
+}
+
+async function checksOutOnThisSite(
+  request: NextRequest,
+  items: z.infer<typeof CartItemSchema>[],
+): Promise<boolean> {
+  if (items.some((item) => item.fundraiserSlug)) return true
+  const referralCode = request.cookies.get(REFERRAL_COOKIE_NAME)?.value
+  if (!referralCode) return false
+  try {
+    return (await resolveFundraiserStore({ referralCode })) !== null
+  } catch {
+    // Unknown is treated as BigCommerce: a missed reminder costs less than emailing a buyer.
+    return false
   }
 }

@@ -162,6 +162,15 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Customers who paid on BigCommerce will not be sent "you left something in your cart"
+  emails.** This site's three-email reminder sequence stops as soon as a cart is paid for on this
+  site's own checkout — but once retail checks out in BigCommerce, nothing here ever learns the
+  cart was bought, so every retail buyer who was signed in or had given an email would have been
+  chased for three days after paying. With the BigCommerce switch on, retail carts are no longer
+  tracked here (BigCommerce sends its own reminders for carts left at its checkout), and the
+  reminder job only emails carts stamped as finishing on this site: fundraiser carts, and retail
+  carts a student's referral turns into a fundraiser sale. If the referral cannot be checked, the
+  cart is left alone rather than risk emailing a buyer.
 - **Every product page at `/products/<salsa>` has been a server error in production since
   10 September.** The page is cached as a static page, and it asked the server for the current
   visitor's session only to decide whether the review form should say "sign in" — reading the

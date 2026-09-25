@@ -117,6 +117,20 @@ describe('GET /api/cron/abandoned-cart', () => {
     expect(whereClause).toHaveProperty('OR')
   })
 
+  it('only chases site-checkout carts once retail checks out in BigCommerce', async () => {
+    vi.stubEnv('NEXT_PUBLIC_COMMERCE_BACKEND', 'bigcommerce')
+    vi.stubEnv('BIGCOMMERCE_STORE_HASH', 'testhash')
+    vi.stubEnv('BIGCOMMERCE_ACCESS_TOKEN', 'test-token')
+    vi.stubEnv('BIGCOMMERCE_CLIENT_ID', 'test-client')
+    vi.stubEnv('BIGCOMMERCE_CLIENT_SECRET', 'test-secret')
+    try {
+      await GET(cronRequest())
+      expect(abandonedCartFindMany.mock.calls[0][0].where.cartData).toEqual({ path: ['checkout'], equals: 'site' })
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('selects the correct template for stage 1', async () => {
     abandonedCartFindMany.mockResolvedValue([
       {

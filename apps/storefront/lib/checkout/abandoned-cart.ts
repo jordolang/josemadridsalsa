@@ -32,6 +32,13 @@ export const ABANDONED_CART_EMAIL_TYPE = 'abandoned_cart'
 export const FINAL_STAGE = 3
 
 /**
+ * Stamped on a tracked cart (`cartData.checkout`) when it will be paid for on this site's own
+ * checkout — the only checkout that marks a cart recovered. Once retail sells through
+ * BigCommerce, carts without it are never emailed.
+ */
+export const SITE_CHECKOUT = 'site'
+
+/**
  * How long a recovery link keeps working, and therefore the only deadline the emails may
  * advertise. `app/api/cart/recover` refuses a cart older than this with a 410, so the countdown
  * in the final email is read from here rather than restated — a promise the route does not keep
@@ -76,11 +83,17 @@ export function recoveryLinkExpiresIn(cartCreatedAt: Date, now: Date): string | 
  * Later stages measure from `emailSentAt`, the previous reminder. Measuring everything from
  * `updatedAt` would fire all three within the same sweep once a cart was two days old.
  */
-export function abandonedCartWhere(now: Date): Prisma.AbandonedCartWhereInput {
+export function abandonedCartWhere(
+  now: Date,
+  { siteCheckoutOnly = false }: { siteCheckoutOnly?: boolean } = {},
+): Prisma.AbandonedCartWhereInput {
   const since = (stage: number) => new Date(now.getTime() - STAGE_DELAY_MS[stage])
 
   return {
     recoveredAt: null,
+    // Once retail checks out in BigCommerce, a purchase there never marks a cart recovered
+    // here, so only carts known to finish on this site's checkout may be chased.
+    ...(siteCheckoutOnly ? { cartData: { path: ['checkout'], equals: SITE_CHECKOUT } } : {}),
     emailStage: { lt: FINAL_STAGE },
     OR: [
       { emailStage: 0, updatedAt: { lte: since(1) } },
