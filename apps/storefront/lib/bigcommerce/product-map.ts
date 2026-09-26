@@ -48,3 +48,15 @@ export const BIGCOMMERCE_BUNDLE_PRODUCT_IDS: Readonly<Record<string, number>> = 
   'choose-6': 121,
   'choose-12': 119,
 }
+
+/**
+ * Pack "Jar N" choices whose wording differs from the product they stand for
+ * (main store). Every other choice is matched to its product by name.
+ */
+export const BIGCOMMERCE_JAR_LABEL_PRODUCT_IDS: Readonly<Record<string, number>> = {
+  'Cherry Hot (Habanero)': 135,
+  'Garden Fresh Cilantro Hot': 103,
+  'Garden Fresh Cilantro Mild': 105,
+  'Roasted Pineapple Habanero': 112,
+  'Spanish Verde XX (Stupid) Hot': 116,
+}

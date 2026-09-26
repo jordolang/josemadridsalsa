@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { http, HttpResponse } from 'msw'
 import { revalidateTag } from 'next/cache'
+import { mirrorBigCommerceOrder } from '@/lib/bigcommerce/orders'
 import { server } from '@/tests/mocks/server'
 import { POST } from '@/app/api/webhooks/bigcommerce/route'
 import {
@@ -11,6 +12,12 @@ import {
 } from '@/lib/bigcommerce/webhooks'
 
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/server')>()),
+  // Outside a request there is no `after` queue; run the work inline.
+  after: (fn: () => unknown) => fn(),
+}))
+vi.mock('@/lib/bigcommerce/orders', () => ({ mirrorBigCommerceOrder: vi.fn() }))
 
 const API = 'https://api.bigcommerce.com/stores/testhash'
 const DESTINATION = 'https://www.josemadridsalsa.com/api/webhooks/bigcommerce'
@@ -59,9 +66,26 @@ describe('POST /api/webhooks/bigcommerce', () => {
     expect(revalidateTag).toHaveBeenCalledWith('bigcommerce:catalog', 'max')
   })
 
-  it('acknowledges other scopes without touching the cache', async () => {
-    expect((await deliver({ scope: 'store/order/created' })).status).toBe(200)
+  it('copies the order into this site on an order change, without touching the catalog cache', async () => {
+    vi.mocked(mirrorBigCommerceOrder).mockReset().mockResolvedValue({ action: 'created', orderId: 'o-1' })
+    const res = await deliver({ scope: 'store/order/statusUpdated', data: { type: 'order', id: 9595 } })
+
+    expect(res.status).toBe(200)
+    expect(mirrorBigCommerceOrder).toHaveBeenCalledWith(9595)
     expect(revalidateTag).not.toHaveBeenCalled()
+  })
+
+  it('still acknowledges an order change whose copy fails, leaving it to the hourly sweep', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(mirrorBigCommerceOrder).mockReset().mockRejectedValue(new Error('BigCommerce down'))
+    expect((await deliver({ scope: 'store/order/created', data: { id: 1 } })).status).toBe(200)
+  })
+
+  it('acknowledges other scopes without doing anything', async () => {
+    vi.mocked(mirrorBigCommerceOrder).mockReset()
+    expect((await deliver({ scope: 'store/customer/created', data: { id: 5 } })).status).toBe(200)
+    expect(revalidateTag).not.toHaveBeenCalled()
+    expect(mirrorBigCommerceOrder).not.toHaveBeenCalled()
   })
 
   it('rejects calls without the secret header', async () => {
@@ -92,9 +116,10 @@ describe('ensureBigCommerceWebhooks', () => {
 
     await expect(ensureBigCommerceWebhooks(DESTINATION)).resolves.toEqual([
       { scope: 'store/product/*', action: 'created' },
+      { scope: 'store/order/*', action: 'created' },
     ])
     expect(created).toEqual({
-      scope: 'store/product/*',
+      scope: 'store/order/*',
       destination: DESTINATION,
       is_active: true,
       headers: { [BIGCOMMERCE_WEBHOOK_SECRET_HEADER]: 'hook-secret' },
@@ -105,7 +130,12 @@ describe('ensureBigCommerceWebhooks', () => {
     let updatedPath: string | null = null
     server.use(
       http.get(`${API}/v3/hooks`, () =>
-        HttpResponse.json({ data: [{ id: 7, scope: 'store/product/*', destination: DESTINATION, is_active: false }] }),
+        HttpResponse.json({
+          data: [
+            { id: 7, scope: 'store/product/*', destination: DESTINATION, is_active: false },
+            { id: 8, scope: 'store/order/*', destination: DESTINATION, is_active: true },
+          ],
+        }),
       ),
       http.put(`${API}/v3/hooks/:id`, ({ params }) => {
         updatedPath = String(params.id)
@@ -114,16 +144,23 @@ describe('ensureBigCommerceWebhooks', () => {
     )
     await expect(ensureBigCommerceWebhooks(DESTINATION)).resolves.toEqual([
       { scope: 'store/product/*', action: 'reactivated' },
+      { scope: 'store/order/*', action: 'unchanged' },
     ])
     expect(updatedPath).toBe('7')
 
     server.use(
       http.get(`${API}/v3/hooks`, () =>
-        HttpResponse.json({ data: [{ id: 7, scope: 'store/product/*', destination: DESTINATION, is_active: true }] }),
+        HttpResponse.json({
+          data: [
+            { id: 7, scope: 'store/product/*', destination: DESTINATION, is_active: true },
+            { id: 8, scope: 'store/order/*', destination: DESTINATION, is_active: true },
+          ],
+        }),
       ),
     )
     await expect(ensureBigCommerceWebhooks(DESTINATION)).resolves.toEqual([
       { scope: 'store/product/*', action: 'unchanged' },
+      { scope: 'store/order/*', action: 'unchanged' },
     ])
   })
 

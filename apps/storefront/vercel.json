@@ -29,6 +29,10 @@
       "schedule": "0 * * * *"
     },
     {
+      "path": "/api/cron/bigcommerce-orders",
+      "schedule": "5 * * * *"
+    },
+    {
       "path": "/api/cron/quickbooks-sync",
       "schedule": "15 * * * *"
     },

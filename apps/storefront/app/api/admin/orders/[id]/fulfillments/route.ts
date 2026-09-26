@@ -12,6 +12,7 @@ import {
   fulfillOrderItems,
   validateFulfillmentRequest,
 } from '@/lib/orders/fulfillment'
+import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 
 const CreateFulfillmentSchema = z.object({
   items: z
@@ -48,6 +49,8 @@ export async function POST(
     }
 
     const { id } = await params
+    const locked = await bigCommerceOrderLock(id)
+    if (locked) return locked
     const body = CreateFulfillmentSchema.parse(await request.json())
 
     const order = await prisma.order.findUnique({

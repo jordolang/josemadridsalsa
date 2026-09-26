@@ -16,6 +16,7 @@ import {
   sendOrderCancellationEmail,
   sendRefundProcessedEmail,
 } from '@/lib/email/transactional'
+import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 
 const UpdateStatusSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']),
@@ -38,6 +39,8 @@ export async function POST(
     }
 
     const { id } = await params
+    const locked = await bigCommerceOrderLock(id)
+    if (locked) return locked
     const body = await request.json()
     const { status, adminNote } = UpdateStatusSchema.parse(body)
 

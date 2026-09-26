@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import { bigCommerceFetch } from './client'
-import { findBigCommerceProductBySlug, getBigCommerceProducts, type BigCommerceProduct } from './catalog'
+import {
+  findBigCommerceProductBySlug,
+  findProductForJarLabel,
+  getBigCommerceProducts,
+  type BigCommerceProduct,
+} from './catalog'
 import { BIGCOMMERCE_BUNDLE_PRODUCT_IDS } from './product-map'
 
 /**
@@ -47,8 +52,6 @@ export class BigCommerceCartError extends Error {
 /** What the required order-notes field gets when the shopper left no note. */
 export const DEFAULT_BUNDLE_NOTE = 'No special requests'
 
-const normalizeLabel = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
-
 function requirePurchasable(product: BigCommerceProduct | null, what: string): BigCommerceProduct {
   if (!product) throw new BigCommerceCartError(`${what} is not sold online right now.`)
   if (!product.isPurchasable) throw new BigCommerceCartError(`${product.name} is out of stock.`)
@@ -76,7 +79,7 @@ function packLineItem(
   const selections: NonNullable<BigCommerceLineItem['option_selections']> = picked.map((jar, index) => {
     const salsa = findBigCommerceProductBySlug(products, jar.slug, jar.name)
     if (!salsa) throw new BigCommerceCartError(`One of the salsas in ${pack.name} is not sold online right now.`)
-    const value = slots[index].values.find((choice) => normalizeLabel(choice.label) === normalizeLabel(salsa.name))
+    const value = slots[index].values.find((choice) => findProductForJarLabel(products, choice.label)?.id === salsa.id)
     if (!value) throw new BigCommerceCartError(`${salsa.name} is not available in ${pack.name}.`)
     return { option_id: slots[index].id, option_value: value.id }
   })

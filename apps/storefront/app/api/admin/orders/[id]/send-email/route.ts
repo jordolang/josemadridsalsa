@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
 import { sendEmail } from '@/lib/email'
 import { z } from 'zod'
+import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 
 const SendEmailSchema = z.object({
   type: z.enum(['confirmation', 'shipping', 'custom']),
@@ -163,6 +164,12 @@ export async function POST(
     const { id } = await params
     const body = await request.json()
     const { type, subject, message } = SendEmailSchema.parse(body)
+
+    // BigCommerce already sent a copied order's confirmation and shipping emails.
+    if (type !== 'custom') {
+      const locked = await bigCommerceOrderLock(id)
+      if (locked) return locked
+    }
 
     const order = await prisma.order.findUnique({
       where: { id },

@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit'
 import { buildFulfillmentUpdate, fulfillEntireOrder, recordFulfillmentEvent } from '@/lib/orders/fulfillment'
 import { EXTERNAL_LABEL_SOURCE } from '@/lib/shipping/rate-selection'
 import { z } from 'zod'
+import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 
 /**
  * Postage bought outside the system.
@@ -46,6 +47,8 @@ export async function POST(
     }
 
     const { id } = await params
+    const locked = await bigCommerceOrderLock(id)
+    if (locked) return locked
     const body = await request.json()
     const { trackingNumber, carrier, service, trackingUrl, costPaid, updateStatus } =
       TrackingSchema.parse(body)
