@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Ad platforms and analytics now see shoppers start checkout.** Neither this site nor the
+  BigCommerce store has been reporting purchases to any tracker, and once retail checks out on
+  BigCommerce's domain the last step this site can see is the hand-off. At that moment the site
+  now sends "checkout started" — with the cart's value and items — to Google Tag Manager
+  (`begin_checkout`), the Meta and TikTok pixels (`InitiateCheckout`) and Amplitude, so the funnel
+  up to checkout is measured. A blocked or missing tracker never stops the shopper reaching
+  checkout. Recording the purchase itself is a BigCommerce setting (connecting Google Analytics 4
+  and the Meta pixel under Settings → Data solutions), covered in the cutover runbook.
 - **The admin says plainly what moved to BigCommerce.** Once the storefront sells through
   BigCommerce, the Products, Inventory, Orders, Customers and Gift Certificates pages open with a
   "Managed in BigCommerce" note saying which half of the record lives there — prices, stock and
