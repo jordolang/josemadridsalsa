@@ -189,6 +189,15 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions
+  budget ran out, which stops every check from starting. Each run took about 30 minutes, and ten of
+  those were a Playwright step that hit its time limit on every run without producing a result;
+  another six were a second full run of the test suite just to produce the coverage report; and
+  every merge to main re-ran the whole thing on code its pull request had already tested. The
+  suite now runs once, gating on failures and writing the coverage report together; Playwright
+  runs only when started by hand; main is not re-run after a merge (Vercel still builds it before
+  deploying); a new push to a pull request cancels the previous run; changes that touch only docs,
+  Markdown or the desktop apps skip CI; and runs are capped at 30 minutes.
 - **The macOS admin app builds on the standalone Command Line Tools again.** `ConnectionSettings`
   held its editable endpoint in `@State`, which is a macro in the current SDK and expands through
   a plugin that ships only with a full Xcode install — so the bundle could not be built on a

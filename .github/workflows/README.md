@@ -33,25 +33,24 @@ will read. Real credentials for the agent belong in **Settings → Secrets and v
 ### CI Workflow (`ci.yml`)
 
 **Triggers:**
-- Push to `main` or `develop` branches
-- Pull requests to `main` or `develop` branches
+- Pull requests to `main` or `develop`
+- Pushes to `develop`
+- By hand (**Actions → CI → Run workflow**), optionally with the Playwright suite
 
-**Jobs:**
+Main is not re-run after a merge: the pull request already ran the same code, and Vercel builds
+main before deploying. Runs are skipped when a change touches only docs, Markdown or the desktop
+apps, and a new push to a pull request cancels the run for the previous one. Each run is capped
+at 30 minutes.
 
-1. **Lint & Type Check**
-   - Runs ESLint
-   - Runs TypeScript type checking
-   - Ensures code quality
+**One job, in order:** ESLint → TypeScript → Vitest (a single run that gates on failures and
+writes the coverage report; the 60% thresholds report but do not gate) → Next.js build →
+shipping E2E against the built app. The Playwright suite runs only when requested by hand, because
+it currently hits its 10-minute limit without producing a result.
 
-2. **Test**
-   - Runs Vitest test suite
-   - Validates application logic
-
-3. **Build**
-   - Generates Prisma client
-   - Builds Next.js application
-- Uploads build artifacts
-- Only runs if lint and tests pass
+Actions minutes are billed against the account's budget. When the budget is spent, GitHub refuses
+to start the job ("an Actions budget is preventing further use") and the check fails in seconds
+with no steps; raise the spending limit under **Settings → Billing and plans**, or wait for the
+monthly reset.
 
 ## Running Locally
 
