@@ -1,5 +1,7 @@
 import { getBigCommerceProducts, normalizeProductName, type BigCommerceProduct } from './catalog'
 import { isBigCommerceConfigured } from './config'
+import { BIGCOMMERCE_BUNDLE_PRODUCT_IDS } from './product-map'
+import { getSalsaBundle, type PackOverrides } from '@/lib/bundles'
 
 /**
  * The switch for the headless cutover. Until `NEXT_PUBLIC_COMMERCE_BACKEND` is
@@ -115,5 +117,31 @@ export function getBigCommerceOrderHistoryUrl(): string | null {
     return `${new URL(raw).origin}/account.php?action=order_status`
   } catch {
     return null
+  }
+}
+
+/**
+ * BigCommerce's price and availability for each mix-and-match pack, keyed by pack id,
+ * once the storefront sells through BigCommerce. Empty until then, or if BigCommerce
+ * cannot be reached, in which case the packs keep their listed prices — BigCommerce
+ * prices the cart at checkout either way.
+ */
+export async function getBigCommercePackOverrides(): Promise<PackOverrides> {
+  if (!isBigCommerceStorefrontEnabled()) return {}
+  try {
+    const products = await getBigCommerceProducts('main')
+    const overrides: PackOverrides = {}
+    for (const [bundleId, productId] of Object.entries(BIGCOMMERCE_BUNDLE_PRODUCT_IDS)) {
+      const product = products.find((candidate) => candidate.id === productId)
+      overrides[bundleId] = product
+        ? { price: product.price, available: product.isPurchasable }
+        : { price: getSalsaBundle(bundleId)?.price ?? 0, available: false }
+    }
+    return overrides
+  } catch (error) {
+    console.error('[bigcommerce] pack prices unavailable; showing listed prices', {
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return {}
   }
 }

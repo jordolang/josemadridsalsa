@@ -14,6 +14,7 @@ import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-gr
 import { ScrollVideoHeroHome } from '@/components/store/scroll-video-hero-home'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
+import { getBigCommercePackOverrides } from '@/lib/bigcommerce/storefront'
 
 export const revalidate = 300
 
@@ -95,9 +96,10 @@ const FUNDRAISING_STATS = [
 // on the schedule map is the only path that ever triggers a client fetch.
 export default async function Home() {
   // Fetch all data in parallel — reviews and calendar
-  const [reviewsData, calendarEvents] = await Promise.all([
+  const [reviewsData, calendarEvents, packOverrides] = await Promise.all([
     getReviewsData(),
     getCalendarEvents(),
+    getBigCommercePackOverrides(),
   ])
 
   return (
@@ -357,7 +359,7 @@ export default async function Home() {
         </ErrorBoundary>
 
         {/* Gift Box Selector Section */}
-        <GiftBoxSelector />
+        <GiftBoxSelector packOverrides={packOverrides} />
 
         {/* Location Map Section */}
         <LocationMapClient />

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProductCard, type Product } from '@/components/store/product-card'
 import { GiftBoxQuickAdd } from '@/components/store/gift-box-quick-add'
+import type { PackOverrides } from '@/lib/bundles'
 import { typicalJarPrice } from '@/lib/bundles'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +36,8 @@ interface SalsasClientProps {
   initialHeatLevel?: string
   initialSearch?: string
   initialView?: 'grid' | 'list'
+  /** Live pack prices and availability from BigCommerce, when the storefront sells through it. */
+  packOverrides?: PackOverrides
 }
 
 export function SalsasClient({
@@ -44,6 +47,7 @@ export function SalsasClient({
   initialHeatLevel,
   initialSearch,
   initialView,
+  packOverrides,
 }: SalsasClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -233,7 +237,7 @@ export function SalsasClient({
       </section>
 
       {/* Gift Box Quick Add */}
-      <GiftBoxQuickAdd jarPrice={typicalJarPrice(initialProducts.map((product) => product.price))} />
+      <GiftBoxQuickAdd jarPrice={typicalJarPrice(initialProducts.map((product) => product.price))} packOverrides={packOverrides} />
 
       {/* Products Grid */}
       <section className="py-12">

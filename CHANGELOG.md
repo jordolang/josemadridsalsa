@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Mix-and-match packs show BigCommerce's price and stock.** The four pack prices were written
+  into the site's code, so a price changed in BigCommerce would have been shown here at the old
+  figure while checkout charged the new one — and a pack BigCommerce had run out of (the Choose 3
+  is out of stock there today) could still be built and added to the cart, only to be refused at
+  checkout. With the BigCommerce switch on, the home page, the packs page and the gift-box strip
+  on the salsa and product listings read each pack's live price and availability from
+  BigCommerce, the cart splits the pack at that price, and a pack BigCommerce cannot sell shows
+  "Out of Stock" and cannot be added. If BigCommerce cannot be reached the listed prices stand.
 - **Ad platforms and analytics now see shoppers start checkout.** Neither this site nor the
   BigCommerce store has been reporting purchases to any tracker, and once retail checks out on
   BigCommerce's domain the last step this site can see is the hand-off. At that moment the site

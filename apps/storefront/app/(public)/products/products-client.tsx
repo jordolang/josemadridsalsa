@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProductCard, type Product } from '@/components/store/product-card'
 import { GiftBoxQuickAdd } from '@/components/store/gift-box-quick-add'
+import type { PackOverrides } from '@/lib/bundles'
 import { typicalJarPrice } from '@/lib/bundles'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +36,8 @@ interface ProductsClientProps {
   initialHeatLevel?: string
   initialSearch?: string
   initialView?: 'grid' | 'list'
+  /** Live pack prices and availability from BigCommerce, when the storefront sells through it. */
+  packOverrides?: PackOverrides
 }
 
 export function ProductsClient({
@@ -44,6 +47,7 @@ export function ProductsClient({
   initialHeatLevel,
   initialSearch,
   initialView,
+  packOverrides,
 }: ProductsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -238,7 +242,7 @@ export function ProductsClient({
       </section>
 
       {/* Gift Box Quick Add */}
-      <GiftBoxQuickAdd jarPrice={jarPrice} />
+      <GiftBoxQuickAdd jarPrice={jarPrice} packOverrides={packOverrides} />
 
       {/* Products Grid */}
       <section className="py-12">
