@@ -75,6 +75,20 @@ that domain. josemadrid.net starts sending carts there.
 
 **Rollback:** remove `NEXT_PUBLIC_COMMERCE_BACKEND` and redeploy.
 
+### Purchase tracking
+
+Purchases now happen on BigCommerce's checkout, so they are recorded by the trackers connected
+inside BigCommerce, not by this site. Neither site records purchases today. The website already
+reports "checkout started" to all of these at the hand-off. In **BigCommerce → Settings → Data
+solutions**, connect them using the same accounts the website uses:
+
+- **Google Analytics 4**: the GA4 property behind the website's Google Tag Manager container
+  `GTM-NTWG6BQW`. Then in Google Analytics → Admin → Data streams → *Configure tag settings* →
+  *Configure your domains*, list `josemadrid.net`, `josemadridsalsa.com` and
+  `shop.josemadridsalsa.com`, so a visit and its purchase count as one journey.
+- **Meta pixel**: `2546527762445636`.
+- **TikTok pixel**: `D8OEDO3C77U56UIVDE3G`, through BigCommerce's TikTok channel or app.
+
 ## Phase 3 — Move the domains
 
 ### 3.1 Move the BigCommerce storefront to a subdomain (call BigCommerce)
@@ -98,6 +112,23 @@ Ask BigCommerce support:
 
 Add the DNS record they give you. Wait until `https://shop.josemadridsalsa.com` loads the old
 store over HTTPS, then continue.
+
+**Then keep the old store out of search results.** At `shop.josemadridsalsa.com` the old
+store still serves every product page, and Google would treat them as duplicates of the new
+site's. In **BigCommerce → Settings → Storefront → Search engine robots** (the robots.txt for
+the "Jose Madrid Salsa" storefront), replace the contents with:
+
+```text
+User-agent: *
+Disallow: /
+```
+
+<Callout type="warn" title="Only after the move">
+This robots.txt belongs to the storefront, not to a domain. Until BigCommerce support has moved
+the storefront to `shop.josemadridsalsa.com`, that storefront *is* josemadridsalsa.com, and this
+would hide the live store from Google. Checkout keeps working either way; search engines never
+need to read it.
+</Callout>
 
 ### 3.2 Point josemadridsalsa.com at Vercel
 
@@ -149,6 +180,9 @@ josemadrid.net has to be updated to `https://www.josemadridsalsa.com/...`:
 - Old addresses redirect: `/original-hot/`, `/choose-6/`, `/cart.php` and `/login.php` each land on
   a real page (the full list is `apps/storefront/bigcommerce-redirects.mjs`).
 - A checkout lands on `shop.josemadridsalsa.com`.
+- `https://shop.josemadridsalsa.com/robots.txt` shows `Disallow: /`, and
+  `https://www.josemadridsalsa.com/robots.txt` does **not**; it's this site's own, which allows
+  the store pages.
 - Signing in with Google works.
 - A test Stripe webhook from the Stripe dashboard returns 200.
 

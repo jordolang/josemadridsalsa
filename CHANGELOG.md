@@ -55,7 +55,11 @@ the root `package.json` is canonical.
   Once the old BigCommerce store moves to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`),
   sign-in, account, gift-certificate and wishlist links — including the ones in past order
   emails — go to the customer's real BigCommerce account there instead. The full cutover is
-  written up step by step in the new BigCommerce Cutover Runbook. A signed-in customer's account
+  written up step by step in the new BigCommerce Cutover Runbook. The runbook now also covers
+  keeping the old store's pages at `shop.josemadridsalsa.com` out of Google (a robots.txt change
+  in BigCommerce that must wait until the store has moved there, or it would hide the live
+  store), and connecting Google Analytics 4 and the Meta and TikTok pixels in BigCommerce so
+  purchases on its checkout are recorded. A signed-in customer's account
   page also links to that BigCommerce order history, where retail orders placed on the new site
   are tracked.
 - **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls
