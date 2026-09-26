@@ -252,6 +252,27 @@ describe('mirrorBigCommerceOrder', () => {
     expect(db.order.create).not.toHaveBeenCalled()
   })
 
+  it('counts an order marked Shipped as fulfilled even when BigCommerce recorded no per-item shipment', async () => {
+    // Live data: order 9580 is Shipped with quantity_shipped 0 on every line and no shipments.
+    useOrder({ status_id: 2 }, [{ ...packLine, quantity_shipped: 0 }])
+    db.order.findUnique.mockResolvedValue({ id: 'o-1', _count: { fulfillments: 0, returnRequests: 0 } })
+
+    await mirrorBigCommerceOrder(9595, { catalog, siteProducts })
+
+    expect(db.order.update.mock.calls[0][0].data).toMatchObject({ status: 'SHIPPED', fulfillmentStatus: 'FULFILLED' })
+    const lines = db.orderItem.createMany.mock.calls[0][0].data as Array<{ quantity: number; quantityFulfilled: number }>
+    expect(lines.every((line) => line.quantityFulfilled === line.quantity)).toBe(true)
+  })
+
+  it('still counts items one by one for a partially shipped order', async () => {
+    useOrder({ status_id: 3 }, [{ ...packLine, quantity: 2, quantity_shipped: 1, total_ex_tax: '56.0000' }])
+    db.order.findUnique.mockResolvedValue({ id: 'o-1', _count: { fulfillments: 0, returnRequests: 0 } })
+
+    await mirrorBigCommerceOrder(9595, { catalog, siteProducts })
+
+    expect(db.order.update.mock.calls[0][0].data).toMatchObject({ fulfillmentStatus: 'PARTIALLY_FULFILLED' })
+  })
+
   it('leaves lines alone once something on this site points at them', async () => {
     useOrder({ status_id: 2 })
     db.order.findUnique.mockResolvedValue({ id: 'o-1', _count: { fulfillments: 1, returnRequests: 0 } })

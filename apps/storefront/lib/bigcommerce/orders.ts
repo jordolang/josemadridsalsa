@@ -76,6 +76,9 @@ type RawShipment = { tracking_number: string; tracking_carrier: string; tracking
 
 // ---- Status ----
 
+/** Shipped (2) and Completed (10): every item has gone out, whatever the per-item counts say. */
+const FULLY_SHIPPED_STATUS_IDS = new Set([2, 10])
+
 type MirroredStatus = { status: OrderStatus; paymentStatus: PaymentStatus }
 
 /**
@@ -265,7 +268,14 @@ export async function mirrorBigCommerceOrder(
 
   const catalog = context?.catalog ?? (await getBigCommerceProducts('main'))
   const siteProducts = context?.siteProducts ?? (await loadSiteProducts())
-  const { items, unmatched } = buildMirrorItems(lines ?? [], catalog, siteProducts)
+  const built = buildMirrorItems(lines ?? [], catalog, siteProducts)
+  const unmatched = built.unmatched
+  // Staff mark orders Shipped (or Completed) by changing the status, usually without recording
+  // a shipment per item, so BigCommerce's shipped quantities stay at zero. Those statuses mean
+  // the whole order went out; only Partially Shipped needs the per-item counts.
+  const items = FULLY_SHIPPED_STATUS_IDS.has(order.status_id)
+    ? built.items.map((item) => ({ ...item, quantityFulfilled: item.quantity }))
+    : built.items
 
   const shipments =
     itemsShipped > 0
