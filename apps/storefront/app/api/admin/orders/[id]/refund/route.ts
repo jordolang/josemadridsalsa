@@ -5,6 +5,7 @@ import { logAuditWithRequest } from '@/lib/audit';
 import prisma from '@/lib/prisma';
 import { getStripe } from '@/lib/stripe';
 import { isPaid } from '@/lib/payments/status';
+import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock';
 
 /**
  * POST /api/admin/orders/[id]/refund
@@ -19,6 +20,8 @@ export async function POST(
     const user = await requirePermission('orders:write');
 
     const { id } = await params;
+    const locked = await bigCommerceOrderLock(id)
+    if (locked) return locked
 
     // Parse request body
     const body = await req.json();

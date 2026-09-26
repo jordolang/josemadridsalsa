@@ -8,13 +8,12 @@ vi.mock('@/lib/rbac', () => ({
   requirePermission: vi.fn(),
 }))
 
-vi.mock('@/lib/prisma', () => ({
-  default: {
-    order: {
-      findUnique: vi.fn(),
-    },
-  },
-}))
+vi.mock('@/lib/prisma', () => {
+  // `lib/prisma` exports the client both ways; the route reads the default, the
+  // BigCommerce order lock the named one.
+  const client = { order: { findUnique: vi.fn() } }
+  return { default: client, prisma: client }
+})
 
 vi.mock('@/lib/audit', () => ({
   logAuditWithRequest: vi.fn(),
@@ -86,6 +85,23 @@ describe('POST /api/admin/orders/[id]/refund', () => {
   // ========================================
   // 1. Refund Amount Validation Tests
   // ========================================
+
+  it('refuses to refund a copied BigCommerce order, which is refunded in BigCommerce', async () => {
+    const { requirePermission } = await import('@/lib/rbac')
+    const { default: prisma } = await import('@/lib/prisma')
+
+    vi.mocked(requirePermission).mockResolvedValue(mockUser)
+    vi.mocked(prisma.order.findUnique).mockResolvedValue({ ...mockOrder, importSource: 'bigcommerce' } as any)
+
+    const request = new NextRequest('http://localhost/api/admin/orders/order-123/refund', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 50 }),
+    })
+    const response = await POST(request, { params: Promise.resolve({ id: 'order-123' }) })
+
+    expect(response.status).toBe(409)
+    expect(mockStripeRefundsCreate).not.toHaveBeenCalled()
+  })
 
   it('should refund valid amount successfully', async () => {
     const { requirePermission } = await import('@/lib/rbac')

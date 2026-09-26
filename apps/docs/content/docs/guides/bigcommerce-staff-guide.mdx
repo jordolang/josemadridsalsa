@@ -35,7 +35,10 @@ see that note, the thing you're looking for is probably in BigCommerce.
 
 ## Two kinds of orders
 
-- **Retail orders** (anyone buying salsa from the website) are in **BigCommerce → Orders**.
+- **Retail orders** (anyone buying salsa from the website) are worked in **BigCommerce → Orders**.
+  A read-only copy numbered `BC-<number>` also appears in the website admin's Orders list, so the
+  website's sales reports include them. Ship, refund and cancel them in BigCommerce; the website
+  refuses those actions on a copy and updates it by itself.
 - **Fundraiser orders** (bought from a fundraiser's page, or through a student's referral link)
   are in the **website admin → Orders** and the fundraiser's own page, because they're priced by
   the campaign and credited to the group.

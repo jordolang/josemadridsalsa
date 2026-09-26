@@ -12,6 +12,7 @@ import {
 } from './mappers'
 import { buildJournalEntry, journalDocNumber, JOURNAL_SYNC_SOURCES } from './journal'
 import { getLedgerAccountMap } from './ledger-account-settings'
+import { BIGCOMMERCE_ORDER_SOURCE } from '@/lib/bigcommerce/orders'
 
 /**
  * Pushes paid website orders into QuickBooks Online as SalesReceipts.
@@ -548,6 +549,12 @@ export async function enqueuePaidOrders(limit = 100): Promise<number> {
     where: {
       paymentStatus: 'PAID',
       ...(settings.syncStartDate && { createdAt: { gte: settings.syncStartDate } }),
+      // Retail orders copied from BigCommerce stay out unless the books are meant to take
+      // them per order. If online revenue already reaches QuickBooks another way (the
+      // Stripe/PayPal deposits), syncing these too would count every retail sale twice.
+      ...(process.env.BIGCOMMERCE_ORDERS_TO_QUICKBOOKS !== 'true' && {
+        NOT: { importSource: BIGCOMMERCE_ORDER_SOURCE },
+      }),
     },
     select: { id: true },
     orderBy: { createdAt: 'asc' },

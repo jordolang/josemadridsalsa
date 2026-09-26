@@ -122,7 +122,7 @@ const toCents = (value: number) => Math.round(value * 100)
  * with the largest fractional part. Without it a pack of three at $23 would come to $23.01
  * or $22.99 depending on which way each line rounded.
  */
-function allocateCents(totalCents: number, weights: number[]): number[] {
+export function allocateCents(totalCents: number, weights: number[]): number[] {
   const weightTotal = weights.reduce((sum, weight) => sum + weight, 0)
   // Every jar free is a legitimate catalogue state; splitting by weight would divide by zero,
   // so fall back to an even split.

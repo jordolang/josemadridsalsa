@@ -56,14 +56,28 @@ that domain. josemadrid.net starts sending carts there.
 
 1. Set `NEXT_PUBLIC_COMMERCE_BACKEND=bigcommerce` in Vercel (Production) and **redeploy**. The
    setting is read at build time.
-2. Register the product webhooks so BigCommerce edits reach the site within seconds. Run this from
-   `apps/storefront`, with the production values of the variables above in your shell:
+2. Register the webhooks, so BigCommerce product edits reach the site within seconds and every
+   BigCommerce order is copied into this site's order table (for dashboards, margin reports and
+   "verified buyer" reviews). Run this from `apps/storefront`, with the production values of the
+   variables above in your shell:
 
    ```bash
    npm run bigcommerce:webhooks -- https://www.josemadrid.net
    ```
 
-3. Check it:
+3. Optional: copy past BigCommerce orders into this site too, so reports cover them. Pick a start
+   date; re-running is safe:
+
+   ```bash
+   npm run bigcommerce:orders -- 2026-01-01
+   ```
+
+   An hourly job (`/api/cron/bigcommerce-orders`) also re-copies anything changed in the last three
+   days, in case a webhook was missed.
+4. **QuickBooks:** copied orders are *not* sent to QuickBooks unless
+   `BIGCOMMERCE_ORDERS_TO_QUICKBOOKS=true`. Check with whoever keeps the books how online sales reach
+   QuickBooks today. If the Stripe and PayPal deposits already book them, leave it off.
+5. Check it:
    - A salsa page shows BigCommerce's price.
    - Change a price in BigCommerce, reload the page a few seconds later, and see the new price.
    - Add a jar and a Choose-6 to the cart and check out. You should land on BigCommerce's checkout
@@ -72,6 +86,8 @@ that domain. josemadrid.net starts sending carts there.
      it there.
    - Open a fundraiser referral link, add a jar, and check out. That cart must stay on this site's
      checkout.
+   - Within a minute of the test order, it appears in the **website admin → Orders** as
+     `BC-<number>`, marked read-only.
 
 **Rollback:** remove `NEXT_PUBLIC_COMMERCE_BACKEND` and redeploy.
 
