@@ -198,6 +198,12 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Copied BigCommerce orders marked Shipped were showing as unfulfilled.** Staff mark an order
+  shipped by changing its status in BigCommerce, usually without recording a shipment per item, so
+  BigCommerce's shipped quantities stay at zero and the copy read "Shipped" but "Unfulfilled" —
+  which would have left every shipped retail order in this site's "awaiting fulfillment" views.
+  Shipped and Completed now count the whole order as fulfilled; Partially Shipped still counts item
+  by item. Found in the first live sync, where it affected every shipped order copied.
 - **A mix-and-match pack holding any of five salsas would have been refused at the BigCommerce
   checkout.** The handoff matched each chosen jar to BigCommerce's "Jar" choices by name, but five
   of the 27 choices are worded differently from their product ("Garden Fresh Cilantro Mild" for
