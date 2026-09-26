@@ -4,6 +4,7 @@ import {
   SALSA_BUNDLES,
   bundleSavings,
   getSalsaBundle,
+  offeredBundles,
   priceCartLines,
   typicalJarPrice,
 } from '@/lib/bundles'
@@ -198,5 +199,33 @@ describe('salsa bundles', () => {
       expect(bundleSavings(getSalsaBundle('choose-5')!, 5)).toBeNull()
       expect(bundleSavings(getSalsaBundle('choose-5')!, null)).toBeNull()
     })
+  })
+})
+
+describe('offeredBundles', () => {
+  it('lists the packs at their listed prices, all available, with no live data', () => {
+    expect(offeredBundles().map((bundle) => [bundle.id, bundle.price, bundle.available])).toEqual(
+      SALSA_BUNDLES.map((bundle) => [bundle.id, bundle.price, true]),
+    )
+  })
+
+  it('applies BigCommerce\'s live price and availability', () => {
+    const offered = offeredBundles({ 'choose-5': { price: 30, available: true }, 'choose-3': { price: 23, available: false } })
+    expect(offered.find((bundle) => bundle.id === 'choose-5')).toMatchObject({ price: 30, available: true })
+    expect(offered.find((bundle) => bundle.id === 'choose-3')).toMatchObject({ available: false })
+    expect(offered.find((bundle) => bundle.id === 'choose-12')).toMatchObject({ price: 60, available: true })
+  })
+})
+
+describe('priceCartLines with a live pack price', () => {
+  it('splits the pack at the live price, not the listed one', () => {
+    const lines = ['a', 'b', 'c', 'd', 'e'].map((productId) => ({
+      productId,
+      quantity: 1,
+      bundleId: 'choose-5',
+      bundleGroupId: 'g1',
+    }))
+    const priced = priceCartLines(lines, retail, { 'choose-5': { price: 30, available: true } })
+    expect(Math.round(priced.reduce((sum, line) => sum + line.lineTotal, 0) * 100)).toBe(3000)
   })
 })

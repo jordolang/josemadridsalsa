@@ -67,6 +67,22 @@ export function getSalsaBundle(bundleId: string): SalsaBundle | undefined {
 }
 
 /**
+ * Live price and availability for a pack, from BigCommerce once the storefront sells
+ * through it. A pack with no override uses the price above and is available.
+ */
+export type PackOverrides = Partial<Record<string, { price: number; available: boolean }>>
+
+export type OfferedSalsaBundle = SalsaBundle & { available: boolean }
+
+/** The packs as they are offered right now, with any live price and availability applied. */
+export function offeredBundles(overrides: PackOverrides = {}): OfferedSalsaBundle[] {
+  return SALSA_BUNDLES.map((bundle) => {
+    const live = overrides[bundle.id]
+    return { ...bundle, price: live?.price ?? bundle.price, available: live?.available ?? true }
+  })
+}
+
+/**
  * A cart line as both the browser and the checkout routes see it.
  *
  * `bundleId` says which pack a line belongs to; `bundleGroupId` says which *instance* of
@@ -148,7 +164,8 @@ export function allocateCents(totalCents: number, weights: number[]): number[] {
  */
 export function priceCartLines<T extends BundleCartLine>(
   lines: readonly T[],
-  retailUnitPrice: (line: T) => number
+  retailUnitPrice: (line: T) => number,
+  packOverrides: PackOverrides = {}
 ): Array<PricedCartLine<T>> {
   const priced = new Array<PricedCartLine<T>>(lines.length)
   const groups = new Map<string, number[]>()
@@ -196,7 +213,7 @@ export function priceCartLines<T extends BundleCartLine>(
     }
 
     const weights = groupLines.map((line) => toCents(retailUnitPrice(line)) * line.quantity)
-    const allocated = allocateCents(toCents(bundle.price), weights)
+    const allocated = allocateCents(toCents(packOverrides[bundleId]?.price ?? bundle.price), weights)
 
     indexes.forEach((lineIndex, position) => {
       const line = lines[lineIndex]

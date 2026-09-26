@@ -14,6 +14,22 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Mix-and-match packs show BigCommerce's price and stock.** The four pack prices were written
+  into the site's code, so a price changed in BigCommerce would have been shown here at the old
+  figure while checkout charged the new one — and a pack BigCommerce had run out of (the Choose 3
+  is out of stock there today) could still be built and added to the cart, only to be refused at
+  checkout. With the BigCommerce switch on, the home page, the packs page and the gift-box strip
+  on the salsa and product listings read each pack's live price and availability from
+  BigCommerce, the cart splits the pack at that price, and a pack BigCommerce cannot sell shows
+  "Out of Stock" and cannot be added. If BigCommerce cannot be reached the listed prices stand.
+- **Ad platforms and analytics now see shoppers start checkout.** Neither this site nor the
+  BigCommerce store has been reporting purchases to any tracker, and once retail checks out on
+  BigCommerce's domain the last step this site can see is the hand-off. At that moment the site
+  now sends "checkout started" — with the cart's value and items — to Google Tag Manager
+  (`begin_checkout`), the Meta and TikTok pixels (`InitiateCheckout`) and Amplitude, so the funnel
+  up to checkout is measured. A blocked or missing tracker never stops the shopper reaching
+  checkout. Recording the purchase itself is a BigCommerce setting (connecting Google Analytics 4
+  and the Meta pixel under Settings → Data solutions), covered in the cutover runbook.
 - **BigCommerce retail orders are copied into this site, so its reports keep seeing retail
   sales.** Once retail checks out in BigCommerce, those orders never reached this site's order
   table — and the sales dashboards, product and margin reports and "verified buyer" reviews all
@@ -55,7 +71,11 @@ the root `package.json` is canonical.
   Once the old BigCommerce store moves to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`),
   sign-in, account, gift-certificate and wishlist links — including the ones in past order
   emails — go to the customer's real BigCommerce account there instead. The full cutover is
-  written up step by step in the new BigCommerce Cutover Runbook. A signed-in customer's account
+  written up step by step in the new BigCommerce Cutover Runbook. The runbook now also covers
+  keeping the old store's pages at `shop.josemadridsalsa.com` out of Google (a robots.txt change
+  in BigCommerce that must wait until the store has moved there, or it would hide the live
+  store), and connecting Google Analytics 4 and the Meta and TikTok pixels in BigCommerce so
+  purchases on its checkout are recorded. A signed-in customer's account
   page also links to that BigCommerce order history, where retail orders placed on the new site
   are tracked.
 - **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls

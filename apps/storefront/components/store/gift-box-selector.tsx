@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Plus, Minus, X, ChevronDown } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
-import { SALSA_BUNDLES, type SalsaBundle } from '@/lib/bundles'
+import { offeredBundles, type OfferedSalsaBundle, type PackOverrides } from '@/lib/bundles'
 import { formatPrice } from '@/lib/utils'
 
 type Product = {
@@ -19,9 +19,10 @@ type Product = {
   sku: string
 }
 
-export function GiftBoxSelector() {
+export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOverrides } = {}) {
+  const bundles = useMemo(() => offeredBundles(packOverrides), [packOverrides])
   const [products, setProducts] = useState<Product[]>([])
-  const [selectedBox, setSelectedBox] = useState<SalsaBundle | null>(null)
+  const [selectedBox, setSelectedBox] = useState<OfferedSalsaBundle | null>(null)
   const [selections, setSelections] = useState<Record<number, Product | null>>({})
   const [loading, setLoading] = useState(true)
   const addBundle = useCartStore((state) => state.addBundle)
@@ -43,7 +44,7 @@ export function GiftBoxSelector() {
     fetchProducts()
   }, [])
 
-  const handleSelectBox = (box: SalsaBundle) => {
+  const handleSelectBox = (box: OfferedSalsaBundle) => {
     setSelectedBox(box)
     // Initialize selections with null for each slot
     const newSelections: Record<number, Product | null> = {}
@@ -89,7 +90,8 @@ export function GiftBoxSelector() {
         sku: product.sku,
         heatLevel: product.heatLevel,
         price: product.price,
-      }))
+      })),
+      packOverrides
     )
 
     if (!added) {
@@ -126,11 +128,16 @@ export function GiftBoxSelector() {
 
         {!selectedBox ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {SALSA_BUNDLES.map((box) => (
+            {bundles.map((box) => (
               <div
                 key={box.id}
-                className="card p-6 text-center group hover:scale-105 transition-transform duration-300 cursor-pointer"
-                onClick={() => handleSelectBox(box)}
+                className={
+                  box.available
+                    ? 'card p-6 text-center group hover:scale-105 transition-transform duration-300 cursor-pointer'
+                    : 'card p-6 text-center opacity-60'
+                }
+                onClick={box.available ? () => handleSelectBox(box) : undefined}
+                aria-disabled={!box.available}
               >
                 <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                   <Image
@@ -143,7 +150,9 @@ export function GiftBoxSelector() {
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-foreground">{box.name}</h3>
                 <p className="text-2xl font-bold text-salsa-600 mb-4">{formatPrice(box.price)}</p>
-                <Button className="w-full">Select This Box</Button>
+                <Button className="w-full" disabled={!box.available}>
+                  {box.available ? 'Select This Box' : 'Out of Stock'}
+                </Button>
               </div>
             ))}
           </div>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import type { CartItem } from '@/lib/store/cart'
 import { getReferralCodeFromCookie } from '@/lib/fundraising/referral-tracker.client'
+import { trackCheckoutStarted } from '@/lib/analytics/checkout-started'
 
 /**
  * Sends a retail cart to BigCommerce's hosted checkout. The cart is rebuilt in
@@ -50,6 +51,7 @@ export function BigCommerceCheckoutHandoff({
         }
         if (res.ok && data.siteCheckout) return onSiteCheckout()
         if (!res.ok || !data.checkoutUrl) throw new Error(data.error || 'Checkout is unavailable right now.')
+        trackCheckoutStarted(items)
         window.location.assign(data.checkoutUrl)
       })
       .catch((err: unknown) => {
