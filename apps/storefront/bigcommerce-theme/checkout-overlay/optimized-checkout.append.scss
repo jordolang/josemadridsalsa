@@ -1,0 +1,331 @@
+// =============================================================================
+// Jose Madrid — checkout matched to josemadrid.net
+// Appended to assets/scss/optimized-checkout.scss by `npm run bigcommerce:theme --
+// apply-checkout-style`. Colours come from the storefront's tailwind.config.ts (salsa +
+// stone); the class names are the ones BigCommerce's checkout renders (read from a live
+// checkout, September 2026). Everything here is presentation only.
+// =============================================================================
+
+$jm-ink: #1c1917;        // stone-900
+$jm-ink-soft: #57534e;   // stone-600
+$jm-muted: #78716c;      // stone-500
+$jm-line: #e7e5e4;       // stone-200
+$jm-line-strong: #d6d3d1; // stone-300
+$jm-page: #fafaf9;       // stone-50
+$jm-red: #d53030;        // salsa-600
+$jm-red-dark: #b91c1c;   // salsa-700
+$jm-radius: 16px;        // rounded-2xl, the storefront's cards
+$jm-radius-control: 10px;
+$jm-shadow: 0 1px 2px rgba(28, 25, 23, 0.05), 0 8px 24px -12px rgba(28, 25, 23, 0.12);
+
+body {
+    background: $jm-page;
+}
+
+// ---- Header: logo + wordmark left, secure badge + back link right ----------------
+
+.jm-header {
+    background: #ffffff;
+    border-bottom: 1px solid $jm-line;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.jm-header-inner {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: 0 auto;
+    max-width: 1180px;
+    padding: 12px 24px;
+}
+
+.jm-brand {
+    align-items: center;
+    color: $jm-ink;
+    display: inline-flex;
+    gap: 12px;
+    text-decoration: none;
+}
+
+.jm-brand-logo {
+    height: 44px;
+    max-height: 44px;
+    width: auto;
+}
+
+.jm-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.jm-brand-name {
+    color: $jm-ink;
+    font-family: 'Volkhov', Georgia, serif;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.jm-brand-tagline {
+    color: $jm-red;
+    font-family: 'Montserrat', Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    margin-top: 3px;
+    text-transform: uppercase;
+}
+
+.jm-header-actions {
+    align-items: center;
+    display: flex;
+    gap: 20px;
+}
+
+.jm-secure,
+.jm-back {
+    align-items: center;
+    display: inline-flex;
+    font-family: 'Montserrat', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    gap: 6px;
+}
+
+.jm-secure {
+    color: $jm-ink-soft;
+}
+
+.jm-back {
+    border: 1px solid $jm-line-strong;
+    border-radius: 999px;
+    color: $jm-ink;
+    padding: 7px 14px 7px 10px;
+    text-decoration: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.jm-back:hover {
+    border-color: $jm-red;
+    color: $jm-red;
+}
+
+// BigCommerce's own header rules size it for the old full-width logo (a 120px minimum height)
+// and spread its contents evenly; these win on specificity so the bar hugs its contents with the
+// brand left and the actions right, like the storefront's navigation.
+.checkoutHeader.jm-header {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+}
+
+.checkoutHeader.jm-header .jm-header-inner {
+    justify-content: space-between;
+}
+
+// The header container carries clearfix pseudo-elements; in a flex row they become two extra
+// items that the free space is shared with, which pushed the brand ~220px in from the edge.
+.checkoutHeader.jm-header .jm-header-inner::before,
+.checkoutHeader.jm-header .jm-header-inner::after {
+    content: none;
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .jm-header-inner {
+        padding: 10px 16px;
+    }
+
+    .jm-brand-logo {
+        height: 36px;
+    }
+
+    .jm-brand-name {
+        font-size: 18px;
+    }
+
+    .jm-secure-label {
+        display: none;
+    }
+}
+
+// ---- Page layout -----------------------------------------------------------------
+
+.jm-main {
+    padding-top: 32px;
+}
+
+// Both columns start at the same line, so the first step card and the summary card align.
+// BigCommerce gives the summary a 3rem top margin of its own.
+.jm-main .layout-main,
+.jm-main .layout-cart,
+.jm-main .cart {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.layout {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1180px;
+}
+
+// ---- Each step as a card, like the storefront's panels ---------------------------
+
+.checkout-step {
+    background: #ffffff;
+    border: 1px solid $jm-line;
+    border-radius: $jm-radius;
+    box-shadow: $jm-shadow;
+    margin-bottom: 16px;
+    padding: 20px 24px;
+}
+
+.checkout-step--current {
+    border-color: $jm-line-strong;
+}
+
+.stepHeader-title {
+    color: $jm-ink;
+    font-weight: 700;
+}
+
+.stepHeader-counter {
+    border-radius: 999px;
+}
+
+// ---- Form controls ---------------------------------------------------------------
+
+.form-input,
+.optimizedCheckout-form-input,
+.form-select,
+.optimizedCheckout-form-select,
+.form-textarea {
+    border-radius: $jm-radius-control;
+    min-height: 44px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-input:focus,
+.optimizedCheckout-form-input:focus,
+.form-select:focus,
+.optimizedCheckout-form-select:focus,
+.form-textarea:focus {
+    border-color: $jm-red;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.18);
+    outline: none;
+}
+
+.form-label,
+.optimizedCheckout-form-label {
+    color: $jm-ink-soft;
+    font-weight: 500;
+}
+
+.form-checklist,
+.optimizedCheckout-form-checklist {
+    border-radius: $jm-radius-control;
+    overflow: hidden;
+}
+
+// ---- Buttons: rounded, sentence case, like "Select This Box" ---------------------
+
+.button,
+.optimizedCheckout-buttonPrimary,
+.optimizedCheckout-buttonSecondary {
+    border-radius: $jm-radius-control;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    min-height: 44px;
+    text-transform: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+// ---- Order summary: a floating card that stays in view ---------------------------
+
+.cart,
+.optimizedCheckout-orderSummary {
+    background: #ffffff;
+    border: 1px solid $jm-line;
+    border-radius: $jm-radius;
+    box-shadow: $jm-shadow;
+    overflow: hidden;
+}
+
+@media (min-width: 968px) {
+    .layout-cart {
+        align-self: flex-start;
+        position: sticky;
+        top: 88px;
+    }
+}
+
+.cart-title {
+    color: $jm-ink;
+    font-weight: 700;
+}
+
+.cart-section {
+    border-color: $jm-line;
+}
+
+.product-figure img,
+.productList-item img {
+    border-radius: 8px;
+}
+
+.product-title {
+    color: $jm-ink;
+    font-weight: 500;
+}
+
+.product-price {
+    color: $jm-red;
+    font-weight: 600;
+}
+
+.cart-priceItem--total {
+    color: $jm-ink;
+}
+
+.cart-priceItem--total .cart-priceItem-value {
+    color: $jm-red;
+}
+
+// ---- Footer ----------------------------------------------------------------------
+
+.jm-footer {
+    align-items: center;
+    border-top: 1px solid $jm-line;
+    color: $jm-muted;
+    display: flex;
+    flex-wrap: wrap;
+    font-family: 'Montserrat', Arial, sans-serif;
+    font-size: 13px;
+    gap: 12px 24px;
+    justify-content: space-between;
+    margin: 40px auto 0;
+    max-width: 1180px;
+    padding: 24px;
+}
+
+.jm-footer p {
+    margin: 0;
+}
+
+.jm-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.jm-footer-links a {
+    color: $jm-ink-soft;
+    text-decoration: none;
+}
+
+.jm-footer-links a:hover {
+    color: $jm-red;
+}

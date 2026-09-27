@@ -45,22 +45,30 @@ see that note, the thing you're looking for is probably in BigCommerce.
 
 ## The checkout's look
 
-BigCommerce's checkout takes its colours from the store's theme. Since September 2026 the live
-theme is **"Cornerstone — Jose Madrid checkout"**: a copy of the original Cornerstone theme
-whose checkout colours match this website (white header, near-black buttons, salsa-red links
-and step numbers). Only the checkout changed; every other page of the old store is as it was.
+BigCommerce's checkout is designed to look like this website. The live theme is
+**"Cornerstone — Jose Madrid checkout"**, a copy of the original Cornerstone theme with a
+redesigned checkout:
+
+- A slim header with the logo, "Jose Madrid / Salsa · Est. 1987", a "Secure checkout" badge
+  and a "Back to shop" link to the website.
+- Each step (Customer, Shipping, Billing, Payment) in its own rounded card, with rounded fields
+  and buttons, salsa-red accents and the website's fonts.
+- An order summary card that stays in view, with prices and the total in red.
+- A footer linking to Shipping, Returns, Privacy and Contact on the website.
+
+Only the look changed. Ordering, payment, tax, shipping and the order emails are BigCommerce's,
+exactly as before, and every other page of the old store is untouched.
 
 - **To go back to the original look**, a developer runs
-  `npm run bigcommerce:theme --workspace @jose-madrid/storefront -- restore` (or you can tell
-  Claude "restore the BigCommerce theme"). The original theme is also still under
-  **BigCommerce → Storefront → Themes → My Themes** as "Cornerstone" and can be applied there.
-- **To change the checkout colours again**, edit `apps/storefront/bigcommerce-theme/checkout-style.json`
-  and run `npm run bigcommerce:theme --workspace @jose-madrid/storefront -- apply-checkout-style`.
-  Only checkout settings can be changed this way.
-- A full backup of the original theme (the theme package, all 328 settings, and exactly which
-  style was live) is kept in `apps/storefront/bigcommerce-theme/backups/2026-09-26/`.
-- Changing the theme in BigCommerce's own Theme Editor still works; it simply edits whichever
-  theme is live.
+  `npm run bigcommerce:theme --workspace @jose-madrid/storefront -- restore` (or tell Claude
+  "restore the BigCommerce theme"). The original "Cornerstone" is also still under
+  **BigCommerce → Storefront → Themes → My Themes** and can be applied there.
+- **To change the design**, edit the files in `apps/storefront/bigcommerce-theme/`:
+  `checkout-style.json` (colours), `checkout-overlay/templates/pages/` (the header and footer
+  markup) and `checkout-overlay/optimized-checkout.append.scss` (layout, corners, spacing). Then
+  run `npm run bigcommerce:theme --workspace @jose-madrid/storefront -- apply-checkout-style`.
+  Each run uploads a new copy of the theme; older copies stay in My Themes until deleted there.
+- A full backup of the original theme is kept in `apps/storefront/bigcommerce-theme/backups/2026-09-26/`.
 
 ## When something looks wrong
 

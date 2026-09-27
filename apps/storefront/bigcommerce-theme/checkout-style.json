@@ -1,11 +1,11 @@
 {
-  "_comment": "Checkout colours matched to josemadrid.net (tailwind.config.ts: salsa + stone). Fonts already match: Montserrat body, Volkhov headings. Only optimizedCheckout-* keys are allowed.",
+  "_comment": "Checkout colours matched to josemadrid.net (tailwind.config.ts: salsa + stone). Fonts already match: Montserrat body, Volkhov headings. Only optimizedCheckout-* keys are allowed. Layout, header and rounded corners live in checkout-overlay/.",
   "optimizedCheckout-header-backgroundColor": "#ffffff",
   "optimizedCheckout-header-borderColor": "#e7e5e4",
   "optimizedCheckout-header-textColor": "#1c1917",
   "optimizedCheckout-headingPrimary-color": "#1c1917",
   "optimizedCheckout-headingSecondary-color": "#57534e",
-  "optimizedCheckout-body-backgroundColor": "#ffffff",
+  "optimizedCheckout-body-backgroundColor": "#fafaf9",
   "optimizedCheckout-colorFocus": "#e53e3e",
   "optimizedCheckout-contentPrimary-color": "#292524",
   "optimizedCheckout-contentSecondary-color": "#57534e",

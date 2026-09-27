@@ -15,7 +15,8 @@
  * Needs BIGCOMMERCE_STORE_HASH and BIGCOMMERCE_ACCESS_TOKEN (an API account with
  * Themes: modify).
  */
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import JSZip from 'jszip'
 import {
@@ -112,15 +113,69 @@ async function applyCheckoutStyle(arg: string | undefined) {
   const themeConfig = JSON.parse(await zip.file('config.json')!.async('string'))
   const variationId = point.variation_name.toLowerCase()
   zip.file('config.json', JSON.stringify(withCheckoutStyle(themeConfig, variationId, overrides, RESTYLED_NAME), null, 2))
+  const overlaid = await applyCheckoutOverlay(zip)
 
   const restyled = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
-  console.log(`Uploading "${RESTYLED_NAME}" (${Object.keys(overrides).length} checkout settings changed)…`)
+  console.log(
+    `Uploading "${RESTYLED_NAME}" (${Object.keys(overrides).length} checkout settings, ${overlaid.join(', ') || 'no overlay files'})…`,
+  )
   const themeUuid = await uploadThemeZip(restyled, 'jose-madrid-checkout.zip')
   const variation = (await getTheme(themeUuid)).variations.find((v) => v.external_id === variationId)
   if (!variation) throw new Error(`The uploaded theme has no ${point.variation_name} style`)
 
   await activateTheme(variation.uuid)
   console.log(`Live: ${RESTYLED_NAME} (${variation.name}). Undo with: npm run bigcommerce:theme -- restore`)
+}
+
+/**
+ * Copies the checkout's own template files from bigcommerce-theme/checkout-overlay/ over the
+ * theme's, and appends its extra checkout styles to the theme's checkout stylesheet. Only the
+ * checkout and order-confirmation pages and the checkout stylesheet may be overlaid, so the
+ * rest of the storefront cannot change.
+ */
+const OVERLAY_DIR = path.join(THEME_DIR, 'checkout-overlay')
+const OVERLAYABLE_TEMPLATES = ['templates/pages/checkout.html', 'templates/pages/order-confirmation.html']
+const CHECKOUT_SCSS = 'assets/scss/optimized-checkout.scss'
+
+async function applyCheckoutOverlay(zip: JSZip): Promise<string[]> {
+  const applied: string[] = []
+  for (const template of OVERLAYABLE_TEMPLATES) {
+    const source = path.join(OVERLAY_DIR, template)
+    if (!existsSync(source)) continue
+    if (!zip.file(template)) throw new Error(`The theme has no ${template} to replace`)
+    const content = readFileSync(source, 'utf8')
+    zip.file(template, content)
+    await writeParsed(zip, parsedTemplatePath(template), templateName(template), content)
+    applied.push(template)
+  }
+  const extraScss = path.join(OVERLAY_DIR, 'optimized-checkout.append.scss')
+  if (existsSync(extraScss)) {
+    const original = await zip.file(CHECKOUT_SCSS)?.async('string')
+    if (original === undefined) throw new Error(`The theme has no ${CHECKOUT_SCSS} to extend`)
+    const content = `${original}\n\n${readFileSync(extraScss, 'utf8')}`
+    zip.file(CHECKOUT_SCSS, content)
+    await writeParsed(zip, `parsed/scss/${path.basename(CHECKOUT_SCSS)}.json`, path.basename(CHECKOUT_SCSS), content)
+    applied.push(`${CHECKOUT_SCSS} (+ checkout styles)`)
+  }
+  return applied
+}
+
+/**
+ * BigCommerce renders from the precompiled copies under `parsed/` that a theme bundle carries,
+ * not from the source files beside them, so an edited source must be written there too.
+ * Templates live in `parsed/templates/<md5 of the template name>.json` keyed by name; stylesheets
+ * in `parsed/scss/<file>.json` keyed by file name. Each is the source text, verbatim.
+ */
+const templateName = (file: string) => file.replace(/^templates\//, '').replace(/\.html$/, '')
+const parsedTemplatePath = (file: string) =>
+  `parsed/templates/${createHash('md5').update(templateName(file)).digest('hex')}.json`
+
+async function writeParsed(zip: JSZip, parsedPath: string, key: string, content: string) {
+  const existing = await zip.file(parsedPath)?.async('string')
+  if (existing === undefined) throw new Error(`The theme has no precompiled ${parsedPath} for ${key}`)
+  const parsed = JSON.parse(existing) as Record<string, string>
+  if (!(key in parsed)) throw new Error(`${parsedPath} does not hold ${key}`)
+  zip.file(parsedPath, JSON.stringify({ ...parsed, [key]: content }))
 }
 
 const [command, arg] = process.argv.slice(2)
