@@ -14,6 +14,23 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **BigCommerce's checkout now looks like this site, with the original one command away.** It
+  goes beyond colours: a slim header with the logo, wordmark, "Secure checkout" and a "Back to shop"
+  link; every step in its own rounded card on the storefront's off-white; rounded fields and
+  sentence-case buttons; a summary card that stays in view with the total in salsa red; and a footer
+  linking to the site's policies — checked on desktop and phone against a real checkout. The design
+  lives in `apps/storefront/bigcommerce-theme/checkout-overlay/`, which may only replace the
+  checkout and order-confirmation pages and extend the checkout stylesheet (BigCommerce renders
+  from a theme's precompiled `parsed/` copies, so those are rewritten alongside the sources). Before
+  touching anything, the live Cornerstone theme was backed up in full — the theme package BigCommerce
+  would restore from, all 328 of its settings, and which of its styles was live — into
+  `apps/storefront/bigcommerce-theme/backups/`. The checkout's look lives in 70 of those settings;
+  42 of them now take this site's colours (white header, near-black buttons, salsa-red links and
+  step numbers; the fonts already matched), applied by uploading a copy of the live theme named
+  "Cornerstone — Jose Madrid checkout". Nothing outside checkout can change — the tool refuses any
+  other setting — and the ordering, payment, tax and shipping behaviour is BigCommerce's, untouched.
+  `npm run bigcommerce:theme -- restore` switches the store back to the original theme and its exact
+  saved configuration; `status`, `backup` and `apply-checkout-style` round it out.
 - **Mix-and-match packs show BigCommerce's price and stock.** The four pack prices were written
   into the site's code, so a price changed in BigCommerce would have been shown here at the old
   figure while checkout charged the new one — and a pack BigCommerce had run out of (the Choose 3
