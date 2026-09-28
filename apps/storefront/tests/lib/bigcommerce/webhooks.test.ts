@@ -7,6 +7,7 @@ import { server } from '@/tests/mocks/server'
 import { POST } from '@/app/api/webhooks/bigcommerce/route'
 import {
   BIGCOMMERCE_WEBHOOK_SECRET_HEADER,
+  bigCommerceWebhookDestination,
   ensureBigCommerceWebhooks,
   isValidBigCommerceWebhookSecret,
 } from '@/lib/bigcommerce/webhooks'
@@ -48,9 +49,9 @@ describe('isValidBigCommerceWebhookSecret', () => {
 })
 
 describe('POST /api/webhooks/bigcommerce', () => {
-  const deliver = (body: unknown, secret: string | null = 'hook-secret') =>
+  const deliver = (body: unknown, secret: string | null = 'hook-secret', query = '') =>
     POST(
-      new NextRequest('http://localhost/api/webhooks/bigcommerce', {
+      new NextRequest(`http://localhost/api/webhooks/bigcommerce${query}`, {
         method: 'POST',
         body: JSON.stringify(body),
         headers: {
@@ -96,6 +97,31 @@ describe('POST /api/webhooks/bigcommerce', () => {
 
   it('rejects malformed payloads', async () => {
     expect((await deliver({ nope: true })).status).toBe(400)
+  })
+
+  it('copies a fundraising-store order from the fundraising store', async () => {
+    vi.mocked(mirrorBigCommerceOrder).mockReset().mockResolvedValue({ action: 'created', orderId: 'o-f1' })
+    const res = await deliver({ scope: 'store/order/created', data: { id: 4821 } }, 'hook-secret', '?store=fundraising')
+
+    expect(res.status).toBe(200)
+    expect(mirrorBigCommerceOrder).toHaveBeenCalledWith(4821, { store: 'fundraising' })
+  })
+
+  it('still requires the secret on fundraising-store deliveries, and refuses an unknown store', async () => {
+    vi.mocked(mirrorBigCommerceOrder).mockReset()
+    const order = { scope: 'store/order/created', data: { id: 1 } }
+    expect((await deliver(order, null, '?store=fundraising')).status).toBe(401)
+    expect((await deliver(order, 'hook-secret', '?store=elsewhere')).status).toBe(400)
+    expect(mirrorBigCommerceOrder).not.toHaveBeenCalled()
+  })
+})
+
+describe('bigCommerceWebhookDestination', () => {
+  it('names the store on the fundraising store\'s hooks only', () => {
+    expect(bigCommerceWebhookDestination('https://www.josemadridsalsa.com/')).toBe(DESTINATION)
+    expect(bigCommerceWebhookDestination('https://www.josemadridsalsa.com', 'fundraising')).toBe(
+      `${DESTINATION}?store=fundraising`,
+    )
   })
 })
 
@@ -162,6 +188,27 @@ describe('ensureBigCommerceWebhooks', () => {
       { scope: 'store/product/*', action: 'unchanged' },
       { scope: 'store/order/*', action: 'unchanged' },
     ])
+  })
+
+  it('registers the fundraising store\'s hooks through its own API account', async () => {
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_STORE_HASH', 'fundhash')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_ACCESS_TOKEN', 'fund-token')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_ID', 'fund-client')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET', 'fund-secret')
+    const destination = bigCommerceWebhookDestination('https://www.josemadridsalsa.com', 'fundraising')
+    const created: unknown[] = []
+    server.use(
+      http.get('https://api.bigcommerce.com/stores/fundhash/v3/hooks', () => HttpResponse.json({ data: [] })),
+      http.post('https://api.bigcommerce.com/stores/fundhash/v3/hooks', async ({ request }) => {
+        created.push(await request.json())
+        return HttpResponse.json({ data: { id: 3 } })
+      }),
+    )
+
+    await ensureBigCommerceWebhooks(destination, 'fundraising')
+
+    expect(created).toHaveLength(2)
+    expect(created[1]).toMatchObject({ scope: 'store/order/*', destination })
   })
 
   it('refuses to register without a secret', async () => {

@@ -14,6 +14,35 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **fundraising.josemadrid.net replaces josemadridsalsafundraising.com's pages.** The storefront app
+  now serves a fundraising site on its own host: `proxy.ts` rewrites `fundraising.josemadrid.net`
+  (and `fundraising.josemadridsalsa.com`, ready for later) into `app/fundraising-site/`, with its own
+  header and footer in the josemadrid.net design. It carries over everything the old Stencil site
+  did — home, shop and product pages read live from the BigCommerce fundraising store at $10 a jar,
+  why-us, start-your-fundraiser with the order-form packs and fliers, sign-up, our story,
+  testimonials, survey, blog, contact, and shipping — and adds a group directory with per-group
+  pages showing orders and earnings so far. The group list is the fundraising checkout's own
+  dropdown, read live, so staff keep adding groups in BigCommerce. The cart collects the group and
+  salesperson and hands off to BigCommerce's hosted checkout, pre-filling both answers where
+  BigCommerce accepts it. Old josemadridsalsafundraising.com URLs redirect to their new paths; the
+  host has its own sitemap.xml and robots.txt; the main site's build-time redirects no longer apply
+  on it. New env vars: `NEXT_PUBLIC_FUNDRAISING_SITE_URL`, `FUNDRAISING_SITE_HOSTS`,
+  `BIGCOMMERCE_FUNDRAISING_STOREFRONT_URL` (all optional). See `features/fundraising-site.mdx`.
+- **Fundraising-store orders are copied into this site and credited to their groups.** The
+  BigCommerce order mirror now covers the fundraising store (josemadridsalsafundraising.com) as
+  well as retail: each order becomes a read-only `BCF-<number>` fundraiser order
+  (`importSource = bigcommerce-fundraising`) carrying the salesperson the buyer named
+  (`Order.sellerName`), and is credited to the fundraiser for the group chosen at checkout — found
+  by `Fundraiser.bigCommerceGroup`, the group name normalized for case, spacing and curly
+  apostrophes, and created on first sight as an inactive, ended record whose coordinator emails are
+  marked sent so no lifecycle email can fire. Commission is recorded per order and the order marked
+  credited so the native credit can never add it twice; campaign totals are recomputed from the
+  copies. The webhook route tells the stores apart by `?store=fundraising` on the registered
+  destination (same secret header), the hourly sweep includes the fundraising store whenever its
+  credentials are set, and `npm run bigcommerce:webhooks` / `bigcommerce:orders` take
+  `--store fundraising`. Order locks, the admin notice, bulk status changes and the QuickBooks
+  exclusion now cover both stores' copies. Migration `20260928120000_bigcommerce_fundraising_orders`
+  adds the two columns.
 - **BigCommerce's checkout now looks like this site, with the original one command away.** It
   goes beyond colours: a slim header with the logo, wordmark, "Secure checkout" and a "Back to shop"
   link; every step in its own rounded card on the storefront's off-white; rounded fields and

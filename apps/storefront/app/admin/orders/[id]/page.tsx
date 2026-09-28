@@ -38,7 +38,7 @@ import { buildOrderTimeline } from '@/lib/orders/order-timeline'
 import { OrderTimeline } from '@/components/admin/OrderTimeline'
 import { FulfillItemsDialog } from '@/components/admin/FulfillItemsDialog'
 import { BigCommerceOrderNotice } from '@/components/admin/BigCommerceNotice'
-import { BIGCOMMERCE_ORDER_SOURCE } from '@/lib/bigcommerce/orders'
+import { isBigCommerceOrderSource } from '@/lib/bigcommerce/orders'
 
 async function getOrder(id: string) {
   const order = await prisma.order.findUnique({
@@ -235,7 +235,7 @@ export default async function OrderDetailPage({
 
   return (
     <>
-    {order.importSource === BIGCOMMERCE_ORDER_SOURCE ? (
+    {isBigCommerceOrderSource(order.importSource) ? (
       <div className="mb-4 md:mb-6">
         <BigCommerceOrderNotice orderNumber={order.orderNumber} />
       </div>

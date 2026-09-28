@@ -14,7 +14,7 @@ import {
 } from '@/lib/orders/fulfillment'
 import { z } from 'zod'
 import { BIGCOMMERCE_ORDER_LOCKED_MESSAGE } from '@/lib/bigcommerce/order-lock'
-import { BIGCOMMERCE_ORDER_SOURCE } from '@/lib/bigcommerce/orders'
+import { isBigCommerceOrderSource } from '@/lib/bigcommerce/orders'
 
 const BulkStatusSchema = z.object({
   orderIds: z
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
-    const managedInBigCommerce = orders.filter((o) => o.importSource === BIGCOMMERCE_ORDER_SOURCE)
+    const managedInBigCommerce = orders.filter((o) => isBigCommerceOrderSource(o.importSource))
     if (managedInBigCommerce.length > 0) {
       return NextResponse.json(
         {

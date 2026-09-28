@@ -8,23 +8,29 @@ import {
   isValidBigCommerceWebhookSecret,
 } from '@/lib/bigcommerce/webhooks'
 
+// Hooks registered for the fundraising store carry `?store=fundraising` on their destination;
+// the main store's hooks carry no query, as they always have.
+const storeSchema = z.enum(['main', 'fundraising']).default('main')
+
 const webhookSchema = z.object({
   scope: z.string().min(1),
   data: z.object({ id: z.coerce.number().int().positive() }).partial().optional(),
 })
 
 /**
- * Receives BigCommerce webhooks. A product change drops the cached catalog so
- * the next page view shows BigCommerce's current price, stock and options. An
- * order change copies that order into this site's order table.
+ * Receives BigCommerce webhooks from both stores. A product change drops the
+ * cached catalog so the next page view shows BigCommerce's current price,
+ * stock and options. An order change copies that order into this site's order
+ * table — from the store named by the `store` query parameter.
  */
 export async function POST(request: NextRequest) {
   if (!isValidBigCommerceWebhookSecret(request.headers.get(BIGCOMMERCE_WEBHOOK_SECRET_HEADER))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const store = storeSchema.safeParse(request.nextUrl.searchParams.get('store') ?? undefined)
   const parsed = webhookSchema.safeParse(await request.json().catch(() => null))
-  if (!parsed.success) {
+  if (!store.success || !parsed.success) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
@@ -38,9 +44,11 @@ export async function POST(request: NextRequest) {
     // hourly sweep picks up any order this attempt fails on.
     after(async () => {
       try {
-        await mirrorBigCommerceOrder(orderId)
+        if (store.data === 'main') await mirrorBigCommerceOrder(orderId)
+        else await mirrorBigCommerceOrder(orderId, { store: store.data })
       } catch (error) {
         console.error('[bigcommerce] order mirror failed', {
+          store: store.data,
           orderId,
           message: error instanceof Error ? error.message : String(error),
         })

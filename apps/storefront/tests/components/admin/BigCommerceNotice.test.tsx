@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { BigCommerceNotice, bigCommerceAdminUrl } from '@/components/admin/BigCommerceNotice'
+import { BigCommerceNotice, BigCommerceOrderNotice, bigCommerceAdminUrl } from '@/components/admin/BigCommerceNotice'
 
 function enableStorefront() {
   vi.stubEnv('NEXT_PUBLIC_COMMERCE_BACKEND', 'bigcommerce')
@@ -38,5 +38,29 @@ describe('BigCommerceNotice', () => {
 
   it('builds control-panel URLs from the store hash', () => {
     expect(bigCommerceAdminUrl('abc123', 'customers')).toBe('https://store-abc123.mybigcommerce.com/manage/customers')
+  })
+})
+
+describe('BigCommerceOrderNotice', () => {
+  it('links a fundraising-store copy to the order in the fundraising store', () => {
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_STORE_HASH', 'c034x363rd')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_ACCESS_TOKEN', 'test-token')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_ID', 'test-client')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET', 'test-secret')
+    render(<BigCommerceOrderNotice orderNumber="BCF-4821" />)
+
+    expect(screen.getByRole('link', { name: /Open order #4821 in the BigCommerce fundraising store/ })).toHaveAttribute(
+      'href',
+      'https://store-c034x363rd.mybigcommerce.com/manage/orders/4821',
+    )
+  })
+
+  it('links a retail copy to the main store', () => {
+    enableStorefront()
+    render(<BigCommerceOrderNotice orderNumber="BC-9595" />)
+    expect(screen.getByRole('link', { name: /Open order #9595 in BigCommerce/ })).toHaveAttribute(
+      'href',
+      'https://store-dsk4gx4.mybigcommerce.com/manage/orders/9595',
+    )
   })
 })
