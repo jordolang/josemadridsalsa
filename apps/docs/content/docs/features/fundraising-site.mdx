@@ -1,0 +1,107 @@
+---
+title: Fundraising Site
+description: fundraising.josemadrid.net — the replacement for josemadridsalsafundraising.com, served by the storefront app and checking out through the BigCommerce fundraising store.
+---
+
+# Fundraising Site
+
+The fundraising site is the public home for groups raising money with salsa and for
+the people buying to support them. It replaces the old BigCommerce Stencil site at
+josemadridsalsafundraising.com with pages in the josemadrid.net design, while
+**BigCommerce's fundraising store stays the system of record** for the catalog,
+checkout, payment and orders.
+
+| | |
+|---|---|
+| Live host | `fundraising.josemadrid.net` |
+| Later host | `fundraising.josemadridsalsa.com` (already recognised; add the domain in Vercel when ready) |
+| Code | `apps/storefront/app/fundraising-site/`, `components/fundraising-site/`, `lib/fundraising-site/` |
+| Checkout | BigCommerce fundraising store (`BIGCOMMERCE_FUNDRAISING_*`), hosted checkout on josemadridsalsafundraising.com |
+
+## How the host works
+
+It is not a separate deployment. `proxy.ts` recognises the fundraising host and
+rewrites every page request into `app/fundraising-site/`, so `/shop` on the
+fundraising host renders `app/fundraising-site/shop/page.tsx`. API routes
+(`/api/*`) and the Sentry tunnel are shared and are not rewritten. Opening
+`/fundraising-site/...` on www redirects to the fundraising host, and the main
+site's build-time redirects in `next.config.mjs` are switched off on that host.
+
+Hosts served: `fundraising.josemadrid.net`, `fundraising.josemadridsalsa.com`,
+`fundraising.localhost` (local development), plus anything in
+`FUNDRAISING_SITE_HOSTS`. The list lives in `lib/fundraising-site/host.ts` and is
+repeated in `next.config.mjs`; change both together.
+
+Local development: run the storefront and open `http://fundraising.localhost:3000`.
+
+## Pages
+
+| Path | What it is |
+|---|---|
+| `/` | Home: pitch, video, popular flavors, start-a-fundraiser call to action |
+| `/shop`, `/shop/[slug]` | The fundraising store's visible products, read live from BigCommerce |
+| `/groups`, `/groups/[slug]` | Groups taking orders right now, with a "Shop for this group" button |
+| `/cart` | Cart, group picker, salesperson name, hand-off to checkout (noindex) |
+| `/why-jose-madrid`, `/start`, `/sign-up` | Program details, order-form downloads, sign-up form |
+| `/our-story`, `/testimonials`, `/survey`, `/blog`, `/contact`, `/shipping` | Content carried over from the old site |
+
+Order-form packs and fliers are static files in
+`apps/storefront/public/fundraising/downloads/`. Replace a file there to update it.
+
+Old josemadridsalsafundraising.com URLs (`/start-your-fundraiser/`,
+`/original-mild-salsa/`, `/cart.php`…) redirect permanently to their new paths
+(`lib/fundraising-site/legacy-redirects.ts`), so they keep working once that domain
+points here.
+
+## Groups and attribution
+
+A sale is credited to a group the same way it always has been: the fundraising
+store's checkout asks two required questions, **Fundraising Group name** (a
+dropdown) and **Salesperson** (free text), and BigCommerce stores the answers on
+the order.
+
+**The group list is the BigCommerce checkout dropdown.** The site reads it live
+from the store's public form-fields endpoint, so staff keep managing groups where
+they always have:
+
+1. BigCommerce control panel › **Settings › Form fields** › Address fields ›
+   *Fundraising Group name* › add the group as a new option.
+2. Within five minutes the group appears on `/groups` and in the cart's dropdown.
+   Remove the option when the fundraiser ends and it disappears from both.
+
+When a buyer checks out, the site creates the BigCommerce cart and tries to
+pre-fill the group and salesperson answers. If BigCommerce does not accept the
+pre-fill, the buyer simply picks them again at checkout — both fields are
+required there, so a sale can never go uncredited because of it.
+
+Orders placed in the fundraising store are copied into this site's order table
+and credited to a fundraiser record per group — see
+[BigCommerce cutover](/docs/deployment/bigcommerce-cutover).
+
+## Pricing and shipping
+
+Both are set in the BigCommerce fundraising store, not here: jars are $10, and
+shipping is a $10 flat rate per order. The cart shows the flat rate as an
+estimate; BigCommerce charges the real total.
+
+## Going live on a domain
+
+1. Add the domain to the `josemadridsalsa` Vercel project (Settings › Domains).
+   `fundraising.josemadrid.net` needs no DNS change — josemadrid.net's DNS is
+   already on Vercel. `fundraising.josemadridsalsa.com` needs a CNAME to
+   `cname.vercel-dns.com` in that domain's DNS.
+2. Make sure `BIGCOMMERCE_FUNDRAISING_STORE_HASH`, `_ACCESS_TOKEN`, `_CLIENT_ID`
+   and `_CLIENT_SECRET` are set in Vercel production.
+3. When the canonical host changes, set `NEXT_PUBLIC_FUNDRAISING_SITE_URL` to it
+   and redeploy; canonical URLs, the sitemap and robots.txt follow it.
+4. Search Console: add the new host as a property, submit
+   `https://<host>/sitemap.xml`, and run URL Inspection on the home page.
+
+### Moving josemadridsalsafundraising.com here
+
+Pointing the old domain at Vercel (and adding it to `FUNDRAISING_SITE_HOSTS`)
+turns its URLs into redirects to the new site — but the BigCommerce hosted
+checkout lives on that domain today. Before moving it, have BigCommerce move the
+fundraising store's checkout to its own subdomain and set
+`BIGCOMMERCE_FUNDRAISING_STOREFRONT_URL` to it, exactly as the main store's
+cutover does. Then use Search Console's **Change of Address** tool.

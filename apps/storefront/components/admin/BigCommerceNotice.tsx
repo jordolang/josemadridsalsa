@@ -67,3 +67,38 @@ export function BigCommerceNotice({ area }: { area: BigCommerceNoticeArea }) {
     </Alert>
   )
 }
+
+/**
+ * Shown on a copied BigCommerce order. The copy updates itself from BigCommerce,
+ * and the actions that would change it are refused here.
+ */
+export function BigCommerceOrderNotice({ orderNumber }: { orderNumber: string }) {
+  // `BCF-` copies come from the fundraising store, `BC-` from the main store.
+  const fundraising = orderNumber.startsWith('BCF-')
+  const store = findBigCommerceStore(fundraising ? 'fundraising' : 'main')
+  const bigCommerceId = orderNumber.replace(/^BCF?-/, '')
+
+  return (
+    <Alert>
+      <Store className="h-4 w-4" />
+      <AlertTitle>Placed in BigCommerce — read-only here</AlertTitle>
+      <AlertDescription>
+        <p>
+          Ship, refund or cancel it in BigCommerce, which also sends the customer their order emails. This copy
+          keeps itself up to date for reports, and changing it here would not reach BigCommerce.
+        </p>
+        {store ? (
+          <a
+            href={bigCommerceAdminUrl(store.storeHash, `orders/${bigCommerceId}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open order #{bigCommerceId} in {fundraising ? 'the BigCommerce fundraising store' : 'BigCommerce'}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        ) : null}
+      </AlertDescription>
+    </Alert>
+  )
+}

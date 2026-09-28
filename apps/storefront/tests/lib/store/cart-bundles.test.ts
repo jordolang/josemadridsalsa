@@ -43,6 +43,28 @@ describe('cart packs', () => {
     )
   })
 
+  it('prices a pack at BigCommerce\'s live price when the storefront sells through it', () => {
+    const added = useCartStore
+      .getState()
+      .addBundle('choose-5', ['a', 'b', 'c', 'd', 'e'].map((id) => jar(id)), {
+        'choose-5': { price: 30, available: true },
+      })
+
+    expect(added).toBe(true)
+    expect(cartTotal()).toBe(30)
+  })
+
+  it('refuses a pack BigCommerce cannot sell right now', () => {
+    const added = useCartStore
+      .getState()
+      .addBundle('choose-3', ['a', 'b', 'c'].map((id) => jar(id)), {
+        'choose-3': { price: 23, available: false },
+      })
+
+    expect(added).toBe(false)
+    expect(useCartStore.getState().items).toHaveLength(0)
+  })
+
   it('refuses a selection that is not the pack it claims to be', () => {
     expect(useCartStore.getState().addBundle('choose-5', [jar('a'), jar('b')])).toBe(false)
     expect(useCartStore.getState().addBundle('choose-99', [jar('a')])).toBe(false)

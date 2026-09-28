@@ -4,6 +4,7 @@ import { server } from '@/tests/mocks/server'
 import { normalizeBigCommerceProduct, type RawBigCommerceProduct } from '@/lib/bigcommerce/catalog'
 import {
   applyBigCommercePricing,
+  getBigCommercePackOverrides,
   getBigCommerceOrderHistoryUrl,
   isBigCommerceStorefrontEnabled,
   overlayBigCommercePricing,
@@ -137,5 +138,43 @@ describe('getBigCommerceOrderHistoryUrl', () => {
 
     vi.stubEnv('BIGCOMMERCE_STOREFRONT_URL', 'not a url')
     expect(getBigCommerceOrderHistoryUrl()).toBeNull()
+  })
+})
+
+describe('getBigCommercePackOverrides', () => {
+  const catalogResponse = (products: RawBigCommerceProduct[]) =>
+    http.get('https://api.bigcommerce.com/stores/testhash/v3/catalog/products', () =>
+      HttpResponse.json({ data: products, meta: { pagination: { current_page: 1, total_pages: 1 } } }),
+    )
+
+  it('is empty until the storefront sells through BigCommerce', async () => {
+    await expect(getBigCommercePackOverrides()).resolves.toEqual({})
+  })
+
+  it('reads each pack\'s price and availability, marking packs missing from BigCommerce unavailable', async () => {
+    enableStorefront()
+    server.use(
+      catalogResponse([
+        { ...chooseSix, id: 121, price: 34, calculated_price: 34 },
+        { ...chooseSix, id: 120, name: 'Choose-3', price: 23, calculated_price: 23, inventory_tracking: 'product', inventory_level: 0 },
+      ]),
+    )
+
+    const overrides = await getBigCommercePackOverrides()
+    expect(overrides['choose-6']).toEqual({ price: 34, available: true })
+    expect(overrides['choose-3']).toEqual({ price: 23, available: false })
+    // Choose-5 and Choose-12 are not in this catalog response.
+    expect(overrides['choose-5']).toEqual({ price: 28, available: false })
+  })
+
+  it('falls back to listed prices when BigCommerce is unreachable', async () => {
+    enableStorefront()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    server.use(
+      http.get('https://api.bigcommerce.com/stores/testhash/v3/catalog/products', () =>
+        HttpResponse.json({ title: 'Down' }, { status: 500 }),
+      ),
+    )
+    await expect(getBigCommercePackOverrides()).resolves.toEqual({})
   })
 })

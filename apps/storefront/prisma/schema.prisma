@@ -616,6 +616,9 @@ model Order {
   printedInvoiceAt        DateTime?
   printedPackingSlipAt    DateTime?
   participantId           String?
+  /// The salesperson (usually a student) named at a fundraising-store checkout — free text as the
+  /// buyer typed it, not a link to a participant. Only BigCommerce fundraising-store copies set it.
+  sellerName              String?
   paymentChannel          PaymentChannel?        @default(ONLINE)
   paymentProvider         PaymentProvider?       @default(STRIPE)
   providerPaymentId       String?
@@ -1061,6 +1064,10 @@ model Fundraiser {
   missionStatement     String?
   bio                  String?
   enableSocialFeatures Boolean                 @default(true)
+  /// The normalized fundraising-store checkout group this fundraiser was created from
+  /// (`normalizeGroupName` in `lib/fundraising-site/checkout-fields.ts`). It is how mirrored
+  /// BigCommerce fundraising orders find their fundraiser. Null for fundraisers set up here.
+  bigCommerceGroup     String?                 @unique
   accessUsers          FundraiserAccess[]
   account              FundraiserAccount?
   analytics            FundraiserAnalytics?

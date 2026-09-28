@@ -16,6 +16,7 @@ import { getPageContent } from '@/lib/cms/queries'
 import { homeHeroPanels } from '@/lib/cms/home'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
+import { getBigCommercePackOverrides } from '@/lib/bigcommerce/storefront'
 
 export const revalidate = 300
 
@@ -97,12 +98,13 @@ const FUNDRAISING_STATS = [
 // on the schedule map is the only path that ever triggers a client fetch.
 export default async function Home() {
   // Fetch all data in parallel — reviews and calendar
-  const [reviewsData, calendarEvents, content] = await Promise.all([
+  const [reviewsData, calendarEvents, content, packOverrides] = await Promise.all([
     getReviewsData(),
     getCalendarEvents(),
     // CMS overrides for this page. Every lookup below supplies the original
     // copy as its fallback, so an unedited homepage is byte-for-byte unchanged.
     getPageContent('home'),
+    getBigCommercePackOverrides(),
   ])
 
   return (
@@ -399,7 +401,7 @@ export default async function Home() {
         )}
 
         {/* Gift Box Selector Section */}
-        {content.isVisible('giftBoxes') && <GiftBoxSelector />}
+        {content.isVisible('giftBoxes') && <GiftBoxSelector packOverrides={packOverrides} />}
 
         {/* Location Map Section */}
         {content.isVisible('locationMap') && <LocationMapClient />}

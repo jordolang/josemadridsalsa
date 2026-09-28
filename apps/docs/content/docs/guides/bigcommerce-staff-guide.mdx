@@ -35,10 +35,40 @@ see that note, the thing you're looking for is probably in BigCommerce.
 
 ## Two kinds of orders
 
-- **Retail orders** (anyone buying salsa from the website) are in **BigCommerce → Orders**.
+- **Retail orders** (anyone buying salsa from the website) are worked in **BigCommerce → Orders**.
+  A read-only copy numbered `BC-<number>` also appears in the website admin's Orders list, so the
+  website's sales reports include them. Ship, refund and cancel them in BigCommerce; the website
+  refuses those actions on a copy and updates it by itself.
 - **Fundraiser orders** (bought from a fundraiser's page, or through a student's referral link)
   are in the **website admin → Orders** and the fundraiser's own page, because they're priced by
   the campaign and credited to the group.
+
+## The checkout's look
+
+BigCommerce's checkout is designed to look like this website. The live theme is
+**"Cornerstone — Jose Madrid checkout"**, a copy of the original Cornerstone theme with a
+redesigned checkout:
+
+- A slim header with the logo, "Jose Madrid / Salsa · Est. 1987", a "Secure checkout" badge
+  and a "Back to shop" link to the website.
+- Each step (Customer, Shipping, Billing, Payment) in its own rounded card, with rounded fields
+  and buttons, salsa-red accents and the website's fonts.
+- An order summary card that stays in view, with prices and the total in red.
+- A footer linking to Shipping, Returns, Privacy and Contact on the website.
+
+Only the look changed. Ordering, payment, tax, shipping and the order emails are BigCommerce's,
+exactly as before, and every other page of the old store is untouched.
+
+- **To go back to the original look**, a developer runs
+  `npm run bigcommerce:theme --workspace @jose-madrid/storefront -- restore` (or tell Claude
+  "restore the BigCommerce theme"). The original "Cornerstone" is also still under
+  **BigCommerce → Storefront → Themes → My Themes** and can be applied there.
+- **To change the design**, edit the files in `apps/storefront/bigcommerce-theme/`:
+  `checkout-style.json` (colours), `checkout-overlay/templates/pages/` (the header and footer
+  markup) and `checkout-overlay/optimized-checkout.append.scss` (layout, corners, spacing). Then
+  run `npm run bigcommerce:theme --workspace @jose-madrid/storefront -- apply-checkout-style`.
+  Each run uploads a new copy of the theme; older copies stay in My Themes until deleted there.
+- A full backup of the original theme is kept in `apps/storefront/bigcommerce-theme/backups/2026-09-26/`.
 
 ## When something looks wrong
 

@@ -3,6 +3,7 @@ import { SalsasClient } from './salsas-client'
 import type { Product } from '@/components/store/product-card'
 import { getProducts, getCategories } from '@/lib/db/products'
 import { logger } from '@/lib/logger'
+import { getBigCommercePackOverrides } from '@/lib/bigcommerce/storefront'
 
 export const revalidate = 60
 
@@ -64,6 +65,7 @@ export default async function SalsasPage({
     <Suspense fallback={<div className="min-h-screen" />}>
       <SalsasClient
         initialProducts={products}
+        packOverrides={await getBigCommercePackOverrides()}
         categories={categories}
         initialCategory={params.category}
         initialHeatLevel={params.heatLevel}

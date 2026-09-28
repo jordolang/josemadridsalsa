@@ -1,6 +1,6 @@
 import { bigCommerceFetchAll } from './client'
 import type { BigCommerceStoreKey } from './config'
-import { BIGCOMMERCE_PRODUCT_SLUGS } from './product-map'
+import { BIGCOMMERCE_JAR_LABEL_PRODUCT_IDS, BIGCOMMERCE_PRODUCT_SLUGS } from './product-map'
 
 /** Cache tag for every catalog read; the product webhook revalidates it. */
 export const BIGCOMMERCE_CATALOG_TAG = 'bigcommerce:catalog'
@@ -225,4 +225,17 @@ export function findBigCommerceProductBySlug(
       ? (products.find((product) => !product.siteSlug && normalizeProductName(product.name) === byName) ?? null)
       : null)
   )
+}
+
+/**
+ * The product a pack's "Jar N" choice stands for. Choices are worded by hand in
+ * BigCommerce and do not always match the product name ("Garden Fresh Cilantro
+ * Mild" for "Garden Fresh Cilantro Salsa Mild"), so known exceptions come from
+ * the label map and the rest match by name.
+ */
+export function findProductForJarLabel(products: BigCommerceProduct[], label: string): BigCommerceProduct | null {
+  const mappedId = BIGCOMMERCE_JAR_LABEL_PRODUCT_IDS[label.trim()]
+  if (mappedId !== undefined) return products.find((product) => product.id === mappedId) ?? null
+  const wanted = normalizeProductName(label)
+  return products.find((product) => normalizeProductName(product.name) === wanted) ?? null
 }

@@ -14,6 +14,84 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **fundraising.josemadrid.net replaces josemadridsalsafundraising.com's pages.** The storefront app
+  now serves a fundraising site on its own host: `proxy.ts` rewrites `fundraising.josemadrid.net`
+  (and `fundraising.josemadridsalsa.com`, ready for later) into `app/fundraising-site/`, with its own
+  header and footer in the josemadrid.net design. It carries over everything the old Stencil site
+  did — home, shop and product pages read live from the BigCommerce fundraising store at $10 a jar,
+  why-us, start-your-fundraiser with the order-form packs and fliers, sign-up, our story,
+  testimonials, survey, blog, contact, and shipping — and adds a group directory with per-group
+  pages showing orders and earnings so far. The group list is the fundraising checkout's own
+  dropdown, read live, so staff keep adding groups in BigCommerce. The cart collects the group and
+  salesperson and hands off to BigCommerce's hosted checkout, pre-filling both answers where
+  BigCommerce accepts it. Old josemadridsalsafundraising.com URLs redirect to their new paths; the
+  host has its own sitemap.xml and robots.txt; the main site's build-time redirects no longer apply
+  on it. New env vars: `NEXT_PUBLIC_FUNDRAISING_SITE_URL`, `FUNDRAISING_SITE_HOSTS`,
+  `BIGCOMMERCE_FUNDRAISING_STOREFRONT_URL` (all optional). See `features/fundraising-site.mdx`.
+- **Fundraising-store orders are copied into this site and credited to their groups.** The
+  BigCommerce order mirror now covers the fundraising store (josemadridsalsafundraising.com) as
+  well as retail: each order becomes a read-only `BCF-<number>` fundraiser order
+  (`importSource = bigcommerce-fundraising`) carrying the salesperson the buyer named
+  (`Order.sellerName`), and is credited to the fundraiser for the group chosen at checkout — found
+  by `Fundraiser.bigCommerceGroup`, the group name normalized for case, spacing and curly
+  apostrophes, and created on first sight as an inactive, ended record whose coordinator emails are
+  marked sent so no lifecycle email can fire. Commission is recorded per order and the order marked
+  credited so the native credit can never add it twice; campaign totals are recomputed from the
+  copies. The webhook route tells the stores apart by `?store=fundraising` on the registered
+  destination (same secret header), the hourly sweep includes the fundraising store whenever its
+  credentials are set, and `npm run bigcommerce:webhooks` / `bigcommerce:orders` take
+  `--store fundraising`. Order locks, the admin notice, bulk status changes and the QuickBooks
+  exclusion now cover both stores' copies. Migration `20260928120000_bigcommerce_fundraising_orders`
+  adds the two columns.
+- **BigCommerce's checkout now looks like this site, with the original one command away.** It
+  goes beyond colours: a slim header with the logo, wordmark, "Secure checkout" and a "Back to shop"
+  link; every step in its own rounded card on the storefront's off-white; rounded fields and
+  sentence-case buttons; a summary card that stays in view with the total in salsa red; and a footer
+  linking to the site's policies — checked on desktop and phone against a real checkout. The design
+  lives in `apps/storefront/bigcommerce-theme/checkout-overlay/`, which may only replace the
+  checkout and order-confirmation pages and extend the checkout stylesheet (BigCommerce renders
+  from a theme's precompiled `parsed/` copies, so those are rewritten alongside the sources). Before
+  touching anything, the live Cornerstone theme was backed up in full — the theme package BigCommerce
+  would restore from, all 328 of its settings, and which of its styles was live — into
+  `apps/storefront/bigcommerce-theme/backups/`. The checkout's look lives in 70 of those settings;
+  42 of them now take this site's colours (white header, near-black buttons, salsa-red links and
+  step numbers; the fonts already matched), applied by uploading a copy of the live theme named
+  "Cornerstone — Jose Madrid checkout". Nothing outside checkout can change — the tool refuses any
+  other setting — and the ordering, payment, tax and shipping behaviour is BigCommerce's, untouched.
+  `npm run bigcommerce:theme -- restore` switches the store back to the original theme and its exact
+  saved configuration; `status`, `backup` and `apply-checkout-style` round it out.
+- **Mix-and-match packs show BigCommerce's price and stock.** The four pack prices were written
+  into the site's code, so a price changed in BigCommerce would have been shown here at the old
+  figure while checkout charged the new one — and a pack BigCommerce had run out of (the Choose 3
+  is out of stock there today) could still be built and added to the cart, only to be refused at
+  checkout. With the BigCommerce switch on, the home page, the packs page and the gift-box strip
+  on the salsa and product listings read each pack's live price and availability from
+  BigCommerce, the cart splits the pack at that price, and a pack BigCommerce cannot sell shows
+  "Out of Stock" and cannot be added. If BigCommerce cannot be reached the listed prices stand.
+- **Ad platforms and analytics now see shoppers start checkout.** Neither this site nor the
+  BigCommerce store has been reporting purchases to any tracker, and once retail checks out on
+  BigCommerce's domain the last step this site can see is the hand-off. At that moment the site
+  now sends "checkout started" — with the cart's value and items — to Google Tag Manager
+  (`begin_checkout`), the Meta and TikTok pixels (`InitiateCheckout`) and Amplitude, so the funnel
+  up to checkout is measured. A blocked or missing tracker never stops the shopper reaching
+  checkout. Recording the purchase itself is a BigCommerce setting (connecting Google Analytics 4
+  and the Meta pixel under Settings → Data solutions), covered in the cutover runbook.
+- **BigCommerce retail orders are copied into this site, so its reports keep seeing retail
+  sales.** Once retail checks out in BigCommerce, those orders never reached this site's order
+  table — and the sales dashboards, product and margin reports and "verified buyer" reviews all
+  read it. Every BigCommerce order is now copied here as a read-only website order numbered
+  `BC-<number>`, linked to the customer's account when their email matches, with each
+  mix-and-match pack recorded as the jars in it (the pack price split to the cent, the way this
+  site records its own packs) and each jar's cost snapshotted for margin. The copy is made when
+  BigCommerce reports the order and kept current as it ships, is refunded or is cancelled; an
+  hourly sweep catches anything a missed notification left behind, and `npm run
+  bigcommerce:orders` copies history from a chosen date. Nothing about the copy emails the
+  customer, takes payment or moves stock, and the admin refuses to ship, refund or re-email a copy,
+  pointing to the order in BigCommerce instead. A dry run over the 120 most recent real orders
+  matched every salsa and pack line; the only thing not copied was a gift-certificate purchase,
+  which is noted on the order. Copies stay out of the QuickBooks sync unless
+  `BIGCOMMERCE_ORDERS_TO_QUICKBOOKS` is set, because online sales may already reach the books
+  through the payment deposits.
 - **The admin says plainly what moved to BigCommerce.** Once the storefront sells through
   BigCommerce, the Products, Inventory, Orders, Customers and Gift Certificates pages open with a
   "Managed in BigCommerce" note saying which half of the record lives there — prices, stock and
@@ -39,7 +117,11 @@ the root `package.json` is canonical.
   Once the old BigCommerce store moves to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`),
   sign-in, account, gift-certificate and wishlist links — including the ones in past order
   emails — go to the customer's real BigCommerce account there instead. The full cutover is
-  written up step by step in the new BigCommerce Cutover Runbook. A signed-in customer's account
+  written up step by step in the new BigCommerce Cutover Runbook. The runbook now also covers
+  keeping the old store's pages at `shop.josemadridsalsa.com` out of Google (a robots.txt change
+  in BigCommerce that must wait until the store has moved there, or it would hide the live
+  store), and connecting Google Analytics 4 and the Meta and TikTok pixels in BigCommerce so
+  purchases on its checkout are recorded. A signed-in customer's account
   page also links to that BigCommerce order history, where retail orders placed on the new site
   are tracked.
 - **Product edits in BigCommerce reach the storefront within seconds.** BigCommerce now calls
@@ -153,6 +235,15 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions
+  budget ran out, which stops every check from starting. Each run took about 30 minutes, and ten of
+  those were a Playwright step that hit its time limit on every run without producing a result;
+  another six were a second full run of the test suite just to produce the coverage report; and
+  every merge to main re-ran the whole thing on code its pull request had already tested. The
+  suite now runs once, gating on failures and writing the coverage report together; Playwright
+  runs only when started by hand; main is not re-run after a merge (Vercel still builds it before
+  deploying); a new push to a pull request cancels the previous run; changes that touch only docs,
+  Markdown or the desktop apps skip CI; and runs are capped at 30 minutes.
 - **The macOS admin app builds on the standalone Command Line Tools again.** `ConnectionSettings`
   held its editable endpoint in `@State`, which is a macro in the current SDK and expands through
   a plugin that ships only with a full Xcode install — so the bundle could not be built on a
@@ -162,6 +253,28 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Copied BigCommerce orders marked Shipped were showing as unfulfilled.** Staff mark an order
+  shipped by changing its status in BigCommerce, usually without recording a shipment per item, so
+  BigCommerce's shipped quantities stay at zero and the copy read "Shipped" but "Unfulfilled" —
+  which would have left every shipped retail order in this site's "awaiting fulfillment" views.
+  Shipped and Completed now count the whole order as fulfilled; Partially Shipped still counts item
+  by item. Found in the first live sync, where it affected every shipped order copied.
+- **A mix-and-match pack holding any of five salsas would have been refused at the BigCommerce
+  checkout.** The handoff matched each chosen jar to BigCommerce's "Jar" choices by name, but five
+  of the 27 choices are worded differently from their product ("Garden Fresh Cilantro Mild" for
+  Garden Fresh Cilantro Salsa Mild, "Spanish Verde XX (Stupid) Hot", "Cherry Hot (Habanero)",
+  "Roasted Pineapple Habanero", "Garden Fresh Cilantro Hot"), so those packs failed with "not
+  available in this pack". The known exceptions are now mapped, and every choice in the live
+  catalog resolves. Found before the switch was turned on, so no customer saw it.
+- **Customers who paid on BigCommerce will not be sent "you left something in your cart"
+  emails.** This site's three-email reminder sequence stops as soon as a cart is paid for on this
+  site's own checkout — but once retail checks out in BigCommerce, nothing here ever learns the
+  cart was bought, so every retail buyer who was signed in or had given an email would have been
+  chased for three days after paying. With the BigCommerce switch on, retail carts are no longer
+  tracked here (BigCommerce sends its own reminders for carts left at its checkout), and the
+  reminder job only emails carts stamped as finishing on this site: fundraiser carts, and retail
+  carts a student's referral turns into a fundraiser sale. If the referral cannot be checked, the
+  cart is left alone rather than risk emailing a buyer.
 - **Every product page at `/products/<salsa>` has been a server error in production since
   10 September.** The page is cached as a static page, and it asked the server for the current
   visitor's session only to decide whether the review form should say "sign in" — reading the

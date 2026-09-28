@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Gift, ArrowRight } from 'lucide-react'
-import { SALSA_BUNDLES, bundleSavings } from '@/lib/bundles'
+import { bundleSavings, offeredBundles, type PackOverrides } from '@/lib/bundles'
 import { formatPrice } from '@/lib/utils'
 
 interface GiftBoxQuickAddProps {
@@ -16,9 +16,11 @@ interface GiftBoxQuickAddProps {
    * hardcoded here that the catalogue can drift away from.
    */
   jarPrice?: number | null
+  /** Live pack prices and availability from BigCommerce, when the storefront sells through it. */
+  packOverrides?: PackOverrides
 }
 
-export function GiftBoxQuickAdd({ jarPrice = null }: GiftBoxQuickAddProps) {
+export function GiftBoxQuickAdd({ jarPrice = null, packOverrides = {} }: GiftBoxQuickAddProps) {
   return (
     <section className="bg-gradient-to-br from-salsa-50 to-chile-50 dark:from-salsa-950/20 dark:to-chile-950/20 py-12 border-y border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -43,7 +45,7 @@ export function GiftBoxQuickAdd({ jarPrice = null }: GiftBoxQuickAddProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {SALSA_BUNDLES.map((box) => {
+          {offeredBundles(packOverrides).map((box) => {
             const savings = bundleSavings(box, jarPrice)
             return (
             <div
@@ -91,12 +93,18 @@ export function GiftBoxQuickAdd({ jarPrice = null }: GiftBoxQuickAddProps) {
                   </span>
                 </div>
 
-                <Link href="/bundles" className="w-full">
-                  <Button className="w-full bg-salsa-500 hover:bg-salsa-600">
-                    <Gift className="w-4 h-4 mr-2" />
-                    Customize Box
+                {box.available ? (
+                  <Link href="/bundles" className="w-full">
+                    <Button className="w-full bg-salsa-500 hover:bg-salsa-600">
+                      <Gift className="w-4 h-4 mr-2" />
+                      Customize Box
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button className="w-full" disabled>
+                    Out of Stock
                   </Button>
-                </Link>
+                )}
               </div>
             </div>
             )

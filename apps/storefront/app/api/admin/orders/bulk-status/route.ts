@@ -13,6 +13,8 @@ import {
   type FulfillmentTransition,
 } from '@/lib/orders/fulfillment'
 import { z } from 'zod'
+import { BIGCOMMERCE_ORDER_LOCKED_MESSAGE } from '@/lib/bigcommerce/order-lock'
+import { isBigCommerceOrderSource } from '@/lib/bigcommerce/orders'
 
 const BulkStatusSchema = z.object({
   orderIds: z
@@ -56,8 +58,19 @@ export async function PATCH(request: NextRequest) {
         userId: true,
         shippedAt: true,
         deliveredAt: true,
+        importSource: true,
       },
     })
+
+    const managedInBigCommerce = orders.filter((o) => isBigCommerceOrderSource(o.importSource))
+    if (managedInBigCommerce.length > 0) {
+      return NextResponse.json(
+        {
+          error: `${managedInBigCommerce.map((o) => o.orderNumber).join(', ')}: ${BIGCOMMERCE_ORDER_LOCKED_MESSAGE}`,
+        },
+        { status: 409 },
+      )
+    }
 
     const foundIds = new Set(orders.map((o) => o.id))
     const missingIds = orderIds.filter((id) => !foundIds.has(id))

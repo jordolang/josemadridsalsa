@@ -3,18 +3,45 @@ permissions:
   contents: read
   pull-requests: write
 
+# Actions minutes are a budget, and this job is most of it. Every merge to main used to
+# re-run the same ~30 minutes the pull request had just run on the same code; main is now
+# covered by the PR run plus Vercel's own build, and can still be run by hand.
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ develop ]
+    paths-ignore:
+      - 'apps/docs/**'
+      - 'apps/macos-admin/**'
+      - 'apps/windows-admin/**'
+      - '**/*.md'
+      - '**/*.mdx'
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - 'apps/docs/**'
+      - 'apps/macos-admin/**'
+      - 'apps/windows-admin/**'
+      - '**/*.md'
+      - '**/*.mdx'
   # Allows re-running the pipeline on demand without an empty commit.
   workflow_dispatch:
+    inputs:
+      run_playwright:
+        description: Also run the Playwright browser suite (slow; currently times out)
+        type: boolean
+        default: false
+
+# A new push to a pull request makes the run for the previous push worthless.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
     name: CI Pipeline
     runs-on: ubuntu-latest
+    # A healthy run takes about 15 minutes; anything past 30 is stuck, not slow.
+    timeout-minutes: 30
 
     # Provision a throwaway Postgres so the integration tests (inventory, checkout
     # reservation, order completion) run for real instead of being skipped.
@@ -75,19 +102,18 @@ jobs:
       - name: Run type check
         run: npm run type-check
 
-      # The vitest suite is now green (the previous backlog of stale mocks / missing test
-      # env vars was fixed, and files run sequentially — fileParallelism: false — which
-      # removed the parallel-execution flakiness). This step gates on test pass/fail.
-      - name: Run tests
-        run: npm run test
-
-      # Coverage is reported (and the thresholds enforced) here but kept non-gating: the
-      # global function/branch coverage still sits just under the 60% target, and blocking
-      # every PR on that is what got the suite disabled before. Raise coverage, then drop
-      # continue-on-error to gate on it too.
-      - name: Run tests with coverage (reported, not gating)
-        run: npm run test:coverage
-        continue-on-error: true
+      # One run of the suite does both jobs: it gates on test failures and writes the coverage
+      # report. Coverage used to be a second full run of the same suite (~6 minutes) because
+      # the 60% thresholds in vitest.config.ts fail the run and global coverage still sits just
+      # under them. The thresholds are zeroed here so they report instead of gate; raise
+      # coverage, then drop these flags to enforce them.
+      - name: Run tests (with coverage report)
+        run: >-
+          npm run test:coverage --
+          --coverage.thresholds.lines=0
+          --coverage.thresholds.functions=0
+          --coverage.thresholds.branches=0
+          --coverage.thresholds.statements=0
         env:
           CI: true
 
@@ -170,13 +196,14 @@ jobs:
             pkill -f "next start" 2>/dev/null || true
           fi
 
+      # The Playwright suite hits its 10-minute limit on every run and produces no result, so it
+      # no longer runs automatically. Tick "run_playwright" when starting the workflow by hand.
       - name: Install Playwright browsers
+        if: github.event_name == 'workflow_dispatch' && inputs.run_playwright
         run: npx playwright install --with-deps chromium
 
-      # Playwright's testMatch is **/*.spec.ts but the e2e files are named *.test.ts, so
-      # this currently matches nothing and the "e2e" files are actually run by vitest.
-      # Reported, not gating, until the suite is renamed and given a database.
       - name: Run Playwright E2E tests (reported, not gating)
+        if: github.event_name == 'workflow_dispatch' && inputs.run_playwright
         timeout-minutes: 10
         run: npm run test:e2e
         continue-on-error: true
@@ -184,7 +211,7 @@ jobs:
           CI: true
 
       - name: Upload Playwright test results
-        if: always()
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.run_playwright
         # A full artifact store must not fail a run whose tests all passed.
         continue-on-error: true
         uses: actions/upload-artifact@v4
@@ -192,17 +219,3 @@ jobs:
           name: playwright-report
           path: apps/storefront/playwright-report/
           retention-days: 2
-
-      - name: Upload build artifacts
-        if: github.ref == 'refs/heads/main'
-        # A full artifact store must not fail a run whose tests all passed.
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            apps/storefront/.next
-            apps/fundraising/.next
-            apps/admin/.next
-          retention-days: 2
-

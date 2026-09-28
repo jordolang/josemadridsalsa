@@ -15,6 +15,17 @@ const NOW = new Date('2026-08-10T12:00:00Z')
 const HOUR = 60 * 60 * 1000
 
 describe('abandonedCartWhere', () => {
+  it('chases every cart until retail checks out in BigCommerce', () => {
+    expect(abandonedCartWhere(NOW)).not.toHaveProperty('cartData')
+  })
+
+  it('only chases carts stamped for this site\'s checkout once retail checks out in BigCommerce', () => {
+    expect(abandonedCartWhere(NOW, { siteCheckoutOnly: true }).cartData).toEqual({
+      path: ['checkout'],
+      equals: 'site',
+    })
+  })
+
   it('never re-emails a recovered cart', () => {
     expect(abandonedCartWhere(NOW).recoveredAt).toBeNull()
   })

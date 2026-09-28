@@ -15,6 +15,7 @@ import {
   recoveryLinkExpiresIn,
 } from '@/lib/checkout/abandoned-cart'
 import { SITE_URL } from '@/lib/site-url'
+import { isBigCommerceStorefrontEnabled } from '@/lib/bigcommerce/storefront'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? SITE_URL
 
@@ -118,7 +119,7 @@ export async function GET(request: Request) {
     const now = new Date()
 
     const carts = await prisma.abandonedCart.findMany({
-      where: abandonedCartWhere(now),
+      where: abandonedCartWhere(now, { siteCheckoutOnly: isBigCommerceStorefrontEnabled() }),
       include: {
         user: { select: { id: true, email: true, name: true } },
       },

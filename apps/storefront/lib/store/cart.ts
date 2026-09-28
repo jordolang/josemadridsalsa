@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { StateCreator } from 'zustand'
-import { getSalsaBundle, priceCartLines } from '@/lib/bundles'
+import { offeredBundles, priceCartLines, type PackOverrides } from '@/lib/bundles'
 
 export interface CartItem {
   /**
@@ -130,7 +130,7 @@ interface CartStore {
   // Actions
   addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => AddItemResult
   replaceWithItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void
-  addBundle: (bundleId: string, selections: BundleSelection[]) => boolean
+  addBundle: (bundleId: string, selections: BundleSelection[], packOverrides?: PackOverrides) => boolean
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
@@ -245,9 +245,11 @@ const cartStoreConfig: StateCreator<CartStore> = (set, get) => ({
    * when the selection is not a pack we sell, which is a bug in the caller rather than
    * something to charge the customer full price for.
    */
-  addBundle: (bundleId: string, selections: BundleSelection[]) => {
-    const bundle = getSalsaBundle(bundleId)
-    if (!bundle || selections.length !== bundle.size) return false
+  addBundle: (bundleId: string, selections: BundleSelection[], packOverrides: PackOverrides = {}) => {
+    // `packOverrides` carries BigCommerce's live pack price and availability, so the cart
+    // shows what checkout will charge and never takes a pack BigCommerce will refuse.
+    const bundle = offeredBundles(packOverrides).find((offered) => offered.id === bundleId)
+    if (!bundle || !bundle.available || selections.length !== bundle.size) return false
 
     // Packs are retail-only, so they cannot join a fundraiser cart — see `addItem`.
     if (cartStoreContext(get().items)) return false
@@ -268,7 +270,8 @@ const cartStoreConfig: StateCreator<CartStore> = (set, get) => ({
         bundleId: bundle.id,
         bundleGroupId,
       })),
-      (line) => cataloguePrices.get(line.productId) ?? 0
+      (line) => cataloguePrices.get(line.productId) ?? 0,
+      packOverrides
     )
 
     const bundleItems: CartItem[] = priced.map((line, index) => {

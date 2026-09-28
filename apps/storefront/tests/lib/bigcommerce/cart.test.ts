@@ -86,6 +86,32 @@ describe('buildBigCommerceLineItems', () => {
     ])
   })
 
+  it('matches pack choices worded differently from their product', () => {
+    // Live catalog: the Jar choice reads "Garden Fresh Cilantro Mild", the product
+    // "Garden Fresh Cilantro Salsa Mild". Matching by name alone refused the pack.
+    const cilantro = normalizeBigCommerceProduct({
+      ...originalHotRaw,
+      id: 105,
+      name: 'Garden Fresh Cilantro Salsa Mild',
+      custom_url: { url: '/garden-fresh-cilantro-salsa-mild/' },
+    })
+    const pack = normalizeBigCommerceProduct({
+      ...chooseSixFull,
+      modifiers: [
+        chooseSixRaw.modifiers![0],
+        ...jarModifiers.map((modifier) => ({
+          ...modifier,
+          option_values: [{ id: 700 + modifier.id, label: 'Garden Fresh Cilantro Mild', sort_order: 0, is_default: false }],
+        })),
+      ],
+    })
+
+    const [line] = buildBigCommerceLineItems([jar('garden-cilantro-mild-salsa', 6)], [pack, cilantro])
+    expect(line.option_selections?.slice(0, 6).map((selection) => selection.option_value)).toEqual([
+      1000, 1001, 1002, 1003, 1004, 1005,
+    ])
+  })
+
   it('keeps two instances of the same pack separate', () => {
     const items = buildBigCommerceLineItems(
       [jar('original-hot', 6), { ...jar('mango-mild-salsa', 6), bundleGroupId: 'pack-b' }],

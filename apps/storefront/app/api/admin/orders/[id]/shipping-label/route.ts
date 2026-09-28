@@ -12,6 +12,7 @@ import { describeMissingOrigin, getShippingOrigin } from '@/lib/shipping/origin'
 import { filterRates, isRealPostage, selectRate } from '@/lib/shipping/rate-selection'
 import { buildShippingItems, calculateOrderParcel } from '@/lib/shipping-calculator'
 import { z } from 'zod'
+import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 
 /**
  * Everything is optional.
@@ -52,6 +53,8 @@ export async function POST(
     }
 
     const { id } = await params
+    const locked = await bigCommerceOrderLock(id)
+    if (locked) return locked
     const { carrier, service, rateId, parcel } = PurchaseLabelSchema.parse(
       await request.json().catch(() => ({}))
     )

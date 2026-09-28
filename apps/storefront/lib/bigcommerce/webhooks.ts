@@ -13,10 +13,23 @@ import type { BigCommerceStoreKey } from './config'
  */
 
 export const BIGCOMMERCE_WEBHOOK_PATH = '/api/webhooks/bigcommerce'
+
+/**
+ * Where a store's hooks deliver. Both stores share the route and the secret;
+ * the fundraising store's hooks add `?store=fundraising` so the route knows
+ * which store an order id belongs to.
+ */
+export function bigCommerceWebhookDestination(origin: string, storeKey: BigCommerceStoreKey = 'main'): string {
+  const base = `${origin.replace(/\/+$/, '')}${BIGCOMMERCE_WEBHOOK_PATH}`
+  return storeKey === 'main' ? base : `${base}?store=${storeKey}`
+}
 export const BIGCOMMERCE_WEBHOOK_SECRET_HEADER = 'x-jms-webhook-secret'
 
-/** Every product change: created, updated, deleted, inventory. */
-export const BIGCOMMERCE_WEBHOOK_SCOPES = ['store/product/*'] as const
+/**
+ * Every product change (created, updated, deleted, inventory), and every order
+ * change, which is copied into this site's order table.
+ */
+export const BIGCOMMERCE_WEBHOOK_SCOPES = ['store/product/*', 'store/order/*'] as const
 
 /** True only when a secret is configured and `provided` matches it. */
 export function isValidBigCommerceWebhookSecret(provided: string | null): boolean {
