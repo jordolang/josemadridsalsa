@@ -73,8 +73,10 @@ export function BigCommerceNotice({ area }: { area: BigCommerceNoticeArea }) {
  * and the actions that would change it are refused here.
  */
 export function BigCommerceOrderNotice({ orderNumber }: { orderNumber: string }) {
-  const store = findBigCommerceStore('main')
-  const bigCommerceId = orderNumber.replace(/^BC-/, '')
+  // `BCF-` copies come from the fundraising store, `BC-` from the main store.
+  const fundraising = orderNumber.startsWith('BCF-')
+  const store = findBigCommerceStore(fundraising ? 'fundraising' : 'main')
+  const bigCommerceId = orderNumber.replace(/^BCF?-/, '')
 
   return (
     <Alert>
@@ -92,7 +94,7 @@ export function BigCommerceOrderNotice({ orderNumber }: { orderNumber: string })
             rel="noopener noreferrer"
             className="mt-2 inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
           >
-            Open order #{bigCommerceId} in BigCommerce
+            Open order #{bigCommerceId} in {fundraising ? 'the BigCommerce fundraising store' : 'BigCommerce'}
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         ) : null}

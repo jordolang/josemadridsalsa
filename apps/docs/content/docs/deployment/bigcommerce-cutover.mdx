@@ -91,6 +91,45 @@ that domain. josemadrid.net starts sending carts there.
 
 **Rollback:** remove `NEXT_PUBLIC_COMMERCE_BACKEND` and redeploy.
 
+### Fundraising store orders
+
+Orders from the fundraising store (josemadridsalsafundraising.com) are copied into this site's order
+table as well, as read-only `BCF-<number>` orders (`importSource = bigcommerce-fundraising`, sales
+channel *Fundraiser*). They follow the same rules as retail copies: admin changes are refused, they
+stay out of QuickBooks unless `BIGCOMMERCE_ORDERS_TO_QUICKBOOKS=true`, and nothing emails the buyer.
+
+Each order is credited to the group the buyer picked at checkout. The group answer is matched by
+name, ignoring case, extra spaces and curly apostrophes, so "Harper Creek band Boosters" and
+"Harper Creek Band Boosters" are one campaign while "Theta Phi Alpha" and "Theta Phi Alpha 2023"
+stay two. The first order for a new group creates a fundraiser for it (commission 50%, contact
+`fundraising@josemadridsalsa.com`, dates stretched to cover its orders). These fundraisers are
+records only: they are inactive, marked *Ended*, and have both coordinator emails marked as already
+sent, so the lifecycle job never announces, closes or summarises them and they never appear as
+stores. The salesperson answer is kept on the order as free text (`sellerName`). Each copy records
+the group's 50% of the merchandise subtotal and is marked credited, and the campaign's orders,
+revenue and commission are recomputed from its copies.
+
+1. Register the fundraising store's webhooks (the same route and secret, marked with
+   `?store=fundraising`). Run from `apps/storefront` with production's `BIGCOMMERCE_FUNDRAISING_*`
+   and `BIGCOMMERCE_WEBHOOK_SECRET` in your shell:
+
+   ```bash
+   npm run bigcommerce:webhooks -- https://www.josemadrid.net --store fundraising
+   ```
+
+2. Copy the history (every order since the store opened; re-running is safe):
+
+   ```bash
+   npm run bigcommerce:orders -- 2020-01-01 --store fundraising
+   ```
+
+   It prints how many orders were created, updated, skipped (not paid yet) and failed, how many
+   fundraisers were created, and how many orders named no group.
+
+The hourly `/api/cron/bigcommerce-orders` job sweeps the fundraising store too whenever its
+credentials are set, whether or not the retail storefront has switched over. After the domain moves
+(Phase 3), re-run the registration command with the new origin.
+
 ### Purchase tracking
 
 Purchases now happen on BigCommerce's checkout, so they are recorded by the trackers connected

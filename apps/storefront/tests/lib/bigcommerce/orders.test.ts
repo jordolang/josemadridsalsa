@@ -3,8 +3,10 @@ import { http, HttpResponse } from 'msw'
 import { server } from '@/tests/mocks/server'
 import { normalizeBigCommerceProduct, type RawBigCommerceProduct } from '@/lib/bigcommerce/catalog'
 import {
+  BIGCOMMERCE_FUNDRAISING_ORDER_SOURCE,
   bigCommerceOrderNumber,
   buildMirrorItems,
+  isBigCommerceOrderSource,
   mapBigCommerceStatus,
   mirrorBigCommerceOrder,
   syncBigCommerceOrders,
@@ -15,7 +17,8 @@ import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 import fixtures from './fixtures.json'
 
 const db = vi.hoisted(() => ({
-  order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+  order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), aggregate: vi.fn() },
+  fundraiser: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   orderItem: { deleteMany: vi.fn(), createMany: vi.fn() },
   product: { findMany: vi.fn() },
   user: { findFirst: vi.fn() },
@@ -326,7 +329,152 @@ describe('bigCommerceOrderLock', () => {
     await expect(bigCommerceOrderLock('o-site')).resolves.toBeNull()
   })
 
-  it('numbers copies after their BigCommerce order', () => {
+  it('refuses admin changes to a copied fundraising-store order too', async () => {
+    db.order.findUnique.mockResolvedValueOnce({ importSource: 'bigcommerce-fundraising' })
+    expect((await bigCommerceOrderLock('o-bcf'))?.status).toBe(409)
+  })
+
+  it('numbers copies after their BigCommerce order and store', () => {
     expect(bigCommerceOrderNumber(9595)).toBe('BC-9595')
+    expect(bigCommerceOrderNumber(9595, 'main')).toBe('BC-9595')
+    expect(bigCommerceOrderNumber(4821, 'fundraising')).toBe('BCF-4821')
+  })
+
+  it('recognises copies from either store as BigCommerce orders', () => {
+    expect(isBigCommerceOrderSource('bigcommerce')).toBe(true)
+    expect(isBigCommerceOrderSource(BIGCOMMERCE_FUNDRAISING_ORDER_SOURCE)).toBe(true)
+    expect(isBigCommerceOrderSource('csv')).toBe(false)
+    expect(isBigCommerceOrderSource(null)).toBe(false)
+  })
+})
+
+describe('mirrorBigCommerceOrder — fundraising store', () => {
+  const FUND_API = 'https://api.bigcommerce.com/stores/fundhash'
+  const address = {
+    first_name: 'Pat', last_name: 'Supporter', company: '', street_1: '2 Oak St', street_2: '',
+    city: 'Leavenworth', state: 'Kansas', zip: '66048', country_iso2: 'US', phone: '', email: 'pat@example.com',
+  }
+  const order = {
+    id: 4821,
+    status_id: 2,
+    date_created: 'Tue, 14 Mar 2023 16:00:00 +0000',
+    date_shipped: '',
+    subtotal_ex_tax: '20.0000',
+    shipping_cost_ex_tax: '10.0000',
+    total_tax: '0.0000',
+    discount_amount: '0.0000',
+    coupon_discount: '0.0000',
+    gift_certificate_amount: '0.0000',
+    total_inc_tax: '30.0000',
+    payment_method: 'Credit Card',
+    customer_message: '',
+    billing_address: {
+      ...address,
+      form_fields: [
+        { name: 'Fundraiser Group ', value: 'Leavenworth Soccer Association' },
+        { name: 'Salesperson', value: 'Jamie' },
+      ],
+    },
+  }
+  const line = { product_id: 7, name: 'Original Hot', sku: '', quantity: 2, quantity_shipped: 0, total_ex_tax: '20.0000', product_options: [] }
+
+  const useOrder = (overrides: Record<string, unknown> = {}) => {
+    server.use(
+      http.get(`${FUND_API}/v2/orders/4821`, () => HttpResponse.json({ ...order, ...overrides })),
+      http.get(`${FUND_API}/v2/orders/4821/products`, () => HttpResponse.json([line])),
+      http.get(`${FUND_API}/v2/orders/4821/shipping_addresses`, () =>
+        HttpResponse.json([{ ...address, shipping_method: 'Flat Rate' }]),
+      ),
+    )
+  }
+
+  beforeEach(() => {
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_STORE_HASH', 'fundhash')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_ACCESS_TOKEN', 'test-token')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_ID', 'test-client')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET', 'test-secret')
+    for (const table of [db.order, db.orderItem, db.product, db.user, db.fundraiser]) {
+      for (const fn of Object.values(table)) fn.mockReset()
+    }
+    db.$transaction.mockReset().mockImplementation(async (fn: (tx: typeof db) => unknown) => fn(db))
+    db.order.create.mockResolvedValue({ id: 'o-f1' })
+    db.order.aggregate.mockResolvedValue({ _count: { _all: 1 }, _sum: { total: 30, fundraiserCommission: 10 } })
+    db.user.findFirst.mockResolvedValue(null)
+    db.fundraiser.findUnique.mockResolvedValue({
+      id: 'f-lsa',
+      commissionRate: 50,
+      startDate: new Date('2023-03-01T00:00:00Z'),
+      endDate: new Date('2023-04-01T00:00:00Z'),
+    })
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('creates a BCF- fundraiser order credited to its group and salesperson, never to be credited again', async () => {
+    useOrder()
+    db.order.findUnique.mockResolvedValue(null)
+
+    const result = await mirrorBigCommerceOrder(4821, { store: 'fundraising', catalog: [], siteProducts })
+
+    expect(result).toMatchObject({ action: 'created', orderId: 'o-f1', fundraiserId: 'f-lsa', fundraiserCreated: false })
+    expect(db.order.findUnique.mock.calls[0][0].where).toEqual({ orderNumber: 'BCF-4821' })
+    expect(db.fundraiser.findUnique.mock.calls[0][0].where).toEqual({ bigCommerceGroup: 'leavenworth soccer association' })
+    const data = db.order.create.mock.calls[0][0].data
+    expect(data).toMatchObject({
+      orderNumber: 'BCF-4821',
+      importSource: 'bigcommerce-fundraising',
+      salesChannel: 'FUNDRAISER',
+      sellerName: 'Jamie',
+      fundraiser: { connect: { id: 'f-lsa' } },
+      // Half of the $20 merchandise; the $10 shipping is not commissionable.
+      fundraiserCommission: 10,
+      commissionCreditedAt: new Date('2023-03-14T16:00:00Z'),
+      status: 'SHIPPED',
+      paymentStatus: 'PAID',
+    })
+    expect(data.adminNotes).toContain('BigCommerce fundraising store order #4821')
+    expect(db.fundraiser.update).toHaveBeenCalledWith({
+      where: { id: 'f-lsa' },
+      data: { totalOrders: 1, totalRevenue: 30, totalCommission: 10 },
+    })
+  })
+
+  it('records no commission for a refunded order, and recomputes its fundraiser', async () => {
+    useOrder({ status_id: 4 })
+    db.order.findUnique.mockResolvedValue({ id: 'o-f1', fundraiserId: 'f-lsa', _count: { fulfillments: 0, returnRequests: 0 } })
+
+    const result = await mirrorBigCommerceOrder(4821, { store: 'fundraising', catalog: [], siteProducts })
+
+    expect(result.action).toBe('updated')
+    expect(db.order.update.mock.calls[0][0].data).toMatchObject({
+      status: 'REFUNDED',
+      fundraiserCommission: null,
+      fundraiser: { connect: { id: 'f-lsa' } },
+    })
+    expect(db.order.aggregate).toHaveBeenCalledTimes(1)
+  })
+
+  it('mirrors an order with no group without crediting anyone', async () => {
+    useOrder({ billing_address: { ...address, form_fields: [{ name: 'Salesperson', value: 'Jamie' }] } })
+    db.order.findUnique.mockResolvedValue(null)
+
+    const result = await mirrorBigCommerceOrder(4821, { store: 'fundraising', catalog: [], siteProducts })
+
+    expect(result).toMatchObject({ action: 'created', fundraiserId: null })
+    const data = db.order.create.mock.calls[0][0].data
+    expect(data.fundraiser).toBeUndefined()
+    expect(data).toMatchObject({ sellerName: 'Jamie', fundraiserCommission: null, commissionCreditedAt: null })
+    expect(db.fundraiser.findUnique).not.toHaveBeenCalled()
+    expect(db.order.aggregate).not.toHaveBeenCalled()
+  })
+
+  it('defers totals to the caller during a sweep', async () => {
+    useOrder()
+    db.order.findUnique.mockResolvedValue(null)
+    const staleFundraisers = new Set<string>()
+
+    await mirrorBigCommerceOrder(4821, { store: 'fundraising', catalog: [], siteProducts, staleFundraisers })
+
+    expect([...staleFundraisers]).toEqual(['f-lsa'])
+    expect(db.order.aggregate).not.toHaveBeenCalled()
   })
 })
