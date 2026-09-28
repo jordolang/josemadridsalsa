@@ -9,6 +9,20 @@ const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
   ? workspaceRoot
   : projectRoot
 
+/**
+ * Hosts served by app/fundraising-site. Keep in step with DEFAULT_SITE_HOSTS in
+ * lib/fundraising-site/host.ts (this config cannot import TypeScript).
+ */
+function fundraisingSiteHostPattern() {
+  const hosts = [
+    'fundraising.josemadrid.net',
+    'fundraising.josemadridsalsa.com',
+    'fundraising.localhost',
+    ...(process.env.FUNDRAISING_SITE_HOSTS ?? '').split(',').map((host) => host.trim().toLowerCase()).filter(Boolean),
+  ]
+  return `(${hosts.map((host) => host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: monorepoRoot,
@@ -19,16 +33,22 @@ const nextConfig = {
   generateBuildId: async () => {
     return `build-${Date.now()}`
   },
-  // Permanent redirect from the old La Perla page URL
-  redirects: async () => [
-    {
-      source: '/la-perla-ave',
-      destination: '/laperla',
-      permanent: true,
-    },
-    // Old BigCommerce storefront URLs, for when josemadridsalsa.com points here
-    ...bigCommerceRedirects(),
-  ],
+  // Main-site redirects. None of them apply on the fundraising host, which has
+  // its own pages (and its own legacy URLs) at paths like /blog and /cart.php.
+  redirects: async () =>
+    [
+      // Permanent redirect from the old La Perla page URL
+      {
+        source: '/la-perla-ave',
+        destination: '/laperla',
+        permanent: true,
+      },
+      // Old BigCommerce storefront URLs, for when josemadridsalsa.com points here
+      ...bigCommerceRedirects(),
+    ].map((redirect) => ({
+      ...redirect,
+      missing: [...(redirect.missing ?? []), { type: 'host', value: fundraisingSiteHostPattern() }],
+    })),
   // Security headers applied to all routes
   headers: async () => {
     const isProd = process.env.NODE_ENV === 'production'
