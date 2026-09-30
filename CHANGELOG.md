@@ -14,6 +14,15 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Online fundraiser order form at fundraising.josemadridsalsa.com/submit.** Groups running an
+  order-form sale can submit their bulk order online instead of emailing the spreadsheet: fundraiser
+  name, contact, phone, email and ship-to address; all 25 flavors with −/+ one-jar steppers beside
+  each count; instant per-flavor, per-section and order totals (sales @ $10, amount due @ $5, group
+  profit, free-shipping progress at 96 jars); and a required confirmation checkbox plus drawn
+  signature on every submission. `POST /api/fundraiser-order-forms` re-validates with Zod, archives a
+  signed PDF to Vercel Blob, logs a FUNDRAISER engagement request, emails the fundraising inbox and
+  the submitter, and audit-logs the order. Linked from Start Your Fundraiser and the footer, and in
+  the fundraising sitemap. See `features/fundraising-site.mdx`.
 - **fundraising.josemadrid.net replaces josemadridsalsafundraising.com's pages.** The storefront app
   now serves a fundraising site on its own host: `proxy.ts` rewrites `fundraising.josemadrid.net`
   (and `fundraising.josemadridsalsa.com`, ready for later) into `app/fundraising-site/`, with its own

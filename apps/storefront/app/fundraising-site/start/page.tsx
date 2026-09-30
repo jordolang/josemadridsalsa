@@ -92,6 +92,11 @@ export default function StartFundraiserPage() {
               Each pack includes a tracking sheet, a spreadsheet order form, a flavor handout, a how-to-launch guide and
               salsa facts with fundraising safety tips.
             </p>
+            <Button size="lg" variant="outline" className="mt-6 h-auto self-start whitespace-normal py-3" asChild>
+              <Link href="/submit">
+                Submit your order form online <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
           </article>
         </div>
       </section>
