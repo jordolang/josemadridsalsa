@@ -1,19 +1,30 @@
-import { app, dialog, shell } from 'electron'
-import type { BrowserWindow } from 'electron'
+import { BrowserWindow, app, dialog, shell } from 'electron'
+import type { MessageBoxOptions } from 'electron'
 import { autoUpdater } from 'electron-updater'
 
-const RELEASES_URL = 'https://github.com/jordolang/josemadridsalsa/releases'
+/**
+ * Where a person can fetch the installer by hand. The feed itself is set in
+ * electron-builder.yml and goes through the same storefront route, because the
+ * repository is private and its GitHub releases answer 404 to an app with no
+ * GitHub session.
+ */
+const DOWNLOAD_URL = 'https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe'
+
+/** A dialog over whichever admin window is in front, or on its own if none is. */
+function ask(options: MessageBoxOptions) {
+  const window = BrowserWindow.getFocusedWindow()
+  return window ? dialog.showMessageBox(window, options) : dialog.showMessageBox(options)
+}
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 
 let wiredUp = false
 
 /**
- * Updates come from the GitHub release the CI workflow publishes. The build is
- * unsigned for now, so Windows shows a SmartScreen prompt on first install;
- * updates themselves still apply, and the manual path stays available for when
- * the automatic check cannot reach GitHub.
+ * Updates come from the build the Desktop Apps workflow publishes to the update
+ * feed. The build is unsigned until a certificate is configured, so Windows
+ * shows a SmartScreen prompt on first install; updates themselves still apply.
  */
-export function initialiseUpdates(window: BrowserWindow): void {
+export function initialiseUpdates(): void {
   if (wiredUp || !app.isPackaged) return
   wiredUp = true
 
@@ -21,7 +32,7 @@ export function initialiseUpdates(window: BrowserWindow): void {
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('update-downloaded', async (info) => {
-    const { response } = await dialog.showMessageBox(window, {
+    const { response } = await ask({
       type: 'info',
       buttons: ['Restart now', 'Later'],
       defaultId: 0,
@@ -42,13 +53,13 @@ export function initialiseUpdates(window: BrowserWindow): void {
   setInterval(() => void autoUpdater.checkForUpdates(), CHECK_INTERVAL_MS)
 }
 
-export async function checkForUpdatesInteractively(window: BrowserWindow): Promise<void> {
+export async function checkForUpdatesInteractively(): Promise<void> {
   if (!app.isPackaged) {
-    await dialog.showMessageBox(window, {
+    await ask({
       type: 'info',
       title: 'Updates',
       message: 'Update checks only run in an installed build.',
-      detail: `You are running from source. Releases are published at ${RELEASES_URL}.`,
+      detail: 'You are running from source. Installed copies update from the Desktop Apps release.',
     })
     return
   }
@@ -56,22 +67,22 @@ export async function checkForUpdatesInteractively(window: BrowserWindow): Promi
   try {
     const result = await autoUpdater.checkForUpdates()
     if (!result || result.updateInfo.version === app.getVersion()) {
-      await dialog.showMessageBox(window, {
+      await ask({
         type: 'info',
         title: 'Updates',
         message: `You are up to date (version ${app.getVersion()}).`,
       })
     }
   } catch (error) {
-    const { response } = await dialog.showMessageBox(window, {
+    const { response } = await ask({
       type: 'warning',
-      buttons: ['Open releases page', 'Close'],
+      buttons: ['Open download page', 'Close'],
       defaultId: 0,
       cancelId: 1,
       title: 'Could not check for updates',
-      message: 'The update check could not reach GitHub.',
+      message: 'The update check could not reach the update server.',
       detail: error instanceof Error ? error.message : String(error),
     })
-    if (response === 0) await shell.openExternal(RELEASES_URL)
+    if (response === 0) await shell.openExternal(DOWNLOAD_URL)
   }
 }

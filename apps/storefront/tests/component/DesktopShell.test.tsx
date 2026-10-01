@@ -334,4 +334,168 @@ describe('DesktopShell', () => {
     renderShell()
     expect(within(screen.getByRole('navigation')).getByText('Database Console')).toBeInTheDocument()
   })
+
+  it('runs a bulk action once per marked row, each on its own record', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(url === '/api/admin/desktop/write' ? { ok: true, message: 'Done' } : payload),
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    renderShell()
+
+    const [first, second] = screen.getAllByRole('option')
+    fireEvent.click(first, { metaKey: true })
+    fireEvent.click(second, { ctrlKey: true })
+
+    const bar = screen.getByRole('toolbar', { name: 'Bulk actions' })
+    expect(within(bar).getByText('2 marked')).toBeInTheDocument()
+    // Sheets are never offered in bulk; the shared write is.
+    expect(within(bar).queryByText('Edit order…')).not.toBeInTheDocument()
+
+    fireEvent.click(within(bar).getByText('Cancel order'))
+    fireEvent.click(screen.getByText('Yes, do it'))
+
+    await waitFor(() => expect(screen.getByText('Cancel order: 2 done')).toBeInTheDocument())
+    const writes = fetchMock.mock.calls.filter(([url]) => url === '/api/admin/desktop/write')
+    expect(writes.map(([, init]) => JSON.parse(init.body).recordId)).toEqual(['JMS-24817', 'JMS-24816'])
+    expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).not.toBeInTheDocument()
+  })
+
+  it('marks a run of rows with Shift and clears them with Escape', () => {
+    renderShell()
+    fireEvent.click(screen.getAllByRole('option')[1], { shiftKey: true })
+    expect(screen.getByText('2 marked')).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByText('2 marked')).not.toBeInTheDocument()
+  })
+
+  it('searches the server once typing stops when the window is full', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(payload) })
+    vi.stubGlobal('fetch', fetchMock)
+    renderAt({ ...payload, list: { q: '', limit: 250, more: true, searchable: true } })
+
+    fireEvent.change(screen.getByPlaceholderText(/Filter this table/), { target: { value: 'wolfe' } })
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/admin/desktop/orders?q=wolfe')
+  })
+
+  it('filters on the spot, without the server, when every row is already loaded', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    renderAt({ ...payload, list: { q: '', limit: 250, more: false, searchable: true } })
+
+    fireEvent.change(screen.getByPlaceholderText(/Filter this table/), { target: { value: 'wolfe' } })
+    expect(screen.getAllByRole('option')).toHaveLength(1)
+    await new Promise((resolve) => setTimeout(resolve, 450))
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('reads the next rows when asked, keeping the search', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(payload) })
+    vi.stubGlobal('fetch', fetchMock)
+    renderAt({ ...payload, list: { q: '', limit: 250, more: true, searchable: false } })
+
+    fireEvent.click(screen.getByText('Load more'))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/admin/desktop/orders?limit=500')
+  })
+
+  it('refreshes on its own and keeps the sidebar badges current', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ ...payload, badges: { orders: 9 } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      renderShell()
+      expect(screen.getByText('6')).toBeInTheDocument()
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/desktop/orders', { credentials: 'same-origin' })
+    } finally {
+      vi.useRealTimers()
+    }
+    await waitFor(() => expect(screen.getByText('9')).toBeInTheDocument())
+  })
+
+  it('tells the desktop app when orders arrive, and keeps its badge at what is waiting', async () => {
+    vi.useFakeTimers()
+    const notify = vi.fn()
+    const setBadge = vi.fn()
+    window.jmsDesktop = { chrome: 'overlay', notify, setBadge }
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ orders: 8 }) })
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      renderShell()
+      // Opening the window is the baseline, not news.
+      expect(notify).not.toHaveBeenCalled()
+      expect(setBadge).toHaveBeenLastCalledWith(6)
+
+      // Hidden windows keep polling: this is the case notifications are for.
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/desktop/badges', { credentials: 'same-origin' })
+      vi.useRealTimers()
+      await waitFor(() =>
+        expect(notify).toHaveBeenCalledWith({
+          title: '2 new orders to fulfil',
+          body: '8 waiting to ship',
+          path: '/admin-desktop?section=orders',
+        }),
+      )
+      expect(setBadge).toHaveBeenLastCalledWith(8)
+      // Only the poll's fetch: a hidden window does not reload its page.
+      expect(fetchMock.mock.calls.every(([url]) => url === '/api/admin/desktop/badges')).toBe(true)
+    } finally {
+      vi.useRealTimers()
+      delete window.jmsDesktop
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    }
+  })
+
+  it('prints a label on the desktop app’s label printer, or opens it beside the shell in a browser', () => {
+    const labelRow = row('JMS-24817', 'Karen Wolfe', '$71.40')
+    labelRow.inspector.actions = [
+      { label: 'Print label', command: { kind: 'label', href: 'https://easypost-files.s3.amazonaws.com/label.png' } },
+    ]
+    const opened = vi.spyOn(window, 'open').mockReturnValue(null)
+    const printLabel = vi.fn()
+
+    const view = renderAt({ ...payload, body: { ...payload.body, rows: [labelRow] } as typeof payload.body })
+    fireEvent.click(screen.getByText('Print label'))
+    expect(opened).toHaveBeenCalledWith('https://easypost-files.s3.amazonaws.com/label.png', '_blank', 'noopener')
+    expect(assigned).toEqual([])
+    view.unmount()
+
+    window.jmsDesktop = { chrome: 'overlay', printLabel }
+    try {
+      renderAt({ ...payload, body: { ...payload.body, rows: [labelRow] } as typeof payload.body })
+      fireEvent.click(screen.getByText('Print label'))
+      expect(printLabel).toHaveBeenCalledWith('https://easypost-files.s3.amazonaws.com/label.png')
+      expect(opened).toHaveBeenCalledTimes(1)
+    } finally {
+      delete window.jmsDesktop
+    }
+  })
+
+  it('exports what the filter shows as a CSV download', () => {
+    const clicked: string[] = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicked.push(this.getAttribute('href') ?? '')
+    })
+    renderShell()
+
+    fireEvent.change(screen.getByPlaceholderText(/Filter this table/), { target: { value: 'wolfe' } })
+    fireEvent.click(screen.getByText('Online'))
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }))
+
+    expect(clicked).toEqual(['/api/admin/desktop/orders?format=csv&q=wolfe&filter=1'])
+  })
 })

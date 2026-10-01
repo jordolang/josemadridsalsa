@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kiosk receipt</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 384px; height: 980px; box-sizing: border-box; padding: 28px 24px; background: #FFFFFF; color: #000000; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 15px; line-height: 1.45; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center">
+<span style="font-size: 26px; font-weight: 800; letter-spacing: .04em">JOSE MADRID</span>
+<span style="font-size: 18px; font-weight: 800; letter-spacing: .3em">SALSA</span>
+<span>[STORE ADDRESS]</span>
+<span>Zanesville, OH [ZIP]</span>
+<span>josemadrid.net</span>
+</div>
+<div style="border-top: 2px dashed #000000"></div>
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; justify-content: space-between"><span>Order</span><span style="font-weight: 800">JM-1042</span></div>
+<div style="display: flex; justify-content: space-between"><span>Date</span><span>10/01/2026 2:14 PM</span></div>
+<div style="display: flex; justify-content: space-between"><span>Channel</span><span>Kiosk 1</span></div>
+</div>
+<div style="border-top: 2px dashed #000000"></div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-direction: column"><span>Mango Habanero</span><div style="display: flex; justify-content: space-between"><span>  2 x $10.00</span><span>$20.00</span></div></div>
+<div style="display: flex; flex-direction: column"><span>Original Mild</span><div style="display: flex; justify-content: space-between"><span>  1 x $10.00</span><span>$10.00</span></div></div>
+<div style="display: flex; flex-direction: column"><span>Ghost of Clovis</span><div style="display: flex; justify-content: space-between"><span>  1 x $10.00</span><span>$10.00</span></div></div>
+</div>
+<div style="border-top: 2px dashed #000000"></div>
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; justify-content: space-between"><span>Subtotal</span><span>$40.00</span></div>
+<div style="display: flex; justify-content: space-between"><span>4-jar deal</span><span>-$8.00</span></div>
+<div style="display: flex; justify-content: space-between"><span>Tax</span><span>$0.00</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 22px; font-weight: 800; padding-top: 6px"><span>TOTAL</span><span>$32.00</span></div>
+</div>
+<div style="border-top: 2px dashed #000000"></div>
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; justify-content: space-between"><span>VISA •••• 4242</span><span>$32.00</span></div>
+<div style="display: flex; justify-content: space-between"><span>Entry</span><span>Contactless</span></div>
+<div style="display: flex; justify-content: space-between"><span>Auth</span><span>[AUTH CODE]</span></div>
+<div style="display: flex; justify-content: space-between"><span>Square ID</span><span>[PAYMENT ID]</span></div>
+</div>
+<div style="border-top: 2px dashed #000000"></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+<div style="width: 140px; height: 140px; border: 2px solid #000000; display: flex; align-items: center; justify-content: center; font-size: 13px">[ORDER QR]</div>
+<span>Scan to view your order<br>or reorder online</span>
+<span style="font-weight: 800">SHOW SPECIAL: 5 jars + chips $40</span>
+<span style="font-weight: 800; font-size: 18px; padding-top: 6px">Gracias!</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":384,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

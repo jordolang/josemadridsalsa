@@ -44,7 +44,7 @@ a tab strip under its heading for the pages inside it — 58 pages in all:
 | Section | What it shows |
 |---|---|
 | Dashboard | Today's orders and revenue, live fundraisers, jars on hand, SKUs at or below reorder, the next shows |
-| Orders | The latest 250 orders with jar counts, channel, status and totals |
+| Orders | The newest orders with jar counts, channel, status and totals |
 | Products | Catalogue with retail, unit cost and the margin between them |
 | Inventory | On hand, reserved, available and reorder point, flagged against the reorder threshold |
 | Customers | Ranked by lifetime value, with order counts and source |
@@ -65,7 +65,7 @@ a tab strip under its heading for the pages inside it — 58 pages in all:
 | Users & Roles | Staff accounts with role, two-factor state and last sign-in |
 | Audit Logs | Who did what, most recent first |
 | Settings | Store identity, checkout rules and search settings — editable here; payment keys, carriers and integrations show live state |
-| Database Console | Row counts for the core tables |
+| Database Console | Row counts for the core tables, and a **Developer** page — the Developer Console's service checks, platform counts and recent activity, with its tools one click away (needs `developer:system`) |
 
 ### The pages inside a section
 
@@ -177,6 +177,9 @@ rows through another the account happens to hold.
 | `F` | Cycle the filter chips |
 | `I` | Show or hide the inspector |
 | `F5` | Read this section's data again |
+| `Space` | Mark or unmark the selected row for a bulk action |
+| `Ctrl/⌘`-click, `Shift`-click | Mark one row, or every row from the selection to this one |
+| `Esc` | Clear the marks |
 | `Ctrl/⌘ K` | Command palette — jump to a section, a page or a row, or run a command |
 | letters or digits | Type-ahead: jump to the first row starting with what you typed |
 
@@ -187,6 +190,71 @@ label acts on the record as soon as you press it, after a confirmation if it is 
 Those keys are checked against the native menus: a combination either window's menu bar already
 owns (`⌘R` reload, `⌘P` print, `⌘A`, `⌘V`, `⌘M` and the rest) is never advertised, because the
 menu handles it before the page ever sees the key.
+
+### Staying current
+
+A window left open keeps itself current. Every 60 seconds it reads the page on screen again, and
+it does so at once when you come back to it after more than 30 seconds away — switching back from
+another app, or un-minimising. The sidebar badges (unfulfilled orders, low stock, live
+fundraisers) are read again with it. The refresh is silent: it keeps the filter, the chip, the
+search and the row you were on, and it waits while a sheet, a confirmation or the palette is open,
+or while a save is in flight. A refresh that fails leaves the screen as it was. The sidebar footer
+shows when the data was read.
+
+### Large lists: search, load more, export
+
+A table reads its newest 250 rows. When there may be more, the filter bar says `250 of 250+ rows`
+and offers **Load more**, which reads the next 250, up to 2,000.
+
+On the lists that outgrow any window — Orders, Customers, Audit Logs, Lists & subscribers and the
+three Media archives — the filter box also searches the database once you stop typing, so a
+customer outside the newest rows is still found. Every word has to match, each in any of the
+searched fields (for customers: email, name, phone, source; for orders: order number, email, name,
+city, tracking number). The filter bar says `matches in the database` while it is showing those
+results. Every other table is small enough that the filter box narrows the rows already loaded.
+
+The file button at the end of the filter bar (also **Export to CSV** in `⌘K`) downloads the rows
+the filter shows — chip and filter box applied the same way — without the 250-row window, up to
+25,000 rows. Each export is written to the audit log.
+
+### Bulk actions
+
+Mark rows with `Space`, `⌘`/`Ctrl`-click or `Shift`-click, or with **Mark every row shown** in
+`⌘K`, and a bar above the table offers every action all of the marked rows share — *Mark paid*,
+*Mark shipped*, *Approve*, *Unsubscribe*, *Delete* and so on. Choosing one asks once, then runs that
+row's own action for each marked row, one at a time, through the same write route, permission
+check and audit row as pressing it on each record. The toast reports how many went through and
+the first reason any failed. Actions that open a form are not offered in bulk, because one form
+filled once does not mean the same thing for thirty records.
+
+### Scanning stock
+
+Inventory's **Scan stock** opens a sheet for a USB or Bluetooth barcode scanner — any scanner
+that acts as a keyboard and sends Enter after the code, which is how they ship. Pick what the
+scans mean:
+
+- **Stock count** — scan every jar on the shelf. Each product you scanned is set to the number
+  scanned; products you did not scan are left alone, so a count can cover one shelf.
+- **Receiving** — scan every jar that arrived. Each scan adds one.
+
+The sheet tallies as you go and shows each product's on-hand count and what it will become. Fix a
+miscount with − and +, then **Apply**. Nothing is written until then, and each product is one
+*Adjust stock* write — the same permission check, stale-count guard and inventory log entry as
+adjusting by hand, with the reason *Stock count (scanned)* or *Received (scanned)*. If one fails
+(say a sale moved the count mid-scan), only that product stays in the sheet to apply again.
+
+A code matches a product's barcode however the scanner pads it (UPC-A `093662452874`, EAN-13
+`0093662452874`), or its SKU typed by hand. Barcodes are also in the Products and Inventory search
+text, so scanning into the filter box finds the jar. A product needs its barcode filled in on its
+edit sheet first.
+
+### Printing shipping labels
+
+**Print label** on a shipping label sends the 4×6 label straight to the label printer chosen in
+the app's settings — **File → Server Settings…** on Windows, **Settings** on macOS — with no
+dialog. Set it to *Ask each time* (the default) to get the print dialog instead; a printer that
+has been removed shows as *not found*. A failed job raises a notification (Windows) or an alert
+(macOS). In a browser tab, the label opens in a new tab beside the shell.
 
 ### Creating and editing, in the window
 
@@ -271,8 +339,9 @@ weeks later that the indexed-page count is rising.
 
 ### Windows 11
 
-1. Download `JoseMadridSalsaAdmin-Setup-<version>.exe` from the
-   [`desktop-latest` release](https://github.com/jordolang/josemadridsalsa/releases/tag/desktop-latest).
+1. Download the installer from
+   [`www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe`](https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe),
+   which is always the current build.
 2. Run it. The build is not code-signed yet, so SmartScreen shows
    **"Windows protected your PC"** — choose **More info → Run anyway**. This is expected once.
 3. The installer offers a folder choice and creates desktop and Start menu shortcuts.
@@ -283,16 +352,40 @@ a check.
 
 ### macOS
 
-1. Download `JoseMadridSalsaAdmin-<version>.dmg` from the same release and drag the app to
-   Applications.
+1. Download
+   [`JoseMadridSalsaAdmin-latest.dmg`](https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-latest.dmg)
+   and drag the app to Applications.
+   It is a universal app — the same download runs on Apple silicon and Intel Macs, macOS 14 or
+   later.
 2. The build carries an ad-hoc signature rather than a Developer ID, so the first launch needs
    **right-click → Open → Open**. Afterwards it opens normally.
 
-The macOS app does not update itself. **Help → Check for Updates…** opens the releases page.
+The macOS app checks the same feed on launch and every six hours, and when there is a newer
+version it offers to download the new disk image (each version is offered once). **Help → Check
+for Updates…** checks now and says so when you are up to date. It cannot replace itself while it
+is ad-hoc signed — macOS does not allow it — so installing is quit, open the image, drag to
+Applications.
 
 ## Using them
 
 Sign in once with the same account used on the web. The session persists across restarts.
+
+### Notifications and the badge
+
+When an order arrives that needs fulfilling, or a customer message arrives, the app shows a
+system notification — *New order to fulfil · 3 waiting to ship* — and clicking it opens that
+section. The dock icon (macOS) or taskbar button (Windows, as a red dot) shows how many orders
+and messages are waiting. It keeps working while the window is minimised or behind others: the
+page checks the counts every minute even when hidden. Only sections your account can open count,
+the counts the window opened with are never announced, and with several windows open each alert
+appears once. macOS asks for notification permission the first time there is something to show.
+
+### More than one window
+
+**File → New Window** (`Ctrl+Shift+N` / `⌘⇧N`) opens another admin window, and any link the admin
+opens in a new tab opens one too — orders on one screen, inventory on the other. All windows share
+one sign-in. The menu bar acts on the window in front. (`⌘N` is not used: the shell already binds
+it to section jumps.)
 
 ### Keyboard shortcuts
 
@@ -419,20 +512,32 @@ is the supported way to get a `.dmg` without installing Xcode locally.
 
 The **Desktop Apps** workflow (`.github/workflows/desktop-release.yml`) builds the Windows
 installer on `windows-latest` and the macOS app on `macos-15`, then publishes both to the
-rolling `desktop-latest` release. Run it from the Actions tab, or push a `desktop-v*` tag to
-also keep a fixed copy under that tag.
+rolling `desktop-latest` release and to the update feed. Run it from the Actions tab, or push a
+`desktop-v*` tag to also keep a fixed copy under that tag.
 
-The update feed is pinned to the `desktop-latest` tag by name rather than to GitHub's "latest
-release", because this repository also cuts platform releases (`v1.0.0`, `v2.0.0`) that carry no
-installer — whichever of those was newest would otherwise become the feed and every update check
-would come back empty.
+**The update feed is not GitHub.** The repository is private, so its release assets answer 404
+to an app with no GitHub session — an app pointed there would never see an update. Instead the
+workflow's last step (`.github/scripts/publish-desktop-updates.mjs`) uploads the build to the
+public Vercel Blob store under `desktop/`, and both apps read it through the storefront at
+`https://www.josemadrid.net/api/desktop/updates/<file>`, which redirects there. That address is
+baked into every installed copy, so the files can move without breaking updates. The installers
+go up before `latest.yml`, so a check mid-publish never sees a manifest naming a missing file,
+and older builds are deleted afterwards. The step needs the `BLOB_READ_WRITE_TOKEN` repository
+secret, and fails the run without it.
 
 ### Code signing
 
 Neither app is signed yet, which is the source of the SmartScreen and right-click-to-open
-prompts above. Both builds are structured for it:
+prompts above. The workflow signs as soon as the certificates exist — adding the repository
+secrets is the whole job:
 
-- **Windows** — set the `CSC_LINK` and `CSC_KEY_PASSWORD` secrets on the workflow. No change to
-  `electron-builder.yml` is needed.
-- **macOS** — replace the ad-hoc `codesign --sign -` at the end of `build-app.sh` with a
-  Developer ID identity, then notarize with `xcrun notarytool`.
+- **Windows** — `WINDOWS_CSC_LINK` (the code-signing `.pfx`, base64) and
+  `WINDOWS_CSC_KEY_PASSWORD`. Without them the build logs a warning and stays unsigned.
+- **macOS** — `MACOS_CERT_P12` (a *Developer ID Application* certificate, base64) and
+  `MACOS_CERT_PASSWORD` sign the app with the hardened runtime (`build-app.sh` reads the
+  identity from `MACOS_SIGN_IDENTITY`). Add `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD`
+  (an app-specific password) and the disk image is notarised and stapled too. Developer ID
+  membership is $99 a year from Apple.
+
+These steps have not run yet — there has been no certificate to run them with — so expect the
+first signed build to need a look.

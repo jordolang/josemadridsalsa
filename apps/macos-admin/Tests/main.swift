@@ -132,4 +132,58 @@ for section in AdminSections.all {
   )
 }
 
+// MARK: page bridge
+
+precondition(
+  AdminEndpoint.isEndpointOrigin(scheme: "https", host: "www.josemadrid.net", port: 0, endpoint: home),
+  "the admin page itself may use the bridge"
+)
+precondition(
+  !AdminEndpoint.isEndpointOrigin(scheme: "https", host: "accounts.google.com", port: 0, endpoint: home),
+  "a sign-in provider's page may not"
+)
+precondition(
+  AdminEndpoint.isEndpointOrigin(
+    scheme: "http", host: "localhost", port: 3000,
+    endpoint: URL(string: "http://localhost:3000/admin-desktop")!
+  ),
+  "a local development server's own port should match"
+)
+precondition(
+  AdminEndpoint.notificationTarget("/admin-desktop?section=orders", endpoint: home)?.absoluteString ==
+    "https://www.josemadrid.net/admin-desktop?section=orders",
+  "a notification opens its section in the shell"
+)
+for path in ["https://evil.example/admin-desktop?x", "//evil.example/admin-desktop?x", "/admin/users", "/admin-desktop"] {
+  precondition(AdminEndpoint.notificationTarget(path, endpoint: home) == nil, "a notification may not open \(path)")
+}
+
+// MARK: label printing
+
+precondition(
+  AdminEndpoint.labelURL("https://easypost-files.s3.amazonaws.com/files/postage_label/x.png") != nil,
+  "an https label on the carrier's host should print"
+)
+for value in ["http://example.com/x.png", "file:///etc/hosts", "javascript:alert(1)", "not a url"] {
+  precondition(AdminEndpoint.labelURL(value) == nil, "\(value) should not print")
+}
+
+// MARK: update feed
+
+precondition(
+  UpdateFeed.version(inManifest: "version: 2.1.0\nfiles:\n  - url: JoseMadridSalsaAdmin-Setup-2.1.0.exe\n") == "2.1.0",
+  "the version line of latest.yml should be read"
+)
+precondition(UpdateFeed.version(inManifest: "version: '2.2.0'") == "2.2.0", "a quoted version should be read")
+precondition(UpdateFeed.version(inManifest: "files: []") == nil, "no version line means no version")
+precondition(UpdateFeed.isNewer("2.10.0", than: "2.9.0"), "versions compare numerically, not as text")
+precondition(UpdateFeed.isNewer("2.2", than: "2.1.9"), "a missing part counts as zero")
+precondition(!UpdateFeed.isNewer("2.1.0", than: "2.1.0"), "the same version is not an update")
+precondition(!UpdateFeed.isNewer("2.0.9", than: "2.1.0"), "an older feed is not an update")
+precondition(
+  UpdateFeed.diskImage(for: "2.2.0").absoluteString ==
+    "https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-2.2.0.dmg",
+  "the disk image sits beside the manifest"
+)
+
 print("AdminEndpoint checks passed (\(AdminSections.all.count) sections)")

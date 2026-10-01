@@ -21,8 +21,8 @@ const ORDER_FORMS = [
 ] as const
 
 const FLIERS = [
-  { href: `${DOWNLOAD_DIR}/sample-flier-2023.pdf`, label: 'Sample flier', meta: 'PDF, 766 KB' },
-  { href: `${DOWNLOAD_DIR}/flyer-template.pdf`, label: 'Flier template', meta: 'PDF, 582 KB' },
+  { href: `${DOWNLOAD_DIR}/sample-flier-2023.pdf`, label: 'Sample flier', meta: 'PDF, 277 KB' },
+  { href: `${DOWNLOAD_DIR}/flyer-template.pdf`, label: 'Flier template', meta: 'PDF, 382 KB' },
 ] as const
 
 function DownloadLink({ href, label, meta, zip }: { href: string; label: string; meta: string; zip?: boolean }) {

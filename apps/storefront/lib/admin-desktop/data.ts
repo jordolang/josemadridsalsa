@@ -26,6 +26,7 @@ import {
   type DesktopSectionId,
 } from './sections'
 import { allowedPages } from './access'
+import { getPlatformStats, getRecentAudit, getStatusChecks } from '@/lib/developer/status'
 import {
   reconcileYears,
   summariseReconciliation,
@@ -59,6 +60,7 @@ import {
   toNumber,
 } from './format'
 import type { FormId, FormValues, WriteOpId } from './forms'
+import { DEFAULT_LIST, type ListQuery } from './list'
 import type {
   AnalyticsPayload,
   Cell,
@@ -77,8 +79,31 @@ import type {
   Tone,
 } from './types'
 
-/** How many rows any one section will load. */
-const ROW_LIMIT = 250
+/**
+ * Search the database for every word of `q`, each matching any of `fields`.
+ *
+ * Used by the lists that outgrow their window, so a customer outside the newest
+ * rows is still found. Undefined when there is nothing to search for, which
+ * Prisma reads as no condition at all.
+ */
+type WordFilter = { contains: string; mode: 'insensitive' }
+
+function matching<W>(q: string, fields: (word: WordFilter) => W[]): W | undefined {
+  const words = q.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return undefined
+  return { AND: words.map((word) => ({ OR: fields({ contains: word, mode: 'insensitive' }) })) } as W
+}
+
+/** Pages whose loader passes `list.q` to the database, rather than leaving it to the filter box. */
+const SEARCHABLE_PAGES = new Set([
+  'orders',
+  'customers',
+  'audit',
+  'email.lists',
+  'media.documents',
+  'media.mileage',
+  'media.shows',
+])
 
 /**
  * An order only counts as a sale once it is paid, and exchange replacements are
@@ -140,6 +165,9 @@ const page = (id: string): DesktopCommand => ({ kind: 'page', page: id })
 
 const link = (href: string): DesktopCommand => ({ kind: 'open', href })
 
+/** A shipping label: the desktop apps print it on the label printer, a browser opens it. */
+const printLabel = (href: string): DesktopCommand => ({ kind: 'label', href })
+
 // ---------------------------------------------------------------------------
 // Form values
 // ---------------------------------------------------------------------------
@@ -180,12 +208,19 @@ function textValue(value: string | null | undefined): string {
 const ORDER_FILTERS = ['All channels', 'Online', 'Wholesale', 'Fundraiser', 'Shows']
 const ORDER_FILTER_CHANNELS = ['', 'WEBSITE', 'WHOLESALE', 'FUNDRAISER', 'EVENT']
 
-async function loadOrders(): Promise<TablePayload> {
+async function loadOrders(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const orders = await safe(
     () =>
       prisma.order.findMany({
+        where: matching<Prisma.OrderWhereInput>(list.q, (word) => [
+          { orderNumber: word },
+          { guestEmail: word },
+          { trackingNumber: word },
+          { user: { is: { OR: [{ name: word }, { email: word }] } } },
+          { shippingAddress: { is: { OR: [{ firstName: word }, { lastName: word }, { city: word }] } } },
+        ]),
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           user: { select: { name: true, email: true } },
           shippingAddress: { select: { firstName: true, lastName: true, city: true, state: true } },
@@ -320,6 +355,28 @@ async function loadOrders(): Promise<TablePayload> {
                   }),
                 },
               ]),
+          // A button rather than only the status sheet, so a stack of paid orders
+          // can be marked shipped together from the bulk bar. It sends what the
+          // sheet would, with the status moved on, so fulfillment is stamped by
+          // the same handler either way.
+          ...((order.paymentStatus === 'PAID' || order.paymentStatus === 'SUCCEEDED') &&
+          ['PENDING', 'CONFIRMED', 'PROCESSING'].includes(order.status)
+            ? [
+                {
+                  label: 'Mark shipped',
+                  command: write('order.status', order.id, {
+                    values: {
+                      status: 'SHIPPED',
+                      paymentStatus: order.paymentStatus,
+                      salesChannel: order.salesChannel,
+                      adminNotes: textValue(order.adminNotes),
+                    },
+                    confirm: `Mark ${order.orderNumber} shipped? Every line is recorded as fulfilled.`,
+                    success: `${order.orderNumber} marked shipped`,
+                  }),
+                },
+              ]
+            : []),
           ...(order.status === 'CANCELLED'
             ? []
             : [
@@ -352,7 +409,7 @@ async function loadOrders(): Promise<TablePayload> {
       text(count(jars), { right: true }),
       text(money(value), { right: true, strong: true }),
       text(''),
-      text(rows.length === ROW_LIMIT ? `latest ${ROW_LIMIT}` : '', { dim: true }),
+      text(rows.length === list.limit ? `latest ${list.limit}` : '', { dim: true }),
     ],
   }
 }
@@ -411,12 +468,12 @@ function productEditValues(product: Prisma.ProductGetPayload<object>): FormValue
   }
 }
 
-async function loadProducts(): Promise<TablePayload> {
+async function loadProducts(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const products = await safe(
     () =>
       prisma.product.findMany({
         orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { category: { select: { name: true } } },
       }),
     [],
@@ -451,7 +508,7 @@ async function loadProducts(): Promise<TablePayload> {
         title: product.name,
         values: productEditValues(product),
       }),
-      search: `${product.name} ${product.sku} ${product.category.name}`,
+      search: `${product.name} ${product.sku} ${product.barcode ?? ''} ${product.category.name}`,
       buckets: [
         0,
         ...(product.isActive ? [1] : []),
@@ -575,13 +632,13 @@ function stockStanding(available: number, reorder: number): { label: string; ton
   return { label: 'Healthy', tone: 'good', bucket: 3 }
 }
 
-async function loadInventory(): Promise<TablePayload> {
+async function loadInventory(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const products = await safe(
     () =>
       prisma.product.findMany({
         where: { isActive: true },
         orderBy: { name: 'asc' },
-        take: ROW_LIMIT,
+        take: list.limit,
       }),
     [],
   )
@@ -613,7 +670,7 @@ async function loadInventory(): Promise<TablePayload> {
         recordId: product.id,
         title: `Adjust ${product.name} — ${count(product.inventory)} on hand`,
       }),
-      search: `${product.name} ${product.sku}`,
+      search: `${product.name} ${product.sku} ${product.barcode ?? ''}`,
       buckets: [0, standing.bucket],
       cells: [
         text(product.name, { strong: true }),
@@ -730,12 +787,19 @@ async function loadInventory(): Promise<TablePayload> {
 const CUSTOMER_FILTERS = ['Everyone', 'Standard', 'Wholesale', 'Fundraising', 'Has ordered']
 const CUSTOMER_FILTER_TYPES = ['', 'STANDARD', 'WHOLESALE', 'FUNDRAISING']
 
-async function loadCustomers(): Promise<TablePayload> {
+async function loadCustomers(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const customers = await safe(
     () =>
       prisma.customer.findMany({
+        where: matching<Prisma.CustomerWhereInput>(list.q, (word) => [
+          { email: word },
+          { firstName: word },
+          { lastName: word },
+          { phone: word },
+          { sourceName: word },
+        ]),
         orderBy: [{ totalSpent: 'desc' }, { email: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
       }),
     [],
   )
@@ -894,12 +958,12 @@ async function loadCustomers(): Promise<TablePayload> {
 
 const FUNDRAISER_FILTERS = ['All participants', 'Active campaigns', 'Has sales', 'No sales yet']
 
-async function loadFundraisers(): Promise<TablePayload> {
+async function loadFundraisers(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const participants = await safe(
     () =>
       prisma.fundraiserParticipant.findMany({
         orderBy: [{ totalRevenue: 'desc' }, { name: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           // Everything the campaign's own edit sheet needs, so opening it from a
           // participant row costs no second query.
@@ -1148,7 +1212,7 @@ function buildCalendar(month: Date, events: { startDate: Date; title: string }[]
   })
 }
 
-async function loadEvents(): Promise<EventsPayload> {
+async function loadEvents(list: ListQuery = DEFAULT_LIST): Promise<EventsPayload> {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
@@ -1167,7 +1231,7 @@ async function loadEvents(): Promise<EventsPayload> {
       () =>
         prisma.featuredEvent.findMany({
           orderBy: { startDate: 'desc' },
-          take: ROW_LIMIT,
+          take: list.limit,
         }),
       [],
     ),
@@ -1345,12 +1409,12 @@ async function loadEvents(): Promise<EventsPayload> {
 
 const LEDGER_FILTERS = ['All entries', 'Income', 'Expenses', 'Not exported']
 
-async function loadLedger(): Promise<TablePayload> {
+async function loadLedger(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const entries = await safe(
     () =>
       prisma.ledgerEntry.findMany({
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
       }),
     [],
   )
@@ -2166,9 +2230,18 @@ async function loadSettings(): Promise<SettingsPayload> {
 // Audit logs
 // ---------------------------------------------------------------------------
 
-async function loadAudit(): Promise<TablePayload> {
+async function loadAudit(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const logs = await safe(
-    () => prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: ROW_LIMIT }),
+    () =>
+      prisma.auditLog.findMany({
+        where: matching<Prisma.AuditLogWhereInput>(list.q, (word) => [
+          { action: word },
+          { entityType: word },
+          { entityId: word },
+        ]),
+        orderBy: { createdAt: 'desc' },
+        take: list.limit,
+      }),
     [],
   )
 
@@ -2239,7 +2312,7 @@ async function loadAudit(): Promise<TablePayload> {
       text(''),
       text(''),
       text(''),
-      text(rows.length === ROW_LIMIT ? `latest ${ROW_LIMIT}` : '', { dim: true }),
+      text(rows.length === list.limit ? `latest ${list.limit}` : '', { dim: true }),
     ],
   }
 }
@@ -2259,12 +2332,12 @@ const PURCHASE_TONE: Record<string, Tone> = {
   CANCELLED: 'muted',
 }
 
-async function loadPurchase(): Promise<TablePayload> {
+async function loadPurchase(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const orders = await safe(
     () =>
       prisma.purchaseOrder.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           supplier: { select: { name: true, city: true, state: true, email: true } },
           createdBy: { select: { name: true, email: true } },
@@ -2430,7 +2503,7 @@ async function loadPurchase(): Promise<TablePayload> {
       text(count(jars), { right: true }),
       text(money(value), { right: true, strong: true }),
       text(''),
-      text(rows.length === ROW_LIMIT ? `latest ${ROW_LIMIT}` : '', { dim: true }),
+      text(rows.length === list.limit ? `latest ${list.limit}` : '', { dim: true }),
     ],
   }
 }
@@ -2530,9 +2603,9 @@ function invoiceLines(value: Prisma.JsonValue | null | undefined): InspectorLine
   })
 }
 
-async function loadInvoices(): Promise<TablePayload> {
+async function loadInvoices(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const invoices = await safe(
-    () => prisma.invoice.findMany({ orderBy: { createdAt: 'desc' }, take: ROW_LIMIT }),
+    () => prisma.invoice.findMany({ orderBy: { createdAt: 'desc' }, take: list.limit }),
     [],
   )
 
@@ -2694,7 +2767,7 @@ const WHOLESALE_TONE: Record<string, Tone> = {
   SUSPENDED: 'bad',
 }
 
-async function loadWholesale(): Promise<TablePayload> {
+async function loadWholesale(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   // The design's price tier and year-to-date columns have no schema behind
   // them; the account's own discount, minimum and self-reported volume are the
   // nearest things that are actually true.
@@ -2702,7 +2775,7 @@ async function loadWholesale(): Promise<TablePayload> {
     () =>
       prisma.wholesaleAccount.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { user: { select: { name: true, email: true } } },
       }),
     [],
@@ -2866,12 +2939,12 @@ const EMAIL_TONE: Record<string, Tone> = {
   FAILED: 'bad',
 }
 
-async function loadEmail(): Promise<TablePayload> {
+async function loadEmail(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const campaigns = await safe(
     () =>
       prisma.emailCampaign.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           stats: true,
           list: { select: { name: true } },
@@ -3061,12 +3134,12 @@ const SOCIAL_TONE: Record<string, Tone> = {
   FAILED: 'bad',
 }
 
-async function loadSocial(): Promise<TablePayload> {
+async function loadSocial(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const posts = await safe(
     () =>
       prisma.socialMediaPost.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           media: { select: { id: true } },
           publishes: { include: { account: { select: { accountName: true, platform: true } } } },
@@ -3247,7 +3320,7 @@ const CONTENT_TONE: Record<string, Tone> = {
 const SEO_TITLE_MAX = 60
 const SEO_DESCRIPTION_MAX = 160
 
-async function loadContent(): Promise<TablePayload> {
+async function loadContent(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   // Pages, banners and FAQs are edited through `/admin/content` but are not one
   // queryable list, so this table is the blog — the content the schema models as
   // rows. The other views stay one ⌘K away.
@@ -3255,7 +3328,7 @@ async function loadContent(): Promise<TablePayload> {
     () =>
       prisma.blogPost.findMany({
         orderBy: { updatedAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           author: { select: { name: true, email: true } },
           category: { select: { name: true } },
@@ -3441,12 +3514,12 @@ const LEAD_TONE: Record<string, Tone> = {
   EMAIL_FAILED: 'bad',
 }
 
-async function loadLeads(): Promise<TablePayload> {
+async function loadLeads(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const leads = await safe(
     () =>
       prisma.lead.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { campaign: { select: { id: true, name: true, leadType: true } } },
       }),
     [],
@@ -3598,12 +3671,12 @@ const REVIEW_TONE: Record<string, Tone> = {
   REJECTED: 'bad',
 }
 
-async function loadReviews(): Promise<TablePayload> {
+async function loadReviews(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const reviews = await safe(
     () =>
       prisma.review.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           product: { select: { id: true, name: true } },
           user: { select: { name: true, email: true } },
@@ -3752,12 +3825,12 @@ function mediaBucket(mimeType: string): { kind: string; bucket: number } {
   return { kind: humanise(mimeType.split('/').pop() ?? 'File'), bucket: 3 }
 }
 
-async function loadMedia(): Promise<TablePayload> {
+async function loadMedia(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const files = await safe(
     () =>
       prisma.media.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { _count: { select: { socialMediaPosts: true, mediaTags: true } } },
       }),
     [],
@@ -3890,7 +3963,7 @@ const CHAT_TONE: Record<string, Tone> = {
   OFFLINE: 'muted',
 }
 
-async function loadMessages(): Promise<TablePayload> {
+async function loadMessages(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   // Three tables feed one inbox. `Conversation` is the support inbox the web
   // panel at /admin/messages shows; `ContactSubmission` is the marketing site's
   // contact form; `ChatThread` is the live-chat handoff. They are separate
@@ -3901,7 +3974,7 @@ async function loadMessages(): Promise<TablePayload> {
       () =>
         prisma.conversation.findMany({
           orderBy: { updatedAt: 'desc' },
-          take: ROW_LIMIT,
+          take: list.limit,
           include: {
             user: { select: { name: true, email: true } },
             messages: { orderBy: { createdAt: 'desc' }, take: 1 },
@@ -3911,14 +3984,14 @@ async function loadMessages(): Promise<TablePayload> {
       [],
     ),
     safe(
-      () => prisma.contactSubmission.findMany({ orderBy: { createdAt: 'desc' }, take: ROW_LIMIT }),
+      () => prisma.contactSubmission.findMany({ orderBy: { createdAt: 'desc' }, take: list.limit }),
       [],
     ),
     safe(
       () =>
         prisma.chatThread.findMany({
           orderBy: { lastMessageAt: 'desc' },
-          take: ROW_LIMIT,
+          take: list.limit,
           include: { _count: { select: { messages: true } } },
         }),
       [],
@@ -4121,7 +4194,7 @@ async function loadMessages(): Promise<TablePayload> {
 
   const merged = [...conversationRows, ...formRows, ...chatRows]
     .sort((a, b) => b.at.getTime() - a.at.getTime())
-    .slice(0, ROW_LIMIT)
+    .slice(0, list.limit)
 
   const open = merged.filter((row) => row.buckets.includes(4)).length
   const rows: Row[] = merged.map(({ at: _at, ...row }) => row)
@@ -4156,13 +4229,13 @@ const ROLE_TONE: Record<string, Tone> = {
   STAFF: 'muted',
 }
 
-async function loadUsers(): Promise<TablePayload> {
+async function loadUsers(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const users = await safe(
     () =>
       prisma.user.findMany({
         where: { role: { in: [...STAFF_ROLES] } },
         orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         select: {
           id: true,
           name: true,
@@ -4317,12 +4390,12 @@ function returnBuckets(status: string): number[] {
   return [0, 3]
 }
 
-async function loadReturns(): Promise<TablePayload> {
+async function loadReturns(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const requests = await safe(
     () =>
       prisma.returnRequest.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           items: { include: { orderItem: { select: { productName: true, unitPrice: true } } } },
           order: {
@@ -4533,12 +4606,12 @@ function labelTone(status: string | null): Tone {
   return 'warn'
 }
 
-async function loadShippingLabels(): Promise<TablePayload> {
+async function loadShippingLabels(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const labels = await safe(
     () =>
       prisma.shippingLabel.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           carrier: { select: { name: true } },
           order: {
@@ -4589,7 +4662,7 @@ async function loadShippingLabels(): Promise<TablePayload> {
 
     return {
       id: label.id,
-      open: label.labelUrl ? link(label.labelUrl) : jump('orders'),
+      open: label.labelUrl ? printLabel(label.labelUrl) : jump('orders'),
       search: `${tracking ?? ''} ${label.order.orderNumber} ${customer} ${carrier}`,
       buckets,
       cells: [
@@ -4634,7 +4707,7 @@ async function loadShippingLabels(): Promise<TablePayload> {
         ],
         actions: [
           ...(label.labelUrl
-            ? [{ label: 'Print label…', shortcut: '⌘I', command: link(label.labelUrl) }]
+            ? [{ label: 'Print label', shortcut: '⌘I', command: printLabel(label.labelUrl) }]
             : []),
           { label: 'Orders', command: jump('orders'), shortcut: '⌘O' },
           { label: 'Returns', command: page('orders.returns'), shortcut: '⌘⇧B' },
@@ -4666,12 +4739,12 @@ async function loadShippingLabels(): Promise<TablePayload> {
 
 const SUPPLIER_FILTERS = ['All suppliers', 'Active', 'Inactive']
 
-async function loadSuppliers(): Promise<TablePayload> {
+async function loadSuppliers(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const suppliers = await safe(
     () =>
       prisma.supplier.findMany({
         orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           purchaseOrders: {
             orderBy: { createdAt: 'desc' },
@@ -4809,12 +4882,12 @@ const TEAM_TONE: Record<string, Tone> = {
   ENDED: 'muted',
 }
 
-async function loadArena(): Promise<TablePayload> {
+async function loadArena(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const teams = await safe(
     () =>
       prisma.fundraiserTeam.findMany({
         orderBy: [{ status: 'asc' }, { salesCount: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           saleEvents: { select: { amount: true, createdAt: true } },
           season: { select: { period: true } },
@@ -4985,12 +5058,12 @@ const MANIFEST_TONE: Record<string, Tone> = {
   RETURNED: 'good',
 }
 
-async function loadManifests(): Promise<TablePayload> {
+async function loadManifests(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const manifests = await safe(
     () =>
       prisma.eventManifest.findMany({
         orderBy: { updatedAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           event: { select: { id: true, title: true, startDate: true, city: true, state: true } },
           items: { include: { product: { select: { name: true, price: true } } } },
@@ -5119,12 +5192,12 @@ async function loadManifests(): Promise<TablePayload> {
 
 const LOCATION_FILTERS = ['All stockists', 'Listed', 'Hidden', 'No photo']
 
-async function loadLocations(): Promise<TablePayload> {
+async function loadLocations(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const locations = await safe(
     () =>
       prisma.retailLocation.findMany({
         orderBy: [{ isActive: 'desc' }, { state: 'asc' }, { city: 'asc' }, { businessName: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { _count: { select: { photos: true } } },
       }),
     [],
@@ -5419,12 +5492,12 @@ async function loadReconciliation(): Promise<TablePayload> {
 
 const EMAIL_TEMPLATE_FILTERS = ['All templates', 'Marketing', 'Transactional', 'Retired']
 
-async function loadEmailTemplates(): Promise<TablePayload> {
+async function loadEmailTemplates(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const templates = await safe(
     () =>
       prisma.emailTemplate.findMany({
         orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { _count: { select: { campaigns: true, versions: true } } },
       }),
     [],
@@ -5538,12 +5611,12 @@ async function loadEmailTemplates(): Promise<TablePayload> {
 
 const AUTOMATION_FILTERS = ['All automations', 'Running', 'Paused']
 
-async function loadAutomations(): Promise<TablePayload> {
+async function loadAutomations(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const automations = await safe(
     () =>
       prisma.emailAutomation.findMany({
         orderBy: [{ isActive: 'desc' }, { updatedAt: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           steps: { orderBy: { order: 'asc' }, select: { order: true, subject: true, delayHours: true } },
           _count: { select: { enrollments: true, logs: true } },
@@ -5672,13 +5745,19 @@ const SUBSCRIBER_TONE: Record<string, Tone> = {
   COMPLAINED: 'bad',
 }
 
-async function loadSubscribers(): Promise<TablePayload> {
+async function loadSubscribers(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const [subscribers, lists] = await Promise.all([
     safe(
       () =>
         prisma.mailingListSubscriber.findMany({
+          where: matching<Prisma.MailingListSubscriberWhereInput>(list.q, (word) => [
+            { email: word },
+            { firstName: word },
+            { lastName: word },
+            { source: word },
+          ]),
           orderBy: { createdAt: 'desc' },
-          take: ROW_LIMIT,
+          take: list.limit,
           include: { list: { select: { id: true, name: true, description: true, isDefault: true } } },
         }),
       [],
@@ -5831,7 +5910,7 @@ async function loadSubscribers(): Promise<TablePayload> {
       text(''),
       text(''),
       text(''),
-      text(rows.length === ROW_LIMIT ? `latest ${ROW_LIMIT}` : '', { dim: true }),
+      text(rows.length === list.limit ? `latest ${list.limit}` : '', { dim: true }),
     ],
   }
 }
@@ -5851,10 +5930,10 @@ const SUPPRESSION_TONE: Record<string, Tone> = {
   ADMIN: 'muted',
 }
 
-async function loadSuppressions(): Promise<TablePayload> {
+async function loadSuppressions(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const [suppressions, bounces] = await Promise.all([
     safe(
-      () => prisma.emailSuppression.findMany({ orderBy: { createdAt: 'desc' }, take: ROW_LIMIT }),
+      () => prisma.emailSuppression.findMany({ orderBy: { createdAt: 'desc' }, take: list.limit }),
       [],
     ),
     safe(
@@ -5988,12 +6067,12 @@ const EMAIL_LOG_TONE: Record<string, Tone> = {
   BOUNCED: 'bad',
 }
 
-async function loadEmailLogs(): Promise<TablePayload> {
+async function loadEmailLogs(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const logs = await safe(
     () =>
       prisma.emailLog.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { user: { select: { name: true, email: true } } },
       }),
     [],
@@ -6095,7 +6174,7 @@ async function loadEmailLogs(): Promise<TablePayload> {
       text(count(opened), { right: true }),
       text(count(clicked), { right: true }),
       text(failed ? `${count(failed)} failed` : '', { tone: failed ? 'bad' : 'muted' }),
-      text(rows.length === ROW_LIMIT ? `latest ${ROW_LIMIT}` : '', { dim: true }),
+      text(rows.length === list.limit ? `latest ${list.limit}` : '', { dim: true }),
     ],
   }
 }
@@ -6190,12 +6269,12 @@ async function loadBrandKit(): Promise<SettingsPayload> {
 
 const SOCIAL_ACCOUNT_FILTERS = ['All accounts', 'Connected', 'Needs attention']
 
-async function loadSocialAccounts(): Promise<TablePayload> {
+async function loadSocialAccounts(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const accounts = await safe(
     () =>
       prisma.socialAccount.findMany({
         orderBy: [{ isActive: 'desc' }, { platform: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           _count: { select: { publishedPosts: true, shopListings: true } },
           publishedPosts: {
@@ -6325,12 +6404,12 @@ const LISTING_TONE: Record<string, Tone> = {
   ERROR: 'bad',
 }
 
-async function loadFeeds(): Promise<TablePayload> {
+async function loadFeeds(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const listings = await safe(
     () =>
       prisma.shopListing.findMany({
         orderBy: [{ shopPlatform: 'asc' }, { updatedAt: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           product: { select: { name: true, sku: true, price: true, isActive: true } },
           socialAccount: { select: { accountName: true } },
@@ -6452,13 +6531,13 @@ async function loadFeeds(): Promise<TablePayload> {
 
 const REACH_FILTERS = ['All published', 'Facebook', 'Instagram', 'Other']
 
-async function loadSocialReach(): Promise<TablePayload> {
+async function loadSocialReach(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const publishes = await safe(
     () =>
       prisma.socialPostPublish.findMany({
         where: { status: 'PUBLISHED' },
         orderBy: { publishedAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           account: { select: { accountName: true } },
           post: { select: { content: true, hashtags: true, linkUrl: true } },
@@ -6618,12 +6697,12 @@ function cmsPageValues(record: {
   }
 }
 
-async function loadCmsPages(): Promise<TablePayload> {
+async function loadCmsPages(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const pages = await safe(
     () =>
       prisma.page.findMany({
         orderBy: { updatedAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { _count: { select: { sections: true } } },
       }),
     [],
@@ -6790,12 +6869,12 @@ async function loadCmsPages(): Promise<TablePayload> {
 
 const BANNER_FILTERS = ['All banners', 'Live now', 'Scheduled', 'Drafts']
 
-async function loadBanners(): Promise<TablePayload> {
+async function loadBanners(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const banners = await safe(
     () =>
       prisma.banner.findMany({
         orderBy: [{ placement: 'asc' }, { priority: 'desc' }, { updatedAt: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
       }),
     [],
   )
@@ -6934,12 +7013,12 @@ async function loadBanners(): Promise<TablePayload> {
 
 const FAQ_FILTERS = ['All FAQs', 'Published', 'Drafts']
 
-async function loadFaqs(): Promise<TablePayload> {
+async function loadFaqs(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const faqs = await safe(
     () =>
       prisma.faqItem.findMany({
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { category: { select: { name: true } } },
       }),
     [],
@@ -7039,9 +7118,9 @@ async function loadFaqs(): Promise<TablePayload> {
 
 const REDIRECT_FILTERS = ['All redirects', 'Active', 'Off', 'Never hit']
 
-async function loadRedirects(): Promise<TablePayload> {
+async function loadRedirects(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const redirects = await safe(
-    () => prisma.redirect.findMany({ orderBy: [{ isActive: 'desc' }, { hitCount: 'desc' }], take: ROW_LIMIT }),
+    () => prisma.redirect.findMany({ orderBy: [{ isActive: 'desc' }, { hitCount: 'desc' }], take: list.limit }),
     [],
   )
 
@@ -7289,12 +7368,12 @@ const LEAD_CAMPAIGN_TONE: Record<string, Tone> = {
 
 const LEAD_CAMPAIGN_RUNNING = ['SCRAPING', 'PARSING_CONTACTS', 'SENDING_EMAILS']
 
-async function loadLeadCampaigns(): Promise<TablePayload> {
+async function loadLeadCampaigns(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const campaigns = await safe(
     () =>
       prisma.leadCampaign.findMany({
         orderBy: { createdAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           template: { select: { name: true } },
           _count: { select: { leads: true } },
@@ -7419,13 +7498,13 @@ const FORM_TONE: Record<string, Tone> = {
   ARCHIVED: 'muted',
 }
 
-async function loadForms(): Promise<TablePayload> {
+async function loadForms(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const [templates, captures] = await Promise.all([
     safe(
       () =>
         prisma.formTemplate.findMany({
           orderBy: { updatedAt: 'desc' },
-          take: ROW_LIMIT,
+          take: list.limit,
           include: { _count: { select: { versions: true } } },
         }),
       [],
@@ -7923,12 +8002,17 @@ const SENSITIVITY_TONE: Record<string, Tone> = {
   SENSITIVE: 'bad',
 }
 
-async function loadArchiveDocuments(): Promise<TablePayload> {
+async function loadArchiveDocuments(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const documents = await safe(
     () =>
       prisma.archiveDocument.findMany({
+        where: matching<Prisma.ArchiveDocumentWhereInput>(list.q, (word) => [
+          { filename: word },
+          { path: word },
+          { category: word },
+        ]),
         orderBy: [{ year: 'desc' }, { path: 'asc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
       }),
     [],
   )
@@ -8041,9 +8125,19 @@ async function loadArchiveDocuments(): Promise<TablePayload> {
 
 const MILEAGE_FILTERS = ['All trips', 'Shows', 'Markets', 'Other']
 
-async function loadMileage(): Promise<TablePayload> {
+async function loadMileage(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const trips = await safe(
-    () => prisma.mileageEntry.findMany({ orderBy: { tripDate: 'desc' }, take: ROW_LIMIT }),
+    () =>
+      prisma.mileageEntry.findMany({
+        where: matching<Prisma.MileageEntryWhereInput>(list.q, (word) => [
+          { destination: word },
+          { city: word },
+          { state: word },
+          { driver: word },
+        ]),
+        orderBy: { tripDate: 'desc' },
+        take: list.limit,
+      }),
     [],
   )
 
@@ -8148,12 +8242,17 @@ async function loadMileage(): Promise<TablePayload> {
 
 const SHOW_ARCHIVE_FILTERS = ['All shows', 'Shows', 'Farmers markets', 'No sales figure']
 
-async function loadShowArchive(): Promise<TablePayload> {
+async function loadShowArchive(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const shows = await safe(
     () =>
       prisma.archivedShowSale.findMany({
+        where: matching<Prisma.ArchivedShowSaleWhereInput>(list.q, (word) => [
+          { showName: word },
+          { salesPerson: word },
+          { dateText: word },
+        ]),
         orderBy: [{ year: 'desc' }, { showDate: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
       }),
     [],
   )
@@ -8279,12 +8378,12 @@ const CHAT_THREAD_TONE: Record<string, Tone> = {
   OFFLINE: 'bad',
 }
 
-async function loadLiveChat(): Promise<TablePayload> {
+async function loadLiveChat(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const threads = await safe(
     () =>
       prisma.chatThread.findMany({
         orderBy: { lastMessageAt: 'desc' },
-        take: ROW_LIMIT,
+        take: list.limit,
         include: {
           messages: { orderBy: { createdAt: 'desc' }, take: 1 },
           _count: { select: { messages: true } },
@@ -8446,13 +8545,13 @@ const INBOX_STATUS_TONE: Record<string, Tone> = {
  * "clear" — that refusal lives in `lib/inbox/resolution.ts` and is enforced server-side
  * whichever surface asks.
  */
-async function loadCustomerEmail(): Promise<TablePayload> {
+async function loadCustomerEmail(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const emails = await safe(
     () =>
       prisma.inboundEmail.findMany({
         where: { status: { not: 'IGNORED' } },
         orderBy: [{ resolvedAt: { sort: 'asc', nulls: 'first' } }, { receivedAt: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
         include: { steps: { orderBy: { position: 'asc' } } },
       }),
     [],
@@ -8595,12 +8694,12 @@ const NOTIFICATION_TONE: Record<string, Tone> = {
   CRITICAL: 'bad',
 }
 
-async function loadNotifications(): Promise<TablePayload> {
+async function loadNotifications(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const notifications = await safe(
     () =>
       prisma.notification.findMany({
         orderBy: [{ isRead: 'asc' }, { createdAt: 'desc' }],
-        take: ROW_LIMIT,
+        take: list.limit,
       }),
     [],
   )
@@ -8714,13 +8813,13 @@ async function loadNotifications(): Promise<TablePayload> {
 
 const CREDENTIAL_FILTERS = ['All credentials', 'Rotated this year', 'Never rotated']
 
-async function loadCredentials(): Promise<TablePayload> {
+async function loadCredentials(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const [credentials, grants] = await Promise.all([
     safe(
       () =>
         prisma.serviceCredential.findMany({
           orderBy: [{ serviceName: 'asc' }, { label: 'asc' }],
-          take: ROW_LIMIT,
+          take: list.limit,
           // Never the encrypted value, its IV or its tag. This window lists what
           // is in the vault; revealing a secret is the vault UI's own job, behind
           // its own confirmation.
@@ -9279,6 +9378,7 @@ function meta(section: DesktopSection): SectionMeta {
         filters: INVENTORY_FILTERS,
         actions: [
           { label: 'New purchase order', icon: 'i-plus', command: form('purchase.create'), primary: true },
+          { label: 'Scan stock', icon: 'i-boxes', command: { kind: 'scan' } },
           { label: 'Purchase orders', icon: 'i-truck', command: jump('purchase') },
           open,
         ],
@@ -9463,54 +9563,120 @@ function meta(section: DesktopSection): SectionMeta {
   }
 }
 
-async function loadBody(section: DesktopSection): Promise<SectionPayload['body']> {
+/**
+ * The Developer Console's overview, read through the same helpers as
+ * `/admin/developer` so the two always agree. The console's tools — the SQL
+ * console, the file explorer, the blog — stay web pages; the inspector opens
+ * them.
+ */
+async function loadDeveloper(): Promise<SettingsPayload> {
+  const [checks, stats, audit] = await Promise.all([getStatusChecks(), getPlatformStats(), getRecentAudit()])
+  const failing = checks.filter((check) => !check.ok).length
+  const stat = (value: number | null) => (value === null ? 'Unavailable' : count(value))
+
+  return {
+    view: 'settings',
+    groups: [
+      {
+        label: 'SYSTEM STATUS',
+        rows: checks.map((check) => ({ label: check.label, value: check.detail, tone: check.ok ? 'good' : 'bad' })),
+      },
+      {
+        label: 'PLATFORM',
+        rows: [
+          { label: 'Users', value: stat(stats.users), mono: true },
+          { label: 'Orders', value: stat(stats.orders), mono: true },
+          { label: 'Products', value: stat(stats.products), mono: true },
+          { label: 'Developer blog posts', value: stat(stats.posts), mono: true },
+        ],
+      },
+      {
+        label: 'RECENT ACTIVITY',
+        rows:
+          audit.length === 0
+            ? [{ label: 'Audit trail', value: 'No entries yet', tone: 'muted' }]
+            : audit.map((entry) => ({
+                label: [entry.action, entry.entityType].filter(Boolean).join(' · '),
+                value: stamp(entry.createdAt),
+                mono: true,
+              })),
+      },
+    ],
+    inspector: {
+      title: 'Developer Console',
+      tag: failing === 0 ? 'All systems configured' : `${failing} need attention`,
+      tagTone: failing === 0 ? 'good' : 'bad',
+      groups: [
+        {
+          label: 'TOOLS',
+          fields: [
+            { label: 'SQL console', value: 'Guarded queries against the platform database' },
+            { label: 'File explorer', value: 'The josemadridsalsa-blob store' },
+            { label: 'Developer blog', value: 'Posts on /developer' },
+          ],
+        },
+      ],
+      actions: [
+        { label: 'SQL console…', command: link('/admin/developer/database') },
+        { label: 'File explorer…', command: link('/admin/developer/files') },
+        { label: 'Developer blog…', command: link('/admin/developer/blog') },
+        { label: 'Page content…', command: link('/admin/developer/content') },
+        { label: 'Salsadocs…', command: link('/admin/developer/salsadocs') },
+        { label: 'Credential vault', command: page('users.credentials') },
+        { label: 'Audit logs', command: jump('audit') },
+      ],
+    },
+  }
+}
+
+async function loadBody(section: DesktopSection, list: ListQuery): Promise<SectionPayload['body']> {
   switch (section.id) {
     case 'dashboard':
       return loadDashboard()
     case 'orders':
-      return loadOrders()
+      return loadOrders(list)
     case 'products':
-      return loadProducts()
+      return loadProducts(list)
     case 'inventory':
-      return loadInventory()
+      return loadInventory(list)
     case 'customers':
-      return loadCustomers()
+      return loadCustomers(list)
     case 'fundraisers':
-      return loadFundraisers()
+      return loadFundraisers(list)
     case 'events':
-      return loadEvents()
+      return loadEvents(list)
     case 'ledger':
-      return loadLedger()
+      return loadLedger(list)
     case 'analytics':
       return loadAnalytics()
     case 'settings':
       return loadSettings()
     case 'audit':
-      return loadAudit()
+      return loadAudit(list)
     case 'database':
       return loadDatabase()
     case 'purchase':
-      return loadPurchase()
+      return loadPurchase(list)
     case 'invoices':
-      return loadInvoices()
+      return loadInvoices(list)
     case 'wholesale':
-      return loadWholesale()
+      return loadWholesale(list)
     case 'email':
-      return loadEmail()
+      return loadEmail(list)
     case 'social':
-      return loadSocial()
+      return loadSocial(list)
     case 'content':
-      return loadContent()
+      return loadContent(list)
     case 'leads':
-      return loadLeads()
+      return loadLeads(list)
     case 'reviews':
-      return loadReviews()
+      return loadReviews(list)
     case 'media':
-      return loadMedia()
+      return loadMedia(list)
     case 'messages':
-      return loadMessages()
+      return loadMessages(list)
     case 'users':
-      return loadUsers()
+      return loadUsers(list)
     default:
       return {
         view: 'link',
@@ -9719,6 +9885,15 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
           { label: 'Pages', icon: 'i-file', command: page('content.pages') },
         ],
       }
+    case 'database.developer':
+      return {
+        eyebrow: 'DEVELOPER CONSOLE',
+        filters: ['Overview'],
+        actions: [
+          { label: 'Tables', icon: 'i-database', command: page('database') },
+          { label: 'Open full console', icon: 'i-chev', command: link('/admin/developer') },
+        ],
+      }
     case 'content.seo':
       return {
         eyebrow,
@@ -9877,54 +10052,56 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
 }
 
 /** The body for one page inside a section, or `null` when it is the section's own list. */
-async function loadPageBody(pageId: string): Promise<SectionPayload['body'] | null> {
+async function loadPageBody(pageId: string, list: ListQuery): Promise<SectionPayload['body'] | null> {
   switch (pageId) {
+    case 'database.developer':
+      return loadDeveloper()
     case 'orders.returns':
-      return loadReturns()
+      return loadReturns(list)
     case 'orders.shipping':
-      return loadShippingLabels()
+      return loadShippingLabels(list)
     case 'purchase.suppliers':
-      return loadSuppliers()
+      return loadSuppliers(list)
     case 'fundraisers.arena':
-      return loadArena()
+      return loadArena(list)
     case 'events.manifests':
-      return loadManifests()
+      return loadManifests(list)
     case 'wholesale.locations':
-      return loadLocations()
+      return loadLocations(list)
     case 'ledger.reconciliation':
       return loadReconciliation()
     case 'email.templates':
-      return loadEmailTemplates()
+      return loadEmailTemplates(list)
     case 'email.automations':
-      return loadAutomations()
+      return loadAutomations(list)
     case 'email.lists':
-      return loadSubscribers()
+      return loadSubscribers(list)
     case 'email.suppressions':
-      return loadSuppressions()
+      return loadSuppressions(list)
     case 'email.logs':
-      return loadEmailLogs()
+      return loadEmailLogs(list)
     case 'email.brand':
       return loadBrandKit()
     case 'social.accounts':
-      return loadSocialAccounts()
+      return loadSocialAccounts(list)
     case 'social.feeds':
-      return loadFeeds()
+      return loadFeeds(list)
     case 'social.analytics':
-      return loadSocialReach()
+      return loadSocialReach(list)
     case 'content.pages':
-      return loadCmsPages()
+      return loadCmsPages(list)
     case 'content.banners':
-      return loadBanners()
+      return loadBanners(list)
     case 'content.faqs':
-      return loadFaqs()
+      return loadFaqs(list)
     case 'content.redirects':
-      return loadRedirects()
+      return loadRedirects(list)
     case 'content.seo':
       return loadSeo()
     case 'leads.campaigns':
-      return loadLeadCampaigns()
+      return loadLeadCampaigns(list)
     case 'reviews.forms':
-      return loadForms()
+      return loadForms(list)
     case 'analytics.retention':
       return loadRetention()
     case 'analytics.margin':
@@ -9932,19 +10109,19 @@ async function loadPageBody(pageId: string): Promise<SectionPayload['body'] | nu
     case 'analytics.attribution':
       return loadAttribution()
     case 'media.documents':
-      return loadArchiveDocuments()
+      return loadArchiveDocuments(list)
     case 'media.mileage':
-      return loadMileage()
+      return loadMileage(list)
     case 'media.shows':
-      return loadShowArchive()
+      return loadShowArchive(list)
     case 'messages.email':
-      return loadCustomerEmail()
+      return loadCustomerEmail(list)
     case 'messages.live':
-      return loadLiveChat()
+      return loadLiveChat(list)
     case 'messages.notifications':
-      return loadNotifications()
+      return loadNotifications(list)
     case 'users.credentials':
-      return loadCredentials()
+      return loadCredentials(list)
     case 'settings.payments':
       return loadPaymentSettings()
     case 'settings.shipping':
@@ -9967,6 +10144,7 @@ async function loadPageBody(pageId: string): Promise<SectionPayload['body'] | nu
 export async function loadSection(
   id: DesktopSectionId | string,
   permissions?: Iterable<string>,
+  requested: ListQuery = DEFAULT_LIST,
 ): Promise<SectionPayload> {
   const entry = findPage(id) ?? (findSection(id) ? { section: findSection(id)!, page: undefined } : undefined)
   if (!entry) throw new Error(`Unknown desktop page: ${id}`)
@@ -9976,7 +10154,12 @@ export async function loadSection(
   const isDefault = current.id === section.id
 
   const { eyebrow, filters, actions } = isDefault ? meta(section) : pageMeta(section, current)
-  const body = (await loadPageBody(current.id)) ?? (await loadBody(section))
+  const searchable = SEARCHABLE_PAGES.has(current.id)
+  // A page that cannot search the database ignores `q`; the filter box narrows
+  // its rows instead, and the payload says so.
+  const list = searchable ? requested : { ...requested, q: '' }
+  const body = (await loadPageBody(current.id, list)) ?? (await loadBody(section, list))
+  const rowCount = body.view === 'table' || body.view === 'events' ? body.rows.length : null
   const visible = permissions ? allowedPages(section, permissions) : pagesFor(section)
 
   return {
@@ -9991,12 +10174,13 @@ export async function loadSection(
     actions,
     body,
     loadedAt: new Date().toISOString(),
+    list: rowCount === null ? undefined : { ...list, more: rowCount >= list.limit, searchable },
   }
 }
 
 /** Sidebar badges — the few counts worth a red dot next to the section name. */
 export async function loadBadges(): Promise<DesktopBadges> {
-  const [orders, lowStock, fundraisers] = await Promise.all([
+  const [orders, lowStock, fundraisers, conversations, chats] = await Promise.all([
     safe(
       () =>
         prisma.order.count({
@@ -10006,6 +10190,8 @@ export async function loadBadges(): Promise<DesktopBadges> {
     ),
     safe(() => prisma.product.findMany({ where: { isActive: true } }), []),
     safe(() => prisma.fundraiser.count({ where: { status: 'ACTIVE' } }), 0),
+    safe(() => prisma.conversation.count({ where: { status: 'OPEN' } }), 0),
+    safe(() => prisma.chatThread.count({ where: { status: 'WAITING' } }), 0),
   ])
 
   const below = lowStock.filter(
@@ -10016,5 +10202,6 @@ export async function loadBadges(): Promise<DesktopBadges> {
     orders: orders || undefined,
     inventory: below || undefined,
     fundraisers: fundraisers || undefined,
+    messages: conversations + chats || undefined,
   }
 }

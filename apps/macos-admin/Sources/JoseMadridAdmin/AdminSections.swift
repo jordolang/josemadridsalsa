@@ -13,7 +13,7 @@ import Foundation
 ///
 /// Each path opens the shell at that section rather than the web admin page
 /// behind it, so a menu choice stays in the window the operator is already in.
-/// Developer Console is the exception: the shell has no view for it.
+/// Developer Console opens the Developer page inside the Database section.
 struct AdminSection: Identifiable, Hashable {
   let label: String
   let path: String
@@ -74,7 +74,7 @@ enum AdminSections {
       AdminSection("Users & Roles", "/admin-desktop?section=users"),
       AdminSection("Audit Logs", "/admin-desktop?section=audit"),
       AdminSection("Settings", "/admin-desktop?section=settings"),
-      AdminSection("Developer Console", "/admin/developer"),
+      AdminSection("Developer Console", "/admin-desktop?section=database&page=database.developer"),
       AdminSection("Database Console", "/admin-desktop?section=database"),
     ]),
   ]

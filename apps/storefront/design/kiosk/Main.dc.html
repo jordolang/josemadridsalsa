@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Salsa kiosk</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&amp;family=Montserrat:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#FFF3E0}a:hover{color:#F4A81D}
+button{font-family:inherit;cursor:pointer}
+.jm-serape{background:linear-gradient(180deg,#D62828 0 20%,#F4A81D 20% 36%,#FFF3E0 36% 44%,#0E4D3A 44% 64%,#FFF3E0 64% 72%,#2F6DB5 72% 86%,#D62828 86% 100%)}
+.jm-ring{position:absolute;inset:-6px;border-radius:999px;border:5px solid #F4A81D;animation:jm-pulse 2s ease-out infinite;pointer-events:none}
+.jm-ring2{animation-delay:1s}
+@keyframes jm-pulse{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.35);opacity:0}}
+.jm-bob{animation:jm-bob 3.2s ease-in-out infinite}
+@keyframes jm-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}
+.jm-bounce{animation:jm-bounce 1.4s ease-in-out infinite}
+@keyframes jm-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(18px)}}
+.jm-print{animation:jm-print 3s ease-out forwards}
+@keyframes jm-print{0%{transform:translateY(-100%)}100%{transform:translateY(0)}}
+.jm-tile img{transition:transform .25s ease}
+.jm-tile:active img{transform:scale(.94) rotate(-3deg)}
+.jm-spin{animation:jm-spin 90s linear infinite}
+@keyframes jm-spin{to{transform:rotate(360deg)}}
+.jm-in-left{animation:jm-in-left .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes jm-in-left{from{opacity:0;transform:translateX(-80px)}to{opacity:1;transform:none}}
+.jm-in-right{animation:jm-in-right .9s cubic-bezier(.2,.8,.2,1) .2s both}
+@keyframes jm-in-right{from{opacity:0;transform:translateX(160px)}to{opacity:1;transform:none}}
+.jm-in-up{animation:jm-in-up .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes jm-in-up{from{opacity:0;transform:translateY(60px)}to{opacity:1;transform:none}}
+.jm-rise{animation:jm-rise .9s cubic-bezier(.2,.9,.25,1.2) both}
+@keyframes jm-rise{from{opacity:0;transform:translateY(240px)}to{opacity:1;transform:none}}
+.jm-pop{animation:jm-pop .7s cubic-bezier(.2,.9,.3,1.4) both}
+@keyframes jm-pop{from{opacity:0;transform:scale(.4) rotate(-8deg)}to{opacity:1;transform:none}}
+.jm-breathe{animation:jm-breathe 2.4s ease-in-out infinite}
+@keyframes jm-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.jm-flame{transform-origin:50% 100%;animation-name:jm-flicker;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate}
+@keyframes jm-flicker{0%{transform:scale(1,1) skewX(-3deg);opacity:.85}50%{transform:scale(1.08,1.22) skewX(4deg);opacity:1}100%{transform:scale(.94,.92) skewX(-5deg);opacity:.9}}
+.jm-glow{animation:jm-glow 1.6s ease-in-out infinite alternate}
+@keyframes jm-glow{from{opacity:.75;transform:scale(1)}to{opacity:1;transform:scale(1.04)}}
+.jm-ember-a,.jm-ember-b{animation-name:jm-ember-a;animation-timing-function:linear;animation-iteration-count:infinite}
+.jm-ember-b{animation-name:jm-ember-b}
+@keyframes jm-ember-a{0%{transform:translate(0,0);opacity:0}8%{opacity:1}50%{transform:translate(40px,-460px)}100%{transform:translate(-20px,-980px);opacity:0}}
+@keyframes jm-ember-b{0%{transform:translate(0,0);opacity:0}8%{opacity:1}50%{transform:translate(-50px,-480px)}100%{transform:translate(30px,-1000px);opacity:0}}
+.jm-chili{animation-name:jm-chili;animation-timing-function:linear;animation-iteration-count:infinite}
+@keyframes jm-chili{0%{transform:translateY(0) rotate(0deg);opacity:0}10%{opacity:.9}85%{opacity:.9}100%{transform:translateY(-1500px) rotate(320deg);opacity:0}}
+.jm-shimmer{animation:jm-shimmer 2.8s ease-in-out infinite}
+@keyframes jm-shimmer{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.jm-hot{animation:jm-hot 1.8s ease-in-out infinite alternate}
+@keyframes jm-hot{from{text-shadow:0 0 20px rgba(255,90,20,.5)}to{text-shadow:0 0 50px rgba(255,140,30,.95),0 0 90px rgba(214,40,40,.6)}}
+.jm-crown{animation:jm-crown 2.6s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes jm-crown{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg) translateY(-4px)}}
+.jm-countdown{animation:jm-countdown 10s linear forwards}
+@keyframes jm-countdown{from{stroke-dashoffset:0}to{stroke-dashoffset:188.5}}
+</style>
+</helmet>
+<div style="width: {{W}}px; height: {{H}}px; position: relative; overflow: hidden; background: #FFF3E0; color: #24130A; font-family: Montserrat, system-ui, sans-serif; display: flex; flex-direction: column">
+
+<sc-if value="{{isAttract}}" hint-placeholder-val="{{ false }}">
+<button onClick="{{start}}" aria-label="Touch anywhere to start an order" style="flex-grow: 1; min-height: 0; position: relative; overflow: hidden; border: 0; padding: 0; background: #0B0605; color: #FFF3E0; text-align: left">
+<div style="position: absolute; left: 50%; top: {{vidTop}}px; width: {{vidW}}px; height: {{vidH}}px; margin-left: -{{vidHalf}}px; -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000000 62%, transparent 100%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000000 62%, transparent 100%)">
+<video src="/_blob/9c5a1d6191c15b8df082e5496f26c071" autoplay muted loop playsinline aria-hidden="true" onLoadedData="{{playVid}}" style="width: 100%; height: 100%; object-fit: cover; display: block"></video>
+</div>
+<div class="jm-glow" style="position: absolute; left: 50%; bottom: -260px; width: 2400px; height: 760px; margin-left: -1200px; border-radius: 50%; background: radial-gradient(ellipse at 50% 50%, rgba(255, 122, 24, .55) 0%, rgba(214, 40, 40, .35) 35%, transparent 70%)"></div>
+<sc-for list="{{chilis}}" as="c" hint-placeholder-count="7">
+<svg class="jm-chili" width="{{c.size}}" height="{{c.size}}" viewBox="0 0 64 64" aria-hidden="true" style="position: absolute; left: {{c.x}}%; bottom: -120px; opacity: 0; animation-duration: {{c.dur}}s; animation-delay: {{c.delay}}s"><path d="M40 14c-6 3-9 8-11 15-3 10-9 20-21 27 16 2 32-6 38-22 3-8 1-15-6-20z" fill="{{c.fill}}"></path><path d="M40 14c-2 1-3 4-2 6 3-1 7-1 9 1 0-3-3-6-7-7z" fill="#2E6B22"></path><path d="M44 13c1-4 3-6 7-7" fill="none" stroke="#2E6B22" stroke-width="3" stroke-linecap="round"></path><path d="M30 30c-2 6-5 11-10 15" fill="none" stroke="rgba(255, 255, 255, .35)" stroke-width="2.5" stroke-linecap="round"></path></svg>
+</sc-for>
+<sc-for list="{{embers}}" as="e" hint-placeholder-count="24">
+<span class="{{e.cls}}" style="position: absolute; left: {{e.x}}%; bottom: 120px; width: {{e.size}}px; height: {{e.size}}px; border-radius: 50%; background: {{e.color}}; box-shadow: 0 0 10px 2px {{e.color}}; opacity: 0; animation-duration: {{e.dur}}s; animation-delay: {{e.delay}}s"></span>
+</sc-for>
+
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: {{fireH}}px">
+<sc-for list="{{flames}}" as="f" hint-placeholder-count="16">
+<svg class="jm-flame" width="{{f.w}}" height="{{f.h}}" viewBox="0 0 40 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; bottom: 0; left: {{f.x}}%; margin-left: -{{f.half}}px; animation-duration: {{f.dur}}s; animation-delay: {{f.delay}}s"><path d="M20 0C24 18 38 34 38 62c0 22-8 38-18 38S2 84 2 62C2 44 12 36 14 22c3 8 5 12 8 14C24 26 22 12 20 0z" fill="{{f.outer}}"></path><path d="M20 40c3 10 11 18 11 32 0 14-5 28-11 28S9 86 9 72c0-8 5-13 7-20 2 4 3 6 5 7 0-7-1-12-1-19z" fill="{{f.inner}}"></path></svg>
+</sc-for>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: {{grillH}}px; background: linear-gradient(180deg, rgba(11, 6, 5, 0) 0%, #0B0605 85%)"></div>
+<div style="position: absolute; left: 0; right: 0; bottom: {{jarBase}}px; display: flex; justify-content: center; align-items: flex-end; gap: {{jarGap}}px">
+<sc-for list="{{fireJars}}" as="j" hint-placeholder-count="7">
+<img class="jm-shimmer" src="{{j.img}}" alt="{{j.name}} jar" style="height: {{j.h}}px; width: auto; display: block; animation-delay: {{j.delay}}s; filter: drop-shadow(0 -4px 22px rgba(255, 120, 20, .55)) drop-shadow(0 18px 14px rgba(0, 0, 0, .6))">
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; {{headPos}}; display: flex; flex-direction: column; align-items: {{headAlign}}; text-align: {{headText}}; gap: 22px">
+<div class="jm-in-up" style="display: flex; align-items: center; gap: 18px; padding: 10px 28px 12px 20px; border: 3px solid #F4A81D; border-radius: 18px; background: rgba(11, 6, 5, .55)">
+<svg class="jm-crown" width="64" height="52" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 40 0 10l17 13L32 0l15 23 17-13-4 30z" fill="#F4A81D"></path><rect x="4" y="43" width="56" height="9" rx="2" fill="#F4A81D"></rect><circle cx="32" cy="27" r="5" fill="#D62828"></circle><circle cx="16" cy="31" r="3.5" fill="#3F8F2F"></circle><circle cx="48" cy="31" r="3.5" fill="#3F8F2F"></circle></svg>
+<span class="jm-hot" style="font: 400 {{kingsSize}}px/1 'Alfa Slab One', serif; letter-spacing: .03em; color: #F4A81D">Salsa Kings</span>
+</div>
+<div class="jm-in-up" style="font: 800 22px Montserrat; letter-spacing: .26em; color: #F4A81D; animation-delay: .1s">SINCE 1987 · ZANESVILLE, OHIO</div>
+<div class="jm-in-up" style="font: 400 {{headSize}}px/.95 'Alfa Slab One', serif; color: #FFF3E0; text-shadow: 0 0 40px rgba(255, 110, 20, .45); animation-delay: .15s">Feel the<span style="white-space: pre">{{headBreak}}</span><span class="jm-hot" style="color: #FF8A1F">heat.</span></div>
+<div class="jm-in-up" style="font: 600 28px/1.35 Montserrat; color: #F3DCC0; max-width: 520px; animation-delay: .3s">Small-batch salsa, made by hand in Ohio.</div>
+</div>
+
+<div style="position: absolute; {{statPos}}; display: flex; flex-direction: {{statDir}}; gap: {{statGap}}px; align-items: {{statAlign}}">
+<sc-for list="{{stats}}" as="st" hint-placeholder-count="3">
+<div class="jm-in-up" style="display: flex; flex-direction: column; align-items: {{statAlign}}; gap: 2px; animation-delay: {{st.delay}}s">
+<span style="font: 400 {{statSize}}px/1 'Alfa Slab One', serif; color: #F4A81D">{{st.big}}</span>
+<span style="font: 800 18px Montserrat; letter-spacing: .18em; color: #F3DCC0">{{st.small}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 0; right: 0; top: {{ctaTop}}px; display: flex; justify-content: center; z-index: 3">
+<span class="jm-breathe" style="position: relative; height: 112px; padding: 0 58px; border-radius: 56px; background: #F4A81D; color: #24130A; display: flex; align-items: center; gap: 18px; font: 400 44px 'Alfa Slab One', serif; box-shadow: 0 10px 0 #B5740A, 0 0 60px rgba(255, 140, 30, .5)">
+<span class="jm-ring"></span><span class="jm-ring jm-ring2"></span>
+Touch to start
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</span>
+</div>
+
+<div style="position: absolute; right: 36px; top: 30px; display: flex; gap: 12px; font: 700 17px Montserrat; color: #F3DCC0">
+<span style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 22px; background: rgba(255, 243, 224, .08)"><span style="width: 11px; height: 11px; border-radius: 6px; background: #5BD18B"></span>Card reader ready</span>
+<span style="display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 22px; background: rgba(255, 243, 224, .08)"><span style="width: 11px; height: 11px; border-radius: 6px; background: #5BD18B"></span>Printer ready</span>
+</div>
+</button>
+</sc-if>
+
+<sc-if value="{{isMenu}}" hint-placeholder-val="{{ true }}">
+<header style="flex-shrink: 0; height: 136px; padding: 0 40px; background: #C81E1E; color: #FFF3E0; display: flex; align-items: center; justify-content: space-between; gap: 24px">
+<div style="display: flex; align-items: center; gap: 22px">
+<div style="width: 96px; height: 96px; border-radius: 48px; background: #FFF3E0; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+<img src="/_blob/ec96e734ff9a23fce306e05162f08fa9" alt="Jose Madrid Salsa logo" style="width: 70px; height: 72px; object-fit: contain">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font: 400 52px/1 'Alfa Slab One', serif">Pick your salsa</div>
+<div style="font: 700 20px Montserrat; letter-spacing: .2em; color: #FFD9A0">13 OZ JARS · {{priceText}} EACH</div>
+</div>
+</div>
+<button onClick="{{reset}}" style="height: 72px; padding: 0 30px; border-radius: 36px; border: 3px solid #FFF3E0; background: transparent; color: #FFF3E0; font: 700 24px Montserrat; display: flex; align-items: center; gap: 12px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"></path><path d="M4 4v5h5"></path></svg>Start over</button>
+</header>
+<div class="jm-serape" style="height: 18px; flex-shrink: 0"></div>
+<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: {{bodyDir}}">
+<div style="flex-grow: 1; min-height: 0; position: relative; overflow: hidden; background: #24130A; display: flex; flex-direction: column">
+<video src="/_blob/059674136e10835f92959469641e088f" autoplay muted loop playsinline aria-hidden="true" onLoadedData="{{playVid}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover"></video>
+<div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(36, 19, 10, .82) 0%, rgba(36, 19, 10, .62) 45%, rgba(36, 19, 10, .86) 100%)"></div>
+<div style="position: relative; flex-shrink: 0; padding: 22px 40px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+<span style="display: flex; align-items: center; gap: 12px; padding: 12px 22px 12px 14px; border-radius: 16px; background: #D62828; color: #FFF3E0; font: 800 22px Montserrat; box-shadow: 0 6px 0 #8E1414">
+<span style="padding: 4px 10px; border-radius: 8px; background: #F4A81D; color: #24130A; font: 800 16px Montserrat; letter-spacing: .14em">SHOW SPECIAL</span>5 jars + a bag of chips <span style="font: 400 28px 'Alfa Slab One', serif; color: #F4A81D">$40</span></span>
+<sc-for list="{{deals}}" as="dl" hint-placeholder-count="3">
+<span style="padding: 12px 20px; border-radius: 16px; border: 2px solid rgba(255, 243, 224, .45); background: rgba(36, 19, 10, .55); color: #FFF3E0; font: 700 22px Montserrat">{{dl.label}} <span style="font: 400 26px 'Alfa Slab One', serif; color: #F4A81D">{{dl.price}}</span></span>
+</sc-for>
+</div>
+<nav aria-label="Filter by heat" style="position: relative; flex-shrink: 0; padding: 18px 40px 10px; display: flex; flex-wrap: wrap; gap: 14px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="6">
+<button onClick="{{f.pick}}" style="height: 72px; padding: 0 30px; border-radius: 36px; border: 3px solid {{f.border}}; background: {{f.bg}}; color: {{f.fg}}; font: 800 24px Montserrat; display: flex; align-items: center; gap: 12px">{{f.label}}<span style="min-width: 40px; height: 40px; padding: 0 10px; box-sizing: border-box; border-radius: 20px; background: {{f.countBg}}; color: {{f.countFg}}; display: flex; align-items: center; justify-content: center; font: 800 20px Montserrat">{{f.count}}</span></button>
+</sc-for>
+</nav>
+<div style="position: relative; flex-grow: 1; min-height: 0; overflow-y: auto; padding: 22px 40px 48px">
+<div style="display: grid; grid-template-columns: repeat({{cols}}, minmax(0, 1fr)); gap: 26px">
+<sc-for list="{{products}}" as="p" hint-placeholder-count="8">
+<button class="jm-tile" onClick="{{p.pick}}" aria-label="{{p.name}}, {{p.heatLabel}}" style="position: relative; border: 0; padding: 0; border-radius: 30px; overflow: hidden; background: #FFFDF8; color: #24130A; display: flex; flex-direction: column; text-align: left; box-shadow: {{p.shadow}}">
+<div style="position: relative; height: 290px; background: {{p.tint}}; display: flex; align-items: flex-end; justify-content: center; overflow: hidden">
+<div style="position: absolute; left: 50%; top: 34px; width: 230px; height: 230px; margin-left: -115px; border-radius: 50%; background: rgba(255, 255, 255, .18)"></div>
+<img src="{{p.img}}" alt="{{p.name}} jar" style="position: relative; height: 262px; width: auto; display: block; margin-bottom: -6px; filter: drop-shadow(0 14px 14px rgba(0, 0, 0, .35))">
+<sc-if value="{{p.inCart}}" hint-placeholder-val="{{ false }}">
+<span style="position: absolute; top: 16px; right: 16px; min-width: 60px; height: 60px; padding: 0 12px; box-sizing: border-box; border-radius: 30px; background: #F4A81D; color: #24130A; border: 4px solid #FFF3E0; display: flex; align-items: center; justify-content: center; font: 400 28px 'Alfa Slab One', serif">{{p.qty}}</span>
+</sc-if>
+</div>
+<div style="padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 12px; border-top: 6px solid {{p.tint}}">
+<div style="font: 800 26px/1.15 Montserrat; min-height: 60px; display: flex; align-items: center">{{p.name}}</div>
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 4px">
+<sc-for list="{{p.pips}}" as="pip" hint-placeholder-count="4">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="{{pip.fill}}" stroke="{{pip.stroke}}" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14 4c0 1.6 1 2.6 2.6 2.6-.8.8-1 1.8-1 2.6 0 6-4.6 11.8-11.1 11.8 2.8-2.8 4.6-6.6 4.6-10.6 0-3 2-5.2 4.9-5.2z"></path><path d="M14 4c.4-1.2 1.4-2 2.6-2" fill="none"></path></svg>
+</sc-for>
+<span style="margin-left: 8px; font: 800 18px Montserrat; letter-spacing: .08em; color: {{p.heatInk}}">{{p.heatUpper}}</span>
+</div>
+<span style="font: 400 28px 'Alfa Slab One', serif; color: #C81E1E">{{priceText}}</span>
+</div>
+</div>
+</button>
+</sc-for>
+</div>
+</div>
+</div>
+
+<sc-if value="{{isLand}}" hint-placeholder-val="{{ true }}">
+<aside aria-label="Your order" style="width: 500px; flex-shrink: 0; background: #0E4D3A; color: #FFF3E0; display: flex; flex-direction: column; padding: 34px 34px 36px; box-sizing: border-box">
+<div style="display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 22px">
+<h2 style="margin: 0; font: 400 44px 'Alfa Slab One', serif">Your order</h2>
+<span style="font: 700 22px Montserrat; color: #A7D9C0">{{countText}}</span>
+</div>
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">
+<sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; padding: 20px">
+<img class="jm-bob" src="/_blob/98b6bef48fdbfef49fe0252d61d6bf24" alt="" style="width: 220px; height: auto">
+<p style="margin: 0; font: 600 28px/1.35 Montserrat; color: #FFF3E0">Your bag is empty.<br><span style="color: #F4A81D">Tap a jar to start.</span></p>
+</div>
+</sc-if>
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 16px; padding: 14px 16px 14px 12px; border-radius: 22px; background: #145C46">
+<div style="width: 70px; height: 84px; border-radius: 16px; background: {{l.tint}}; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex-shrink: 0">
+<img src="{{l.img}}" alt="" style="height: 76px; width: auto; display: block">
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; gap: 10px; font: 700 21px/1.2 Montserrat"><span>{{l.name}}</span><span style="font: 400 22px 'Alfa Slab One', serif; color: #F4A81D">{{l.total}}</span></div>
+<div style="display: flex; align-items: center; gap: 12px">
+<button onClick="{{l.dec}}" aria-label="Remove one {{l.name}}" style="width: 52px; height: 52px; border-radius: 26px; border: 3px solid #FFF3E0; background: transparent; color: #FFF3E0; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+<span style="min-width: 30px; text-align: center; font: 400 26px 'Alfa Slab One', serif">{{l.qty}}</span>
+<button onClick="{{l.inc}}" aria-label="Add one {{l.name}}" style="width: 52px; height: 52px; border-radius: 26px; border: 0; background: #FFF3E0; color: #0E4D3A; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 22px; margin-top: 12px; border-top: 2px dashed #3E7F69; font: 600 22px Montserrat; color: #A7D9C0">
+<sc-if value="{{showNudge}}" hint-placeholder-val="{{ true }}">
+<div class="jm-pop" style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 18px; background: #F4A81D; color: #24130A; font: 800 {{nudgeSize}}px/1.25 Montserrat; margin-bottom: 8px">
+<svg width="34" height="34" viewBox="0 0 24 24" fill="#D62828" aria-hidden="true" style="flex-shrink: 0"><path d="M14 4c0 1.6 1 2.6 2.6 2.6-.8.8-1 1.8-1 2.6 0 6-4.6 11.8-11.1 11.8 2.8-2.8 4.6-6.6 4.6-10.6 0-3 2-5.2 4.9-5.2z"></path></svg>
+<span>{{nudgeText}}</span>
+</div>
+</sc-if>
+<div style="display: flex; justify-content: space-between"><span>Subtotal</span><span>{{subText}}</span></div>
+<sc-if value="{{hasSavings}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; justify-content: space-between; color: #F4A81D"><span>{{dealText}}</span><span>-{{saveText}}</span></div>
+</sc-if>
+<sc-if value="{{hasChips}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; justify-content: space-between; color: #F4A81D"><span>{{chipsText}}</span><span>FREE</span></div>
+</sc-if>
+<div style="display: flex; justify-content: space-between"><span>Tax</span><span>{{taxText}}</span></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; color: #FFF3E0; padding: 8px 0 18px"><span style="font: 800 26px Montserrat">Total</span><span style="font: 400 46px 'Alfa Slab One', serif">{{totalText}}</span></div>
+<button onClick="{{goPay}}" disabled="{{isEmpty}}" style="height: 116px; border: 0; border-radius: 58px; background: {{payBg}}; color: {{payFg}}; font: 400 40px 'Alfa Slab One', serif; box-shadow: {{payShadow}}">{{payLabel}}</button>
+</div>
+</aside>
+</sc-if>
+
+<sc-if value="{{isPort}}" hint-placeholder-val="{{ false }}">
+<div style="height: 196px; flex-shrink: 0; background: #0E4D3A; color: #FFF3E0; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; gap: 28px">
+<div style="display: flex; align-items: center; gap: 20px">
+<div style="display: flex">
+<sc-for list="{{peek}}" as="k" hint-placeholder-count="3">
+<div style="width: 76px; height: 92px; margin-right: -22px; border-radius: 18px; border: 4px solid #0E4D3A; background: {{k.tint}}; display: flex; align-items: flex-end; justify-content: center; overflow: hidden"><img src="{{k.img}}" alt="" style="height: 82px; width: auto"></div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding-left: 30px">
+<span style="font: 400 48px 'Alfa Slab One', serif">{{totalText}}</span>
+<span style="font: 700 22px Montserrat; color: #A7D9C0">{{countText}}<span style="color: #F4A81D">{{barSave}}</span></span>
+</div>
+</div>
+<button onClick="{{goCart}}" disabled="{{isEmpty}}" style="height: 120px; padding: 0 56px; border: 0; border-radius: 60px; background: {{payBg}}; color: {{payFg}}; font: 400 40px 'Alfa Slab One', serif; box-shadow: {{payShadow}}">Review order</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{isCart}}" hint-placeholder-val="{{ false }}">
+<header style="flex-shrink: 0; height: 136px; padding: 0 40px; background: #C81E1E; color: #FFF3E0; display: flex; align-items: center; justify-content: space-between">
+<button onClick="{{goMenu}}" style="height: 72px; padding: 0 30px 0 18px; border-radius: 36px; border: 3px solid #FFF3E0; background: transparent; color: #FFF3E0; font: 700 24px Montserrat; display: flex; align-items: center; gap: 10px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>Add more salsa</button>
+<div style="font: 400 52px 'Alfa Slab One', serif">Your order</div>
+</header>
+<div class="jm-serape" style="height: 18px; flex-shrink: 0"></div>
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px">
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 24px; padding: 16px 24px 16px 16px; border-radius: 28px; background: #FFFDF8; box-shadow: 0 6px 0 #EBD9BE">
+<div style="width: 120px; height: 140px; border-radius: 20px; background: {{l.tint}}; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex-shrink: 0"><img src="{{l.img}}" alt="" style="height: 128px; width: auto; display: block"></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px">
+<span style="font: 800 30px/1.15 Montserrat">{{l.name}}</span>
+<span style="font: 600 22px Montserrat; color: #7A5A3A">{{l.each}}</span>
+</div>
+<button onClick="{{l.dec}}" aria-label="Remove one {{l.name}}" style="width: 72px; height: 72px; border-radius: 36px; border: 3px solid #24130A; background: transparent; color: #24130A; display: flex; align-items: center; justify-content: center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+<span style="min-width: 40px; text-align: center; font: 400 36px 'Alfa Slab One', serif">{{l.qty}}</span>
+<button onClick="{{l.inc}}" aria-label="Add one {{l.name}}" style="width: 72px; height: 72px; border-radius: 36px; border: 0; background: #24130A; color: #FFF3E0; display: flex; align-items: center; justify-content: center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+<span style="min-width: 130px; text-align: right; font: 400 36px 'Alfa Slab One', serif; color: #C81E1E">{{l.total}}</span>
+</div>
+</sc-for>
+</div>
+<div style="flex-shrink: 0; padding: 30px 40px 44px; background: #0E4D3A; color: #A7D9C0; display: flex; flex-direction: column; gap: 10px; font: 600 26px Montserrat">
+<sc-if value="{{showNudge}}" hint-placeholder-val="{{ true }}">
+<div class="jm-pop" style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 18px; background: #F4A81D; color: #24130A; font: 800 {{nudgeSize}}px/1.25 Montserrat; margin-bottom: 8px">
+<svg width="34" height="34" viewBox="0 0 24 24" fill="#D62828" aria-hidden="true" style="flex-shrink: 0"><path d="M14 4c0 1.6 1 2.6 2.6 2.6-.8.8-1 1.8-1 2.6 0 6-4.6 11.8-11.1 11.8 2.8-2.8 4.6-6.6 4.6-10.6 0-3 2-5.2 4.9-5.2z"></path></svg>
+<span>{{nudgeText}}</span>
+</div>
+</sc-if>
+<div style="display: flex; justify-content: space-between"><span>Subtotal</span><span>{{subText}}</span></div>
+<sc-if value="{{hasSavings}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; justify-content: space-between; color: #F4A81D"><span>{{dealText}}</span><span>-{{saveText}}</span></div>
+</sc-if>
+<sc-if value="{{hasChips}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; justify-content: space-between; color: #F4A81D"><span>{{chipsText}}</span><span>FREE</span></div>
+</sc-if>
+<div style="display: flex; justify-content: space-between"><span>Tax</span><span>{{taxText}}</span></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; color: #FFF3E0; padding: 6px 0 18px"><span style="font: 800 30px Montserrat">Total</span><span style="font: 400 60px 'Alfa Slab One', serif">{{totalText}}</span></div>
+<button onClick="{{goPay}}" disabled="{{isEmpty}}" style="height: 128px; border: 0; border-radius: 64px; background: {{payBg}}; color: {{payFg}}; font: 400 46px 'Alfa Slab One', serif; box-shadow: {{payShadow}}">{{payLabel}}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{isPay}}" hint-placeholder-val="{{ false }}">
+<div style="flex-grow: 1; position: relative; overflow: hidden; background: #C81E1E; color: #FFF3E0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 64px; text-align: center">
+<div style="position: absolute; left: 50%; top: 50%; width: 1500px; height: 1500px; margin: -750px 0 0 -750px; border-radius: 50%; background: radial-gradient(circle, #D9352A 0 30%, transparent 30.2%), radial-gradient(circle, #CF2A22 0 50%, transparent 50.2%)"></div>
+<div style="position: relative; display: flex; flex-direction: column; gap: 6px">
+<span style="font: 800 28px Montserrat; letter-spacing: .24em; color: #FFD9A0">TOTAL DUE</span>
+<span style="font: 400 170px/1 'Alfa Slab One', serif; text-shadow: 6px 6px 0 #8E1414">{{totalText}}</span>
+<sc-if value="{{hasSavings}}" hint-placeholder-val="{{ false }}">
+<span style="align-self: center; margin-top: 10px; padding: 10px 24px; border-radius: 24px; background: #F4A81D; color: #24130A; font: 800 26px Montserrat">You saved {{saveText}}{{payChips}}</span>
+</sc-if>
+</div>
+<button onClick="{{approve}}" aria-label="Simulate a card tap" style="position: relative; width: 280px; height: 280px; border-radius: 140px; border: 0; background: #FFF3E0; color: #C81E1E; display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 0 #8E1414">
+<span class="jm-ring"></span>
+<span class="jm-ring jm-ring2"></span>
+<svg width="130" height="130" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8.5 8.5a5 5 0 0 1 0 7"></path><path d="M12 6a8.5 8.5 0 0 1 0 12"></path><path d="M15.5 3.5a12 12 0 0 1 0 17"></path></svg>
+</button>
+<div style="position: relative; font: 400 60px/1.1 'Alfa Slab One', serif; max-width: 960px">Tap, insert or swipe on the reader below</div>
+<svg class="jm-bounce" style="position: relative" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#F4A81D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M5 13l7 7 7-7"></path></svg>
+<button onClick="{{backFromPay}}" style="position: relative; height: 76px; padding: 0 40px; border-radius: 38px; border: 3px solid #FFF3E0; background: transparent; color: #FFF3E0; font: 700 26px Montserrat">Back to my order</button>
+<span style="position: relative; font: 500 18px Montserrat; color: #FFD9A0">Prototype: touch the reader graphic to simulate an approved payment.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+<div style="flex-grow: 1; position: relative; overflow: hidden; background: #0E4D3A; color: #FFF3E0; display: flex; flex-direction: {{doneDir}}; align-items: center; justify-content: center; gap: 90px; padding: 64px; text-align: center">
+<div class="jm-serape" style="position: absolute; left: 0; right: 0; top: 0; height: 26px"></div>
+<div class="jm-spin" style="position: absolute; left: 50%; top: 50%; width: 2600px; height: 2600px; margin: -1300px 0 0 -1300px; border-radius: 50%; background: repeating-conic-gradient(#0E4D3A 0 7.5deg, #11563F 7.5deg 15deg)"></div>
+<div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 30px">
+<div class="jm-pop" style="width: 150px; height: 150px; border-radius: 75px; background: #F4A81D; color: #24130A; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 0 #B5740A"><svg width="86" height="86" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+<div class="jm-in-up" style="font: 400 150px/1 'Alfa Slab One', serif; color: #F4A81D; text-shadow: 6px 6px 0 #062A1F">¡Gracias!</div>
+<div class="jm-in-up" style="font: 700 36px Montserrat; animation-delay: .15s">Order {{orderNo}} · {{totalText}} paid</div>
+<div style="display: flex; align-items: flex-end; gap: 16px">
+<sc-for list="{{doneJars}}" as="j" hint-placeholder-count="3">
+<div class="jm-rise" style="width: 130px; height: 158px; border-radius: 24px; background: {{j.tint}}; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; animation-delay: {{j.delay}}"><img src="{{j.img}}" alt="" style="height: 146px; width: auto"></div>
+</sc-for>
+</div>
+</div>
+<div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 26px">
+<div style="display: flex; flex-direction: column; align-items: center">
+<div style="width: 420px; height: 34px; border-radius: 17px; background: #062A1F; box-shadow: inset 0 -8px 0 #000000"></div>
+<div style="width: 340px; height: 430px; overflow: hidden">
+<div class="jm-print" style="width: 340px; background: #FFFFFF; color: #000000; padding: 22px 24px 26px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; font: 600 15px/1.4 ui-monospace, monospace; text-align: left; box-shadow: 0 12px 24px rgba(0, 0, 0, .35)">
+<span style="font-weight: 800; font-size: 20px; text-align: center">JOSE MADRID SALSA</span>
+<span style="text-align: center">Zanesville, OH · josemadrid.net</span>
+<span style="border-top: 2px dashed #000000"></span>
+<span style="display: flex; justify-content: space-between"><span>Order</span><span style="font-weight: 800">{{orderNo}}</span></span>
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="3">
+<span style="display: flex; justify-content: space-between; gap: 10px"><span>{{l.qty}} x {{l.name}}</span><span>{{l.total}}</span></span>
+</sc-for>
+<span style="border-top: 2px dashed #000000"></span>
+<sc-if value="{{hasSavings}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; justify-content: space-between; gap: 10px"><span>{{dealText}}</span><span>-{{saveText}}</span></span>
+</sc-if>
+<sc-if value="{{hasChips}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; justify-content: space-between; gap: 10px"><span>{{chipsText}}</span><span>FREE</span></span>
+</sc-if>
+<span style="display: flex; justify-content: space-between; font-weight: 800; font-size: 19px"><span>TOTAL</span><span>{{totalText}}</span></span>
+<span style="text-align: center; font-weight: 800; padding-top: 6px">Gracias!</span>
+</div>
+</div>
+</div>
+<div style="font: 700 30px Montserrat; display: flex; align-items: center; gap: 14px"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"></path><rect x="3" y="9" width="18" height="8" rx="2"></rect><path d="M6 14h12v7H6z"></path></svg>{{printText}}</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 48px; display: flex; justify-content: center">
+<button onClick="{{newOrder}}" style="height: 104px; padding: 0 22px 0 44px; border: 0; border-radius: 52px; background: #FFF3E0; color: #0E4D3A; display: flex; align-items: center; gap: 22px; font: 800 30px Montserrat; box-shadow: 0 10px 0 #062A1F">
+Back to start in {{doneLeft}}s
+<span style="position: relative; width: 72px; height: 72px">
+<svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true" style="transform: rotate(-90deg)"><circle cx="36" cy="36" r="30" fill="none" stroke="#CFE7DA" stroke-width="8"></circle><circle class="jm-countdown" cx="36" cy="36" r="30" fill="none" stroke="#D62828" stroke-width="8" stroke-linecap="round" stroke-dasharray="188.5"></circle></svg>
+</span>
+</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showDetail}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(36, 19, 10, .72); display: flex; align-items: center; justify-content: center; padding: 40px">
+<div role="dialog" aria-label="{{d.name}}" style="position: relative; width: {{dlgW}}px; border-radius: 40px; overflow: hidden; background: #FFF3E0; display: flex; flex-direction: {{dlgDir}}; box-shadow: 0 30px 60px rgba(0, 0, 0, .4)">
+<div style="position: relative; flex-shrink: 0; width: {{dlgArtW}}; height: {{dlgArtH}}px; background: {{d.tint}}; display: flex; align-items: center; justify-content: center; overflow: hidden">
+<div style="position: absolute; width: 420px; height: 420px; border-radius: 50%; background: rgba(255, 255, 255, .18)"></div>
+<div style="position: absolute; width: 600px; height: 600px; border-radius: 50%; border: 3px dashed rgba(255, 255, 255, .35)"></div>
+<img class="jm-bob" src="{{d.img}}" alt="{{d.name}} jar" style="position: relative; height: {{dlgJar}}px; width: auto; filter: drop-shadow(0 24px 22px rgba(0, 0, 0, .4))">
+</div>
+<div style="flex-grow: 1; padding: 52px 52px 48px; display: flex; flex-direction: column; gap: 24px">
+<button onClick="{{closeDetail}}" aria-label="Close" style="position: absolute; top: 22px; right: 22px; width: 76px; height: 76px; border-radius: 38px; border: 0; background: #24130A; color: #FFF3E0; display: flex; align-items: center; justify-content: center"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+<span style="align-self: flex-start; padding: 10px 20px; border-radius: 22px; background: {{d.heatChip}}; color: #FFFFFF; font: 800 20px Montserrat; letter-spacing: .14em">{{d.heatUpper}}</span>
+<h2 style="margin: 0; padding-right: 70px; font: 400 64px/1.02 'Alfa Slab One', serif; color: #24130A">{{d.name}}</h2>
+<div style="display: flex; align-items: center; gap: 6px">
+<sc-for list="{{d.pips}}" as="pip" hint-placeholder-count="4">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="{{pip.fill}}" stroke="{{pip.stroke}}" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14 4c0 1.6 1 2.6 2.6 2.6-.8.8-1 1.8-1 2.6 0 6-4.6 11.8-11.1 11.8 2.8-2.8 4.6-6.6 4.6-10.6 0-3 2-5.2 4.9-5.2z"></path><path d="M14 4c.4-1.2 1.4-2 2.6-2" fill="none"></path></svg>
+</sc-for>
+<span style="margin-left: 12px; font: 700 26px Montserrat; color: #7A5A3A">13 oz jar · {{priceText}} · mix &amp; match 3 for $25</span>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="display: flex; align-items: center; gap: 26px">
+<button onClick="{{detailDec}}" aria-label="One fewer" style="width: 96px; height: 96px; border-radius: 48px; border: 4px solid #24130A; background: transparent; color: #24130A; display: flex; align-items: center; justify-content: center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+<span style="min-width: 80px; text-align: center; font: 400 72px 'Alfa Slab One', serif">{{detailQty}}</span>
+<button onClick="{{detailInc}}" aria-label="One more" style="width: 96px; height: 96px; border-radius: 48px; border: 0; background: #24130A; color: #FFF3E0; display: flex; align-items: center; justify-content: center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<button onClick="{{addDetail}}" style="width: 100%; height: 120px; border: 0; border-radius: 60px; background: {{accent}}; color: #FFFFFF; font: 400 42px 'Alfa Slab One', serif; box-shadow: 0 10px 0 #8E1414">{{addLabel}}</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"orientation":{"editor":"enum","options":["landscape","portrait"],"default":"landscape"},"taxRate":{"editor":"float","default":0,"min":0,"max":15,"step":0.25,"unit":"%"},"accent":{"editor":"color","default":"#D62828","options":["#D62828","#0E4D3A","#2F6DB5","#B5740A"]},"$preview":{"width":1920,"height":1080}}'>
+const B = '/_blob/';
+// [id, name, heat, group, label-matched tint, photo blob id]
+const SALSAS = [
+  ['original-mild', 'Original Mild', 'mild', 'classic', '#3E8ED0', 'bfe6843743fd3d8dcf0bb7aac89d7e0a'],
+  ['clovis-medium', 'Clovis Medium', 'medium', 'classic', '#D9452B', '8396bc6cf6b3000e2fa7bcc6ace61ee8'],
+  ['original-hot', 'Original Hot', 'hot', 'classic', '#245C9E', '3f94b8d0b3bc45cb0543380a427a08e4'],
+  ['original-x-hot', 'Original X Hot', 'xhot', 'classic', '#123A6B', '5fb72fdd3d546f95da86ac35b1f23a6d'],
+  ['ghost-of-clovis', 'Ghost of Clovis', 'xhot', 'classic', '#2A1F1A', 'eee827da66126ef59d2dada51cf953dd'],
+  ['spanish-verde-mild', 'Spanish Verde Mild', 'mild', 'verde', '#22A38D', 'e8371de8d5d47d78b799521e467ee169'],
+  ['spanish-verde-hot', 'Spanish Verde Hot', 'hot', 'verde', '#147A68', '9b7591f23b13a41a4b29c324a163a8c1'],
+  ['spanish-verde-xx-hot', 'Spanish Verde X X Hot', 'xhot', 'verde', '#0B5246', 'b3997a3d593d21a45667f3bd7140a2ba'],
+  ['cilantro-mild', 'Garden Fresh Cilantro Mild', 'mild', 'classic', '#E06A92', '6f61865050c93cd709b0b226a6be9a1e'],
+  ['cilantro-hot', 'Garden Fresh Cilantro Hot', 'hot', 'classic', '#C2416E', 'e7c301663d83706b9747de4e23b265e7'],
+  ['chipotle-hot', 'Chipotle Hot', 'hot', 'specialty', '#8E4FA0', '167ae076f1e12f981d86004a5a737074'],
+  ['chipotle-con-queso', 'Chipotle Con Queso', 'medium', 'specialty', '#C98A3C', 'dec7eeae7981e04406b0620f43fe70ca'],
+  ['black-bean-corn-poblano', 'Black Bean Corn Poblano', 'mild', 'specialty', '#E3A21A', 'c066483a9e72dfebf74f47bc78a1e2d3'],
+  ['roasted-garlic-olives', 'Roasted Garlic & Olives', 'mild', 'specialty', '#8C6A3C', '7076ad3db85494550ba25d09aa65190a'],
+  ['jamaican-jerk', 'Jamaican Jerk', 'hot', 'specialty', '#C8642A', '866dbe121417a35e65da0080ea379823'],
+  ['peach-mild', 'Peach Mild', 'mild', 'fruit', '#EE8A73', '035548b02bf36ec8757392622dd1a501'],
+  ['mango-mild', 'Mango Mild', 'mild', 'fruit', '#F08A24', '2cc2ea2cf266ebb4810a4040929ac067'],
+  ['pineapple-mild', 'Pineapple Mild', 'mild', 'fruit', '#EBB21C', '58bf7fd555c7b5d1c31e0772fc0d7e0c'],
+  ['strawberry-mild', 'Strawberry Mild', 'mild', 'fruit', '#B23A5E', 'cbc67cb2400f96861b4efae52b09baa5'],
+  ['raspberry-mild', 'Raspberry Mild', 'mild', 'fruit', '#C2477A', '8b2f233f585f67d2570fadf05a7a9ec3'],
+  ['blueberry-mild', 'Blueberry Mild', 'mild', 'fruit', '#2F6DB5', 'ae7c54f62c0b0a17b1d1a2eef02daa99'],
+  ['cherry-mild', 'Cherry Mild', 'mild', 'fruit', '#E0533D', 'c8022383e6f2f8ac829bb56e1ff48c78'],
+  ['green-apple', 'Green Apple', 'mild', 'fruit', '#7DAA2B', '61e47c0727c8ae8dba9e30b344499c59'],
+  ['cherry-hot', 'Cherry Hot', 'hot', 'fruit', '#C23A28', '0d59ab0eaa5358514a741cc7f7937b34'],
+  ['cherry-chocolate-hot', 'Cherry Chocolate Hot', 'hot', 'fruit', '#6B2A1F', '002a638476047d4aadd2bf6b3f1de050'],
+  ['mango-habanero', 'Mango Habanero', 'hot', 'fruit', '#E5641A', 'b14a0a92adcbc8dd1e85f73282e1f763'],
+  ['roasted-pineapple-habanero', 'Roasted Pineapple Habanero Hot', 'hot', 'fruit', '#D99A12', '1133f9663b8676d43049bdfa5be49dff'],
+  ['raspberry-bbq-chipotle', 'Raspberry BBQ Chipotle', 'medium', 'fruit', '#9D2B5B', 'fe9b961d966f441441d6448b224d836f'],
+].map(([id, name, heat, group, tint, blob]) => ({ id, name, heat, group, tint, img: B + blob }));
+
+const BY_ID = {};
+SALSAS.forEach((s) => { BY_ID[s.id] = s; });
+
+const HEAT = {
+  mild: { label: 'Mild', n: 1, ink: '#1F7A3A', chip: '#1F7A3A' },
+  medium: { label: 'Medium', n: 2, ink: '#A85F00', chip: '#C47A00' },
+  hot: { label: 'Hot', n: 3, ink: '#C2410C', chip: '#D9480F' },
+  xhot: { label: 'Extra Hot', n: 4, ink: '#B91C1C', chip: '#B91C1C' },
+};
+
+const FILTERS = [
+  ['all', 'All'], ['mild', 'Mild'], ['medium', 'Medium'], ['hot', 'Hot'], ['xhot', 'Extra Hot'], ['fruit', 'Fruity'], ['verde', 'Verde'],
+];
+const matches = (id, p) => id === 'all' || (id === 'fruit' || id === 'verde' ? p.group === id : p.heat === id);
+
+// fixed pseudo-random so the fire looks organic but renders the same every time
+const rnd = (n) => { const x = Math.sin(n * 9301 + 49297) * 233280; return x - Math.floor(x); };
+const FIRE_JARS = ['mango-habanero', 'spanish-verde-hot', 'cherry-hot', 'clovis-medium', 'ghost-of-clovis', 'original-mild', 'chipotle-hot', 'green-apple', 'blueberry-mild'];
+// Prices from the booth sign. Flavors mix and match; the cheapest combination of bundles wins.
+const JAR_PRICE = 10;
+const BUNDLES = [
+  { n: 12, cost: 80, name: 'Case of 12', chips: 0 },
+  { n: 5, cost: 40, name: 'Show Special', chips: 1 },
+  { n: 4, cost: 32, name: '4-jar deal', chips: 0 },
+  { n: 3, cost: 25, name: '3-jar deal', chips: 0 },
+  { n: 1, cost: 10, name: '1 jar', chips: 0 },
+];
+const DEALS = BUNDLES.filter((b) => b.n > 1 && !b.chips);
+// best[n] = cheapest way to buy exactly n jars; ties go to the mix with more free chips
+const priceFor = (n) => {
+  const best = [{ cost: 0, chips: 0, used: [] }];
+  for (let i = 1; i <= n; i++) {
+    let pick = null;
+    BUNDLES.forEach((b) => {
+      if (b.n > i) return;
+      const prev = best[i - b.n];
+      const c = { cost: prev.cost + b.cost, chips: prev.chips + b.chips, used: prev.used.concat(b) };
+      if (!pick || c.cost < pick.cost || (c.cost === pick.cost && c.chips > pick.chips)) pick = c;
+    });
+    best.push(pick);
+  }
+  return best[n];
+};
+const FRESH = { screen: 'attract', filter: 'all', cart: {}, detail: null, qty: 1 };
+const DONE_SECS = 10;
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    // t = seconds on the kiosk clock; doneT marks when the confirmation screen opened
+    this.state = { ...FRESH, order: 1042, t: 0, doneT: 0 };
+  }
+
+  componentDidMount() {
+    this.timer = setInterval(() => this.tick(), 1000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+
+  tick() {
+    const s = this.state;
+    const t = s.t + 1;
+    if (s.screen === 'done' && t - s.doneT >= DONE_SECS) {
+      this.setState({ ...FRESH, order: s.order + 1, t });
+    } else {
+      this.setState({ t });
+    }
+  }
+
+  renderVals() {
+    const s = this.state;
+    const port = (this.props.orientation ?? 'landscape') === 'portrait';
+    const taxRate = Number(this.props.taxRate ?? 0);
+    const accent = this.props.accent ?? '#D62828';
+    const money = (n) => '$' + n.toFixed(2);
+
+    const bump = (id, n) => {
+      const cart = { ...this.state.cart };
+      cart[id] = Math.max(0, (cart[id] || 0) + n);
+      if (!cart[id]) delete cart[id];
+      this.setState({ cart });
+    };
+    const heatFields = (p) => ({
+      heatLabel: HEAT[p.heat].label,
+      heatUpper: HEAT[p.heat].label.toUpperCase(),
+      heatInk: HEAT[p.heat].ink,
+      heatChip: HEAT[p.heat].chip,
+      pips: [1, 2, 3, 4].map((i) => (i <= HEAT[p.heat].n
+        ? { fill: '#D62828', stroke: '#8E1414' }
+        : { fill: 'none', stroke: '#CDB89A' })),
+    });
+
+    const products = SALSAS
+      .filter((p) => matches(s.filter, p))
+      .map((p) => ({
+        ...p,
+        ...heatFields(p),
+        qty: s.cart[p.id] || 0,
+        inCart: !!s.cart[p.id],
+        shadow: s.cart[p.id] ? '0 0 0 6px #F4A81D, 0 14px 30px rgba(0, 0, 0, .5)' : '0 14px 30px rgba(0, 0, 0, .45)',
+        pick: () => this.setState({ detail: p.id, qty: 1 }),
+      }));
+
+    const lines = Object.keys(s.cart).map((id) => {
+      const q = s.cart[id];
+      const p = BY_ID[id];
+      return {
+        id, name: p.name, tint: p.tint, img: p.img, qty: q,
+        total: money(q * JAR_PRICE), each: money(JAR_PRICE) + ' each',
+        inc: () => bump(id, 1), dec: () => bump(id, -1),
+      };
+    });
+    const count = lines.reduce((a, l) => a + l.qty, 0);
+    const sub = count * JAR_PRICE;
+    const deal = priceFor(count);
+    const saved = sub - deal.cost;
+    const tax = Math.round(deal.cost * taxRate) / 100;
+    const dealNames = {};
+    deal.used.filter((b) => b.n > 1).forEach((b) => { dealNames[b.name] = (dealNames[b.name] || 0) + 1; });
+    const nextDeal = priceFor(count + 1);
+    const nextCost = nextDeal.cost - deal.cost;
+    const nextChips = nextDeal.chips > deal.chips;
+    const isEmpty = count === 0;
+
+    const dp = s.detail ? BY_ID[s.detail] : SALSAS[0];
+    const reset = () => this.setState({ ...FRESH });
+    const doneJars = lines.slice(0, 3).map((l, i) => ({ ...l, delay: (0.3 + i * 0.15) + 's' }));
+    const doneFor = s.t - s.doneT;
+
+    return {
+      W: port ? 1080 : 1920,
+      H: port ? 1920 : 1080,
+      cols: port ? 3 : 4,
+      bodyDir: port ? 'column' : 'row',
+      isLand: !port,
+      isPort: port,
+      accent,
+      // splash: burning-logo loop from the website hero, jars over a fire bed, rising chilis and embers
+      vidW: port ? 1500 : 1240,
+      vidH: port ? 844 : 698,
+      vidHalf: port ? 750 : 620,
+      vidTop: port ? 400 : -10,
+      playVid: (e) => { e.target.muted = true; e.target.play(); },
+      fireH: port ? 560 : 420,
+      grillH: port ? 120 : 90,
+      jarBase: port ? 70 : 40,
+      jarGap: port ? 18 : 26,
+      fireJars: FIRE_JARS.slice(0, port ? 5 : 9).map((id, i, all) => {
+        const mid = (all.length - 1) / 2;
+        return { ...BY_ID[id], h: Math.round((port ? 330 : 250) - Math.abs(i - mid) * (port ? 26 : 16)), delay: (i * 0.35) % 2.8 };
+      }),
+      flames: Array.from({ length: port ? 13 : 19 }, (_, i) => {
+        const r = rnd(i + 1);
+        const all = { length: port ? 13 : 19 };
+        const w = Math.round(90 + r * 90);
+        return {
+          x: Math.round((i / (all.length - 1)) * 100), w, half: Math.round(w / 2),
+          h: Math.round((port ? 300 : 230) + rnd(i + 40) * (port ? 260 : 190)),
+          dur: (0.5 + rnd(i + 80) * 0.6).toFixed(2), delay: (-rnd(i + 120)).toFixed(2),
+          outer: i % 3 ? '#E8401C' : '#D62828', inner: i % 2 ? '#FFB020' : '#FFD23F',
+        };
+      }),
+      embers: Array.from({ length: 28 }, (_, i) => ({
+        cls: i % 2 ? 'jm-ember-a' : 'jm-ember-b',
+        x: Math.round(rnd(i + 200) * 100), size: 3 + Math.round(rnd(i + 230) * 5),
+        color: ['#FFD23F', '#FF8A1F', '#FF5A1F'][i % 3],
+        dur: (5 + rnd(i + 260) * 6).toFixed(1), delay: (-rnd(i + 290) * 11).toFixed(1),
+      })),
+      chilis: Array.from({ length: 8 }, (_, i) => ({
+        x: [6, 18, 30, 44, 58, 70, 82, 93][i], size: 56 + Math.round(rnd(i + 320) * 60),
+        fill: ['#D62828', '#3F8F2F', '#E8401C', '#B91C1C'][i % 4],
+        dur: (14 + rnd(i + 340) * 10).toFixed(1), delay: (-rnd(i + 360) * 24).toFixed(1),
+      })),
+      headPos: port ? 'left: 40px; right: 40px; top: 110px' : 'left: 96px; top: 150px; width: 600px',
+      headAlign: port ? 'center' : 'flex-start',
+      headText: port ? 'center' : 'left',
+      headSize: port ? 104 : 112,
+      kingsSize: port ? 64 : 60,
+      headBreak: port ? ' ' : '\n',
+      statPos: port ? 'left: 0; right: 0; top: 1230px; justify-content: center' : 'right: 96px; top: 170px',
+      statDir: port ? 'row' : 'column',
+      statGap: port ? 70 : 34,
+      statAlign: port ? 'center' : 'flex-end',
+      statSize: port ? 64 : 72,
+      stats: [
+        { big: String(SALSAS.length), small: 'SALSAS', delay: 0.4 },
+        { big: '$10', small: 'A JAR', delay: 0.55 },
+        { big: '5/$40', small: 'SHOW SPECIAL + CHIPS', delay: 0.7 },
+      ],
+      ctaTop: port ? 1370 : 640,
+      // confirmation
+      doneDir: port ? 'column' : 'row',
+      doneLeft: Math.max(0, DONE_SECS - doneFor),
+      printText: doneFor < 3 ? 'Printing your receipt…' : 'Grab your receipt from the printer',
+      // screens
+      isAttract: s.screen === 'attract',
+      isMenu: s.screen === 'menu',
+      isCart: s.screen === 'cart',
+      isPay: s.screen === 'pay',
+      isDone: s.screen === 'done',
+      showDetail: s.screen === 'menu' && !!s.detail,
+      priceText: money(JAR_PRICE),
+      deals: DEALS.map((b) => ({ label: b.n === 12 ? 'Case of 12' : b.n + ' for', price: '$' + b.cost })),
+      hasSavings: saved > 0,
+      saveText: money(saved),
+      dealText: Object.keys(dealNames).map((k) => (dealNames[k] > 1 ? dealNames[k] + ' × ' : '') + k).join(' + '),
+      hasChips: deal.chips > 0,
+      chipsText: deal.chips === 1 ? 'Bag of chips' : deal.chips + ' bags of chips',
+      payChips: deal.chips ? ' + free chips' : '',
+      barSave: saved > 0 ? ' · saving ' + money(saved) : '',
+      showNudge: count > 0 && (nextCost < JAR_PRICE || nextChips),
+      nudgeText: nextCost <= 0
+        ? 'Add 1 more jar to make a case of 12. Your total drops to ' + money(nextDeal.cost) + '!'
+        : 'Add 1 more jar for just ' + money(nextCost) + (nextChips ? ' and get a FREE bag of chips' : ''),
+      nudgeSize: port ? 24 : 20,
+      filters: FILTERS.map(([id, label]) => {
+        const on = s.filter === id;
+        return {
+          label,
+          count: SALSAS.filter((p) => matches(id, p)).length,
+          bg: on ? '#F4A81D' : 'rgba(255, 243, 224, .1)',
+          fg: on ? '#24130A' : '#FFF3E0',
+          border: on ? '#F4A81D' : 'rgba(255, 243, 224, .55)',
+          countBg: on ? '#24130A' : '#FFF3E0',
+          countFg: on ? '#FFF3E0' : '#24130A',
+          pick: () => this.setState({ filter: id }),
+        };
+      }),
+      products,
+      lines,
+      peek: lines.slice(-3),
+      doneJars,
+      isEmpty,
+      countText: count === 1 ? '1 jar' : count + ' jars',
+      subText: money(sub),
+      taxText: money(tax),
+      totalText: money(deal.cost + tax),
+      payLabel: isEmpty ? 'Add a salsa to pay' : 'Pay ' + money(deal.cost + tax),
+      payBg: isEmpty ? '#2C6B57' : accent,
+      payFg: isEmpty ? '#A7D9C0' : '#FFFFFF',
+      payShadow: isEmpty ? 'none' : '0 10px 0 #062A1F',
+      orderNo: 'JM-' + s.order,
+      d: { ...dp, ...heatFields(dp) },
+      dlgW: port ? 960 : 1240,
+      dlgDir: port ? 'column' : 'row',
+      dlgArtW: port ? '100%' : '500px',
+      dlgArtH: port ? 560 : 720,
+      dlgJar: port ? 460 : 560,
+      detailQty: s.qty,
+      addLabel: 'Add ' + s.qty + ' to my order',
+      detailInc: () => this.setState({ qty: Math.min(24, this.state.qty + 1) }),
+      detailDec: () => this.setState({ qty: Math.max(1, this.state.qty - 1) }),
+      closeDetail: () => this.setState({ detail: null }),
+      addDetail: () => { bump(this.state.detail, this.state.qty); this.setState({ detail: null }); },
+      start: () => this.setState({ screen: 'menu' }),
+      reset,
+      goMenu: () => this.setState({ screen: 'menu' }),
+      goCart: () => { if (!isEmpty) this.setState({ screen: 'cart' }); },
+      goPay: () => { if (!isEmpty) this.setState({ screen: 'pay' }); },
+      backFromPay: () => this.setState({ screen: port ? 'cart' : 'menu' }),
+      approve: () => this.setState({ screen: 'done', doneT: this.state.t }),
+      newOrder: () => this.setState({ ...FRESH, order: this.state.order + 1 }),
+    };
+  }
+}
+</script>
+</body>
+</html>

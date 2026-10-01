@@ -1,6 +1,16 @@
-const PRODUCTION_ENDPOINT = 'https://www.josemadrid.net/admin'
+const PRODUCTION_ENDPOINT = 'https://www.josemadrid.net/admin-desktop'
 
 const input = document.getElementById('endpoint')
+const printer = document.getElementById('labelPrinter')
+
+// Filled with the printers Windows knows about. Built with textContent, never
+// HTML, since printer names come from the system.
+function addPrinter(value, label) {
+  const option = document.createElement('option')
+  option.value = value
+  option.textContent = label
+  printer.appendChild(option)
+}
 const message = document.getElementById('message')
 
 function show(text, kind) {
@@ -8,7 +18,14 @@ function show(text, kind) {
   message.className = `message ${kind}`
 }
 
-window.desktop.getSettings().then((settings) => {
+Promise.all([window.desktop.getSettings(), window.desktop.listPrinters()]).then(([settings, printers]) => {
+  addPrinter('', 'Ask each time')
+  for (const name of printers) addPrinter(name, name)
+  // A saved printer that is no longer installed still shows, so it is clear why labels ask.
+  if (settings.labelPrinter && !printers.includes(settings.labelPrinter)) {
+    addPrinter(settings.labelPrinter, `${settings.labelPrinter} (not found)`)
+  }
+  printer.value = settings.labelPrinter || ''
   input.value = settings.endpoint
   document.getElementById('version').textContent = `Version ${settings.version}`
   input.focus()
@@ -16,6 +33,7 @@ window.desktop.getSettings().then((settings) => {
 })
 
 async function save() {
+  await window.desktop.saveLabelPrinter(printer.value)
   const result = await window.desktop.saveEndpoint(input.value)
   if (result && result.error) {
     show(result.error, 'error')

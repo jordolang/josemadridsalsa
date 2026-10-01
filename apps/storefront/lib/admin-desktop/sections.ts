@@ -383,6 +383,19 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         icon: 'i-database',
         path: '/admin/developer/database',
         kind: 'table',
+        pages: [
+          { id: 'database', label: 'Tables', path: '/admin/developer/database' },
+          // The Developer Console's overview. It lives here rather than as a
+          // section of its own because both are the DEVELOPER account's tools,
+          // and it asks for the permission /admin/developer checks.
+          {
+            id: 'database.developer',
+            label: 'Developer',
+            path: '/admin/developer',
+            kind: 'settings',
+            permission: 'developer:system',
+          },
+        ],
       },
     ],
   },

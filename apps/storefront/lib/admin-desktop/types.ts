@@ -93,6 +93,13 @@ export type DesktopCommand =
       success?: string
       danger?: boolean
     }
+  /** The scan sheet: count or receive stock with a barcode scanner. */
+  | { kind: 'scan' }
+  /**
+   * A 4×6 shipping label. The desktop apps send it straight to the label
+   * printer chosen in their settings; a browser tab opens it in a new tab.
+   */
+  | { kind: 'label'; href: string }
   | { kind: 'section'; section: DesktopSectionId }
   | { kind: 'page'; page: string }
   | { kind: 'open'; href: string }
@@ -229,6 +236,13 @@ export interface SectionPayload {
   body: SectionBody
   /** ISO timestamp of when this payload was built, shown in the sidebar footer. */
   loadedAt: string
+  /**
+   * The window of rows this table read. Absent for views that are not a list.
+   * `more` means the window was full, so there may be rows past it.
+   */
+  list?: { q: string; limit: number; more: boolean; searchable: boolean }
+  /** Sidebar counts as of this load, so they stay current as the window is used. */
+  badges?: DesktopBadges
 }
 
 /** Sidebar counts that are worth a badge — computed once for the whole shell. */
@@ -236,4 +250,6 @@ export interface DesktopBadges {
   orders?: number
   inventory?: number
   fundraisers?: number
+  /** Open support conversations plus live chats waiting on a reply. */
+  messages?: number
 }

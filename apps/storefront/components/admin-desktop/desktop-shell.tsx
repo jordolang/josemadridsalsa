@@ -26,8 +26,12 @@ import {
   type ColumnWidths,
 } from '@/lib/admin-desktop/columns'
 import { findForm } from '@/lib/admin-desktop/forms'
+import { filterRows, listSearch, MAX_LIST_LIMIT, ROW_LIMIT, type ListQuery } from '@/lib/admin-desktop/list'
+import { bulkActions, type BulkAction } from '@/lib/admin-desktop/bulk'
+import { attentionCount, badgeAlerts, type DesktopAlert } from '@/lib/admin-desktop/alerts'
 import { Icon, IconSprite } from './icons'
 import { RecordSheet, type SheetRequest } from './record-sheet'
+import { ScanSheet } from './scan-sheet'
 import {
   AnalyticsView,
   DashboardView,
@@ -37,6 +41,7 @@ import {
   SettingsView,
   TableView,
   toneClass,
+  type RowClick,
 } from './views'
 
 type Appearance = '' | 'light' | 'dark'
@@ -53,12 +58,45 @@ type FrameChrome = 'browser' | 'traffic-lights' | 'overlay'
 
 declare global {
   interface Window {
-    jmsDesktop?: { platform?: string; chrome?: FrameChrome }
+    /**
+     * Injected by the macOS and Windows apps. `notify` and `setBadge` reach the
+     * native notification centre and the dock or taskbar; a browser tab has
+     * neither, and the shell carries on without them.
+     */
+    jmsDesktop?: {
+      platform?: string
+      chrome?: FrameChrome
+      notify?: (alert: DesktopAlert) => void
+      setBadge?: (count: number) => void
+      /** Print a 4×6 label image on the label printer set in the app's settings. */
+      printLabel?: (url: string) => void
+    }
   }
 }
 
 /** Thrown for a 403 so the shell can say why rather than blaming the network. */
 class SectionDeniedError extends Error {}
+
+/**
+ * How often an open window reads its page again on its own. A window left open
+ * all day should show the order that came in at lunch without anyone pressing
+ * F5. Paused while the window is hidden or something modal is open.
+ */
+const AUTO_REFRESH_MS = 60_000
+
+/** Coming back to a window whose data is older than this reloads it at once. */
+const STALE_AFTER_MS = 30_000
+
+/**
+ * How often the badge counts are read on their own. Unlike the page refresh this
+ * keeps going while the window is hidden — a hidden window is exactly when a
+ * new-order notification is worth having. The apps keep the page's timers
+ * running in the background for it.
+ */
+const BADGE_POLL_MS = 60_000
+
+/** How long the filter box waits for typing to stop before searching the server. */
+const SEARCH_DEBOUNCE_MS = 350
 
 const APPEARANCE_KEY = 'jms-desktop-appearance'
 const APPEARANCE_ORDER: Appearance[] = ['', 'light', 'dark']
@@ -72,10 +110,38 @@ interface PaletteItem {
   run: () => void
 }
 
-/** A `write` command waiting on the operator to say yes. */
+type WriteCommand = Extract<DesktopCommand, { kind: 'write' }>
+
+/** A write — one, or one per marked row — waiting on the operator to say yes. */
 interface PendingConfirm {
   message: string
-  command: Extract<DesktopCommand, { kind: 'write' }>
+  danger?: boolean
+  run: () => void
+}
+
+interface FetchOptions {
+  /** Keep the filter, the chip and the cursor's row rather than starting fresh. */
+  keepPlace?: boolean
+  list?: Partial<ListQuery>
+  /** A background refresh: no spinner, and a failure leaves the screen as it was. */
+  silent?: boolean
+}
+
+/** POST one write and read back the route's fixed answer shape. */
+async function postWrite(command: WriteCommand): Promise<{ message: string } | { error: string }> {
+  try {
+    const response = await fetch('/api/admin/desktop/write', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: command.op, recordId: command.recordId, values: command.values ?? {} }),
+    })
+    const body = (await response.json()) as { ok?: boolean; message?: string; error?: string }
+    if (!response.ok || !body.ok) return { error: body.error ?? 'That did not go through.' }
+    return { message: body.message ?? 'Done' }
+  } catch {
+    return { error: 'Could not reach the server. Check the connection and try again.' }
+  }
 }
 
 export function DesktopShell({
@@ -117,9 +183,13 @@ export function DesktopShell({
   const [toast, setToast] = useState('')
   const [frame, setFrame] = useState<FrameChrome>('browser')
   const [sheet, setSheet] = useState<SheetRequest | null>(null)
+  const [scanning, setScanning] = useState(false)
   const [confirming, setConfirming] = useState<PendingConfirm | null>(null)
   const [working, setWorking] = useState(false)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
+  const [badgeCounts, setBadgeCounts] = useState<DesktopBadges>(badges)
+  /** Row ids marked for a bulk action. */
+  const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set())
 
   const filterInputRef = useRef<HTMLInputElement>(null)
   const quickFindTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -128,6 +198,8 @@ export function DesktopShell({
   const requestId = useRef(0)
   /** The row id to re-select once a reload lands, so a save does not lose your place. */
   const restoreRow = useRef<string | null>(null)
+  /** The row under the cursor, read by reloads that should keep it there. */
+  const activeRowId = useRef<string | null>(null)
 
   // Undefined means "no list was supplied" — every section shows, which is what
   // an older server render or a test fixture expects. An empty array is a real
@@ -195,29 +267,41 @@ export function DesktopShell({
    * the route resolves both, so the shell never has to know which sub-page a
    * command meant, only its name.
    */
-  const fetchSection = useCallback(async (id: string, keepPlace: boolean) => {
+  const fetchSection = useCallback(async (id: string, { keepPlace = false, list = {}, silent = false }: FetchOptions = {}) => {
     const entry = findPage(id)
     const sectionId = entry?.section.id ?? (id as DesktopSectionId)
     const ticket = ++requestId.current
-    setLoading(true)
-    setError(null)
+    if (!silent) {
+      setLoading(true)
+      setError(null)
+    }
 
     try {
-      const query = entry && entry.page.id !== sectionId ? `?page=${encodeURIComponent(entry.page.id)}` : ''
+      const params = new URLSearchParams(listSearch(list))
+      if (entry && entry.page.id !== sectionId) params.set('page', entry.page.id)
+      const query = params.toString() ? `?${params}` : ''
       const response = await fetch(`/api/admin/desktop/${sectionId}${query}`, { credentials: 'same-origin' })
       if (response.status === 403) throw new SectionDeniedError()
       if (!response.ok) throw new Error(`Request failed with ${response.status}`)
       const payload = (await response.json()) as SectionPayload
       if (ticket !== requestId.current) return
 
+      // Rows arrive newest first, so a new order pushes everything down one.
+      // Follow the row rather than the index, or the cursor lands on a neighbour.
+      if (keepPlace && restoreRow.current === null) restoreRow.current = activeRowId.current
       setSection(payload)
+      if (payload.badges) setBadgeCounts(payload.badges)
       if (!keepPlace) {
         setSelected(0)
         setQuery('')
         setFilter(0)
+        setMarked(new Set())
       }
     } catch (failure) {
       if (ticket !== requestId.current) return
+      // A background refresh that fails leaves the screen as it was; the next
+      // one, or F5, will try again.
+      if (silent) return
       setError(
         failure instanceof SectionDeniedError
           ? 'Your account does not have permission to open that page.'
@@ -240,7 +324,7 @@ export function DesktopShell({
       setPaletteOpen(false)
       if (id === section.page) return
 
-      await fetchSection(id, false)
+      await fetchSection(id)
 
       // Keep `?section=`/`?page=` in step so a reload, and the macOS and Windows
       // menu bars, all agree on where the window is. Replace rather than push:
@@ -261,8 +345,26 @@ export function DesktopShell({
 
   const goToSection = useCallback((id: DesktopSectionId) => goToPage(id), [goToPage])
 
-  /** Reload what is on screen, keeping the filter and the selected row. */
-  const reload = useCallback(() => fetchSection(section.page, true), [fetchSection, section.page])
+  /** Reload what is on screen, keeping the filter, the search window and the selected row. */
+  const reload = useCallback(
+    (silent = false) =>
+      fetchSection(section.page, {
+        keepPlace: true,
+        list: { q: section.list?.q, limit: section.list?.limit },
+        silent,
+      }),
+    [fetchSection, section.page, section.list?.q, section.list?.limit],
+  )
+
+  /** Widen the window by another page of rows. */
+  const loadMore = useCallback(() => {
+    const list = section.list
+    if (!list) return
+    void fetchSection(section.page, {
+      keepPlace: true,
+      list: { q: list.q, limit: Math.min(list.limit + ROW_LIMIT, MAX_LIST_LIMIT) },
+    })
+  }, [fetchSection, section.page, section.list])
 
   /** Leave the shell for a page in the web admin, in this same window. */
   const openPath = useCallback((path: string) => {
@@ -282,6 +384,32 @@ export function DesktopShell({
       return next
     })
   }, [flash])
+
+  // ------------------------------------------------------------- badges
+
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      try {
+        const response = await fetch('/api/admin/desktop/badges', { credentials: 'same-origin' })
+        if (response.ok) setBadgeCounts((await response.json()) as DesktopBadges)
+      } catch {
+        // The next poll, or the next page load, will bring them.
+      }
+    }, BADGE_POLL_MS)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Tell the native app when work arrives, and keep its dock or taskbar badge
+  // at what is still waiting. The counts the window opened with are the
+  // baseline: opening the app is not news.
+  const lastBadges = useRef(badges)
+  useEffect(() => {
+    const bridge = window.jmsDesktop
+    const canSee = (id: DesktopSectionId) => !permitted || permitted.has(id)
+    for (const alert of badgeAlerts(lastBadges.current, badgeCounts, canSee)) bridge?.notify?.(alert)
+    lastBadges.current = badgeCounts
+    bridge?.setBadge?.(attentionCount(badgeCounts, canSee))
+  }, [badgeCounts, permitted])
 
   // ------------------------------------------------------------ columns
 
@@ -323,33 +451,59 @@ export function DesktopShell({
 
   /** Send one no-form mutation, then reload so the table shows what happened. */
   const runWrite = useCallback(
-    async (command: Extract<DesktopCommand, { kind: 'write' }>) => {
+    async (command: WriteCommand) => {
       if (working) return
       setWorking(true)
       setConfirming(null)
 
       try {
-        const response = await fetch('/api/admin/desktop/write', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ op: command.op, recordId: command.recordId, values: command.values ?? {} }),
-        })
-
-        const body = (await response.json()) as { ok?: boolean; message?: string; error?: string }
-
-        if (!response.ok || !body.ok) {
-          flash(body.error ?? 'That did not go through.')
+        const result = await postWrite(command)
+        if ('error' in result) {
+          flash(result.error)
           return
         }
 
         restoreRow.current = command.recordId ?? null
-        flash(command.success ?? body.message ?? 'Done')
+        flash(command.success ?? result.message)
         await reload()
-      } catch {
-        flash('Could not reach the server. Check the connection and try again.')
       } finally {
         setWorking(false)
+      }
+    },
+    [working, flash, reload],
+  )
+
+  /**
+   * Run one bulk action: each marked row's own command, one after another.
+   *
+   * In sequence rather than all at once, so thirty orders do not land on the
+   * database as thirty simultaneous transactions, and a failure part way is
+   * reported by count rather than lost in a race.
+   */
+  const runBulk = useCallback(
+    async (action: BulkAction) => {
+      if (working) return
+      setWorking(true)
+      setConfirming(null)
+
+      let done = 0
+      let firstError: string | null = null
+      try {
+        for (const command of action.commands) {
+          const result = await postWrite(command)
+          if ('error' in result) firstError ??= result.error
+          else done += 1
+        }
+      } finally {
+        const failed = action.commands.length - done
+        flash(
+          failed === 0
+            ? `${action.label}: ${done} done`
+            : `${action.label}: ${done} done, ${failed} failed — ${firstError}`,
+        )
+        setMarked(new Set())
+        setWorking(false)
+        await reload()
       }
     },
     [working, flash, reload],
@@ -383,11 +537,28 @@ export function DesktopShell({
 
         case 'write':
           if (command.confirm) {
-            setConfirming({ message: command.confirm, command })
+            setConfirming({ message: command.confirm, danger: command.danger, run: () => void runWrite(command) })
             return
           }
           void runWrite(command)
           return
+
+        case 'scan':
+          setScanning(true)
+          return
+
+        case 'label': {
+          const print = window.jmsDesktop?.printLabel
+          if (print) {
+            print(command.href)
+            flash('Sent to the label printer')
+          } else {
+            // A browser tab: the label is an image on the carrier's host, so
+            // open it beside the shell rather than navigating away from it.
+            window.open(command.href, '_blank', 'noopener')
+          }
+          return
+        }
 
         case 'section':
           void goToSection(command.section)
@@ -408,17 +579,31 @@ export function DesktopShell({
   // ---------------------------------------------------------------- rows
 
   const body = section.body
+  const isRowView = body.view === 'table' || body.view === 'events'
   const allRows: Row[] = useMemo(
     () => (body.view === 'table' || body.view === 'events' ? body.rows : []),
     [body],
   )
 
-  const rows = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return allRows.filter(
-      (row) => (filter === 0 || row.buckets.includes(filter)) && (!needle || row.search.toLowerCase().includes(needle)),
-    )
-  }, [allRows, query, filter])
+  const rows = useMemo(
+    () => filterRows(allRows, { query, filter, serverQuery: section.list?.q }),
+    [allRows, query, filter, section.list?.q],
+  )
+
+  // The filter box searches the database on lists that outgrow their window,
+  // once typing stops. Only when the window could be hiding matches (or to undo
+  // a server search) — a list that fits is already filtered on the spot.
+  const list = section.list
+  useEffect(() => {
+    if (!list?.searchable) return
+    const wanted = query.trim()
+    if (wanted === list.q || (!list.more && !list.q)) return
+    const timer = setTimeout(() => {
+      setSelected(0)
+      void fetchSection(section.page, { keepPlace: true, list: { q: wanted } })
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [query, list, section.page, fetchSection])
 
   // A reload after a write puts the cursor back on the row that was acted on,
   // rather than snapping to the top of a list somebody was working down.
@@ -431,6 +616,63 @@ export function DesktopShell({
   }, [rows])
 
   const activeRow = rows[Math.min(selected, Math.max(rows.length - 1, 0))] ?? null
+  useEffect(() => {
+    activeRowId.current = activeRow?.id ?? null
+  }, [activeRow])
+
+  // Marks follow the rows: one that a reload or a search removed is dropped
+  // rather than acted on unseen.
+  const markedRows = useMemo(() => allRows.filter((row) => marked.has(row.id)), [allRows, marked])
+  const bulk = useMemo(() => bulkActions(markedRows), [markedRows])
+
+  /** A click on a row: plain moves the cursor, ⌘/Ctrl toggles a mark, Shift marks a run. */
+  const clickRow = useCallback(
+    (index: number, click?: RowClick) => {
+      const row = rows[index]
+      if (row && (click?.metaKey || click?.ctrlKey)) {
+        setMarked((previous) => {
+          const next = new Set(previous)
+          if (next.has(row.id)) next.delete(row.id)
+          else next.add(row.id)
+          return next
+        })
+      } else if (row && click?.shiftKey) {
+        const [from, to] = index < selected ? [index, selected] : [selected, index]
+        setMarked((previous) => new Set([...previous, ...rows.slice(from, to + 1).map((entry) => entry.id)]))
+      }
+      setSelected(index)
+    },
+    [rows, selected],
+  )
+
+  const askBulk = useCallback(
+    (action: BulkAction) => {
+      const count = action.commands.length
+      setConfirming({
+        message: `${action.label} — ${count} ${count === 1 ? 'row' : 'rows'}? Each is done and logged exactly as if you pressed it on that record.`,
+        danger: action.danger,
+        run: () => void runBulk(action),
+      })
+    },
+    [runBulk],
+  )
+
+  /** Download the rows on screen — chip, filter box and all — without the window's row cap. */
+  const exportCsv = useCallback(() => {
+    const params = new URLSearchParams({ format: 'csv' })
+    if (section.page !== section.id) params.set('page', section.page)
+    if (query.trim()) params.set('q', query.trim())
+    if (filter) params.set('filter', String(filter))
+    // A link with `download` rather than a navigation, so the desktop windows
+    // save the file instead of showing it in place of the shell.
+    const link = document.createElement('a')
+    link.href = `/api/admin/desktop/${section.id}?${params}`
+    link.download = ''
+    document.body.append(link)
+    link.click()
+    link.remove()
+    flash('Preparing the CSV…')
+  }, [section.id, section.page, query, filter, flash])
 
   const inspectorData: InspectorData | null = useMemo(() => {
     if (body.view === 'table' || body.view === 'events') return activeRow?.inspector ?? null
@@ -511,6 +753,40 @@ export function DesktopShell({
         void reload()
       },
     })
+    if (isRowView) {
+      items.push({
+        key: 'command:export',
+        label: 'Export to CSV',
+        hint: `${currentSection.label} · the rows the filter shows, without the row cap`,
+        icon: 'i-file',
+        run: () => {
+          setPaletteOpen(false)
+          exportCsv()
+        },
+      })
+      items.push({
+        key: 'command:mark-all',
+        label: 'Mark every row shown',
+        hint: `${rows.length} rows · for a bulk action`,
+        icon: 'i-columns',
+        run: () => {
+          setPaletteOpen(false)
+          setMarked(new Set(rows.map((row) => row.id)))
+        },
+      })
+    }
+    if (section.list?.more && section.list.limit < MAX_LIST_LIMIT) {
+      items.push({
+        key: 'command:more',
+        label: 'Load more rows',
+        hint: `Showing the newest ${section.list.limit}`,
+        icon: 'i-rotate',
+        run: () => {
+          setPaletteOpen(false)
+          loadMore()
+        },
+      })
+    }
     items.push({
       key: 'command:columns',
       label: 'Reset column widths',
@@ -576,6 +852,10 @@ export function DesktopShell({
     reload,
     openPath,
     flash,
+    isRowView,
+    exportCsv,
+    loadMore,
+    section.list,
   ])
 
   // ------------------------------------------------------------ keyboard
@@ -589,7 +869,39 @@ export function DesktopShell({
   )
 
   /** True while a sheet or a confirmation owns the keyboard. */
-  const modalOpen = sheet !== null || confirming !== null
+  const modalOpen = sheet !== null || confirming !== null || scanning
+
+  // Keep what is on screen current without anyone pressing F5: on a timer while
+  // the window is visible, and at once when it comes back after a while away.
+  // Never under a sheet, a confirmation or the palette, and never while a load
+  // or a write is already in flight — the refresh is silent, so it must not
+  // race something the operator is waiting on.
+  const autoRefresh = useRef({ blocked: false, loadedAt: 0, reload })
+  useEffect(() => {
+    autoRefresh.current = {
+      blocked: modalOpen || paletteOpen || loading || working,
+      loadedAt: Date.parse(section.loadedAt),
+      reload,
+    }
+  })
+  useEffect(() => {
+    const refresh = () => {
+      const state = autoRefresh.current
+      if (document.visibilityState !== 'visible' || state.blocked) return
+      void state.reload(true)
+    }
+    const onReturn = () => {
+      if (Date.now() - autoRefresh.current.loadedAt > STALE_AFTER_MS) refresh()
+    }
+    const timer = setInterval(refresh, AUTO_REFRESH_MS)
+    document.addEventListener('visibilitychange', onReturn)
+    window.addEventListener('focus', onReturn)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onReturn)
+      window.removeEventListener('focus', onReturn)
+    }
+  }, [])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -628,6 +940,7 @@ export function DesktopShell({
       if (event.key === 'Escape') {
         if (paletteOpen) setPaletteOpen(false)
         else if (typing) target?.blur()
+        else if (marked.size > 0) setMarked(new Set())
         return
       }
 
@@ -674,6 +987,17 @@ export function DesktopShell({
       if (event.key === 'Enter') {
         event.preventDefault()
         openRow(activeRow)
+        return
+      }
+      if (event.key === ' ' && activeRow) {
+        event.preventDefault()
+        const id = activeRow.id
+        setMarked((previous) => {
+          const next = new Set(previous)
+          if (next.has(id)) next.delete(id)
+          else next.add(id)
+          return next
+        })
         return
       }
       if (event.key === '/') {
@@ -726,6 +1050,7 @@ export function DesktopShell({
     inspectorData,
     runCommand,
     reload,
+    marked.size,
   ])
 
   useEffect(() => {
@@ -743,7 +1068,7 @@ export function DesktopShell({
 
   // --------------------------------------------------------------- render
 
-  const badgeFor = (item: DesktopSection) => badges[item.id as keyof DesktopBadges]
+  const badgeFor = (item: DesktopSection) => badgeCounts[item.id as keyof DesktopBadges]
   const initials = operator.name
     .split(/\s+/)
     .map((part) => part[0])
@@ -752,8 +1077,11 @@ export function DesktopShell({
     .join('')
     .toUpperCase()
 
-  const isRowView = body.view === 'table' || body.view === 'events'
-  const rowSummary = isRowView ? `${rows.length} of ${allRows.length} rows` : section.path
+  const rowSummary = !isRowView
+    ? section.path
+    : list?.q && list.q === query.trim()
+      ? `${rows.length}${list.more ? '+' : ''} ${rows.length === 1 && !list.more ? 'match' : 'matches'} in the database`
+      : `${rows.length} of ${allRows.length}${list?.more ? '+' : ''} rows`
 
   return (
     <div className="jmsd-root" data-appearance={appearance || undefined} data-frame={frame}>
@@ -936,7 +1264,52 @@ export function DesktopShell({
               </button>
             ) : null}
             <span className="jmsd-rowsummary">{rowSummary}</span>
+            {isRowView && list?.more && list.limit < MAX_LIST_LIMIT ? (
+              <button type="button" className="jmsd-chip" onClick={loadMore} title="Read the next rows">
+                Load more
+              </button>
+            ) : null}
+            {isRowView ? (
+              <button
+                type="button"
+                className="jmsd-chip"
+                onClick={exportCsv}
+                aria-label="Export CSV"
+                title="Export these rows as CSV"
+              >
+                <Icon name="i-file" size={11} />
+              </button>
+            ) : null}
           </div>
+
+          {isRowView && marked.size > 0 ? (
+            <div className="jmsd-bulkbar" role="toolbar" aria-label="Bulk actions">
+              <span className="jmsd-bulkbar-count">{markedRows.length} marked</span>
+              {bulk.length === 0 ? (
+                <span style={{ color: 'var(--faint)' }}>No action is shared by every marked row.</span>
+              ) : (
+                bulk.map((action) => (
+                  <button
+                    key={action.key}
+                    type="button"
+                    className={`jmsd-action ${action.danger ? 'jmsd-action--danger' : ''}`}
+                    disabled={working}
+                    onClick={() => askBulk(action)}
+                  >
+                    {action.label}
+                  </button>
+                ))
+              )}
+              <button
+                type="button"
+                className="jmsd-chip"
+                style={{ marginLeft: 'auto' }}
+                onClick={() => setMarked(new Set())}
+              >
+                Clear · Esc
+              </button>
+            </div>
+          ) : null}
 
           <div className="jmsd-pane">
             {error ? (
@@ -953,7 +1326,8 @@ export function DesktopShell({
               <EventsView
                 payload={{ ...body, rows }}
                 selected={selected}
-                onSelect={setSelected}
+                marked={marked}
+                onSelect={clickRow}
                 onOpen={openRow}
                 widths={sectionWidths}
                 onResize={resizeColumn}
@@ -965,7 +1339,8 @@ export function DesktopShell({
                 rows={rows}
                 totals={body.totals}
                 selected={selected}
-                onSelect={setSelected}
+                marked={marked}
+                onSelect={clickRow}
                 onOpen={openRow}
                 widths={sectionWidths}
                 onResize={resizeColumn}
@@ -997,6 +1372,7 @@ export function DesktopShell({
           <span>↵ open</span>
           <span>/ filter</span>
           <span>F cycle</span>
+          <span>Space mark</span>
           <span>I inspector</span>
           <span>⌘K search</span>
         </span>
@@ -1066,6 +1442,18 @@ export function DesktopShell({
         />
       ) : null}
 
+      {scanning ? (
+        <ScanSheet
+          postWrite={postWrite}
+          onClose={() => setScanning(false)}
+          onApplied={(message) => {
+            setScanning(false)
+            flash(message)
+            void reload()
+          }}
+        />
+      ) : null}
+
       {confirming ? (
         <div className="jmsd-scrim" role="presentation" onClick={() => setConfirming(null)}>
           <div
@@ -1082,8 +1470,8 @@ export function DesktopShell({
               <button
                 type="button"
                 autoFocus
-                className={`jmsd-action jmsd-action--primary ${confirming.command.danger ? 'jmsd-action--danger' : ''}`}
-                onClick={() => void runWrite(confirming.command)}
+                className={`jmsd-action jmsd-action--primary ${confirming.danger ? 'jmsd-action--danger' : ''}`}
+                onClick={confirming.run}
                 disabled={working}
               >
                 {working ? 'Working…' : 'Yes, do it'}

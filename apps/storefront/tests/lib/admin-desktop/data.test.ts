@@ -40,6 +40,10 @@ function commandFault(command: DesktopCommand | undefined): string | null {
       return isDesktopSectionId(command.section) ? null : `unknown section → ${command.section}`
     case 'page':
       return isDesktopPageId(command.page) ? null : `unknown page → ${command.page}`
+    case 'scan':
+      return null
+    case 'label':
+      return command.href.startsWith('https://') ? null : `label is not https → ${command.href}`
   }
 }
 
@@ -60,6 +64,7 @@ const prismaMock = {
   contactSubmission: { findMany: vi.fn() },
   conversation: { findMany: vi.fn() },
   credentialAccessGrant: { findMany: vi.fn() },
+  developerBlogPost: { count: vi.fn() },
   customer: { count: vi.fn(), findMany: vi.fn() },
   emailAutomation: { findMany: vi.fn() },
   emailBounce: { findMany: vi.fn() },
@@ -537,6 +542,83 @@ describe('customers', () => {
       (row.open as { values: Record<string, unknown> }).values.email,
       'the email is not editable, so the sheet should not carry it',
     ).toBeUndefined()
+  })
+})
+
+describe('developer page', () => {
+  it('shows the console overview and asks for the permission the console does', async () => {
+    const { canSeePage } = await import('@/lib/admin-desktop/access')
+    prismaMock.developerBlogPost.count.mockResolvedValue(3)
+
+    const payload = await loadSection('database.developer')
+    if (payload.body.view !== 'settings') throw new Error('expected a settings payload')
+
+    const [status, platform] = payload.body.groups
+    // The stubbed client has no $queryRaw, so the database check fails — and
+    // says so rather than taking the page down.
+    expect(status.rows.find((row) => row.label === 'Database')).toMatchObject({ value: 'Unreachable', tone: 'bad' })
+    expect(platform.rows.find((row) => row.label === 'Developer blog posts')?.value).toBe('3')
+
+    expect(canSeePage('database.developer', ['developer:database'])).toBe(false)
+    expect(canSeePage('database.developer', ['developer:database', 'developer:system'])).toBe(true)
+  })
+})
+
+describe('list window', () => {
+  it('searches the database for every word on a list that outgrows its window', async () => {
+    prismaMock.customer.findMany.mockResolvedValue([customerFixture])
+
+    const payload = await loadSection('customers', undefined, { q: 'vera  smith', limit: 500 })
+
+    const [args] = prismaMock.customer.findMany.mock.calls[0]
+    expect(args.take).toBe(500)
+    // Both words must match, each in any of the fields — "vera smith" finds
+    // Vera Smith, not every Vera and every Smith.
+    expect(args.where.AND).toHaveLength(2)
+    expect(args.where.AND[0].OR).toContainEqual({ email: { contains: 'vera', mode: 'insensitive' } })
+    expect(args.where.AND[1].OR).toContainEqual({ lastName: { contains: 'smith', mode: 'insensitive' } })
+    expect(payload.list).toEqual({ q: 'vera  smith', limit: 500, more: false, searchable: true })
+  })
+
+  it('reads with no condition when there is nothing to search for', async () => {
+    await loadSection('customers')
+    expect(prismaMock.customer.findMany.mock.calls[0][0].where).toBeUndefined()
+  })
+
+  it('ignores q on a page that cannot search, and says the window is full', async () => {
+    prismaMock.product.findMany.mockResolvedValue([productFixture, { ...productFixture, id: 'p4' }])
+
+    const payload = await loadSection('products', undefined, { q: 'peach', limit: 2 })
+
+    expect(prismaMock.product.findMany.mock.calls[0][0].take).toBe(2)
+    expect(payload.list).toEqual({ q: '', limit: 2, more: true, searchable: false })
+  })
+
+  it('offers Mark shipped only on a paid order that has not gone out yet', async () => {
+    prismaMock.order.findMany.mockResolvedValue([
+      { ...orderFixture, id: 'paid', status: 'PROCESSING', adminNotes: 'gift wrap' },
+      { ...orderFixture, id: 'unpaid', status: 'PROCESSING', paymentStatus: 'PENDING' },
+      { ...orderFixture, id: 'gone', status: 'SHIPPED' },
+    ])
+
+    const payload = await loadSection('orders')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+
+    const shipped = (id: string) =>
+      payload.body.view === 'table'
+        ? payload.body.rows.find((row) => row.id === id)?.inspector.actions?.find((a) => a.label === 'Mark shipped')
+        : undefined
+
+    // The order's own notes travel with it, because the status handler writes
+    // every field it is sent and would otherwise clear them.
+    expect(shipped('paid')?.command).toMatchObject({
+      kind: 'write',
+      op: 'order.status',
+      recordId: 'paid',
+      values: { status: 'SHIPPED', paymentStatus: 'PAID', adminNotes: 'gift wrap' },
+    })
+    expect(shipped('unpaid')).toBeUndefined()
+    expect(shipped('gone')).toBeUndefined()
   })
 })
 
