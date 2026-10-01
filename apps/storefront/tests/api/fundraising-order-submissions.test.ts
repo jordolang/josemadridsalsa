@@ -4,12 +4,23 @@ import { POST } from '@/app/api/fundraising-site/order-submissions/route'
 import { sendEmail } from '@/lib/email/sender'
 import { logEngagementRequest } from '@/lib/engagements'
 import { put } from '@vercel/blob'
+import { createOrderPaymentCheckout } from '@/lib/fundraising-site/order-checkout'
 
 vi.mock('server-only', () => ({}))
 vi.mock('@vercel/blob', () => ({ put: vi.fn() }))
 vi.mock('@/lib/engagements', () => ({ logEngagementRequest: vi.fn().mockResolvedValue({ id: 'cmabc12345xyz' }) }))
 vi.mock('@/lib/audit', () => ({ logAudit: vi.fn() }))
 vi.mock('@/lib/email/sender', () => ({ sendEmail: vi.fn() }))
+vi.mock('@/lib/bigcommerce/config', () => ({ isBigCommerceConfigured: vi.fn(() => true) }))
+vi.mock('@/lib/fundraising-site/checkout-fields', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/fundraising-site/checkout-fields')>()),
+  getFundraisingCheckoutFields: vi.fn(async () => ({
+    groupFieldId: 'field_26',
+    sellerFieldId: 'field_28',
+    groups: [{ value: '11', label: 'Lower Dauphin Band Boosters' }],
+  })),
+}))
+vi.mock('@/lib/fundraising-site/order-checkout', () => ({ createOrderPaymentCheckout: vi.fn() }))
 
 const valid = {
   kit: '9',
@@ -114,5 +125,51 @@ describe('POST /api/fundraising-site/order-submissions', () => {
       )
     for (let i = 0; i < 5; i++) expect((await request()).status).toBe(200)
     expect((await request()).status).toBe(429)
+  })
+
+  describe('paying by card online', () => {
+    const card = { ...valid, paymentMethod: 'card-online', group: 'lower dauphin band boosters' }
+
+    beforeEach(() => {
+      vi.mocked(createOrderPaymentCheckout)
+        .mockReset()
+        .mockResolvedValue({ checkoutUrl: 'https://store.example/checkout/abc', amountDue: 70 })
+    })
+
+    it('builds the store checkout and sends its link to the coordinator', async () => {
+      const response = await post(card)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data).toMatchObject({ checkoutUrl: 'https://store.example/checkout/abc', cardTotal: 70, amountDue: 60 })
+      expect(createOrderPaymentCheckout).toHaveBeenCalledWith(expect.objectContaining({ quantities: valid.quantities }), '12345XYZ')
+      const [inbox, confirmation] = vi.mocked(sendEmail).mock.calls.map(([options]) => options)
+      expect(inbox.text).toContain('fill it once')
+      expect(confirmation.html).toContain('href="https://store.example/checkout/abc"')
+      expect(confirmation.text).toContain('Pay $70 (including shipping) by card')
+    })
+
+    it('requires a group', async () => {
+      const response = await post({ ...card, group: undefined })
+      expect(response.status).toBe(400)
+      expect(createOrderPaymentCheckout).not.toHaveBeenCalled()
+    })
+
+    it('refuses a group the store cannot credit, before recording the order', async () => {
+      const response = await post({ ...card, group: 'Not A Real Group' })
+      expect(response.status).toBe(422)
+      expect(logEngagementRequest).not.toHaveBeenCalled()
+      expect(sendEmail).not.toHaveBeenCalled()
+    })
+
+    it('still takes the order when the store checkout cannot be built', async () => {
+      vi.mocked(createOrderPaymentCheckout).mockRejectedValueOnce(new Error('BigCommerce down'))
+      const response = await post(card)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.checkoutUrl).toBeNull()
+      expect(vi.mocked(sendEmail).mock.calls[0][0].text).toContain('contact the coordinator to take payment')
+    })
   })
 })

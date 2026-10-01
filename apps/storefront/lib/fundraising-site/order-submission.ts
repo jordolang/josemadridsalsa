@@ -94,6 +94,8 @@ export const orderSubmissionSchema = z
     quantities: z.record(z.string(), z.number().int().min(0).max(10_000)),
     paymentMethod: z.enum(Object.keys(PAYMENT_METHODS) as [PaymentMethod, ...PaymentMethod[]]),
     notes: z.string().trim().max(2000).optional(),
+    /** The fundraising store's checkout group; required to pay by card online. */
+    group: z.string().trim().max(200).optional(),
     confirmFinal: z.literal(true, { message: 'Please confirm this order is final' }),
     signature: z
       .string({ message: 'Please sign the order' })
@@ -105,6 +107,9 @@ export const orderSubmissionSchema = z
     const unknown = Object.keys(order.quantities).filter((id) => !allowed.has(id))
     if (unknown.length > 0) {
       ctx.addIssue({ code: 'custom', path: ['quantities'], message: `Not in the ${order.kit}-flavor kit: ${unknown.join(', ')}` })
+    }
+    if (order.paymentMethod === 'card-online' && !order.group) {
+      ctx.addIssue({ code: 'custom', path: ['group'], message: 'Choose your group to pay by card online' })
     }
     if (Object.values(order.quantities).every((qty) => qty === 0)) {
       ctx.addIssue({ code: 'custom', path: ['quantities'], message: 'Enter at least one jar' })

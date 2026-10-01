@@ -1,6 +1,8 @@
 import { put } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { logAudit } from '@/lib/audit'
+import { BigCommerceCartError } from '@/lib/bigcommerce/cart'
+import { isBigCommerceConfigured } from '@/lib/bigcommerce/config'
 import { checkRateLimit } from '@/lib/email/rate-limit'
 import { sendEmail } from '@/lib/email/sender'
 import { logEngagementRequest } from '@/lib/engagements'
@@ -11,6 +13,9 @@ import {
   orderSubmissionSchema,
   summarizeOrder,
 } from '@/lib/fundraising-site/order-submission'
+import { requireGroup } from '@/lib/fundraising-site/checkout'
+import { getFundraisingCheckoutFields } from '@/lib/fundraising-site/checkout-fields'
+import { createOrderPaymentCheckout } from '@/lib/fundraising-site/order-checkout'
 import { buildSignedOrderPdf, signedOrderPathname } from '@/lib/fundraising-site/signed-order-pdf'
 
 export const runtime = 'nodejs'
@@ -28,6 +33,7 @@ const money = (amount: number) => `$${amount.toLocaleString('en-US')}`
  * (which is what starts fulfillment), confirms to the submitter, and records it.
  * Succeeds only if the inbox email was sent, so a lost order is never reported as received.
  * The drawn signature is archived as a signed PDF in Vercel Blob and linked from both emails.
+ * Paying by card online builds the fundraising store checkout for the order (see order-checkout.ts).
  */
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
@@ -47,8 +53,30 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const order = parsed.data
+  const payByCard = order.paymentMethod === 'card-online'
+
+  // A group the store's checkout cannot credit is a fixable mistake: say so before recording anything.
+  if (payByCard) {
+    if (!isBigCommerceConfigured('fundraising')) {
+      return NextResponse.json(
+        { error: 'Card payment online is unavailable right now. Please choose check or card by phone.' },
+        { status: 503 },
+      )
+    }
+    try {
+      requireGroup(await getFundraisingCheckoutFields(), order.group ?? '')
+    } catch (error) {
+      if (error instanceof BigCommerceCartError) return NextResponse.json({ error: error.message }, { status: 422 })
+      console.error('Fundraising group list unavailable:', error)
+      return NextResponse.json(
+        { error: 'Card payment online is unavailable right now. Please choose check or card by phone.' },
+        { status: 503 },
+      )
+    }
+  }
+
   try {
-    const order = parsed.data
     const { signature: _signature, ...orderWithoutSignature } = order
     const submittedAt = new Date()
     const summary = summarizeOrder(order.kit, order.quantities)
@@ -86,6 +114,17 @@ export async function POST(request: NextRequest) {
       console.warn('BLOB_READ_WRITE_TOKEN missing; signed fundraiser order PDF not archived')
     }
 
+    // The order is already recorded; a checkout failure only means payment is collected another way.
+    let checkout: { checkoutUrl: string; amountDue: number | null } | null = null
+    if (payByCard) {
+      try {
+        checkout = await createOrderPaymentCheckout(order, reference)
+      } catch (error) {
+        console.error('Fundraiser order card checkout failed:', error)
+      }
+    }
+    const cardTotal = checkout?.amountDue ?? summary.amountDue
+
     const e = escapeHtml
     const rowsHtml = summary.lines
       .map((line) => `<tr><td style="padding:4px 12px 4px 0">${e(line.name)}</td><td style="text-align:right">${line.quantity}</td></tr>`)
@@ -97,6 +136,17 @@ export async function POST(request: NextRequest) {
       ['Contact', `${order.contactName} · ${email} · ${order.phone}`],
       ['Kit', kitLabel],
       ['Payment', `${payment} — amount due ${money(summary.amountDue)} (${summary.totalJars} jars × ${money(DUE_PER_JAR)})`],
+      ...(payByCard
+        ? [
+            ['Group', order.group ?? ''],
+            [
+              'Card checkout',
+              checkout
+                ? `Sent to the coordinator (${money(cardTotal)} incl. shipping). The BigCommerce order that follows is this same order — fill it once.`
+                : 'Could not be created — contact the coordinator to take payment.',
+            ],
+          ]
+        : []),
       ['Signed', `Electronically by ${order.contactName}`],
       ...(reference ? [['Reference', reference]] : []),
     ]
@@ -135,16 +185,25 @@ Notes: ${order.notes || '—'}${pdfUrl ? `\n\nSigned order form: ${pdfUrl}` : ''
       )
     }
 
+    const payNoteText = checkout
+      ? `Pay ${money(cardTotal)} (including shipping) by card: ${checkout.checkoutUrl}`
+      : payByCard
+        ? `We could not open card checkout just now; we will contact you to take your ${money(summary.amountDue)} payment.`
+        : `Please pay ${money(summary.amountDue)} by ${payment.toLowerCase()}.`
+    const payNoteHtml = checkout
+      ? `<a href="${e(checkout.checkoutUrl)}"><strong>Pay ${money(cardTotal)} by card</strong></a> (including shipping).`
+      : e(payNoteText)
+
     // The submitter's copy is a courtesy; the order already reached the inbox.
     await sendEmail({
       to: email,
       replyTo: inbox,
       subject: `We received your final fundraiser order (${summary.totalJars} jars)`,
       html: `<p>Thank you! We received the final order for <strong>${e(order.organizationName)}</strong> and will fill it from the details below.</p>
-        <p>Please pay ${money(summary.amountDue)} by ${e(payment.toLowerCase())}. Orders ship within 10 days of payment.
+        <p>${payNoteHtml} Orders ship within 10 days of payment.
         Need to change something? Reply to this email or call 740-521-4304.</p>${html}`,
       text: `Thank you! We received your final order and will fill it from the details below.\n` +
-        `Please pay ${money(summary.amountDue)} by ${payment.toLowerCase()}. Orders ship within 10 days of payment.\n` +
+        `${payNoteText} Orders ship within 10 days of payment.\n` +
         `Need to change something? Reply to this email or call 740-521-4304.\n\n${text}`,
     }).catch((error) => console.error('Fundraiser order confirmation failed:', error))
 
@@ -153,10 +212,17 @@ Notes: ${order.notes || '—'}${pdfUrl ? `\n\nSigned order form: ${pdfUrl}` : ''
       action: 'CREATE',
       entityType: 'FundraiserOrderSubmission',
       entityId: record?.id ?? email,
-      changes: { organizationName: order.organizationName, kit: order.kit, totalJars: summary.totalJars, signed: true, pdfUrl },
+      changes: { organizationName: order.organizationName, kit: order.kit, totalJars: summary.totalJars, signed: true, pdfUrl, cardCheckout: !!checkout },
     })
 
-    return NextResponse.json({ success: true, reference, pdfUrl, ...summary })
+    return NextResponse.json({
+      success: true,
+      reference,
+      pdfUrl,
+      ...summary,
+      checkoutUrl: checkout?.checkoutUrl ?? null,
+      cardTotal: checkout ? cardTotal : null,
+    })
   } catch (error) {
     console.error('Fundraiser order submission error:', error)
     return NextResponse.json(

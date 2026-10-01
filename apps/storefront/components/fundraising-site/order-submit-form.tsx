@@ -1,10 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Loader2, Minus, Plus } from 'lucide-react'
+import { CheckCircle2, CreditCard, Loader2, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { SignaturePad } from '@/components/waiver/SignaturePad'
 import {
@@ -35,19 +36,24 @@ type FieldName = (typeof CONTACT_FIELDS)[number][0] | (typeof SHIP_FIELDS)[numbe
 const CATEGORIES: FlavorCategory[] = ['Fruit', 'Specialty', 'Verde', 'Original']
 const money = (amount: number) => `$${amount.toLocaleString('en-US')}`
 
-export function OrderSubmitForm() {
+/** `groups`: the fundraising store's checkout groups, or null when they could not be loaded. */
+export function OrderSubmitForm({ groups }: { groups: string[] | null }) {
   const [kit, setKit] = useState<KitId>('16')
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [fields, setFields] = useState<Record<FieldName, string>>(
     Object.fromEntries([...CONTACT_FIELDS, ...SHIP_FIELDS].map(([name]) => [name, ''])) as Record<FieldName, string>,
   )
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card-online')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(groups?.length ? 'card-online' : 'check')
   const [notes, setNotes] = useState('')
   const [confirmFinal, setConfirmFinal] = useState(false)
   const [signature, setSignature] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [reference, setReference] = useState<string | null>(null)
+  const [group, setGroup] = useState('')
+  const [checkout, setCheckout] = useState<{ url: string; total: number } | null>(null)
+  const cardOnline = paymentMethod === 'card-online'
+  const cardAvailable = groups !== null && groups.length > 0
 
   const flavors = ORDER_KITS[kit].flavors
   const numeric = useMemo(
@@ -68,16 +74,27 @@ export function OrderSubmitForm() {
     setError(null)
     if (summary.totalJars === 0) return setError('Enter at least one jar.')
     if (!signature) return setError('Please sign the order.')
+    if (cardOnline && !group) return setError('Choose your group to pay by card online.')
     setStatus('sending')
     try {
       const response = await fetch('/api/fundraising-site/order-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kit, quantities: numeric, ...fields, paymentMethod, notes: notes || undefined, confirmFinal, signature }),
+        body: JSON.stringify({
+          kit,
+          quantities: numeric,
+          ...fields,
+          paymentMethod,
+          notes: notes || undefined,
+          group: cardOnline ? group : undefined,
+          confirmFinal,
+          signature,
+        }),
       })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(data?.error || 'We could not submit your order.')
       setReference(data?.reference ?? null)
+      setCheckout(data?.checkoutUrl ? { url: data.checkoutUrl, total: data.cardTotal ?? summary.amountDue } : null)
       setStatus('done')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
@@ -96,9 +113,31 @@ export function OrderSubmitForm() {
           entered. A copy is on its way to {fields.email}.
         </p>
         {reference ? <p className="mt-2 text-sm text-muted-foreground">Reference: <strong>{reference}</strong></p> : null}
-        <p className="mt-4 font-semibold text-foreground">
-          Amount due: {money(summary.amountDue)} by {PAYMENT_METHODS[paymentMethod].toLowerCase()}
-        </p>
+        {checkout ? (
+          <>
+            <Button
+              size="lg"
+              className="mt-6 h-auto whitespace-normal bg-gradient-to-r from-salsa-600 to-chile-600 py-3 hover:from-salsa-700 hover:to-chile-700"
+              asChild
+            >
+              <a href={checkout.url}>
+                <CreditCard className="mr-2 h-5 w-5" aria-hidden /> Pay {money(checkout.total)} by card now
+              </a>
+            </Button>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {money(summary.amountDue)} for {summary.totalJars} jars plus shipping, on our secure checkout. The link is also in
+              your confirmation email.
+            </p>
+          </>
+        ) : cardOnline ? (
+          <p className="mt-4 font-semibold text-foreground">
+            We could not open card checkout just now. We will contact you to take your {money(summary.amountDue)} payment.
+          </p>
+        ) : (
+          <p className="mt-4 font-semibold text-foreground">
+            Amount due: {money(summary.amountDue)} by {PAYMENT_METHODS[paymentMethod].toLowerCase()}
+          </p>
+        )}
       </div>
     )
   }
@@ -221,19 +260,49 @@ export function OrderSubmitForm() {
       <fieldset>
         <legend className="font-serif text-xl font-bold text-foreground">4. How will you pay?</legend>
         <div className="mt-3 space-y-2">
-          {(Object.keys(PAYMENT_METHODS) as PaymentMethod[]).map((method) => (
-            <label key={method} className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="paymentMethod"
-                value={method}
-                checked={paymentMethod === method}
-                onChange={() => setPaymentMethod(method)}
-              />
-              {PAYMENT_METHODS[method]}
-            </label>
-          ))}
+          {(Object.keys(PAYMENT_METHODS) as PaymentMethod[]).map((method) => {
+            const unavailable = method === 'card-online' && !cardAvailable
+            return (
+              <label key={method} className={`flex items-center gap-2 ${unavailable ? 'opacity-50' : ''}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value={method}
+                  checked={paymentMethod === method}
+                  disabled={unavailable}
+                  onChange={() => setPaymentMethod(method)}
+                />
+                {PAYMENT_METHODS[method]}
+                {method === 'card-online' ? (
+                  <span className="text-sm text-muted-foreground">
+                    {unavailable ? '(unavailable right now)' : '— pay right after you submit'}
+                  </span>
+                ) : null}
+              </label>
+            )
+          })}
         </div>
+        {cardOnline && cardAvailable ? (
+          <div className="mt-4 space-y-1.5 rounded-lg border border-border p-4">
+            <Label htmlFor="fundraising-group">Your group</Label>
+            <Select value={group} onValueChange={setGroup}>
+              <SelectTrigger id="fundraising-group" className="w-full">
+                <SelectValue placeholder="Choose your group" />
+              </SelectTrigger>
+              <SelectContent>
+                {groups!.map((label) => (
+                  <SelectItem key={label} value={label}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              You&apos;ll pay {money(summary.amountDue)} plus shipping on our secure checkout. Group not listed? Choose check
+              or card by phone, or call {'740-521-4304'} and we&apos;ll add it.
+            </p>
+          </div>
+        ) : null}
         <div className="mt-4 space-y-1.5">
           <Label htmlFor="notes">Notes or special instructions (optional)</Label>
           <Textarea id="notes" rows={3} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -273,7 +342,7 @@ export function OrderSubmitForm() {
       <Button
         type="submit"
         size="lg"
-        disabled={status === 'sending' || !confirmFinal || !signature}
+        disabled={status === 'sending' || !confirmFinal || !signature || (cardOnline && !group)}
         className="w-full bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700"
       >
         {status === 'sending' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
