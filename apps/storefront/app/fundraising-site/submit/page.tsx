@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Mail, Phone } from 'lucide-react'
 import { OrderSubmitForm } from '@/components/fundraising-site/order-submit-form'
 import { FUNDRAISING_CONTACT } from '@/components/fundraising-site/nav'
+import { getActiveFundraisingGroups } from '@/lib/fundraising-site/groups'
 import { DUE_PER_JAR } from '@/lib/fundraising-site/order-submission'
 import { PageHero } from '../_components/page-hero'
 
@@ -18,7 +19,10 @@ const BEFORE_YOU_SUBMIT = [
   'You have the shipping address where the salsa should go.',
 ] as const
 
-export default function SubmitFinalOrderPage() {
+export const revalidate = 300
+
+export default async function SubmitFinalOrderPage() {
+  const groups = await getActiveFundraisingGroups().catch(() => null)
   return (
     <>
       <PageHero eyebrow="Community fundraisers" title="Submit your final order">
@@ -44,8 +48,9 @@ export default function SubmitFinalOrderPage() {
             <div>
               <h2 className="font-serif text-2xl font-bold text-foreground">Then pay ${DUE_PER_JAR} per jar</h2>
               <ul className="mt-3 space-y-2 text-muted-foreground">
+                <li><strong className="text-foreground">Card online:</strong> pay on our secure checkout right after you submit (plus shipping).</li>
                 <li><strong className="text-foreground">Check:</strong> payable to Jose Madrid Salsa, P.O. Box 1061, Zanesville, OH 43702-1061.</li>
-                <li><strong className="text-foreground">Credit card:</strong> call {FUNDRAISING_CONTACT.phone}.</li>
+                <li><strong className="text-foreground">Card by phone:</strong> call {FUNDRAISING_CONTACT.phone}.</li>
               </ul>
               <p className="mt-3 text-sm text-muted-foreground">Orders ship within 10 days of payment, usually within a week.</p>
             </div>
@@ -59,7 +64,7 @@ export default function SubmitFinalOrderPage() {
               </a>
             </div>
           </aside>
-          <OrderSubmitForm />
+          <OrderSubmitForm groups={groups?.map((group) => group.label) ?? null} />
         </div>
       </section>
     </>

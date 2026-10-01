@@ -14,6 +14,15 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Pay by card online on fundraising `/submit`.** Choosing "Credit card online" asks for the group (the
+  fundraising store's live checkout dropdown) and, once the order is submitted, builds a cart in the
+  BigCommerce fundraising store with every jar at the group price (`DUE_PER_JAR`, $5), pre-filled with the
+  group, salesperson ("Order form – <contact>"), billing and ship-to address and the store's flat-rate
+  shipping, plus an order note tying it to the submission. The coordinator gets a "Pay $X by card now"
+  button and the same link by email; the inbox email notes the BigCommerce order is the same order. A
+  group the store cannot credit is refused before anything is recorded; a checkout that cannot be built
+  never loses the order (it is still emailed, marked for manual payment). Kit flavors map to store
+  products in `lib/fundraising-site/order-checkout.ts`.
 - **`/submit` on the fundraising site: −/+ jar buttons and a required signature.** Each flavor's
   count now has − and + buttons that remove or add one jar, with the totals updating instantly. Every
   final order must be signed in a signature box before Submit unlocks. The API stores a signed PDF
