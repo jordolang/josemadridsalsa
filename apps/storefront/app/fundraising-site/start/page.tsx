@@ -15,9 +15,9 @@ export const metadata: Metadata = {
 const DOWNLOAD_DIR = '/fundraising/downloads'
 
 const ORDER_FORMS = [
-  { href: `${DOWNLOAD_DIR}/25-flavor-fundraiser-forms.zip`, label: '25 flavor fundraiser forms', meta: 'ZIP, 2.3 MB' },
-  { href: `${DOWNLOAD_DIR}/16-flavor-fundraiser-forms.zip`, label: '16 flavor fundraiser forms', meta: 'ZIP, 2.1 MB' },
-  { href: `${DOWNLOAD_DIR}/9-flavor-fundraiser-forms.zip`, label: '9 flavor fundraiser forms', meta: 'ZIP, 2.3 MB' },
+  { href: `${DOWNLOAD_DIR}/2026-Fundraiser-Kit-25-Flavors.zip`, label: '2026 fundraiser kit: 25 flavors', meta: 'ZIP, 2.5 MB' },
+  { href: `${DOWNLOAD_DIR}/2026-Fundraiser-Kit-16-Flavors.zip`, label: '2026 fundraiser kit: 16 flavors', meta: 'ZIP, 3.2 MB' },
+  { href: `${DOWNLOAD_DIR}/2026-Fundraiser-Kit-9-Flavors.zip`, label: '2026 fundraiser kit: 9 flavors', meta: 'ZIP, 2.5 MB' },
 ] as const
 
 const FLIERS = [
@@ -84,14 +84,19 @@ export default function StartFundraiserPage() {
             <ul className="mt-4 space-y-2 text-foreground/90">
               <li>• Pre-set forms for 25, 16 or just 9 flavors.</li>
               <li>• We recommend running the sale for 2 to 3 weeks.</li>
-              <li>• Tally the totals for each flavor and send us one bulk order.</li>
+              <li>• Tally the totals for each flavor on one order form.</li>
+              <li>• When it is 100% final, submit it online and we fill it from what you enter.</li>
               <li>• We ship it to your group within 10 days of receiving payment.</li>
-              <li>• Free shipping on orders of 96 jars or more.</li>
             </ul>
             <p className="mt-4 text-sm text-muted-foreground">
               Each pack includes a tracking sheet, a spreadsheet order form, a flavor handout, a how-to-launch guide and
               salsa facts with fundraising safety tips.
             </p>
+            <Button size="lg" variant="outline" className="mt-6 h-auto self-start whitespace-normal py-3" asChild>
+              <Link href="/submit">
+                Submit your final order <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
           </article>
         </div>
       </section>

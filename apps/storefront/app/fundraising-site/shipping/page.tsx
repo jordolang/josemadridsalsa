@@ -25,8 +25,11 @@ export default function ShippingPage() {
               USPS, and UPS for larger orders.
             </p>
             <p className="mt-3 text-foreground/90">
-              Community (order-form) fundraisers send us one bulk order, which ships to the group within about 10 days
-              of payment. Bulk orders of 96 jars or more ship free.
+              Community (order-form) fundraisers submit one final bulk order at{' '}
+              <Link href="/submit" className="font-semibold text-salsa-600 hover:underline">
+                /submit
+              </Link>
+              , and it ships to the group within about 10 days of payment.
             </p>
           </div>
           <div className="card surface-shadow p-8">

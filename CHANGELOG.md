@@ -14,6 +14,19 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Final-order submission for community fundraisers (`/submit` on the fundraising site).** Coordinators
+  pick their kit (25, 16 or 9 flavors), enter jars per flavor with live totals, contact, shipping and
+  payment method, and confirm the order is 100% final. `POST /api/fundraising-site/order-submissions`
+  validates it (Zod, kit-specific flavor list, 5 submissions per IP per 10 minutes), logs a `FUNDRAISER`
+  engagement, emails the order to `FUNDRAISING_EMAIL` with reply-to set to the coordinator, and sends
+  them a confirmation. It reports success only when the inbox email went out. Linked from the start
+  page, shipping page and footer nav, and listed in the fundraising sitemap.
+- **2026 fundraiser kits (25, 16 and 9 flavors) replace the old order-form packs on `/start`.** Fillable
+  PDFs and an Excel workbook per kit, all directing coordinators to submit at `/submit`.
+
+### Removed
+- The "free shipping on 96+ jars" claim from the fundraising start and shipping pages.
+
 - **fundraising.josemadrid.net replaces josemadridsalsafundraising.com's pages.** The storefront app
   now serves a fundraising site on its own host: `proxy.ts` rewrites `fundraising.josemadrid.net`
   (and `fundraising.josemadridsalsa.com`, ready for later) into `app/fundraising-site/`, with its own

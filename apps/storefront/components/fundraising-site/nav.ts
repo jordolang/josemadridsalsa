@@ -12,6 +12,7 @@ export const FUNDRAISING_NAV = [
 export const FUNDRAISING_FOOTER_LINKS = [
   { href: '/start', label: 'Start Your Fundraiser' },
   { href: '/sign-up', label: 'Fundraiser Sign-Up' },
+  { href: '/submit', label: 'Submit Final Order' },
   { href: '/survey', label: 'Customer Survey' },
   { href: '/blog', label: 'Blog' },
   { href: '/shipping', label: 'Shipping & Satisfaction' },
