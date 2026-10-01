@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **`/submit` on the fundraising site: −/+ jar buttons and a required signature.** Each flavor's
+  count now has − and + buttons that remove or add one jar, with the totals updating instantly. Every
+  final order must be signed in a signature box before Submit unlocks. The API stores a signed PDF
+  of the order (contact, ship-to, every kit flavor, totals, confirmation, signature, time and IP) in
+  Vercel Blob under `fundraising/order-submissions/` and links it from both emails. The signature
+  image is kept out of the engagement record and audit log. A storage failure never blocks the
+  order. Needs `BLOB_READ_WRITE_TOKEN` in production for the PDF.
 - **Final-order submission for community fundraisers (`/submit` on the fundraising site).** Coordinators
   pick their kit (25, 16 or 9 flavors), enter jars per flavor with live totals, contact, shipping and
   payment method, and confirm the order is 100% final. `POST /api/fundraising-site/order-submissions`

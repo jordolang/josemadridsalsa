@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/fundraising-site/order-submissions/route'
 import { sendEmail } from '@/lib/email/sender'
+import { logEngagementRequest } from '@/lib/engagements'
+import { put } from '@vercel/blob'
 
+vi.mock('server-only', () => ({}))
+vi.mock('@vercel/blob', () => ({ put: vi.fn() }))
 vi.mock('@/lib/engagements', () => ({ logEngagementRequest: vi.fn().mockResolvedValue({ id: 'cmabc12345xyz' }) }))
 vi.mock('@/lib/audit', () => ({ logAudit: vi.fn() }))
 vi.mock('@/lib/email/sender', () => ({ sendEmail: vi.fn() }))
@@ -21,6 +25,8 @@ const valid = {
   quantities: { raspberry: 10, 'original-hot': 2 },
   paymentMethod: 'check',
   confirmFinal: true,
+  signature:
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEElEQVR4nGNgYGD4D8UQBgAd9AP9yOH2qAAAAABJRU5ErkJggg==',
 }
 
 let ipCounter = 0
@@ -36,6 +42,30 @@ const post = (body: unknown) =>
 describe('POST /api/fundraising-site/order-submissions', () => {
   beforeEach(() => {
     vi.mocked(sendEmail).mockReset().mockResolvedValue({ success: true })
+    vi.mocked(put).mockReset().mockResolvedValue({ url: 'https://blob.example/signed.pdf' } as Awaited<ReturnType<typeof put>>)
+    vi.mocked(logEngagementRequest).mockClear()
+    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'test-token')
+  })
+
+  it('archives a signed PDF, links it in both emails and keeps the image out of the record', async () => {
+    const response = await post(valid)
+    expect(response.status).toBe(200)
+    expect((await response.json()).pdfUrl).toBe('https://blob.example/signed.pdf')
+    expect(put).toHaveBeenCalledWith(
+      expect.stringMatching(/^fundraising\/order-submissions\/\d{4}\/\d{2}\/\d{4}-\d{2}-\d{2}-lincoln-b-pto-b\.pdf$/),
+      expect.anything(),
+      expect.objectContaining({ contentType: 'application/pdf', addRandomSuffix: true }),
+    )
+    for (const [mail] of vi.mocked(sendEmail).mock.calls) expect(mail.text).toContain('https://blob.example/signed.pdf')
+    expect(JSON.stringify(vi.mocked(logEngagementRequest).mock.calls[0][0])).not.toContain('base64')
+  })
+
+  it('still delivers the order when the PDF cannot be stored', async () => {
+    vi.mocked(put).mockRejectedValueOnce(new Error('blob down'))
+    const response = await post(valid)
+    expect(response.status).toBe(200)
+    expect((await response.json()).pdfUrl).toBeNull()
+    expect(sendEmail).toHaveBeenCalledTimes(2)
   })
 
   it('emails the order to the fundraising inbox and returns the totals', async () => {
@@ -61,6 +91,8 @@ describe('POST /api/fundraising-site/order-submissions', () => {
 
   it.each([
     ['an unconfirmed order', { confirmFinal: false }],
+    ['an unsigned order', { signature: undefined }],
+    ['a signature that is not a PNG', { signature: 'data:image/jpeg;base64,AAAA' }],
     ['a flavor outside the chosen kit', { quantities: { strawberry: 3 } }],
     ['an order with no jars', { quantities: { raspberry: 0 } }],
     ['a bad ZIP code', { shipZip: '4370' }],

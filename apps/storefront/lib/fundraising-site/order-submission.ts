@@ -75,6 +75,10 @@ export type PaymentMethod = keyof typeof PAYMENT_METHODS
 
 const text = (max: number) => z.string().trim().min(1, 'Required').max(max)
 
+/** Largest drawn signature accepted, as a base64 PNG data URL (~375 KB of image). */
+export const SIGNATURE_MAX_LENGTH = 500_000
+const SIGNATURE_DATA_URL = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/
+
 export const orderSubmissionSchema = z
   .object({
     kit: z.enum(KIT_IDS),
@@ -91,6 +95,10 @@ export const orderSubmissionSchema = z
     paymentMethod: z.enum(Object.keys(PAYMENT_METHODS) as [PaymentMethod, ...PaymentMethod[]]),
     notes: z.string().trim().max(2000).optional(),
     confirmFinal: z.literal(true, { message: 'Please confirm this order is final' }),
+    signature: z
+      .string({ message: 'Please sign the order' })
+      .max(SIGNATURE_MAX_LENGTH, 'Signature is too large')
+      .regex(SIGNATURE_DATA_URL, 'Please sign the order'),
   })
   .superRefine((order, ctx) => {
     const allowed = new Set(ORDER_KITS[order.kit].flavors.map((flavor) => flavor.id))

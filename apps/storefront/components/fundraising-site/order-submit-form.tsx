@@ -1,11 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader2, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { SignaturePad } from '@/components/waiver/SignaturePad'
 import {
   KIT_IDS,
   ORDER_KITS,
@@ -43,6 +44,7 @@ export function OrderSubmitForm() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card-online')
   const [notes, setNotes] = useState('')
   const [confirmFinal, setConfirmFinal] = useState(false)
+  const [signature, setSignature] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [reference, setReference] = useState<string | null>(null)
@@ -54,16 +56,24 @@ export function OrderSubmitForm() {
   )
   const summary = summarizeOrder(kit, numeric)
 
+  /** One jar more or less; 0 shows as blank, like a flavor never typed in. */
+  const stepJars = (id: string, delta: number) =>
+    setQuantities((prev) => {
+      const next = Math.min(10_000, Math.max(0, Math.floor(Number(prev[id]) || 0) + delta))
+      return { ...prev, [id]: next === 0 ? '' : String(next) }
+    })
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     if (summary.totalJars === 0) return setError('Enter at least one jar.')
+    if (!signature) return setError('Please sign the order.')
     setStatus('sending')
     try {
       const response = await fetch('/api/fundraising-site/order-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kit, quantities: numeric, ...fields, paymentMethod, notes: notes || undefined, confirmFinal }),
+        body: JSON.stringify({ kit, quantities: numeric, ...fields, paymentMethod, notes: notes || undefined, confirmFinal, signature }),
       })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(data?.error || 'We could not submit your order.')
@@ -128,7 +138,9 @@ export function OrderSubmitForm() {
 
       <fieldset>
         <legend className="font-serif text-xl font-bold text-foreground">2. Jars of each flavor</legend>
-        <p className="mt-1 text-sm text-muted-foreground">Copy the totals from your Order Form. Leave a flavor blank for zero.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Copy the totals from your Order Form, or tap + and − to add or remove one jar. Leave a flavor blank for zero.
+        </p>
         <div className="mt-4 space-y-5">
           {CATEGORIES.map((category) => {
             const inCategory = flavors.filter((f) => f.category === category)
@@ -136,29 +148,56 @@ export function OrderSubmitForm() {
             return (
               <div key={category}>
                 <h3 className="text-sm font-bold uppercase tracking-wide text-salsa-700">{category}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {inCategory.map((flavor) => (
-                    <div key={flavor.id} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-1.5">
-                      <Label htmlFor={`qty-${flavor.id}`} className="font-normal">{flavor.name}</Label>
-                      <Input
-                        id={`qty-${flavor.id}`}
-                        type="number"
-                        min={0}
-                        max={10000}
-                        step={1}
-                        inputMode="numeric"
-                        className="w-20 text-right"
-                        value={quantities[flavor.id] ?? ''}
-                        onChange={(e) => setQuantities((prev) => ({ ...prev, [flavor.id]: e.target.value }))}
-                      />
-                    </div>
-                  ))}
+                <div className="mt-2 grid gap-2 xl:grid-cols-2">
+                  {inCategory.map((flavor) => {
+                    const jars = numeric[flavor.id] ?? 0
+                    return (
+                      <div
+                        key={flavor.id}
+                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-1.5 ${jars > 0 ? 'border-salsa-300 bg-salsa-50/50' : 'border-border'}`}
+                      >
+                        <Label htmlFor={`qty-${flavor.id}`} className="font-normal">{flavor.name}</Label>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => stepJars(flavor.id, -1)}
+                            disabled={jars === 0}
+                            aria-label={`Remove one jar of ${flavor.name}`}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background hover:border-salsa-400 hover:bg-salsa-50 disabled:opacity-40"
+                          >
+                            <Minus className="h-4 w-4" aria-hidden />
+                          </button>
+                          <Input
+                            id={`qty-${flavor.id}`}
+                            type="number"
+                            min={0}
+                            max={10000}
+                            step={1}
+                            inputMode="numeric"
+                            placeholder="0"
+                            className="h-10 w-16 text-center text-base font-semibold"
+                            value={quantities[flavor.id] ?? ''}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => setQuantities((prev) => ({ ...prev, [flavor.id]: e.target.value }))}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => stepJars(flavor.id, 1)}
+                            aria-label={`Add one jar of ${flavor.name}`}
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-salsa-600 text-white hover:bg-salsa-700"
+                          >
+                            <Plus className="h-4 w-4" aria-hidden />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )
           })}
         </div>
-        <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-muted p-4 text-sm sm:grid-cols-4">
+        <dl aria-live="polite" className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-muted p-4 text-sm sm:grid-cols-4">
           {[
             ['Total jars', String(summary.totalJars)],
             ['Sales value', money(summary.salesValue)],
@@ -215,6 +254,16 @@ export function OrderSubmitForm() {
         </span>
       </label>
 
+      <div>
+        <p className="mb-2 font-medium text-foreground">
+          Sign this order{fields.contactName ? `, ${fields.contactName}` : ''} <span className="text-salsa-700">(required)</span>
+        </p>
+        <SignaturePad onChange={setSignature} disabled={status === 'sending'} />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Draw your signature with a finger, stylus or mouse. Each order you submit is signed separately.
+        </p>
+      </div>
+
       {error ? (
         <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -224,7 +273,7 @@ export function OrderSubmitForm() {
       <Button
         type="submit"
         size="lg"
-        disabled={status === 'sending'}
+        disabled={status === 'sending' || !confirmFinal || !signature}
         className="w-full bg-gradient-to-r from-salsa-600 to-chile-600 hover:from-salsa-700 hover:to-chile-700"
       >
         {status === 'sending' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}

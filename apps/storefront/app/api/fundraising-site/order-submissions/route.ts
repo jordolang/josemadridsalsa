@@ -1,3 +1,4 @@
+import { put } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { logAudit } from '@/lib/audit'
 import { checkRateLimit } from '@/lib/email/rate-limit'
@@ -10,6 +11,7 @@ import {
   orderSubmissionSchema,
   summarizeOrder,
 } from '@/lib/fundraising-site/order-submission'
+import { buildSignedOrderPdf, signedOrderPathname } from '@/lib/fundraising-site/signed-order-pdf'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -25,6 +27,7 @@ const money = (amount: number) => `$${amount.toLocaleString('en-US')}`
  * fundraiser's 100% final bulk order. Emails the order to the fundraising inbox
  * (which is what starts fulfillment), confirms to the submitter, and records it.
  * Succeeds only if the inbox email was sent, so a lost order is never reported as received.
+ * The drawn signature is archived as a signed PDF in Vercel Blob and linked from both emails.
  */
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
@@ -46,6 +49,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const order = parsed.data
+    const { signature: _signature, ...orderWithoutSignature } = order
+    const submittedAt = new Date()
     const summary = summarizeOrder(order.kit, order.quantities)
     const email = order.email.toLowerCase()
     const kitLabel = ORDER_KITS[order.kit].label
@@ -56,9 +61,30 @@ export async function POST(request: NextRequest) {
       email,
       name: order.contactName,
       source: 'site:fundraising-submit',
-      metadata: { ...order, summary },
+      metadata: { ...orderWithoutSignature, summary, signed: true, submittedAt: submittedAt.toISOString() },
     })
     const reference = record?.id ? record.id.slice(-8).toUpperCase() : null
+
+    // The Blob store is public, so the random suffix keeps the URL unguessable; nothing lists it.
+    // A storage failure must not lose the order, so the emails go out either way.
+    let pdfUrl: string | null = null
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+    if (blobToken) {
+      try {
+        const pdf = await buildSignedOrderPdf(order, { submittedAt, reference, ipAddress: ip === 'unknown' ? null : ip })
+        const blob = await put(signedOrderPathname(order, submittedAt), Buffer.from(pdf), {
+          access: 'public',
+          contentType: 'application/pdf',
+          addRandomSuffix: true,
+          token: blobToken,
+        })
+        pdfUrl = blob.url
+      } catch (error) {
+        console.error('Signed fundraiser order PDF failed:', error)
+      }
+    } else {
+      console.warn('BLOB_READ_WRITE_TOKEN missing; signed fundraiser order PDF not archived')
+    }
 
     const e = escapeHtml
     const rowsHtml = summary.lines
@@ -71,6 +97,7 @@ export async function POST(request: NextRequest) {
       ['Contact', `${order.contactName} · ${email} · ${order.phone}`],
       ['Kit', kitLabel],
       ['Payment', `${payment} — amount due ${money(summary.amountDue)} (${summary.totalJars} jars × ${money(DUE_PER_JAR)})`],
+      ['Signed', `Electronically by ${order.contactName}`],
       ...(reference ? [['Reference', reference]] : []),
     ]
     const html = `
@@ -79,7 +106,8 @@ export async function POST(request: NextRequest) {
       <p><strong>Ship to:</strong><br/>${e(shipTo).replace(/\n/g, '<br/>')}</p>
       <table style="border-collapse:collapse"><tr><th align="left">Flavor</th><th align="right">Jars</th></tr>${rowsHtml}
       <tr><td style="padding-top:6px"><strong>Total jars</strong></td><td style="text-align:right"><strong>${summary.totalJars}</strong></td></tr></table>
-      <p><strong>Notes:</strong> ${order.notes ? e(order.notes).replace(/\n/g, '<br/>') : '—'}</p>`
+      <p><strong>Notes:</strong> ${order.notes ? e(order.notes).replace(/\n/g, '<br/>') : '—'}</p>
+      ${pdfUrl ? `<p><a href="${e(pdfUrl)}">Signed order form (PDF)</a></p>` : ''}`
     const text = `Final fundraiser order: ${order.organizationName}
 ${details.map(([k, v]) => `${k}: ${v}`).join('\n')}
 
@@ -89,7 +117,7 @@ ${shipTo}
 ${rowsText}
   ${summary.totalJars.toString().padStart(4)}  TOTAL JARS
 
-Notes: ${order.notes || '—'}`
+Notes: ${order.notes || '—'}${pdfUrl ? `\n\nSigned order form: ${pdfUrl}` : ''}`
 
     const inbox = process.env.FUNDRAISING_EMAIL || 'mike@josemadridsalsa.com'
     const sent = await sendEmail({
@@ -125,10 +153,10 @@ Notes: ${order.notes || '—'}`
       action: 'CREATE',
       entityType: 'FundraiserOrderSubmission',
       entityId: record?.id ?? email,
-      changes: { organizationName: order.organizationName, kit: order.kit, totalJars: summary.totalJars },
+      changes: { organizationName: order.organizationName, kit: order.kit, totalJars: summary.totalJars, signed: true, pdfUrl },
     })
 
-    return NextResponse.json({ success: true, reference, ...summary })
+    return NextResponse.json({ success: true, reference, pdfUrl, ...summary })
   } catch (error) {
     console.error('Fundraiser order submission error:', error)
     return NextResponse.json(
