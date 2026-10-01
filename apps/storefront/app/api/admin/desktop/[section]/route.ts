@@ -29,6 +29,11 @@ import { findPage, isDesktopSectionId } from '@/lib/admin-desktop/sections'
 
 export const dynamic = 'force-dynamic'
 
+// A CSV export reads up to EXPORT_LIMIT rows through the same loaders the
+// window uses. Measured at about 1.5 s per thousand order rows, so the largest
+// list (some 23,000 customers) needs more than the default function timeout.
+export const maxDuration = 300
+
 const SectionParam = z.string().refine(isDesktopSectionId, 'Unknown section')
 
 export async function GET(request: Request, context: { params: Promise<{ section: string }> }) {

@@ -330,6 +330,12 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **The fundraising site's sign-up page reads as two steps.** It led with the organizer-account
+  form while its copy still described the inquiry form below, so an organizer could fill in only
+  the account and never be added to checkout. The page now labels the account as step 1 and the
+  fundraiser details, which put the group on checkout, as step 2.
+- **Large desktop CSV exports could outrun the default function timeout.** The section route now
+  allows 300 seconds; the largest list (about 23,000 customers) needs more than the default.
 - **Desktop app updates could never be found.** The Windows app's update feed pointed at a GitHub
   release in a private repository, which answers 404 to an app with no GitHub session. Builds are
   now published to the public Blob store and served through `/api/desktop/updates/<file>`; the
