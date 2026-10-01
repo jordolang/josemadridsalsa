@@ -9,6 +9,7 @@ export const FUNDRAISING_STATIC_PAGES: readonly string[] = [
   '/why-jose-madrid',
   '/start',
   '/sign-up',
+  '/submit',
   '/our-story',
   '/testimonials',
   '/survey',
