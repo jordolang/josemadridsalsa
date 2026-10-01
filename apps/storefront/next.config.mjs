@@ -45,10 +45,20 @@ const nextConfig = {
       },
       // Old BigCommerce storefront URLs, for when josemadridsalsa.com points here
       ...bigCommerceRedirects(),
-    ].map((redirect) => ({
-      ...redirect,
-      missing: [...(redirect.missing ?? []), { type: 'host', value: fundraisingSiteHostPattern() }],
-    })),
+    ]
+      .map((redirect) => ({
+        ...redirect,
+        missing: [...(redirect.missing ?? []), { type: 'host', value: fundraisingSiteHostPattern() }],
+      }))
+      .concat(
+        // The fundraiser order forms were replaced by the 2026 kits. Links to the
+        // old zips were shared from both hosts, so these apply to both.
+        [25, 16, 9].map((flavors) => ({
+          source: `/fundraising/downloads/${flavors}-flavor-fundraiser-forms.zip`,
+          destination: `/fundraising/downloads/2026-Fundraiser-Kit-${flavors}-Flavors.zip`,
+          permanent: true,
+        })),
+      ),
   // Security headers applied to all routes
   headers: async () => {
     const isProd = process.env.NODE_ENV === 'production'

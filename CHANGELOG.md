@@ -78,8 +78,8 @@ the root `package.json` is canonical.
 - **The fundraising site's sign-up page creates fundraiser accounts.** `/sign-up` on
   fundraising.josemadrid.net (and fundraising.josemadridsalsa.com) now opens with the same account
   form as `/auth/fundraiser-signup`, now a shared `FundraiserAccountForm`; the "what happens next"
-  list and group inquiry form sit below it. After signing up, people land on the main site's pending
-  page. `/start` serves the 2026 fundraiser kits (25, 16 and 9 flavors) and the new sample flier and
+  list and group inquiry form sit below it. After signing up, people go to the main site's sign-in
+  and on to the pending page. `/start` serves the 2026 fundraiser kits (25, 16 and 9 flavors) and the new sample flier and
   flier template; the old order-form zips are gone.
 - **The macOS desktop app is on the developer page.** `/developer`'s timeline gains a ninth entry
   with a screenshot of the app's dashboard and a full list of what it does, section by section. The
@@ -341,6 +341,10 @@ the root `package.json` is canonical.
   window opened the web admin rather than the desktop shell until the app was restarted.
 - **The desktop apps' Help links pointed at the private repository.** They open the desktop-apps
   guide instead.
+- **A pending fundraiser account could never open the portal.** The portal layout read an
+  `x-invoke-path` header nothing sets, so it never recognised the pending page and redirected to it
+  forever. It reads `x-pathname`, which `proxy.ts` sets. The old 25/16/9-flavor order-form zip links
+  redirect to the 2026 kits.
 - **Copied BigCommerce orders marked Shipped were showing as unfulfilled.** Staff mark an order
   shipped by changing its status in BigCommerce, usually without recording a shipment per item, so
   BigCommerce's shipped quantities stay at zero and the copy read "Shipped" but "Unfulfilled" —
