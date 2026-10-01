@@ -1,20 +1,33 @@
-import { Menu, app, shell } from 'electron'
-import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
+import { BrowserWindow, Menu, app, shell } from 'electron'
+import type { BaseWindow, MenuItemConstructorOptions } from 'electron'
 import { ADMIN_SECTION_GROUPS } from '../shared/sections'
 import { sectionUrl } from '../shared/endpoint'
 import { checkForUpdatesInteractively } from './updates'
 
+/**
+ * What the menu can ask of the app. Each action that touches a window is
+ * handed the window it is for — the focused one when the item was chosen — so
+ * one menu bar drives however many admin windows are open.
+ */
 export interface MenuActions {
   openSettings: () => void
-  reload: () => void
-  navigate: (url: string) => void
+  newWindow: () => void
+  reload: (window: BrowserWindow) => void
+  navigate: (window: BrowserWindow, url: string) => void
   currentEndpoint: () => string
-  currentUrl: () => string | undefined
+  currentUrl: (window: BrowserWindow) => string | undefined
 }
 
-const DOCS_URL = 'https://github.com/jordolang/josemadridsalsa'
+/** The admin window a menu click is for, or nothing (say, the settings window had focus). */
+function forWindow(run: (window: BrowserWindow) => void) {
+  return (_item: unknown, base: BaseWindow | undefined) => {
+    if (base instanceof BrowserWindow) run(base)
+  }
+}
 
-export function buildApplicationMenu(window: BrowserWindow, actions: MenuActions): Menu {
+const DOCS_URL = 'https://salsadocs.vercel.app/docs/guides/desktop-apps'
+
+export function buildApplicationMenu(actions: MenuActions): Menu {
   // Separators between the sidebar's own groups, so the menu reads the same way
   // the window does.
   const go: MenuItemConstructorOptions[] = ADMIN_SECTION_GROUPS.flatMap((group, index) => [
@@ -22,7 +35,7 @@ export function buildApplicationMenu(window: BrowserWindow, actions: MenuActions
     ...group.sections.map((section) => ({
       label: section.label,
       accelerator: section.accelerator,
-      click: () => actions.navigate(sectionUrl(actions.currentEndpoint(), section.path)),
+      click: forWindow((window) => actions.navigate(window, sectionUrl(actions.currentEndpoint(), section.path))),
     })),
   ])
 
@@ -31,9 +44,15 @@ export function buildApplicationMenu(window: BrowserWindow, actions: MenuActions
       label: '&File',
       submenu: [
         {
+          label: 'New Window',
+          // Not Ctrl+N: the shell's inspector already binds that to a section jump.
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: actions.newWindow,
+        },
+        {
           label: 'Print…',
           accelerator: 'CmdOrCtrl+P',
-          click: () => window.webContents.print({}),
+          click: forWindow((window) => window.webContents.print({})),
         },
         { type: 'separator' },
         {
@@ -43,10 +62,10 @@ export function buildApplicationMenu(window: BrowserWindow, actions: MenuActions
         },
         {
           label: 'Open Current Page in Browser',
-          click: () => {
-            const url = actions.currentUrl()
+          click: forWindow((window) => {
+            const url = actions.currentUrl(window)
             if (url) void shell.openExternal(url)
-          },
+          }),
         },
         { type: 'separator' },
         { role: 'quit', label: 'Exit' },
@@ -67,7 +86,7 @@ export function buildApplicationMenu(window: BrowserWindow, actions: MenuActions
     {
       label: '&View',
       submenu: [
-        { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: actions.reload },
+        { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: forWindow(actions.reload) },
         { role: 'forceReload' },
         { type: 'separator' },
         { role: 'resetZoom' },
@@ -89,7 +108,7 @@ export function buildApplicationMenu(window: BrowserWindow, actions: MenuActions
         },
         {
           label: 'Check for Updates…',
-          click: () => void checkForUpdatesInteractively(window),
+          click: () => void checkForUpdatesInteractively(),
         },
         { type: 'separator' },
         {

@@ -26,17 +26,22 @@ mkdir -p .build
 # out to the browser. Check them before building anything else.
 swiftc Sources/JoseMadridAdmin/AdminEndpoint.swift \
   Sources/JoseMadridAdmin/AdminSections.swift \
+  Sources/JoseMadridAdmin/UpdateFeed.swift \
   Tests/main.swift \
   -o .build/endpoint-check
 .build/endpoint-check
 
-swift build -c release --arch arm64
+# Universal: Apple silicon and Intel in one binary, so the same download runs on
+# any Mac from macOS 14. SwiftPM warns that x86_64 is deprecated for the build
+# machine's own OS; the binary's minimum stays macOS 14 on both slices.
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCHS[@]}"
 
 # Where the binary lands depends on the toolchain: older SwiftPM writes to
 # .build/release, the Xcode-backed build system to .build/out/Products/Release.
 # Ask SwiftPM rather than hardcode one, and fail loudly rather than bundle an
 # .app with no executable inside it.
-BUILD_DIR=$(swift build -c release --arch arm64 --show-bin-path 2>/dev/null || true)
+BUILD_DIR=$(swift build -c release "${ARCHS[@]}" --show-bin-path 2>/dev/null || true)
 if [ -z "$BUILD_DIR" ] || [ ! -x "$BUILD_DIR/JoseMadridAdmin" ]; then
   FOUND=$(find "$SCRIPT_DIR/.build" -type f -name JoseMadridAdmin -perm -111 -print -quit 2>/dev/null || true)
   BUILD_DIR=${FOUND:+$(dirname "$FOUND")}
@@ -74,7 +79,13 @@ iconutil -c icns "$ICONSET_DIR" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
 # admin server over the network.
 /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string Copyright © Jose Madrid Salsa" "$APP_DIR/Contents/Info.plist"
 
-# Ad-hoc signature. Replace with a Developer ID identity to ship without the
-# right-click-to-open prompt on a machine that did not build the app.
-codesign --force --deep --sign - "$APP_DIR"
+# Developer ID when MACOS_SIGN_IDENTITY names one (the Desktop Apps workflow
+# sets it from its certificate secrets): hardened runtime and a timestamp, which
+# notarisation requires. Otherwise an ad-hoc signature, which runs on the
+# machine that built it and needs right-click > Open anywhere else.
+if [ -n "${MACOS_SIGN_IDENTITY:-}" ]; then
+  codesign --force --deep --options runtime --timestamp --sign "$MACOS_SIGN_IDENTITY" "$APP_DIR"
+else
+  codesign --force --deep --sign - "$APP_DIR"
+fi
 echo "$APP_DIR"

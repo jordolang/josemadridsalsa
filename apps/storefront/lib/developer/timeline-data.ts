@@ -12,6 +12,7 @@ export interface TimelineEntry {
   readonly tags: readonly string[]
   readonly image?: string
   readonly highlight?: boolean
+  readonly features?: readonly string[]
 }
 
 export const timelineEntries: readonly TimelineEntry[] = [
@@ -97,6 +98,45 @@ export const timelineEntries: readonly TimelineEntry[] = [
     icon: 'CreditCard',
     tags: ['PayPal', 'Square', 'POS', 'Performance'],
     image: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/developer/IMG_0090.webp',
+  },
+  {
+    id: 'phase-9-macos-desktop',
+    date: '2026-09',
+    title: 'macOS Desktop App',
+    description:
+      'A native macOS application for running the entire business without ever leaving the desktop. Manage orders, products, inventory, customers, purchase orders and invoices; run fundraisers, events and wholesale accounts; keep the books in Financials; and publish email campaigns, social posts, blog content, leads and reviews — all from one keyboard-driven window with ⌘K search, native menus and shortcuts, real printing, save dialogs for every export, and a persistent signed-in session. It reads the same live database as the website, so every new admin feature lands on the desktop the day it ships.',
+    icon: 'Monitor',
+    tags: ['macOS', 'SwiftUI', 'Desktop', 'Orders', 'Content'],
+    image: '/images/developer/macos-desktop-app.webp',
+    highlight: true,
+    features: [
+      'Dashboard — today\'s revenue and orders, live fundraisers, jars on hand, reorder alerts, and the next shows',
+      'Orders — every order with channel, status and totals, plus returns & RMAs and shipping labels',
+      'Products — the full catalog with retail price, unit cost and margin',
+      'Inventory — on hand, reserved, available and reorder points, flagged when stock runs low',
+      'Customers — ranked by lifetime value, with order counts and acquisition source',
+      'Purchase Orders — inbound supply by supplier, with goods, freight and what is still outstanding',
+      'Invoices — accounts receivable, with open and past-due balances',
+      'Fundraisers — every campaign and participant, sales, group share, and the Battle Arena',
+      'Events & Shows — a month calendar of every show with booth fees, takings and packing manifests',
+      'Wholesale — trade accounts with discounts, minimums, terms and approval, plus the store locator',
+      'Financials — the general ledger and reconciliation, with QuickBooks export state',
+      'Email Marketing — campaigns, templates, automations, lists & subscribers, suppressions, send log and brand kit',
+      'Social — scheduled and published posts, connected accounts, product feeds and reach',
+      'Content & Blog — blog posts, pages, banners, FAQs, redirects and SEO',
+      'Lead Generation — the prospecting pipeline and lead campaigns, with Google ratings behind each lead',
+      'Reviews — moderation queue with average rating, plus customer forms',
+      'Analytics — year-over-year revenue, channel mix, top products, retention, margin and attribution',
+      'Media & Docs — media library, documents archive, mileage log and show archive',
+      'Messages — one inbox for support, the contact form and live chat, plus notifications',
+      'Users & Roles — staff accounts with role, two-factor state and last sign-in, plus the encrypted credential vault',
+      'Audit Logs — who did what, most recent first',
+      'Settings — store identity, checkout, payments, shipping and integrations',
+      'Database Console — live row counts for the core tables',
+      '⌘K command palette to jump to any of 58 pages by name, J/K keyboard navigation, table filtering and a detail inspector',
+      'Resizable table columns remembered per window, light and dark appearance, native menus, real printing and save dialogs for every export',
+      'Role-based access — each person only sees the sections their permissions allow',
+    ],
   },
 ] as const
 

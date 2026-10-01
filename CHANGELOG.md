@@ -39,6 +39,54 @@ the root `package.json` is canonical.
   page, shipping page and footer nav, and listed in the fundraising sitemap.
 - **2026 fundraiser kits (25, 16 and 9 flavors) replace the old order-form packs on `/start`.** Fillable
   PDFs and an Excel workbook per kit, all directing coordinators to submit at `/submit`.
+- **Scan stock with a barcode scanner.** Inventory's *Scan stock* sheet tallies scans for a stock
+  count (sets each scanned product to what was scanned) or a receipt (adds them), and applies the
+  tally through `inventory.adjust`. UPC-A and EAN-13 readings of one barcode match; SKUs can be
+  typed. Barcodes are now in the Products and Inventory search text.
+- **Shipping labels print straight to a label printer.** *Print label* sends the 4×6 label to the
+  printer chosen in each desktop app's settings, or opens the print dialog when none is chosen;
+  in a browser it opens beside the shell instead of navigating away.
+- **Developer Console in the desktop shell.** A *Developer* page in Database Console shows the
+  console's service checks, platform counts and recent activity (the queries now live in
+  `lib/developer/status.ts`, shared with `/admin/developer`). Both apps' *Developer Console* menu
+  item opens it.
+- **The macOS app is universal** — one download for Apple silicon and Intel Macs.
+- **Desktop notifications and a dock/taskbar badge.** Both desktop apps show a system notification
+  when an order to fulfil or a customer message arrives (clicking it opens that section), and badge
+  the dock icon or taskbar button with what is waiting. The shell polls the new
+  `/api/admin/desktop/badges` every minute, including while hidden; the badges gain a Messages
+  count (open conversations plus waiting live chats).
+- **More than one desktop window.** File › New Window (`Ctrl+Shift+N` / `⌘⇧N`) in both apps, and
+  admin links opened in a new tab open a new window. The menu acts on the window in front.
+- **The macOS app checks for updates** on launch and every six hours, and offers the new disk image.
+- **Code-signing hooks in the Desktop Apps workflow.** Windows and macOS builds sign (and macOS
+  notarises) when their certificate secrets are added; until then they build unsigned as before.
+- **The desktop admin keeps itself current.** The `/admin-desktop` window (and so both desktop
+  apps) reads the page on screen again every 60 seconds while visible, and at once when you come
+  back to it after 30 seconds away. The sidebar badges refresh with it; the filter, search and
+  selected row are kept.
+- **Desktop tables are no longer capped at 250 rows.** *Load more* widens a table 250 rows at a
+  time, up to 2,000. On Orders, Customers, Audit Logs, Lists & subscribers and the three Media
+  archives, the filter box searches the database, so a customer outside the newest rows is found.
+- **Bulk actions in the desktop admin.** Mark rows with Space, ⌘/Ctrl-click or Shift-click and run
+  any action every marked row shares, once per row through the existing write route, with one
+  confirmation. Orders gain a *Mark shipped* button so paid orders can be shipped together.
+- **CSV export from any desktop table.** Exports the rows the filter shows, without the row cap
+  (up to 25,000), streamed from `/api/admin/desktop/[section]?format=csv` and written to the audit
+  log. The macOS app now saves `download` links and `Content-Disposition: attachment` responses
+  rather than showing a CSV in place of the shell.
+- **The fundraising site's sign-up page creates fundraiser accounts.** `/sign-up` on
+  fundraising.josemadrid.net (and fundraising.josemadridsalsa.com) now opens with the same account
+  form as `/auth/fundraiser-signup`, now a shared `FundraiserAccountForm`; the "what happens next"
+  list and group inquiry form sit below it. After signing up, people land on the main site's pending
+  page. `/start` serves the 2026 fundraiser kits (25, 16 and 9 flavors) and the new sample flier and
+  flier template; the old order-form zips are gone.
+- **The macOS desktop app is on the developer page.** `/developer`'s timeline gains a ninth entry
+  with a screenshot of the app's dashboard and a full list of what it does, section by section. The
+  list covers the whole admin panel it carries: orders, catalog, inventory, customers, fundraisers,
+  shows, wholesale, financials, marketing, content, analytics, messages, users and settings.
+  Timeline entries can now carry an optional `features` list, which shows up when the card is
+  expanded.
 
 ### Removed
 - The "free shipping on 96+ jars" claim from the fundraising start and shipping pages.
@@ -282,6 +330,17 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Desktop app updates could never be found.** The Windows app's update feed pointed at a GitHub
+  release in a private repository, which answers 404 to an app with no GitHub session. Builds are
+  now published to the public Blob store and served through `/api/desktop/updates/<file>`; the
+  workflow's new publish step needs a `BLOB_READ_WRITE_TOKEN` repository secret.
+- **A page inside the Windows app could change which server it points at.** The settings bridge
+  was exposed to every page the window loaded; saving an endpoint is now only accepted from the
+  app's own settings page.
+- **"Use production" in the Windows app's server settings saved the old `/admin` address**, so the
+  window opened the web admin rather than the desktop shell until the app was restarted.
+- **The desktop apps' Help links pointed at the private repository.** They open the desktop-apps
+  guide instead.
 - **Copied BigCommerce orders marked Shipped were showing as unfulfilled.** Staff mark an order
   shipped by changing its status in BigCommerce, usually without recording a shipment per item, so
   BigCommerce's shipped quantities stay at zero and the copy read "Shipped" but "Unfulfilled" —

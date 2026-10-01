@@ -96,6 +96,32 @@ enum AdminEndpoint {
     url.scheme == "https" || url.scheme == "http"
   }
 
+  /// Whether a frame's security origin is the admin server's. The page bridge
+  /// (notifications, the dock badge) answers only to that origin, so a sign-in
+  /// provider's page cannot use it. `port` 0 is WebKit's "default port".
+  static func isEndpointOrigin(scheme: String, host: String, port: Int, endpoint: URL) -> Bool {
+    guard var components = URLComponents(string: "\(scheme)://\(host)") else { return false }
+    if port != 0 { components.port = port }
+    guard let url = components.url else { return false }
+    return isInternal(url, endpoint: endpoint)
+  }
+
+  /// Where clicking a notification takes the window. Only a path inside the
+  /// desktop shell is accepted, resolved against the configured endpoint — a
+  /// notification can never send the window to a URL of its own choosing.
+  static func notificationTarget(_ path: String, endpoint: URL) -> URL? {
+    guard path.hasPrefix("\(desktopPath)?") else { return nil }
+    return sectionURL(path, endpoint: endpoint)
+  }
+
+  /// A shipping label the page asks to print. Labels live on the carrier's
+  /// host, not the admin's, so the URL is held to https rather than to the
+  /// admin origin — and it is only ever downloaded as an image.
+  static func labelURL(_ value: String) -> URL? {
+    guard value.count <= 2048, let url = URL(string: value), url.scheme == "https", url.host != nil else { return nil }
+    return url
+  }
+
   /// Resolve an admin path against the configured endpoint's origin.
   static func sectionURL(_ path: String, endpoint: URL) -> URL? {
     guard let origin = origin(of: endpoint), let base = URL(string: origin) else { return nil }

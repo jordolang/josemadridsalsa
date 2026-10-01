@@ -6,11 +6,14 @@ import { DEFAULT_ENDPOINT, migrateLegacyDefault, validateEndpoint } from '../sha
 export interface DesktopSettings {
   endpoint: string
   zoomFactor: number
+  /** The printer shipping labels go to without a dialog. Empty means ask each time. */
+  labelPrinter: string
 }
 
 const DEFAULTS: DesktopSettings = {
   endpoint: DEFAULT_ENDPOINT,
   zoomFactor: 1,
+  labelPrinter: '',
 }
 
 function settingsPath(): string {
@@ -36,6 +39,7 @@ export function readSettings(): DesktopSettings {
     return {
       endpoint: 'url' in endpoint ? migrateLegacyDefault(endpoint.url) : DEFAULTS.endpoint,
       zoomFactor,
+      labelPrinter: typeof raw.labelPrinter === 'string' ? raw.labelPrinter.slice(0, 200) : '',
     }
   } catch {
     return { ...DEFAULTS }

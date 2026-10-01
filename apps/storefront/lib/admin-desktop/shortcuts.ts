@@ -47,6 +47,7 @@ const RESERVED = new Set([
   '⌘W', // Close window
   '⌘Q', // Quit
   '⌘0', // Reset zoom
+  '⌘⇧N', // New window
   // macOS only, but reserved on both so one label works in both windows.
   '⌘H', // Hide application
   '⌘[', // Back

@@ -98,7 +98,8 @@ label {
   color: var(--faint);
 }
 
-input[type="text"] {
+input[type="text"],
+select {
   width: 100%;
   padding: 9px 11px;
   border-radius: 6px;
@@ -109,7 +110,8 @@ input[type="text"] {
   font-size: 13px;
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus,
+select:focus {
   outline: none;
   border-color: var(--gold);
   box-shadow: 0 0 0 1px var(--gold);

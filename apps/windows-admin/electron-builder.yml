@@ -36,11 +36,11 @@ nsis:
   shortcutName: Jose Madrid Salsa Admin
   uninstallDisplayName: Jose Madrid Salsa Admin
 
-# The update feed is pinned to one rolling release tag rather than the GitHub
-# provider's "latest release", because this repo also cuts platform releases
-# (v1.0.0, v2.0.0) that carry no installer. Whichever of those is newest would
-# otherwise become the feed and every update check would come back empty.
+# The update feed is the storefront's /api/desktop/updates route, which
+# redirects into the public Blob store the Desktop Apps workflow uploads to.
+# Not GitHub releases: the repository is private, so its release assets answer
+# 404 to an app with no GitHub session and no update would ever be found.
 publish:
   provider: generic
-  url: https://github.com/jordolang/josemadridsalsa/releases/download/desktop-latest
+  url: https://www.josemadrid.net/api/desktop/updates
   channel: latest

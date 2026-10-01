@@ -36,8 +36,25 @@ jobs:
 
       # Produces the NSIS installer plus latest.yml, which is the update feed the
       # installed app reads. Both have to reach the release for updates to work.
+      #
+      # Signed when a code-signing certificate is configured: WINDOWS_CSC_LINK (the
+      # .pfx, base64) and WINDOWS_CSC_KEY_PASSWORD. Without them the installer is
+      # unsigned and Windows shows a SmartScreen prompt on first install. The
+      # variables are only exported when set, so an unsigned build stays unsigned
+      # rather than failing on an empty certificate.
       - name: Build installer
-        run: npm run dist:win --workspace=@jose-madrid/windows-admin
+        shell: bash
+        env:
+          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$WINDOWS_CSC_LINK" ]; then
+            export CSC_LINK="$WINDOWS_CSC_LINK" CSC_KEY_PASSWORD="$WINDOWS_CSC_KEY_PASSWORD"
+            echo "Signing with the configured certificate"
+          else
+            echo "::warning::No WINDOWS_CSC_LINK secret — building an unsigned installer"
+          fi
+          npm run dist:win --workspace=@jose-madrid/windows-admin
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -61,6 +78,14 @@ jobs:
     # A full Xcode toolchain is required: the SwiftUI macro plugins that @State
     # expands through are absent from the standalone Command Line Tools.
     runs-on: macos-15
+    # Developer ID signing and notarisation run when their secrets exist:
+    # MACOS_CERT_P12 (the Developer ID Application certificate, base64) and
+    # MACOS_CERT_PASSWORD; APPLE_ID, APPLE_TEAM_ID and APPLE_APP_PASSWORD (an
+    # app-specific password) for the notary. Without them the app is ad-hoc
+    # signed, as it always has been.
+    env:
+      HAVE_MAC_CERT: ${{ secrets.MACOS_CERT_P12 != '' }}
+      HAVE_NOTARY: ${{ secrets.APPLE_APP_PASSWORD != '' }}
 
     steps:
       - name: Checkout code
@@ -73,6 +98,24 @@ jobs:
 
       - name: Show toolchain
         run: swift --version
+
+      - name: Import signing certificate
+        if: env.HAVE_MAC_CERT == 'true'
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import "$RUNNER_TEMP/cert.p12" -k build.keychain -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm "$RUNNER_TEMP/cert.p12"
+          IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep 'Developer ID Application' | head -1 | awk -F'"' '{print $2}')
+          if [ -z "$IDENTITY" ]; then echo "::error::No Developer ID Application identity in MACOS_CERT_P12"; exit 1; fi
+          echo "MACOS_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
 
       - name: Build app bundle
         working-directory: apps/macos-admin
@@ -87,6 +130,21 @@ jobs:
             -srcfolder "dist/Jose Madrid Salsa Admin.app" \
             -ov -format UDZO \
             "dist/JoseMadridSalsaAdmin-${VERSION}.dmg"
+          if [ -n "${MACOS_SIGN_IDENTITY:-}" ]; then
+            codesign --sign "$MACOS_SIGN_IDENTITY" --timestamp "dist/JoseMadridSalsaAdmin-${VERSION}.dmg"
+          fi
+
+      - name: Notarise disk image
+        if: env.HAVE_MAC_CERT == 'true' && env.HAVE_NOTARY == 'true'
+        working-directory: apps/macos-admin
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          DMG=$(ls dist/*.dmg)
+          xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
+          xcrun stapler staple "$DMG"
 
       - name: Upload disk image
         uses: actions/upload-artifact@v4
@@ -138,6 +196,21 @@ jobs:
           gh release create desktop-latest release/* \
             --title "Desktop Apps (latest)" \
             --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
+
+      # What the installed apps actually read. The GitHub release above is the
+      # archive; the repository is private, so an app with no GitHub session
+      # gets 404 from it and could never update. Fails loudly without its token,
+      # because a build the apps cannot see is not released.
+      - name: Publish the update feed
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo "::error::BLOB_READ_WRITE_TOKEN is not set — installed apps will not see this build"
+            exit 1
+          fi
+          npm install --prefix .github/scripts --no-save --no-package-lock @vercel/blob@2.4.0
+          node .github/scripts/publish-desktop-updates.mjs release
 
       # A tagged run additionally keeps a fixed copy of that build.
       - name: Publish the tagged release

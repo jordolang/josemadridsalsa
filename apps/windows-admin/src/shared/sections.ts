@@ -12,7 +12,7 @@
  *
  * Each path opens the shell at that section rather than the web admin page
  * behind it, so a menu choice stays in the window the operator is already in.
- * Developer Console is the exception: the shell has no view for it.
+ * Developer Console opens the Developer page inside the Database section.
  */
 export interface AdminSection {
   label: string
@@ -70,7 +70,7 @@ export const ADMIN_SECTION_GROUPS: AdminSectionGroup[] = [
       { label: 'Users & Roles', path: '/admin-desktop?section=users' },
       { label: 'Audit Logs', path: '/admin-desktop?section=audit' },
       { label: 'Settings', path: '/admin-desktop?section=settings' },
-      { label: 'Developer Console', path: '/admin/developer' },
+      { label: 'Developer Console', path: '/admin-desktop?section=database&page=database.developer' },
       { label: 'Database Console', path: '/admin-desktop?section=database' },
     ],
   },

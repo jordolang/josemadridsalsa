@@ -47,11 +47,15 @@ function Cell({ cell }: { cell: CellData }) {
 
 // ---------------------------------------------------------------- table view
 
+/** The modifier keys a row click carries, which decide whether it marks rows. */
+export type RowClick = Pick<MouseEvent, 'metaKey' | 'ctrlKey' | 'shiftKey'>
+
 export function TableView({
   columns,
   rows,
   totals,
   selected,
+  marked,
   onSelect,
   onOpen,
   emptyLabel,
@@ -63,7 +67,9 @@ export function TableView({
   rows: Row[]
   totals?: CellData[]
   selected: number
-  onSelect: (index: number) => void
+  /** Row ids marked for a bulk action. */
+  marked?: ReadonlySet<string>
+  onSelect: (index: number, click?: RowClick) => void
   onOpen: (row: Row) => void
   emptyLabel: string
   /** Hand-set widths for this section, by column key. */
@@ -108,7 +114,8 @@ export function TableView({
               className="jmsd-row"
               style={{ gridTemplateColumns: template }}
               aria-selected={index === selected}
-              onClick={() => onSelect(index)}
+              data-marked={marked?.has(row.id) || undefined}
+              onClick={(event) => onSelect(index, event)}
               onDoubleClick={() => onOpen(row)}
             >
               {row.cells.map((cell, cellIndex) => (
@@ -455,6 +462,7 @@ export function AnalyticsView({ payload }: { payload: AnalyticsPayload }) {
 export function EventsView({
   payload,
   selected,
+  marked,
   onSelect,
   onOpen,
   widths,
@@ -463,7 +471,8 @@ export function EventsView({
 }: {
   payload: EventsPayload
   selected: number
-  onSelect: (index: number) => void
+  marked?: ReadonlySet<string>
+  onSelect: (index: number, click?: RowClick) => void
   onOpen: (row: Row) => void
   widths?: Record<string, number>
   onResize?: (key: string, width: number) => void
@@ -511,6 +520,7 @@ export function EventsView({
           columns={payload.columns}
           rows={payload.rows}
           selected={selected}
+          marked={marked}
           onSelect={onSelect}
           onOpen={onOpen}
           emptyLabel="No shows recorded yet."

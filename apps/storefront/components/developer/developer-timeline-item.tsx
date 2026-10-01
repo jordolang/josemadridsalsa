@@ -19,6 +19,7 @@ import {
   Shield,
   Heart,
   CreditCard,
+  Monitor,
   type LucideIcon,
 } from 'lucide-react'
 import type { TimelineEntry } from '@/lib/developer/timeline-data'
@@ -32,6 +33,7 @@ const iconMap: Record<string, LucideIcon> = {
   Shield,
   Heart,
   CreditCard,
+  Monitor,
 }
 
 interface DeveloperTimelineItemProps {
@@ -318,11 +320,18 @@ function TimelineCard({
 
           <div
             className="overflow-hidden transition-[max-height] duration-300 ease-in-out"
-            style={{ maxHeight: isExpanded ? '40rem' : '4.5rem' }}
+            style={{ maxHeight: isExpanded ? '200rem' : '4.5rem' }}
           >
             <p className="text-muted-foreground text-sm leading-relaxed">
               {entry.description}
             </p>
+            {entry.features && (
+              <ul className="mt-3 space-y-1.5 list-disc pl-5 text-muted-foreground text-sm leading-relaxed">
+                {entry.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {entry.description.length > 150 && (

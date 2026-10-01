@@ -11,11 +11,18 @@ import { contextBridge, ipcRenderer } from 'electron'
  * The window is frameless with a title-bar overlay, so Windows paints the
  * minimise/maximise/close buttons over the top-right of the page and the shell
  * has to keep that corner clear. Unlike `desktop` below, this is safe for any
- * page on the origin to see: it says nothing except how the window is framed.
+ * page to see: it says how the window is framed, and its two calls are
+ * checked on the other side of the bridge.
  */
 contextBridge.exposeInMainWorld('jmsDesktop', {
   platform: process.platform,
   chrome: 'overlay',
+  // A notification and the taskbar badge. The main process takes these only
+  // from the admin server's top frame and checks every field, so a page that
+  // is not the admin — a sign-in provider — gets nowhere by calling them.
+  notify: (alert: unknown) => ipcRenderer.send('desktop:notify', alert),
+  setBadge: (count: unknown) => ipcRenderer.send('desktop:badge', count),
+  printLabel: (url: unknown) => ipcRenderer.send('desktop:print-label', url),
 })
 
 contextBridge.exposeInMainWorld('desktop', {
@@ -24,4 +31,6 @@ contextBridge.exposeInMainWorld('desktop', {
   retry: () => ipcRenderer.invoke('window:retry'),
   openSettings: () => ipcRenderer.invoke('window:open-settings'),
   closeSettings: () => ipcRenderer.invoke('window:close-settings'),
+  listPrinters: () => ipcRenderer.invoke('printers:list'),
+  saveLabelPrinter: (name: string) => ipcRenderer.invoke('settings:label-printer', name),
 })

@@ -25,6 +25,10 @@ final class BrowserController: ObservableObject {
   /// than re-read from defaults on every navigation.
   var endpoint: URL = AdminEndpoint.production
 
+  init() {
+    DesktopAttention.shared.register(self)
+  }
+
   func load(_ url: URL) {
     errorMessage = nil
     connectionState = .connecting
@@ -79,17 +83,31 @@ struct AdminBrowser: NSViewRepresentable {
     Coordinator(controller: controller)
   }
 
-  /// Tells the desktop shell which frame it is running inside.
+  /// Tells the desktop shell which frame it is running inside, and gives it
+  /// the two native calls it has: a notification and the dock badge.
   ///
   /// The window has no title bar of its own, so the real traffic lights float
   /// over the top-left of the page and the shell has to leave that corner clear
-  /// rather than drawing its own. This says nothing else about the machine, so
-  /// it is safe for any page on the origin to read.
+  /// rather than drawing its own. The calls post to `bridgeName`, and the
+  /// coordinator only acts on messages from the admin origin's top frame.
+  private static let bridgeName = "jmsDesktop"
   private static let frameMarker = """
-  Object.defineProperty(window, 'jmsDesktop', {
-    value: Object.freeze({ platform: 'darwin', chrome: 'traffic-lights' }),
-    writable: false, configurable: false
-  });
+  (function () {
+    var post = function (message) { window.webkit.messageHandlers.jmsDesktop.postMessage(message); };
+    Object.defineProperty(window, 'jmsDesktop', {
+      value: Object.freeze({
+        platform: 'darwin',
+        chrome: 'traffic-lights',
+        notify: function (alert) {
+          alert = alert || {};
+          post({ type: 'notify', title: String(alert.title || ''), body: String(alert.body || ''), path: String(alert.path || '') });
+        },
+        setBadge: function (count) { post({ type: 'badge', count: Number(count) || 0 }); },
+        printLabel: function (url) { post({ type: 'printLabel', url: String(url || '') }); }
+      }),
+      writable: false, configurable: false
+    });
+  })();
   """
 
   func makeNSView(context: Context) -> WKWebView {
@@ -103,6 +121,11 @@ struct AdminBrowser: NSViewRepresentable {
     configuration.userContentController.addUserScript(
       WKUserScript(source: Self.frameMarker, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     )
+    configuration.userContentController.add(context.coordinator, name: Self.bridgeName)
+    // The shell polls its badge counts so a new order can be announced while
+    // the window is hidden. WebKit would otherwise suspend a hidden page's
+    // timers and the poll would stop with it.
+    configuration.preferences.inactiveSchedulingPolicy = .none
 
     let webView = WKWebView(frame: .zero, configuration: configuration)
     // Matches the shell's window colour so a reload does not flash white.
@@ -127,11 +150,44 @@ struct AdminBrowser: NSViewRepresentable {
     controller.webView = webView
   }
 
-  final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+  final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
     let controller: BrowserController
 
     init(controller: BrowserController) {
       self.controller = controller
+    }
+
+    // MARK: Page bridge
+
+    /// A notification or a badge count from the admin page. Taken only from the
+    /// top frame of the admin origin, so a sign-in provider's page cannot post
+    /// one, and a click can only ever open a section of the shell.
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+      let origin = message.frameInfo.securityOrigin
+      guard message.frameInfo.isMainFrame,
+            AdminEndpoint.isEndpointOrigin(
+              scheme: origin.protocol, host: origin.host, port: origin.port, endpoint: controller.endpoint
+            ),
+            let body = message.body as? [String: Any],
+            let type = body["type"] as? String
+      else { return }
+
+      switch type {
+      case "notify":
+        guard let title = body["title"] as? String, !title.isEmpty,
+              let path = body["path"] as? String,
+              let target = AdminEndpoint.notificationTarget(path, endpoint: controller.endpoint)
+        else { return }
+        DesktopAttention.shared.notify(title: title, body: body["body"] as? String ?? "", target: target)
+      case "badge":
+        guard let count = body["count"] as? Int, count >= 0 else { return }
+        DesktopAttention.shared.setBadge(count)
+      case "printLabel":
+        guard let value = body["url"] as? String, let url = AdminEndpoint.labelURL(value) else { return }
+        Task { await LabelPrinter.print(url, in: controller.webView?.window) }
+      default:
+        return
+      }
     }
 
     // MARK: Navigation policy
@@ -150,7 +206,9 @@ struct AdminBrowser: NSViewRepresentable {
       }
 
       if AdminEndpoint.shouldOpenInApp(url, endpoint: controller.endpoint) {
-        decisionHandler(.allow)
+        // A link marked `download` — the shell's CSV export — is saved, not
+        // shown. WebKit leaves that decision to the app.
+        decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
         return
       }
 
@@ -160,14 +218,20 @@ struct AdminBrowser: NSViewRepresentable {
       }
     }
 
-    /// Anything the web view cannot display — CSV exports, ZIP archives, label
-    /// files — becomes a download rather than a blank page.
+    /// Anything the web view cannot display — ZIP archives, label files — or
+    /// that the server sends as an attachment becomes a download rather than a
+    /// blank page. The attachment check matters for CSV: WebKit can show
+    /// `text/csv` as plain text, and would, in place of the admin.
     func webView(
       _ webView: WKWebView,
       decidePolicyFor navigationResponse: WKNavigationResponse,
       decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
     ) {
-      decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download)
+      let disposition = (navigationResponse.response as? HTTPURLResponse)?
+        .value(forHTTPHeaderField: "Content-Disposition")?
+        .lowercased() ?? ""
+      let attachment = disposition.hasPrefix("attachment")
+      decisionHandler(navigationResponse.canShowMIMEType && !attachment ? .allow : .download)
     }
 
     func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
@@ -245,7 +309,11 @@ struct AdminBrowser: NSViewRepresentable {
     ) -> WKWebView? {
       guard let url = navigationAction.request.url else { return nil }
 
-      if AdminEndpoint.shouldOpenInApp(url, endpoint: controller.endpoint) {
+      // A link the admin opens in a new tab opens a new admin window, sharing
+      // this one's session. A sign-in provider's popup stays in this window.
+      if AdminEndpoint.isInternal(url, endpoint: controller.endpoint) {
+        DesktopAttention.shared.open(url)
+      } else if AdminEndpoint.isAuthURL(url) {
         webView.load(URLRequest(url: url))
       } else if AdminEndpoint.isSafeExternal(url) {
         NSWorkspace.shared.open(url)

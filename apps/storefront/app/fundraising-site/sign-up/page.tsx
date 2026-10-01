@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { Mail, Phone } from 'lucide-react'
+import { FundraiserAccountForm } from '@/components/fundraising/fundraiser-account-form'
 import { FundraiserSignupForm } from '@/components/fundraising/fundraiser-signup-form'
 import { FUNDRAISING_CONTACT } from '@/components/fundraising-site/nav'
+import { SITE_URL } from '@/lib/site-url'
 import { PageHero } from '../_components/page-hero'
 
 export const metadata: Metadata = {
@@ -28,6 +30,12 @@ export default function FundraiserSignUpPage() {
       </PageHero>
 
       <section className="py-14">
+        <div className="container mx-auto flex justify-center px-4">
+          <FundraiserAccountForm siteUrl={SITE_URL} />
+        </div>
+      </section>
+
+      <section className="bg-card py-14">
         <div className="container mx-auto grid gap-10 px-4 lg:grid-cols-[1fr_2fr]">
           <aside>
             <h2 className="font-serif text-2xl font-bold text-foreground">What happens next</h2>
