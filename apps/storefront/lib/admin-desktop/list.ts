@@ -30,11 +30,27 @@ export interface ListQuery {
 
 export const DEFAULT_LIST: ListQuery = { q: '', limit: ROW_LIMIT }
 
+/** The longest search sent to the database. The shell cuts to the same length. */
+export const MAX_QUERY_LENGTH = 200
+
 /** Read `?q=` and `?limit=` off a request, clamped to `max`. */
 export function parseListQuery(params: URLSearchParams, max = MAX_LIST_LIMIT): ListQuery {
-  const q = z.string().trim().max(200).catch('').parse(params.get('q') ?? '')
-  const limit = z.coerce.number().int().min(1).max(max).catch(ROW_LIMIT).parse(params.get('limit') ?? ROW_LIMIT)
+  // Cut rather than refused: a refused query came back empty, never equal to
+  // what the shell asked for, and the shell asked again forever.
+  const q = searchQuery(params.get('q') ?? '')
+  const limit = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .catch(ROW_LIMIT)
+    .transform((value) => Math.min(value, max))
+    .parse(params.get('limit') ?? ROW_LIMIT)
   return { q, limit }
+}
+
+/** The search text as the server will see it: trimmed and cut to length. */
+export function searchQuery(text: string): string {
+  return text.trim().slice(0, MAX_QUERY_LENGTH)
 }
 
 /** The query string for a list window, omitting what is already the default. */
