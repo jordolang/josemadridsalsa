@@ -21,11 +21,12 @@ describe('parseListQuery', () => {
     expect(parseListQuery(new URLSearchParams('q=%20vera%20&limit=500'))).toEqual({ q: 'vera', limit: 500 })
   })
 
-  it('falls back rather than reading an unbounded or junk window', () => {
-    expect(parseListQuery(new URLSearchParams(`limit=${MAX_LIST_LIMIT + 1}`)).limit).toBe(ROW_LIMIT)
+  it('clamps a large window and falls back from a junk one', () => {
+    expect(parseListQuery(new URLSearchParams(`limit=${MAX_LIST_LIMIT + 1}`)).limit).toBe(MAX_LIST_LIMIT)
     expect(parseListQuery(new URLSearchParams('limit=abc')).limit).toBe(ROW_LIMIT)
     expect(parseListQuery(new URLSearchParams('limit=0')).limit).toBe(ROW_LIMIT)
-    expect(parseListQuery(new URLSearchParams(`q=${'x'.repeat(201)}`)).q).toBe('')
+    // Cut, not refused: a refused search never matched what the shell sent, so it asked again forever.
+    expect(parseListQuery(new URLSearchParams(`q=${'x'.repeat(250)}`)).q).toBe('x'.repeat(200))
   })
 
   it('lets the export ask for more than a window', () => {

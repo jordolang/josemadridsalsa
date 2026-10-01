@@ -26,7 +26,7 @@ import {
   type ColumnWidths,
 } from '@/lib/admin-desktop/columns'
 import { findForm } from '@/lib/admin-desktop/forms'
-import { filterRows, listSearch, MAX_LIST_LIMIT, ROW_LIMIT, type ListQuery } from '@/lib/admin-desktop/list'
+import { filterRows, listSearch, MAX_LIST_LIMIT, ROW_LIMIT, searchQuery, type ListQuery } from '@/lib/admin-desktop/list'
 import { bulkActions, type BulkAction } from '@/lib/admin-desktop/bulk'
 import { attentionCount, badgeAlerts, type DesktopAlert } from '@/lib/admin-desktop/alerts'
 import { Icon, IconSprite } from './icons'
@@ -596,7 +596,7 @@ export function DesktopShell({
   const list = section.list
   useEffect(() => {
     if (!list?.searchable) return
-    const wanted = query.trim()
+    const wanted = searchQuery(query)
     if (wanted === list.q || (!list.more && !list.q)) return
     const timer = setTimeout(() => {
       setSelected(0)
@@ -989,7 +989,10 @@ export function DesktopShell({
         openRow(activeRow)
         return
       }
-      if (event.key === ' ' && activeRow) {
+      // Space on a focused button presses it; only a row (or nothing) marks.
+      const onControl =
+        target instanceof Element && Boolean(target.closest('button, a, select')) && !target.closest('.jmsd-row')
+      if (event.key === ' ' && activeRow && !onControl) {
         event.preventDefault()
         const id = activeRow.id
         setMarked((previous) => {
@@ -1286,7 +1289,7 @@ export function DesktopShell({
             <div className="jmsd-bulkbar" role="toolbar" aria-label="Bulk actions">
               <span className="jmsd-bulkbar-count">{markedRows.length} marked</span>
               {bulk.length === 0 ? (
-                <span style={{ color: 'var(--faint)' }}>No action is shared by every marked row.</span>
+                <span className="jmsd-bulkbar-note">No action is shared by every marked row.</span>
               ) : (
                 bulk.map((action) => (
                   <button
@@ -1300,12 +1303,7 @@ export function DesktopShell({
                   </button>
                 ))
               )}
-              <button
-                type="button"
-                className="jmsd-chip"
-                style={{ marginLeft: 'auto' }}
-                onClick={() => setMarked(new Set())}
-              >
+              <button type="button" className="jmsd-chip jmsd-bulkbar-clear" onClick={() => setMarked(new Set())}>
                 Clear · Esc
               </button>
             </div>

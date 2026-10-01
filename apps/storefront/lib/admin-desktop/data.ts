@@ -12,7 +12,7 @@
  * totals row.
  */
 
-import type { Prisma } from '@prisma/client'
+import { SalesChannel, type Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { gmailThreadUrl } from '@/lib/inbox/gmail'
 import { isMissingTableError } from '@/lib/prisma-errors'
@@ -88,11 +88,23 @@ import type {
  */
 type WordFilter = { contains: string; mode: 'insensitive' }
 
-function matching<W>(q: string, fields: (word: WordFilter) => W[]): W | undefined {
-  const words = q.split(/\s+/).filter(Boolean)
+function matching<W>(q: string, fields: (word: WordFilter, raw: string) => W[]): W | undefined {
+  const words = searchWords(q)
   if (words.length === 0) return undefined
-  return { AND: words.map((word) => ({ OR: fields({ contains: word, mode: 'insensitive' }) })) } as W
+  return { AND: words.map((word) => ({ OR: fields({ contains: word, mode: 'insensitive' }, word) })) } as W
 }
+
+function searchWords(q: string): string[] {
+  return q.split(/\s+/).filter(Boolean)
+}
+
+/**
+ * A four-digit word as a year, for the lists whose search text carries one.
+ * Each searchable loader matches every field its row's `search` text holds,
+ * because the shell trusts the database's answer for those pages rather than
+ * filtering again — a field left out here is a search that quietly finds nothing.
+ */
+const yearOf = (word: string): number | null => (/^\d{4}$/.test(word) ? Number(word) : null)
 
 /** Pages whose loader passes `list.q` to the database, rather than leaving it to the filter box. */
 const SEARCHABLE_PAGES = new Set([
@@ -212,12 +224,20 @@ async function loadOrders(list: ListQuery = DEFAULT_LIST): Promise<TablePayload>
   const orders = await safe(
     () =>
       prisma.order.findMany({
-        where: matching<Prisma.OrderWhereInput>(list.q, (word) => [
+        where: matching<Prisma.OrderWhereInput>(list.q, (word, raw) => [
           { orderNumber: word },
           { guestEmail: word },
           { trackingNumber: word },
           { user: { is: { OR: [{ name: word }, { email: word }] } } },
-          { shippingAddress: { is: { OR: [{ firstName: word }, { lastName: word }, { city: word }] } } },
+          {
+            shippingAddress: {
+              is: { OR: [{ firstName: word }, { lastName: word }, { city: word }, { state: word }] },
+            },
+          },
+          // The Channel column shows a label ("Online", "Shows"); match it to the enum.
+          ...Object.values(SalesChannel)
+            .filter((channel) => channelLabel(channel).toLowerCase().includes(raw.toLowerCase()))
+            .map((channel) => ({ salesChannel: channel })),
         ]),
         orderBy: { createdAt: 'desc' },
         take: list.limit,
@@ -2231,13 +2251,40 @@ async function loadSettings(): Promise<SettingsPayload> {
 // ---------------------------------------------------------------------------
 
 async function loadAudit(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
+  // An audit row stores only the user's id, but the Who column shows a name, so
+  // a searched word is first turned into the ids of the people it names.
+  const peopleByWord = new Map(
+    await Promise.all(
+      searchWords(list.q).map(async (word) => {
+        const people = await safe(
+          () =>
+            prisma.user.findMany({
+              where: {
+                OR: [
+                  { name: { contains: word, mode: 'insensitive' } },
+                  { email: { contains: word, mode: 'insensitive' } },
+                ],
+              },
+              select: { id: true },
+              take: 200,
+            }),
+          [],
+        )
+        return [word, people.map((person) => person.id)] as const
+      }),
+    ),
+  )
+
   const logs = await safe(
     () =>
       prisma.auditLog.findMany({
-        where: matching<Prisma.AuditLogWhereInput>(list.q, (word) => [
+        where: matching<Prisma.AuditLogWhereInput>(list.q, (word, raw) => [
           { action: word },
           { entityType: word },
           { entityId: word },
+          { userId: { in: peopleByWord.get(raw) ?? [] } },
+          // Rows with no user show as "system".
+          ...('system'.includes(raw.toLowerCase()) ? [{ userId: null }] : []),
         ]),
         orderBy: { createdAt: 'desc' },
         take: list.limit,
@@ -5750,11 +5797,13 @@ async function loadSubscribers(list: ListQuery = DEFAULT_LIST): Promise<TablePay
     safe(
       () =>
         prisma.mailingListSubscriber.findMany({
-          where: matching<Prisma.MailingListSubscriberWhereInput>(list.q, (word) => [
+          where: matching<Prisma.MailingListSubscriberWhereInput>(list.q, (word, raw) => [
             { email: word },
             { firstName: word },
             { lastName: word },
             { source: word },
+            { list: { is: { name: word } } },
+            { tags: { has: raw } },
           ]),
           orderBy: { createdAt: 'desc' },
           take: list.limit,
@@ -8129,11 +8178,12 @@ async function loadMileage(list: ListQuery = DEFAULT_LIST): Promise<TablePayload
   const trips = await safe(
     () =>
       prisma.mileageEntry.findMany({
-        where: matching<Prisma.MileageEntryWhereInput>(list.q, (word) => [
+        where: matching<Prisma.MileageEntryWhereInput>(list.q, (word, raw) => [
           { destination: word },
           { city: word },
           { state: word },
           { driver: word },
+          ...(yearOf(raw) ? [{ year: yearOf(raw)! }] : []),
         ]),
         orderBy: { tripDate: 'desc' },
         take: list.limit,
@@ -8246,10 +8296,11 @@ async function loadShowArchive(list: ListQuery = DEFAULT_LIST): Promise<TablePay
   const shows = await safe(
     () =>
       prisma.archivedShowSale.findMany({
-        where: matching<Prisma.ArchivedShowSaleWhereInput>(list.q, (word) => [
+        where: matching<Prisma.ArchivedShowSaleWhereInput>(list.q, (word, raw) => [
           { showName: word },
           { salesPerson: word },
           { dateText: word },
+          ...(yearOf(raw) ? [{ year: yearOf(raw)! }] : []),
         ]),
         orderBy: [{ year: 'desc' }, { showDate: 'desc' }],
         take: list.limit,
@@ -10188,7 +10239,14 @@ export async function loadBadges(): Promise<DesktopBadges> {
         }),
       0,
     ),
-    safe(() => prisma.product.findMany({ where: { isActive: true } }), []),
+    safe(
+      () =>
+        prisma.product.findMany({
+          where: { isActive: true },
+          select: { inventory: true, stockReserved: true, lowStockThreshold: true },
+        }),
+      [],
+    ),
     safe(() => prisma.fundraiser.count({ where: { status: 'ACTIVE' } }), 0),
     safe(() => prisma.conversation.count({ where: { status: 'OPEN' } }), 0),
     safe(() => prisma.chatThread.count({ where: { status: 'WAITING' } }), 0),

@@ -580,6 +580,24 @@ describe('list window', () => {
     expect(payload.list).toEqual({ q: 'vera  smith', limit: 500, more: false, searchable: true })
   })
 
+  it('searches every field the row shows, so the database finds what the filter box would', async () => {
+    // Audit rows hold only a user id; the Who column shows a name.
+    prismaMock.user.findMany.mockResolvedValueOnce([{ id: 'u7' }])
+    await loadSection('audit', undefined, { q: 'mike', limit: 250 })
+    const audit = prismaMock.auditLog.findMany.mock.calls[0][0].where.AND[0].OR
+    expect(audit).toContainEqual({ userId: { in: ['u7'] } })
+
+    // Orders: the Channel label and the state in Ship to.
+    await loadSection('orders', undefined, { q: 'wholesale oh', limit: 250 })
+    const [channel, state] = prismaMock.order.findMany.mock.calls[0][0].where.AND
+    expect(channel.OR).toContainEqual({ salesChannel: 'WHOLESALE' })
+    expect(JSON.stringify(state.OR)).toContain('"state":{"contains":"oh","mode":"insensitive"}')
+
+    // Archives: a year.
+    await loadSection('media.shows', undefined, { q: '2019', limit: 250 })
+    expect(prismaMock.archivedShowSale.findMany.mock.calls[0][0].where.AND[0].OR).toContainEqual({ year: 2019 })
+  })
+
   it('reads with no condition when there is nothing to search for', async () => {
     await loadSection('customers')
     expect(prismaMock.customer.findMany.mock.calls[0][0].where).toBeUndefined()
