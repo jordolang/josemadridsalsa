@@ -330,6 +330,11 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **The Desktop Apps workflow failed at its release step on every run after the first.** It
+  deleted and recreated a rolling `desktop-latest` release, but the repository's immutable releases
+  reserve a tag name for good, so the tag could never be created again — and the update-feed step
+  after it never ran. The feed is now published first, and each build is archived under a tag of
+  its own.
 - **The fundraising site's sign-up page reads as two steps.** It led with the organizer-account
   form while its copy still described the inquiry form below, so an organizer could fill in only
   the account and never be added to checkout. The page now labels the account as step 1 and the
