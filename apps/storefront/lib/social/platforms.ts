@@ -196,7 +196,7 @@ export async function getOAuthUrl(
     case 'TWITTER': {
       if (!creds) throw new Error('X (Twitter) is not configured. Add your Client ID and Secret in the admin panel (Social → Accounts → X → Show setup steps).')
       if (!options.codeChallenge) throw new Error('Missing PKCE challenge')
-      const scopes = 'tweet.read tweet.write users.read offline.access'
+      const scopes = 'tweet.read tweet.write users.read media.write offline.access'
       return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${creds.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(options.state)}&code_challenge=${options.codeChallenge}&code_challenge_method=S256`
     }
     case 'TIKTOK': {
@@ -342,7 +342,8 @@ export async function getValidAccessToken(accountId: string): Promise<string | n
 /**
  * Which connected social account platform a shop export must target, or null
  * for platforms that authenticate with server credentials instead of a
- * connected social account (Amazon SP-API, Google Merchant Center).
+ * connected social account (Amazon SP-API, Google Merchant Center, and TikTok
+ * Shop, whose Partner API token is unrelated to a TikTok posting login).
  */
 export function getExpectedAccountPlatformForShop(
   shopPlatform: ShopPlatform,
@@ -352,7 +353,6 @@ export function getExpectedAccountPlatformForShop(
     case 'FACEBOOK_MARKETPLACE':
       return 'FACEBOOK'
     case 'TIKTOK_SHOP':
-      return 'TIKTOK'
     case 'AMAZON':
     case 'GOOGLE_SHOPPING':
       return null

@@ -78,14 +78,15 @@ const ALL_PLATFORMS: ShopPlatform[] = [
 /** Env-var hints for platforms that sync with server credentials. */
 const CREDENTIAL_HINTS: Partial<Record<ShopPlatform, string>> = {
   AMAZON: 'Set the AMAZON_SP_API_* environment variables to enable syncing',
+  TIKTOK_SHOP: 'Set the TIKTOK_SHOP_APP_KEY, _APP_SECRET and _REFRESH_TOKEN environment variables to enable syncing',
   GOOGLE_SHOPPING:
-    'Set GOOGLE_MERCHANT_CENTER_ID and the GOOGLE_SHOPPING_SERVICE_ACCOUNT_* environment variables to enable syncing',
+    'Set GOOGLE_MERCHANT_CENTER_ID, GOOGLE_MERCHANT_DATA_SOURCE_ID and the GOOGLE_SHOPPING_SERVICE_ACCOUNT_* environment variables to enable syncing',
 }
 
 type Props = {
   accounts: SocialAccountInfo[]
   /** Whether server credentials exist for platforms that don't use a connected social account. */
-  syncProviderStatus: { AMAZON: boolean; GOOGLE_SHOPPING: boolean }
+  syncProviderStatus: { AMAZON: boolean; GOOGLE_SHOPPING: boolean; TIKTOK_SHOP: boolean }
 }
 
 export function SocialShops({ accounts, syncProviderStatus }: Props) {
@@ -110,12 +111,11 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
   const [loadingProducts, setLoadingProducts] = useState(false)
 
   const hasFacebook = accounts.some((a) => a.platform === 'FACEBOOK')
-  const hasTikTok = accounts.some((a) => a.platform === 'TIKTOK')
   // null = the platform syncs with server credentials, not a connected account.
   const accountPlatformForShop = useMemo<Record<ShopPlatform, SocialMediaPlatform | null>>(() => ({
     FACEBOOK_SHOP: 'FACEBOOK',
     FACEBOOK_MARKETPLACE: 'FACEBOOK',
-    TIKTOK_SHOP: 'TIKTOK',
+    TIKTOK_SHOP: null,
     AMAZON: null,
     GOOGLE_SHOPPING: null,
   }), [])
@@ -124,10 +124,8 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
     switch (accountPlatformForShop[platform]) {
       case 'FACEBOOK':
         return hasFacebook
-      case 'TIKTOK':
-        return hasTikTok
       default:
-        return syncProviderStatus[platform as 'AMAZON' | 'GOOGLE_SHOPPING']
+        return syncProviderStatus[platform as 'AMAZON' | 'GOOGLE_SHOPPING' | 'TIKTOK_SHOP']
     }
   }
   const matchingAccounts = useMemo(
@@ -462,7 +460,7 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
                 {!isConnected && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     {CREDENTIAL_HINTS[platform] ??
-                      `Connect ${platform === 'TIKTOK_SHOP' ? 'TikTok' : 'Facebook'} in Social Media → Accounts first`}
+                      'Connect Facebook in Social Media → Accounts first'}
                   </p>
                 )}
               </div>
@@ -492,7 +490,9 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
             <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
               {addPlatform === 'AMAZON'
                 ? 'Amazon exports sync through the Selling Partner API using the server credentials — no connected account or catalog ID needed. Products are matched to Amazon’s catalog by UPC (product barcode).'
-                : 'Google Shopping exports sync through the Content API using the configured Merchant Center service account — no connected account or catalog ID needed.'}
+                : addPlatform === 'TIKTOK_SHOP'
+                  ? 'TikTok Shop exports sync through the TikTok Shop Partner API using the server credentials — no connected account needed. Products go to the first shop that authorized the app.'
+                  : 'Google Shopping exports sync through the Merchant API using the configured Merchant Center service account — no connected account or catalog ID needed.'}
             </div>
           )}
 
@@ -516,33 +516,25 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Each export targets the selected {addPlatform === 'TIKTOK_SHOP' ? 'TikTok account' : 'Facebook Page'}.
+                Each export targets the selected Facebook Page.
               </p>
             </div>
 
             <div className="space-y-1.5">
               <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-                {addPlatform === 'TIKTOK_SHOP' ? 'TikTok Shop ID' : 'Facebook Catalog ID'}
+                Facebook Catalog ID
               </label>
               <Input
                 value={catalogId}
                 onChange={(e) => setCatalogId(e.target.value)}
-                placeholder={
-                  addPlatform === 'TIKTOK_SHOP'
-                    ? 'Enter your TikTok Shop ID'
-                    : addPlatform === 'FACEBOOK_SHOP'
-                      ? 'Enter or create a Facebook Catalog ID'
-                      : 'Optional for Marketplace listings'
-                }
+                placeholder="Enter or create a Facebook Catalog ID"
                 className="text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                {addPlatform === 'TIKTOK_SHOP'
-                  ? 'TikTok Shop itself must already exist in Seller Center before product export can work.'
-                  : addPlatform === 'FACEBOOK_SHOP'
-                    ? 'Use an existing Commerce catalog or create one below if your Meta business is ready.'
-                    : 'Marketplace exports use the selected Page directly, so a catalog ID is optional.'}
+                {addPlatform === 'FACEBOOK_SHOP'
+                  ? 'Use an existing Commerce catalog or create one below if your Meta business is ready.'
+                  : 'Meta has no public Marketplace listing API. Products sync to this Commerce catalog, and Meta decides whether they appear on Marketplace.'}
               </p>
             </div>
           </div>
@@ -908,20 +900,18 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
           <div>
             <p className="font-medium text-foreground">Facebook Marketplace</p>
             <ul className="mt-1 list-inside list-disc space-y-1 text-muted-foreground">
-              <li>Requires a connected Facebook Page</li>
-              <li>Listings created via Page Commerce API</li>
-              <li>Supports local and shipped items</li>
-              <li>Inventory synced from your product catalog</li>
+              <li>Requires a connected Facebook Page and a Commerce catalog ID</li>
+              <li>Meta offers no public Marketplace listing API; products sync to the catalog via the Catalog Batch API</li>
+              <li>Whether catalog products appear on Marketplace is decided by Meta in Commerce Manager</li>
             </ul>
           </div>
           <div>
             <p className="font-medium text-foreground">TikTok Shop</p>
             <ul className="mt-1 list-inside list-disc space-y-1 text-muted-foreground">
               <li>Create and approve the shop in TikTok Seller Center first</li>
-              <li>Connect the matching TikTok account in Social Media → Accounts</li>
-              <li>Enable Product API access in your developer app</li>
-              <li>Enter your Shop ID when adding products</li>
-              <li>Products sync via TikTok Open API</li>
+              <li>Create an app in TikTok Shop Partner Center with Product and Logistics API access, and have the shop authorize it</li>
+              <li>Set TIKTOK_SHOP_APP_KEY, TIKTOK_SHOP_APP_SECRET and TIKTOK_SHOP_REFRESH_TOKEN env vars</li>
+              <li>Products sync via the signed TikTok Shop Partner API (202309)</li>
             </ul>
           </div>
           <div>
@@ -936,10 +926,11 @@ export function SocialShops({ accounts, syncProviderStatus }: Props) {
           <div>
             <p className="font-medium text-foreground">Google Shopping</p>
             <ul className="mt-1 list-inside list-disc space-y-1 text-muted-foreground">
-              <li>Create a Google Cloud service account and enable the Content API for Shopping</li>
-              <li>Add the service account email as a user in Merchant Center settings</li>
-              <li>Set GOOGLE_MERCHANT_CENTER_ID and GOOGLE_SHOPPING_SERVICE_ACCOUNT_EMAIL / _PRIVATE_KEY env vars</li>
-              <li>Products sync via the Content API; the scheduled feed URL keeps working as a fallback</li>
+              <li>Create a Google Cloud service account and enable the Merchant API</li>
+              <li>Add the service account email as a user in Merchant Center settings, and register the Cloud project with the account once (Merchant API developer registration)</li>
+              <li>Add an &quot;API&quot; data source in Merchant Center and note its ID</li>
+              <li>Set GOOGLE_MERCHANT_CENTER_ID, GOOGLE_MERCHANT_DATA_SOURCE_ID and GOOGLE_SHOPPING_SERVICE_ACCOUNT_EMAIL / _PRIVATE_KEY env vars</li>
+              <li>Products sync via the Merchant API; the scheduled feed URL keeps working as a fallback</li>
             </ul>
           </div>
         </div>

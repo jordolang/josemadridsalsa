@@ -8,6 +8,7 @@ import {
 } from './platforms'
 import { putAmazonListing } from './amazon-sp-api'
 import { upsertGoogleShoppingProduct } from './google-content-api'
+import { putTikTokShopProduct } from './tiktok-shop-api'
 
 type SyncResult = {
   success: boolean
@@ -49,16 +50,15 @@ export function validateShopExportConfiguration(
     }
   }
 
-  if (
-    (config.shopPlatform === 'FACEBOOK_SHOP' || config.shopPlatform === 'TIKTOK_SHOP') &&
-    !config.catalogId?.trim()
-  ) {
+  // Marketplace has no public listing API: products reach it through the
+  // Commerce catalog, so both Facebook exports need one.
+  if (!config.catalogId?.trim()) {
     return {
       valid: false,
       error:
         config.shopPlatform === 'FACEBOOK_SHOP'
           ? 'Facebook Shop exports require a catalog ID.'
-          : 'TikTok Shop exports require a TikTok Shop ID.',
+          : 'Facebook Marketplace exports require a catalog ID. Marketplace shows products from your Commerce catalog.',
     }
   }
 
@@ -124,17 +124,6 @@ async function getFacebookPageToken(accountId: string): Promise<{ token: string;
   const token = await getAccountAccessToken(account.id)
   if (!token) return null
   return { token, pageId: account.accountId }
-}
-
-/**
- * Get the TikTok access token from the connected TIKTOK social account
- */
-async function getTikTokToken(accountId: string): Promise<string | null> {
-  const account = await prisma.socialAccount.findFirst({
-    where: { id: accountId, platform: 'TIKTOK', isActive: true },
-  })
-  if (!account) return null
-  return getAccountAccessToken(account.id)
 }
 
 /**
@@ -248,226 +237,6 @@ async function syncToFacebookCatalog(
 }
 
 /**
- * Create a Facebook Marketplace listing via the Marketplace API
- */
-async function syncToFacebookMarketplace(
-  listing: {
-    product: {
-      name: string
-      description: string | null
-      sku: string
-      price: number
-      images: string[]
-      featuredImage: string | null
-      inventory: number
-    }
-    overrides: {
-      title?: string | null
-      description?: string | null
-      price?: number | null
-      condition?: string | null
-      availability?: string | null
-      category?: string | null
-    }
-  },
-  accessToken: string,
-  pageId: string,
-  existingExternalId?: string | null,
-): Promise<SyncResult> {
-  try {
-    const title = listing.overrides.title || listing.product.name
-    const description = listing.overrides.description || listing.product.description || listing.product.name
-    const price = listing.overrides.price ?? listing.product.price
-    const condition = listing.overrides.condition || 'new'
-    const imageUrl = listing.product.featuredImage || listing.product.images[0]
-
-    if (!imageUrl) {
-      return { success: false, error: 'Product must have at least one image for Marketplace.' }
-    }
-
-    // Create a marketplace listing via Page commerce
-    const listingData = {
-      name: title,
-      description,
-      price: price.toFixed(2),
-      currency: 'USD',
-      condition,
-      availability: listing.product.inventory > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK',
-      images: listing.product.images.slice(0, 10).map((url) => ({ url })),
-      category: listing.overrides.category || 'FOOD_BEVERAGES',
-      access_token: accessToken,
-    }
-
-    if (existingExternalId) {
-      // Update existing listing
-      const res = await fetch(
-        `https://graph.facebook.com/v21.0/${existingExternalId}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(listingData),
-        },
-      )
-      const data = await res.json()
-      if (data.error) {
-        return { success: false, error: data.error.message }
-      }
-      return {
-        success: true,
-        externalId: existingExternalId,
-        externalUrl: `https://www.facebook.com/marketplace/item/${existingExternalId}`,
-      }
-    }
-
-    // Create new listing
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${pageId}/commerce_listings`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(listingData),
-      },
-    )
-    const data = await res.json()
-
-    if (data.error) {
-      return { success: false, error: data.error.message }
-    }
-
-    return {
-      success: true,
-      externalId: data.id,
-      externalUrl: `https://www.facebook.com/marketplace/item/${data.id}`,
-    }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
-  }
-}
-
-/**
- * Sync a product to TikTok Shop via the Product API
- */
-async function syncToTikTokShop(
-  listing: {
-    shopId: string
-    product: {
-      name: string
-      description: string | null
-      sku: string
-      price: number
-      compareAtPrice: number | null
-      images: string[]
-      featuredImage: string | null
-      inventory: number
-      weight: number | null
-    }
-    overrides: {
-      title?: string | null
-      description?: string | null
-      price?: number | null
-      category?: string | null
-    }
-  },
-  accessToken: string,
-  existingExternalId?: string | null,
-): Promise<SyncResult> {
-  try {
-    const title = listing.overrides.title || listing.product.name
-    const description = listing.overrides.description || listing.product.description || listing.product.name
-    const price = listing.overrides.price ?? listing.product.price
-    const mainImage = listing.product.featuredImage || listing.product.images[0]
-
-    if (!mainImage) {
-      return { success: false, error: 'Product must have at least one image for TikTok Shop.' }
-    }
-
-    // TikTok Shop Product API (202309): `title` + `skus[].price` with a
-    // decimal amount string, e.g. { amount: "9.99", currency: "USD" }.
-    const productPayload = {
-      title,
-      description,
-      category_id: listing.overrides.category || '601501', // Food > Condiments
-      brand: { name: 'Jose Madrid Salsa' },
-      main_images: listing.product.images.slice(0, 9).map((url) => ({
-        uri: url,
-      })),
-      skus: [
-        {
-          seller_sku: listing.product.sku,
-          price: {
-            amount: price.toFixed(2),
-            currency: 'USD',
-          },
-          inventory: [
-            {
-              quantity: listing.product.inventory,
-              warehouse_id: listing.shopId,
-            },
-          ],
-        },
-      ],
-      package_weight: {
-        value: listing.product.weight?.toString() || '1',
-        unit: 'POUND',
-      },
-      is_cod_allowed: false,
-    }
-
-    const baseUrl = `https://open-api.tiktokglobalshop.com`
-
-    if (existingExternalId) {
-      // Update existing product
-      const res = await fetch(`${baseUrl}/product/202309/products/${existingExternalId}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'x-tts-access-token': accessToken,
-        },
-        body: JSON.stringify(productPayload),
-      })
-      const data = await res.json()
-
-      if (data.code !== 0 && data.code !== undefined) {
-        return { success: false, error: data.message || 'TikTok Shop API error' }
-      }
-
-      return {
-        success: true,
-        externalId: existingExternalId,
-        externalUrl: `https://shop.tiktok.com/product/${existingExternalId}`,
-      }
-    }
-
-    // Create new product
-    const res = await fetch(`${baseUrl}/product/202309/products`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'x-tts-access-token': accessToken,
-      },
-      body: JSON.stringify(productPayload),
-    })
-    const data = await res.json()
-
-    if (data.code !== 0 && data.code !== undefined) {
-      return { success: false, error: data.message || 'TikTok Shop API error' }
-    }
-
-    const productId = data.data?.product_id
-
-    return {
-      success: true,
-      externalId: productId,
-      externalUrl: productId ? `https://shop.tiktok.com/product/${productId}` : undefined,
-    }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
-  }
-}
-
-/**
  * Sync a single shop listing to its platform
  */
 export async function syncShopListing(listingId: string): Promise<SyncResult> {
@@ -497,7 +266,7 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
   const configValidation = validateShopExportConfiguration({
     shopPlatform: listing.shopPlatform,
     socialAccountId: listing.socialAccountId,
-    socialAccountPlatform: listing.socialAccount?.platform as 'FACEBOOK' | 'TIKTOK' | null,
+    socialAccountPlatform: listing.socialAccount?.platform ?? null,
     catalogId: listing.catalogId,
   })
 
@@ -537,7 +306,10 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
   let result: SyncResult
 
   switch (listing.shopPlatform) {
-    case 'FACEBOOK_SHOP': {
+    case 'FACEBOOK_SHOP':
+    // Meta has no public Marketplace listing API (the old commerce_listings edge is
+    // partner-only); Marketplace draws from the Page's Commerce catalog instead.
+    case 'FACEBOOK_MARKETPLACE': {
       const fb = await getFacebookPageToken(listing.socialAccountId!)
       if (!fb) {
         result = {
@@ -553,35 +325,25 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
       )
       break
     }
-    case 'FACEBOOK_MARKETPLACE': {
-      const fb = await getFacebookPageToken(listing.socialAccountId!)
-      if (!fb) {
-        result = {
-          success: false,
-          error: 'The selected Facebook Page is unavailable. Reconnect it before exporting.',
-        }
-        break
-      }
-      result = await syncToFacebookMarketplace(
-        { product: productData, overrides },
-        fb.token,
-        fb.pageId,
-        listing.externalId,
-      )
-      break
-    }
     case 'TIKTOK_SHOP': {
-      const token = await getTikTokToken(listing.socialAccountId!)
-      if (!token) {
-        result = {
-          success: false,
-          error: 'The selected TikTok account is unavailable. Reconnect it before exporting.',
-        }
-        break
-      }
-      result = await syncToTikTokShop(
-        { shopId: listing.catalogId!, product: productData, overrides },
-        token,
+      result = await putTikTokShopProduct(
+        {
+          name: productData.name,
+          description: productData.description,
+          sku: productData.sku,
+          price: productData.price,
+          images: productData.images,
+          featuredImage: productData.featuredImage,
+          inventory: productData.inventory,
+          weightOz: productData.weight,
+        },
+        {
+          title: overrides.title,
+          description: overrides.description,
+          price: overrides.price,
+          category: overrides.category,
+        },
+        listing.catalogId,
         listing.externalId,
       )
       break

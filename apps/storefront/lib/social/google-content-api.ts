@@ -1,36 +1,45 @@
 import { createSign } from 'crypto'
 
 /**
- * Google Content API for Shopping client for pushing products into Google
+ * Google Merchant API (products v1) client for pushing products into Google
  * Merchant Center — the push-style counterpart to the scheduled-fetch feed at
- * /api/feeds/google-shopping. Inserting a product with the same offerId
+ * /api/feeds/google-shopping. Inserting a product input with the same offerId
  * upserts it, so repeat syncs keep price and inventory current.
  *
- * Authenticates with a service account (the standard for Merchant Center
- * automation — add the service account's email as a user in Merchant Center
- * settings). Configured via server-only env vars:
+ * Replaces the Content API for Shopping v2.1, which Google sunset on
+ * 2026-08-18 (requests have failed intermittently with HTTP 410 since
+ * 2026-09-01).
+ *
+ * Authenticates with a service account (add the service account's email as a
+ * user in Merchant Center settings). The Merchant API also needs the Google
+ * Cloud project registered once with the Merchant Center account
+ * (developerRegistration:registerGcp) and an API data source to write into.
+ * Configured via server-only env vars:
  *   - GOOGLE_MERCHANT_CENTER_ID
+ *   - GOOGLE_MERCHANT_DATA_SOURCE_ID  (numeric ID of an "API" data source)
  *   - GOOGLE_SHOPPING_SERVICE_ACCOUNT_EMAIL
  *   - GOOGLE_SHOPPING_SERVICE_ACCOUNT_PRIVATE_KEY  (PEM, \n-escaped allowed)
  */
 
-const CONTENT_API_BASE = 'https://shoppingcontent.googleapis.com/content/v2.1'
+const MERCHANT_API_BASE = 'https://merchantapi.googleapis.com/products/v1'
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const CONTENT_SCOPE = 'https://www.googleapis.com/auth/content'
 
 type GoogleShoppingConfig = {
   merchantId: string
+  dataSourceId: string
   serviceAccountEmail: string
   privateKey: string
 }
 
 function getGoogleShoppingConfig(): GoogleShoppingConfig | null {
   const merchantId = process.env.GOOGLE_MERCHANT_CENTER_ID
+  const dataSourceId = process.env.GOOGLE_MERCHANT_DATA_SOURCE_ID
   const serviceAccountEmail = process.env.GOOGLE_SHOPPING_SERVICE_ACCOUNT_EMAIL
   const privateKey = process.env.GOOGLE_SHOPPING_SERVICE_ACCOUNT_PRIVATE_KEY
-  if (!merchantId || !serviceAccountEmail || !privateKey) return null
+  if (!merchantId || !dataSourceId || !serviceAccountEmail || !privateKey) return null
   // Env UIs often store the PEM with literal \n sequences.
-  return { merchantId, serviceAccountEmail, privateKey: privateKey.replace(/\\n/g, '\n') }
+  return { merchantId, dataSourceId, serviceAccountEmail, privateKey: privateKey.replace(/\\n/g, '\n') }
 }
 
 export function isGoogleShoppingSyncConfigured(): boolean {
@@ -99,14 +108,32 @@ export type GoogleShoppingOverrides = {
 const DEFAULT_GOOGLE_CATEGORY =
   'Food, Beverages & Tobacco > Food Items > Condiments & Sauces > Salsa'
 
+/** Merchant API Price: an amount in micros (1 USD = 1,000,000). */
+function toPrice(amount: number) {
+  return { amountMicros: String(Math.round(amount * 1_000_000)), currencyCode: 'USD' }
+}
+
+const AVAILABILITY: Record<string, string> = {
+  'in stock': 'IN_STOCK',
+  'out of stock': 'OUT_OF_STOCK',
+  preorder: 'PREORDER',
+  backorder: 'BACKORDER',
+  'limited availability': 'LIMITED_AVAILABILITY',
+}
+
+/** Accepts feed-style values ("in stock") and Merchant API enums ("IN_STOCK"). */
+function toAvailability(value: string): string {
+  return AVAILABILITY[value.toLowerCase().replace(/_/g, ' ')] ?? value.toUpperCase()
+}
+
 /**
- * Build the Content API product resource. Pure function so tests cover the
+ * Build the Merchant API ProductInput. Pure function so tests cover the
  * mapping; mirrors the field logic of the Google Shopping feed builders.
  */
 export function buildGoogleShoppingProduct(
   product: GoogleShoppingProduct,
   overrides: GoogleShoppingOverrides,
-): Record<string, unknown> {
+): { offerId: string; contentLanguage: string; feedLabel: string; productAttributes: Record<string, unknown> } {
   const title = overrides.title || product.name
   const description = overrides.description || product.description || product.name
   const price = overrides.price ?? product.price
@@ -119,45 +146,44 @@ export function buildGoogleShoppingProduct(
     .filter((url) => url && url !== imageLink)
     .slice(0, 10)
 
-  const resource: Record<string, unknown> = {
-    offerId: product.sku,
-    contentLanguage: 'en',
-    targetCountry: 'US',
-    channel: 'online',
+  const attributes: Record<string, unknown> = {
     title,
     description,
     link: product.url,
     imageLink,
     additionalImageLinks,
-    availability:
+    availability: toAvailability(
       overrides.availability || (product.inventory > 0 ? 'in stock' : 'out of stock'),
-    condition: 'new',
+    ),
+    condition: 'NEW',
     brand: 'Jose Madrid Salsa',
     googleProductCategory: overrides.category || DEFAULT_GOOGLE_CATEGORY,
-    price: {
-      value: (onSale ? product.compareAtPrice! : price).toFixed(2),
-      currency: 'USD',
-    },
+    price: toPrice(onSale ? product.compareAtPrice! : price),
   }
 
   if (onSale) {
-    resource.salePrice = { value: price.toFixed(2), currency: 'USD' }
+    attributes.salePrice = toPrice(price)
   }
   if (product.gtin) {
-    resource.gtin = product.gtin
+    attributes.gtins = [product.gtin]
   } else {
-    resource.identifierExists = false
+    attributes.identifierExists = false
   }
   if (product.weightOz !== null) {
-    resource.shippingWeight = { value: product.weightOz, unit: 'oz' }
+    attributes.shippingWeight = { value: product.weightOz, unit: 'oz' }
   }
 
-  return resource
+  return {
+    offerId: product.sku,
+    contentLanguage: 'en',
+    feedLabel: 'US',
+    productAttributes: attributes,
+  }
 }
 
 export type GoogleShoppingSyncResult = {
   success: boolean
-  /** The Content API product REST id, e.g. online:en:US:SKU. */
+  /** The Merchant API product input name, e.g. accounts/123/productInputs/en~US~SKU. */
   externalId?: string
   externalUrl?: string
   error?: string
@@ -173,7 +199,7 @@ export async function upsertGoogleShoppingProduct(
     return {
       success: false,
       error:
-        'Google Shopping sync is not configured. Set GOOGLE_MERCHANT_CENTER_ID and the GOOGLE_SHOPPING_SERVICE_ACCOUNT_* environment variables.',
+        'Google Shopping sync is not configured. Set GOOGLE_MERCHANT_CENTER_ID, GOOGLE_MERCHANT_DATA_SOURCE_ID and the GOOGLE_SHOPPING_SERVICE_ACCOUNT_* environment variables.',
     }
   }
 
@@ -183,7 +209,9 @@ export async function upsertGoogleShoppingProduct(
 
   try {
     const accessToken = await getServiceAccountToken(config)
-    const res = await fetch(`${CONTENT_API_BASE}/${config.merchantId}/products`, {
+    const account = `accounts/${config.merchantId}`
+    const dataSource = encodeURIComponent(`${account}/dataSources/${config.dataSourceId}`)
+    const res = await fetch(`${MERCHANT_API_BASE}/${account}/productInputs:insert?dataSource=${dataSource}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -200,7 +228,7 @@ export async function upsertGoogleShoppingProduct(
       }
     }
 
-    const restId = (data?.id as string) || `online:en:US:${product.sku}`
+    const restId = (data?.name as string) || `accounts/${config.merchantId}/productInputs/en~US~${product.sku}`
     return {
       success: true,
       externalId: restId,

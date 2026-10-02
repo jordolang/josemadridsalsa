@@ -17,7 +17,7 @@ import {
 import { logAudit } from '@/lib/audit'
 
 const TIKTOK_SCOPES = ['user.info.basic', 'video.publish', 'video.upload']
-const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'offline.access']
+const TWITTER_SCOPES = ['tweet.read', 'tweet.write', 'users.read', 'media.write', 'offline.access']
 const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/business.manage']
 
 async function exchangeFacebookToken(code: string, redirectUri: string) {
