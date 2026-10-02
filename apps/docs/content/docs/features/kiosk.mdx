@@ -1,0 +1,172 @@
+---
+title: Self-Order Kiosk
+description: The Salsa Kings self-order kiosk — an Android tablet that takes orders, charges a Square Terminal, and prints a receipt.
+---
+
+# Self-Order Kiosk
+
+Customers build their own order on a touch screen, pay on a Square Terminal, and
+take a printed receipt. It has three parts:
+
+| Part | Where | Job |
+|---|---|---|
+| Kiosk screens | `/kiosk` in the storefront (`app/kiosk`, `components/kiosk`) | Splash screen, menu, order, payment, confirmation |
+| Android app | `apps/android-kiosk` | Locks the tablet to `/kiosk`, drives the USB receipt printer, passes the barcode scanner through |
+| iPad app | `apps/ios-kiosk` | Same job on an iPad: network, Bluetooth LE, AirPrint and Star receipt printers |
+
+Because the screens are a web page, a design change ships with a normal deploy; the
+tablet picks it up on its next reload without reinstalling the app.
+
+## Hardware
+
+- An Android tablet (Android 8 or later) in a floor or counter stand.
+- A **Square Terminal**: the customer taps, inserts or swipes there.
+- An **80mm USB ESC/POS receipt printer** (Epson TM-T20/T88, Rongta, Munbyn and the
+  like) on the tablet's USB port, through an OTG adapter or hub.
+- Optionally, a **USB barcode scanner**. Scanners act as keyboards; a scan adds that
+  jar to the order.
+
+## How a sale works
+
+1. **Splash screen.** A loop of the burning-logo opening from the website hero, the
+   price chart, and *Touch to start*.
+2. **Menu.** Tiles come from `lib/kiosk/catalog.ts` (photo, label color, heat, filter
+   group, UPC). `GET /api/kiosk/catalog` says which flavors this kiosk can sell and
+   which are sold out.
+3. **Pay.** The tablet sends `POST /api/kiosk/checkout` with flavor keys and
+   quantities, **never prices**. The server prices the cart (below), reserves stock,
+   creates a `KIOSK-YYYYMMDD-NNNN` order, and sends the total to the Square Terminal.
+4. **Waiting on the card.** The tablet polls `GET /api/kiosk/checkout/{checkoutId}`
+   every 2 seconds. A completed checkout marks the order paid, records the `Payment`,
+   deducts stock and emits `payment.completed`. *Cancel payment* calls
+   `POST /api/kiosk/checkout/{checkoutId}/cancel`; if the card went through just
+   before the cancel, the sale is kept.
+5. **Confirmation.** The receipt prints, and the kiosk returns to the splash screen
+   after 10 seconds.
+
+A menu or cart left untouched for 90 seconds clears and returns to the splash screen.
+
+The kiosk and the staff [POS](/docs/features/pos) share one Square Terminal
+implementation, `lib/pos/terminal-checkout.ts`, so a kiosk sale is recorded exactly
+like a counter sale (`salesChannel: POS`, `paymentChannel: POS`). The kiosk's orders
+are the ones numbered `KIOSK-…`, and their admin notes name the deal applied.
+
+## Pricing
+
+`lib/kiosk/pricing.ts` is the booth sign as code:
+
+| Jars | Price |
+|---|---|
+| 1 | $10 |
+| 3 | $25 |
+| 4 | $32 |
+| 5 + a bag of chips (*Show Special*) | $40 |
+| 12 (case) | $80 |
+
+Flavors mix and match, and any count is charged the **cheapest combination** of
+bundles. Ties go to the combination with more free chips. For example, 7 jars are a
+3-jar deal plus a 4-jar deal ($57), and 10 jars are two Show Specials ($80, two bags of
+chips). The order stores every jar at $10 and the bundle savings as `discountAmount`.
+
+Kiosk sales carry **no sales tax**: Ohio exempts grocery food such as salsa.
+
+## Matching flavors to products
+
+Each kiosk flavor sells one `Product`. `matchKioskProducts` pairs them by
+`Product.barcode` (the UPC), confirmed by name. A product without a barcode is matched
+by name alone ("Mango Habanero Salsa" matches "Mango Habanero"). A flavor with no
+matching active product is hidden from the menu and listed in the catalog response's
+`unmatched` array, which the tablet logs to its console.
+
+Scanning: `093662452911` is **Cherry Mild** (an older `upc.txt` also listed it for Green
+Apple, which was wrong). **Blueberry Mild** is `093662453017` and **Cherry Hot** is
+`093662453000`. **Green Apple** is retired and has no barcode, so it can't be scanned. A
+code that matches more than one flavor asks the customer to tap their jar.
+
+## Pairing a tablet
+
+The kiosk API accepts either a **device token** or a logged-in staff session with
+`orders:write` (so staff can test `/kiosk` in a browser).
+
+1. Generate a token of at least 24 characters, for example `openssl rand -hex 24`.
+2. Add it to `KIOSK_DEVICE_TOKENS` in Vercel. Separate several tablets' tokens with
+   commas, so one can be revoked without the others.
+3. Enter the same token in the Android app's setup screen.
+
+A token shorter than 24 characters is ignored. A tablet whose token is missing or
+wrong shows *"Staff: This kiosk is not paired"* on the splash screen.
+
+## The Android app
+
+`apps/android-kiosk` is a Kotlin app (`net.josemadrid.kiosk`, Android 8+) that:
+
+- shows `/kiosk` full screen and blocks navigation off the kiosk's origin;
+- locks the tablet to itself (`startLockTask`, fully locked when it is device owner),
+  starts at boot, and acts as the Home app;
+- exposes `window.JMKiosk` to the page: `getDeviceToken()`, `getAppVersion()`,
+  `printerStatus()` and `printReceipt(json)` (`lib/kiosk/bridge.ts` is the web side);
+- prints receipts to the first USB printer it finds (ESC/POS, 48 columns, partial cut);
+- leaves the barcode scanner's keystrokes to the page.
+
+**Build** (needs JDK 17 and the Android SDK):
+
+```bash
+cd apps/android-kiosk
+JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ./gradlew assembleDebug testDebugUnitTest
+```
+
+**Install on a factory-reset tablet** (before adding a Google account, which device
+owner requires):
+
+```bash
+adb install app/build/outputs/apk/debug/app-debug.apk
+adb shell dpm set-device-owner net.josemadrid.kiosk/.KioskDeviceAdminReceiver
+```
+
+Open the app, enter the kiosk URL (`https://www.josemadrid.net/kiosk`), the device
+token and a staff PIN, and choose it as the Home app. Plug the printer in and accept
+the USB permission prompt once.
+
+**Staff menu:** press and hold the top-right corner for 3 seconds, then enter the PIN.
+The menu has Reload, Printer test, Settings and Exit kiosk. If the app is the Home app,
+Android reopens it after *Exit kiosk*; change the Home app in Settings first. As device
+owner, it can be removed only with `adb shell dpm remove-active-admin` or a factory reset.
+
+<Callout type="warn">
+Only a debug build exists, and nothing has been tried on a physical tablet, printer,
+scanner or Square Terminal yet. Run a full test sale (`SQUARE_SANDBOX` unset, against a
+sandbox Terminal) before the first show.
+</Callout>
+
+## The iPad app
+
+`apps/ios-kiosk` is a Swift app (`net.josemadrid.kiosk`, iPadOS 16+) with the same
+`window.JMKiosk` bridge. The project is generated from `project.yml` with XcodeGen;
+the header of `project.yml` holds the full build, sign and install steps.
+
+- **Printers:** network ESC/POS (TCP 9100), Bluetooth LE ESC/POS, AirPrint (chosen
+  once, then silent), and Star Micronics over USB, Bluetooth or LAN via the StarXpand
+  SDK. iPadOS gives apps no access to other USB printers.
+- **Signing:** put the team ID in `Config/Signing.xcconfig` (gitignored; copy
+  `Signing.example.xcconfig`). With a free personal team the install lasts 7 days,
+  then has to be re-signed and reinstalled from Xcode. The settings survive.
+- **First launch on a device:** trust the developer under *Settings → General →
+  VPN & Device Management*.
+- **Lock-down:** turn on *Settings → Accessibility → Guided Access*, open the app,
+  and triple-click the top button. The staff menu is the same 3-second press in the
+  top-right corner, then the PIN.
+
+## Configuration
+
+| Variable | Purpose |
+|---|---|
+| `KIOSK_DEVICE_TOKENS` | Comma-separated device tokens, one per paired tablet |
+| `SQUARE_ACCESS_TOKEN` | Square API access (shared with the POS) |
+| `SQUARE_TERMINAL_DEVICE_ID` | The Square Terminal the kiosk charges |
+| `SQUARE_SANDBOX` | `false` for real charges; anything else uses the Square sandbox |
+
+## Related
+
+- [Point of Sale](/docs/features/pos)
+- [Square Integration](/docs/features/square)
+- [Inventory Management](/docs/features/inventory)

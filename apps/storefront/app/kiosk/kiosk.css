@@ -1,0 +1,130 @@
+/* Self-order kiosk: animations and brand textures that Tailwind utilities can't express. */
+
+.kiosk-root {
+  --k-red: #c81e1e;
+  --k-chili: #d62828;
+  --k-amber: #f4a81d;
+  --k-cream: #fff3e0;
+  --k-ink: #24130a;
+  --k-green: #0e4d3a;
+  --k-char: #0b0605;
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.kiosk-root button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.k-slab {
+  font-family: var(--font-alfa-slab), Georgia, serif;
+  font-weight: 400;
+}
+
+.k-serape {
+  background: linear-gradient(180deg, #d62828 0 20%, #f4a81d 20% 36%, #fff3e0 36% 44%, #0e4d3a 44% 64%, #fff3e0 64% 72%, #2f6db5 72% 86%, #d62828 86% 100%);
+}
+
+.k-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 5px solid #f4a81d;
+  animation: k-pulse 2s ease-out infinite;
+  pointer-events: none;
+}
+.k-ring-2 { animation-delay: 1s; }
+@keyframes k-pulse { 0% { transform: scale(1); opacity: .9 } 100% { transform: scale(1.35); opacity: 0 } }
+
+.k-spin { animation: k-spin 90s linear infinite; }
+@keyframes k-spin { to { transform: rotate(360deg) } }
+
+.k-in-up { animation: k-in-up .8s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes k-in-up { from { opacity: 0; transform: translateY(60px) } to { opacity: 1; transform: none } }
+
+.k-rise { animation: k-rise .9s cubic-bezier(.2, .9, .25, 1.2) both; }
+@keyframes k-rise { from { opacity: 0; transform: translateY(240px) } to { opacity: 1; transform: none } }
+
+.k-pop { animation: k-pop .7s cubic-bezier(.2, .9, .3, 1.4) both; }
+@keyframes k-pop { from { opacity: 0; transform: scale(.4) rotate(-8deg) } to { opacity: 1; transform: none } }
+
+.k-bob { animation: k-bob 3.2s ease-in-out infinite; }
+@keyframes k-bob { 0%, 100% { transform: translateY(0) rotate(-2deg) } 50% { transform: translateY(-14px) rotate(2deg) } }
+
+.k-bounce { animation: k-bounce 1.4s ease-in-out infinite; }
+@keyframes k-bounce { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(18px) } }
+
+.k-breathe { animation: k-breathe 2.4s ease-in-out infinite; }
+@keyframes k-breathe { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.05) } }
+
+.k-print { animation: k-print 3s ease-out forwards; }
+@keyframes k-print { 0% { transform: translateY(-100%) } 100% { transform: translateY(0) } }
+
+.k-flame {
+  transform-origin: 50% 100%;
+  animation-name: k-flicker;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+@keyframes k-flicker {
+  0% { transform: scale(1, 1) skewX(-3deg); opacity: .85 }
+  50% { transform: scale(1.08, 1.22) skewX(4deg); opacity: 1 }
+  100% { transform: scale(.94, .92) skewX(-5deg); opacity: .9 }
+}
+
+.k-glow { animation: k-glow 1.6s ease-in-out infinite alternate; }
+@keyframes k-glow { from { opacity: .75; transform: scale(1) } to { opacity: 1; transform: scale(1.04) } }
+
+.k-ember-a, .k-ember-b {
+  animation-name: k-ember-a;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.k-ember-b { animation-name: k-ember-b; }
+@keyframes k-ember-a { 0% { transform: translate(0, 0); opacity: 0 } 8% { opacity: 1 } 50% { transform: translate(40px, -460px) } 100% { transform: translate(-20px, -980px); opacity: 0 } }
+@keyframes k-ember-b { 0% { transform: translate(0, 0); opacity: 0 } 8% { opacity: 1 } 50% { transform: translate(-50px, -480px) } 100% { transform: translate(30px, -1000px); opacity: 0 } }
+
+.k-chili {
+  animation-name: k-chili;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes k-chili { 0% { transform: translateY(0) rotate(0deg); opacity: 0 } 10% { opacity: .9 } 85% { opacity: .9 } 100% { transform: translateY(-1500px) rotate(320deg); opacity: 0 } }
+
+.k-shimmer { animation: k-shimmer 2.8s ease-in-out infinite; }
+@keyframes k-shimmer { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+
+.k-hot { animation: k-hot 1.8s ease-in-out infinite alternate; }
+@keyframes k-hot {
+  from { text-shadow: 0 0 20px rgba(255, 90, 20, .5) }
+  to { text-shadow: 0 0 50px rgba(255, 140, 30, .95), 0 0 90px rgba(214, 40, 40, .6) }
+}
+
+.k-crown { animation: k-crown 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes k-crown { 0%, 100% { transform: rotate(-6deg) } 50% { transform: rotate(6deg) translateY(-4px) } }
+
+.k-countdown { animation: k-countdown 10s linear forwards; }
+@keyframes k-countdown { from { stroke-dashoffset: 0 } to { stroke-dashoffset: 188.5 } }
+
+.k-tile img { transition: transform .25s ease; }
+.k-tile:active img { transform: scale(.94) rotate(-3deg); }
+
+.k-video-mask {
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%);
+}
+
+.k-scroll { scrollbar-width: none; }
+.k-scroll::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-root *, .kiosk-root *::before, .kiosk-root *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
