@@ -5,12 +5,15 @@
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
+import { getSquareConnectionStatus } from '@/lib/square/oauth'
 import { PinSchema, generateGroupCode, hashPin, isLocked } from './credentials'
 import { FundraiserAppError } from './errors'
 
 export const AppSettingsUpdateSchema = z
   .object({
     enabled: z.boolean().optional(),
+    /** Let sellers take cards with Square (tap to pay, keyed, reader). */
+    cardPayments: z.boolean().optional(),
     /** Issue a new group ID. Phones already signed in stay signed in; new sign-ups need the new ID. */
     regenerateCode: z.literal(true).optional(),
     groupPin: PinSchema.optional(),
@@ -29,6 +32,7 @@ export async function getAppSettings(fundraiserId: string) {
       name: true,
       organizationName: true,
       appEnabled: true,
+      appCardPayments: true,
       appGroupCode: true,
       appGroupPinHash: true,
       appGroupLockedUntil: true,
@@ -53,12 +57,16 @@ export async function getAppSettings(fundraiserId: string) {
     },
   })
   if (!fundraiser) throw new FundraiserAppError('Fundraiser not found', 404)
+  const square = await getSquareConnectionStatus()
 
   return {
     id: fundraiser.id,
     name: fundraiser.name,
     organizationName: fundraiser.organizationName,
     enabled: fundraiser.appEnabled,
+    cardPayments: fundraiser.appCardPayments,
+    /** Whether the shop's Square account is connected (Settings › Payments) for the app to take cards with. */
+    squareReady: square.connected && !!process.env.SQUARE_LOCATION_ID,
     groupCode: fundraiser.appGroupCode,
     hasGroupPin: !!fundraiser.appGroupPinHash,
     groupLocked: isLocked(fundraiser.appGroupLockedUntil),
@@ -111,6 +119,7 @@ export async function updateAppSettings(fundraiserId: string, update: AppSetting
     }
     data.appEnabled = update.enabled
   }
+  if (update.cardPayments !== undefined) data.appCardPayments = update.cardPayments
   if (update.organizerId !== undefined) {
     if (update.organizerId) {
       const seller = await prisma.fundraiserParticipant.findFirst({

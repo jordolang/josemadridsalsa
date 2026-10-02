@@ -89,10 +89,13 @@ export async function createReaderOrder(input: Omit<InPersonOrderInput, 'reserva
 }
 
 /**
- * The completed Square payment for this order, if there is one. Used when the iPad lost the
- * payment id (or never got it) — the payment carries the order id as its reference.
+ * The completed Square payment for this order, if there is one. Used when the iPad (or the
+ * fundraiser app) lost the payment id or never got it — the payment carries the order id as its
+ * reference.
  */
-async function findOrderPayment(order: ReaderOrder): Promise<Square.Payment | undefined> {
+export async function findOrderPayment(
+  order: Pick<ReaderOrder, 'id' | 'createdAt'>
+): Promise<Square.Payment | undefined> {
   const locationId = process.env.SQUARE_LOCATION_ID
   // A little before the order was created, in case the clocks disagree.
   const beginTime = new Date(order.createdAt.getTime() - 5 * 60_000).toISOString()

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone } from 'lucide-react'
+import Link from 'next/link'
+import { CreditCard, KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -151,6 +152,37 @@ export function MobileAppClient({ initial, canWrite }: { initial: Settings; canW
               always set a new one. The organizer can also change it in the app.
             </p>
           </div>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-md border p-4">
+          <div className="space-y-1">
+            <Label htmlFor="card-payments" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" /> Card payments with Square
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Sellers can take cards on their phone: Tap to Pay on iPhone or Android, a card number keyed in for a
+              phone order, or a paired Square Reader. Payments go to the shop&apos;s Square account and the order is
+              marked paid once Square confirms it. Each seller&apos;s phone holds a Square access token while this is on,
+              so turn it on only for groups you trust with card payments.
+            </p>
+            {!settings.squareReady && (
+              <p className="text-xs text-destructive">
+                Square is not connected yet. Connect it under{' '}
+                <Link href="/admin/settings/payments" className="underline">
+                  Settings › Payments
+                </Link>{' '}
+                (and set SQUARE_LOCATION_ID) before sellers can take cards.
+              </p>
+            )}
+          </div>
+          <Switch
+            id="card-payments"
+            checked={settings.cardPayments}
+            disabled={!canWrite || busy}
+            onCheckedChange={(cardPayments) =>
+              update({ cardPayments }, cardPayments ? 'Card payments turned on' : 'Card payments turned off')
+            }
+          />
         </div>
 
         <div className="space-y-2">

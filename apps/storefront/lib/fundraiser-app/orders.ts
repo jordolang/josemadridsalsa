@@ -8,7 +8,8 @@
  * The seller collects the money, so there is no processor and no `Payment` row (see
  * `lib/admin/manual-order.ts` for why). Cash or a check in hand is a paid order and is credited
  * to the group straight away, the same as an admin marking an order paid. "Pay later" is left
- * pending until Jose Madrid marks it paid, which credits it then. Stock is not reserved here:
+ * pending until Jose Madrid marks it paid, which credits it then. A card order is pending until
+ * Square confirms the card the phone took (`card-payments.ts`). Stock is not reserved here:
  * fundraiser orders are packed in bulk when the campaign closes. Salsa is grocery food, which
  * Ohio does not tax, and the seller delivers, so there is no tax or shipping either.
  */
@@ -26,12 +27,14 @@ import { emitOrderCreated } from '@/lib/orders/events'
 import { deriveSalesChannel } from '@/lib/orders/sales-channel'
 import { inPersonOrderNumber } from '@/lib/pos/terminal-checkout'
 import type { AppSession } from './access'
+import { requireCardPayments } from './card-payments'
 import { FundraiserAppError } from './errors'
 
 export const PAYMENT_METHODS = {
   CASH: 'Cash (collected by seller)',
   CHECK: 'Check (collected by seller)',
   PAY_LATER: 'Pay on delivery',
+  CARD: 'Card (Square)',
 } as const
 
 const MAX_JARS = 500
@@ -63,7 +66,8 @@ export const PhoneOrderSchema = z.object({
     )
     .min(1, 'Add at least one salsa')
     .max(100),
-  payment: z.enum(['CASH', 'CHECK', 'PAY_LATER']),
+  /** CARD: the phone takes the card next, with Square (see `card-payments.ts`). */
+  payment: z.enum(['CASH', 'CHECK', 'PAY_LATER', 'CARD']),
   notes: z.string().trim().max(1000).optional(),
 })
 
@@ -108,7 +112,7 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
   // A retry of an order that already went through gets the same order back.
   const previous = await prisma.order.findUnique({
     where: { orderNumber },
-    select: { id: true, orderNumber: true, total: true, participantId: true, paymentStatus: true },
+    select: orderSummarySelect,
   })
   if (previous) {
     if (previous.participantId !== seller.id) {
@@ -117,6 +121,7 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
     return { ...summarize(previous), duplicate: true }
   }
 
+  if (input.payment === 'CARD') requireCardPayments(session)
   const store = await storeFor(session)
 
   const quantities = new Map<string, number>()
@@ -156,7 +161,8 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
   })
   const subtotal = round2(lines.reduce((sum, line) => sum + Number(line.totalPrice), 0))
 
-  const paid = input.payment !== 'PAY_LATER'
+  const card = input.payment === 'CARD'
+  const paid = input.payment === 'CASH' || input.payment === 'CHECK'
   const customerName = `${input.customer.firstName} ${input.customer.lastName}`
   const salesChannel = deriveSalesChannel({ fundraiserId: store.fundraiserId, participantId: seller.id })
 
@@ -184,9 +190,10 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
         status: paid ? 'CONFIRMED' : 'PENDING',
         paymentStatus: paid ? 'PAID' : 'PENDING',
         paymentMethod: PAYMENT_METHODS[input.payment],
-        // Not a processor sale; the column defaults would otherwise call it a Stripe one.
-        paymentChannel: null,
-        paymentProvider: null,
+        // Cash, check and pay-later have no processor; the column defaults would otherwise call
+        // them Stripe sales. A card is an in-person Square payment.
+        paymentChannel: card ? 'POS' : null,
+        paymentProvider: card ? 'SQUARE' : null,
         salesChannel,
         shippingMethod: 'Delivered by seller',
         fundraiserId: store.fundraiserId,
@@ -196,7 +203,7 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
         adminNotes: `Phone order taken in the fundraiser app by ${seller.name} for ${customerName}.`,
         items: { create: lines },
       },
-      select: { id: true, orderNumber: true, total: true, participantId: true, paymentStatus: true },
+      select: orderSummarySelect,
     })
 
     if (paid) await creditFundraiserCommission(tx, created.id)
@@ -214,12 +221,30 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
   return { ...summarize(order), duplicate: false }
 }
 
-function summarize(order: { id: string; orderNumber: string; total: unknown; paymentStatus: string }) {
+const orderSummarySelect = {
+  id: true,
+  orderNumber: true,
+  total: true,
+  participantId: true,
+  paymentStatus: true,
+  paymentProvider: true,
+} as const
+
+function summarize(order: {
+  id: string
+  orderNumber: string
+  total: unknown
+  paymentStatus: string
+  paymentProvider: string | null
+}) {
   return {
     id: order.id,
     orderNumber: order.orderNumber,
     total: Number(order.total),
+    /** What the phone charges, in cents, when the order is waiting on a card. */
+    amountCents: Math.round(Number(order.total) * 100),
     paid: order.paymentStatus === 'PAID',
+    awaitingCard: order.paymentProvider === 'SQUARE' && order.paymentStatus === 'PENDING',
   }
 }
 

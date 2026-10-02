@@ -28,10 +28,12 @@ const { createPhoneOrder, listSellerOrders } = await import('@/lib/fundraiser-ap
 const { FundraiserAppError } = await import('@/lib/fundraiser-app/errors')
 
 type Session = Parameters<typeof createPhoneOrder>[0]
-const session = {
-  id: 's_1',
-  participant: { id: 'p_1', name: 'Casey Jones', fundraiser: { id: 'f_1', slug: 'zhs-band' } },
-} as unknown as Session
+const sessionWith = (appCardPayments: boolean) =>
+  ({
+    id: 's_1',
+    participant: { id: 'p_1', name: 'Casey Jones', fundraiser: { id: 'f_1', slug: 'zhs-band', appCardPayments } },
+  }) as unknown as Session
+const session = sessionWith(false)
 
 const groupStore = {
   fundraiserId: 'f_1',
@@ -72,6 +74,7 @@ beforeEach(() => {
       total: data.total,
       participantId: data.participantId,
       paymentStatus: data.paymentStatus,
+      paymentProvider: data.paymentProvider,
     })
   )
 })
@@ -127,6 +130,27 @@ describe('createPhoneOrder', () => {
     expect(data).toMatchObject({ paymentStatus: 'PENDING', status: 'PENDING', paymentMethod: 'Pay on delivery' })
     expect(creditFundraiserCommission).not.toHaveBeenCalled()
     expect(result.paid).toBe(false)
+  })
+
+  it('records a card order as pending, for Square, until the card is confirmed', async () => {
+    const result = await createPhoneOrder(sessionWith(true), order({ payment: 'CARD' }))
+    const data = tx.order.create.mock.calls[0][0].data
+    expect(data).toMatchObject({
+      paymentStatus: 'PENDING',
+      status: 'PENDING',
+      paymentProvider: 'SQUARE',
+      paymentChannel: 'POS',
+      paymentMethod: 'Card (Square)',
+    })
+    expect(creditFundraiserCommission).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ awaitingCard: true, amountCents: 4600, paid: false })
+  })
+
+  it('refuses a card order when the group has card payments off', async () => {
+    const error = await createPhoneOrder(session, order({ payment: 'CARD' })).catch((e) => e)
+    expect(error).toBeInstanceOf(FundraiserAppError)
+    expect(error.status).toBe(403)
+    expect(tx.order.create).not.toHaveBeenCalled()
   })
 
   it('saves a delivery address with the customer name when one is given', async () => {

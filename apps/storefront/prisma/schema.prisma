@@ -1090,6 +1090,9 @@ model Fundraiser {
   appGroupLockedUntil  DateTime?
   /// Off until an admin turns the app on for this group; off again shuts every device out.
   appEnabled           Boolean                 @default(false)
+  /// Lets this group's sellers take cards in the app (Square Mobile Payments SDK). Off by default:
+  /// a phone that takes cards holds a Square access token for the shop's account.
+  appCardPayments      Boolean                 @default(false)
   /// The one seat per group that may reset a seller's PIN from the app.
   appOrganizerId       String?                 @unique
   appOrganizer         FundraiserParticipant?  @relation("FundraiserAppOrganizer", fields: [appOrganizerId], references: [id], onDelete: SetNull)

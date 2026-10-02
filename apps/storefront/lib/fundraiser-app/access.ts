@@ -65,6 +65,7 @@ const groupSelect = {
   status: true,
   isActive: true,
   appEnabled: true,
+  appCardPayments: true,
   appGroupPinHash: true,
   appGroupPinFailures: true,
   appGroupLockedUntil: true,
@@ -424,7 +425,7 @@ export async function describeSeller(session: AppSession) {
       referralCode: participant.referralCode,
       isOrganizer: participant.fundraiser.appOrganizerId === participant.id,
     },
-    group: publicGroup(participant.fundraiser),
+    group: { ...publicGroup(participant.fundraiser), cardPayments: participant.fundraiser.appCardPayments },
     stats: {
       orders: totals._count._all,
       sales: Number(totals._sum.total ?? 0),
