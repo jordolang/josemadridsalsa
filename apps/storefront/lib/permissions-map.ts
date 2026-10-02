@@ -463,6 +463,11 @@ export const adminNavigation: NavItem[] = [
         permission: 'settings:read',
       },
       {
+        label: 'Loyalty Rewards',
+        href: '/admin/settings/loyalty-rewards',
+        permission: 'settings:read',
+      },
+      {
         label: 'Audit Logs',
         href: '/admin/audit-logs',
         permission: 'settings:read',

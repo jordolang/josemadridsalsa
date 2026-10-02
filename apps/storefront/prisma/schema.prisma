@@ -43,6 +43,7 @@ model User {
   fundraiserMessages      FundraiserMessage[]
   fundraiserSaleReactions FundraiserSaleEventReaction[]
   fundraiserSaleReplies   FundraiserSaleEventReply[]
+  arenaMessages           ArenaMessage[]
   fundraiserSaleEvents    FundraiserSaleEvent[]
   loyaltyAccount          LoyaltyAccount?
   orders                  Order[]
@@ -3504,6 +3505,22 @@ model FundraiserSaleEventReply {
   @@index([saleEventId, createdAt])
   @@index([authorUserId])
   @@map("fundraiser_sale_event_replies")
+}
+
+/// Spectator chat bubble posted at a team's camp in the monthly battle arena.
+/// Sign-in required to post; `period` is the arena month (YYYY-MM).
+model ArenaMessage {
+  id           String   @id @default(cuid())
+  period       String
+  teamId       String?
+  authorUserId String
+  body         String
+  createdAt    DateTime @default(now())
+  author       User     @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([period, createdAt])
+  @@index([authorUserId])
+  @@map("arena_messages")
 }
 
 model FundraiserShield {

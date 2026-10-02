@@ -11,6 +11,7 @@ import prisma from '@/lib/prisma'
 import { bulkAdjustInventoryInTx, checkAndUpdateAlerts, withSerializableRetry } from '@/lib/inventory-manager'
 import { emitOrderCreated } from '@/lib/orders/events'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
+import { quotePosTaxCents } from '@/lib/pos/tax'
 
 /** An error the route can show as-is, with the HTTP status to use. */
 export class CashSaleError extends Error {
@@ -26,8 +27,7 @@ export interface CashSaleLineItem {
 
 export interface RecordCashSaleInput {
   items: CashSaleLineItem[]
-  taxCents: number
-  /** What the register showed the customer; refused if it no longer matches current prices. */
+  /** What the register showed the customer; refused if it no longer matches current prices and tax. */
   totalCents: number
   tenderedCents: number
   /** Reused across retries of one sale so a lost response can't record it twice. */
@@ -45,7 +45,7 @@ const isUniqueViolation = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
 
 export async function recordCashSale(input: RecordCashSaleInput) {
-  const { items, taxCents, totalCents, tenderedCents, attemptId, userId } = input
+  const { items, totalCents, tenderedCents, attemptId, userId } = input
   const orderNumber = orderNumberFor(attemptId)
   const changeCents = tenderedCents - totalCents
 
@@ -70,8 +70,12 @@ export async function recordCashSale(input: RecordCashSaleInput) {
   })
 
   const subtotalCents = lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0)
+  // Tax is quoted here like a card sale's (lib/pos/tax), never taken from the register.
+  const taxCents = await quotePosTaxCents(
+    lines.map((line) => ({ productId: line.productId, unitPriceCents: line.unitPriceCents, quantity: line.quantity }))
+  )
   if (subtotalCents + taxCents !== totalCents) {
-    throw new CashSaleError('Prices have changed since the register loaded. Reload and try again.', 409)
+    throw new CashSaleError('Prices or tax have changed since the register loaded. Reload and try again.', 409)
   }
 
   let deductions: Awaited<ReturnType<typeof bulkAdjustInventoryInTx>>

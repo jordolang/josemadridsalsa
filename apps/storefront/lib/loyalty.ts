@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import type { LoyaltyTier, Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
@@ -287,80 +288,111 @@ export async function creditPurchaseLoyaltyPoints(
   return { awarded: true, points }
 }
 
+const REDEMPTION_TTL_MS = 90 * 24 * 60 * 60 * 1000
+const TIER_ORDER = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']
+
+class RedemptionError extends Error {}
+
+/**
+ * Spends points on a reward inside one transaction and issues the single-use discount code
+ * the customer actually enters at checkout. Every guard is a conditional write, so two
+ * concurrent redemptions cannot overspend the balance or the reward's redemption cap; any
+ * failure rolls back the whole redemption.
+ */
+export async function redeemRewardInTx(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  rewardId: string
+) {
+  const reward = await tx.loyaltyReward.findUnique({ where: { id: rewardId } })
+  const value = reward?.rewardValue ? Number(reward.rewardValue) : 0
+  // DISCOUNT is the only reward type checkout can honour (a fixed-amount code).
+  if (!reward || !reward.isActive || reward.rewardType !== 'DISCOUNT' || value <= 0) {
+    throw new RedemptionError('Reward not available')
+  }
+
+  const account = await tx.loyaltyAccount.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  })
+
+  if (TIER_ORDER.indexOf(account.tier) < TIER_ORDER.indexOf(reward.minimumTier)) {
+    throw new RedemptionError(`Requires ${reward.minimumTier} tier or higher`)
+  }
+
+  const capacity = await tx.loyaltyReward.updateMany({
+    where: {
+      id: reward.id,
+      ...(reward.maxRedemptions != null && { usedCount: { lt: reward.maxRedemptions } }),
+    },
+    data: { usedCount: { increment: 1 } },
+  })
+  if (capacity.count === 0) {
+    throw new RedemptionError('Reward redemption limit reached')
+  }
+
+  const debit = await tx.loyaltyAccount.updateMany({
+    where: { id: account.id, pointsBalance: { gte: reward.pointsCost } },
+    data: { pointsBalance: { decrement: reward.pointsCost } },
+  })
+  if (debit.count === 0) {
+    throw new RedemptionError('Insufficient points')
+  }
+
+  await tx.pointTransaction.create({
+    data: {
+      accountId: account.id,
+      type: 'REDEEMED_REWARD',
+      points: -reward.pointsCost,
+      description: `Redeemed: ${reward.name}`,
+    },
+  })
+
+  const expiresAt = new Date(Date.now() + REDEMPTION_TTL_MS)
+  const code = `REWARD-${randomBytes(5).toString('hex').toUpperCase()}`
+  await tx.discountCode.create({
+    data: {
+      code,
+      description: `Loyalty reward: ${reward.name}`,
+      type: 'FIXED_AMOUNT',
+      value,
+      maxUses: 1,
+      maxUsesPerUser: 1,
+      expiresAt,
+      isActive: true,
+    },
+  })
+
+  return tx.rewardRedemption.create({
+    data: {
+      accountId: account.id,
+      rewardId: reward.id,
+      pointsSpent: reward.pointsCost,
+      status: 'ACTIVE',
+      discountCode: code,
+      expiresAt,
+    },
+  })
+}
+
 /**
  * Redeems a reward for the user if they meet the requirements.
- * @param {string} userId - The ID of the user.
- * @param {string} rewardId - The ID of the reward to redeem.
- * @returns {Promise<{ success: boolean; error?: string; redemption?: Object }>} An object indicating success and redemption details.
- * @throws {Error} If there's an issue with database operations.
+ * @returns The redemption (including its `discountCode`) or the reason it was refused.
  */
 export async function redeemReward(
   userId: string,
   rewardId: string
-): Promise<{ success: boolean; error?: string; redemption?: any }> {
+): Promise<{ success: boolean; error?: string; redemption?: Awaited<ReturnType<typeof redeemRewardInTx>> }> {
   try {
-    const account = await getOrCreateLoyaltyAccount(userId);
-
-    const reward = await prisma.loyaltyReward.findUnique({
-      where: { id: rewardId },
-    });
-
-    if (!reward || !reward.isActive) {
-      return { success: false, error: 'Reward not available' };
-    }
-
-    // Check tier requirement
-    const tierOrder = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM'];
-    const userTierLevel = tierOrder.indexOf(account.tier);
-    const requiredTierLevel = tierOrder.indexOf(reward.minimumTier);
-
-    if (userTierLevel < requiredTierLevel) {
-      return { success: false, error: `Requires ${reward.minimumTier} tier or higher` };
-    }
-
-    // Check points balance
-    if (account.pointsBalance < reward.pointsCost) {
-      return { success: false, error: 'Insufficient points' };
-    }
-
-    // Check redemption limit
-    if (reward.maxRedemptions && reward.usedCount >= reward.maxRedemptions) {
-      return { success: false, error: 'Reward redemption limit reached' };
-    }
-
-    // Create redemption
-    const result = await prisma.$transaction(async (tx) => {
-      const redemption = await tx.rewardRedemption.create({
-        data: {
-          accountId: account.id,
-          rewardId: reward.id,
-          pointsSpent: reward.pointsCost,
-          status: 'ACTIVE',
-          expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
-        },
-      });
-
-      // Deduct points
-      await awardPoints(
-        userId,
-        -reward.pointsCost,
-        'REDEEMED_REWARD',
-        `Redeemed: ${reward.name}`
-      );
-
-      // Increment usage count
-      await tx.loyaltyReward.update({
-        where: { id: reward.id },
-        data: { usedCount: { increment: 1 } },
-      });
-
-      return redemption;
-    });
-
-    return { success: true, redemption: result };
+    const redemption = await prisma.$transaction((tx) => redeemRewardInTx(tx, userId, rewardId))
+    return { success: true, redemption }
   } catch (error) {
-    console.error('Redeem reward error:', error);
-    return { success: false, error: 'Failed to redeem reward' };
+    if (error instanceof RedemptionError) {
+      return { success: false, error: error.message }
+    }
+    console.error('Redeem reward error:', error)
+    return { success: false, error: 'Failed to redeem reward' }
   }
 }
 

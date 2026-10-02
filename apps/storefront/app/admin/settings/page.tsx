@@ -21,20 +21,40 @@ const roleLabels: Record<string, string> = {
   CUSTOMER: 'Customers',
 }
 
+const STAFF_ROLES = ['ADMIN', 'DEVELOPER', 'STAFF'] as const
+const AUDIT_STALE_DAYS = 30
+const KEY_ROTATION_DAYS = 180
+const DAY_MS = 24 * 60 * 60 * 1000
+
 async function getSettingsOverview() {
-  const [roleCounts, permissionCount, serviceKeyCount, recentAudit] =
-    await Promise.all([
-      prisma.user.groupBy({
-        by: ['role'],
-        _count: { _all: true },
-      }),
-      prisma.permission.count(),
-      prisma.serviceKey.count(),
-      prisma.auditLog.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 6,
-      }),
-    ])
+  const [
+    roleCounts,
+    permissionCount,
+    serviceKeyCount,
+    recentAudit,
+    staffWithout2fa,
+    staleKeyCount,
+  ] = await Promise.all([
+    prisma.user.groupBy({
+      by: ['role'],
+      _count: { _all: true },
+    }),
+    prisma.permission.count(),
+    prisma.serviceKey.count(),
+    prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+    }),
+    prisma.user.count({
+      where: { role: { in: [...STAFF_ROLES] }, twoFactorEnabledAt: null },
+    }),
+    prisma.serviceKey.count({
+      where: {
+        isActive: true,
+        updatedAt: { lt: new Date(Date.now() - KEY_ROTATION_DAYS * DAY_MS) },
+      },
+    }),
+  ])
 
   const roleSummary = roleCounts.reduce<Record<string, number>>(
     (acc, item) => {
@@ -49,6 +69,8 @@ async function getSettingsOverview() {
     permissionCount,
     serviceKeyCount,
     auditLogs: recentAudit,
+    staffWithout2fa,
+    staleKeyCount,
   }
 }
 
@@ -131,12 +153,25 @@ export default async function SettingsPage() {
     },
   ]
 
+  // Each check reads live config/DB state; nothing here is hardcoded to OK.
+  const masterKey = process.env.MASTER_KEY ?? ''
+  const lastAudit = overview.auditLogs[0]?.createdAt
   const securityChecks: Array<{ status: 'ok' | 'review'; text: string }> = [
-    { status: 'ok', text: 'Master encryption key configured for service credentials.' },
-    { status: 'ok', text: 'Admin routes protected by RBAC middleware.' },
-    { status: 'ok', text: 'Audit logging active for all mutations.' },
-    { status: 'review', text: 'Enable two-factor authentication for administrators.' },
-    { status: 'review', text: 'Rotate API keys stored in Integrations on a regular cadence.' },
+    /^[0-9a-fA-F]{64}$/.test(masterKey)
+      ? { status: 'ok', text: 'Master encryption key configured for service credentials.' }
+      : { status: 'review', text: 'MASTER_KEY is missing or not 64 hex characters — stored credentials cannot be decrypted.' },
+    overview.permissionCount > 0
+      ? { status: 'ok', text: `${overview.permissionCount} fine-grained permissions seeded for RBAC.` }
+      : { status: 'review', text: 'No permissions seeded — run db:seed:permissions.' },
+    lastAudit && Date.now() - lastAudit.getTime() < AUDIT_STALE_DAYS * DAY_MS
+      ? { status: 'ok', text: `Audit log active (last entry ${lastAudit.toLocaleDateString()}).` }
+      : { status: 'review', text: `No audit log entries in the last ${AUDIT_STALE_DAYS} days.` },
+    overview.staffWithout2fa === 0
+      ? { status: 'ok', text: 'Two-factor authentication enabled for all admin and staff accounts.' }
+      : { status: 'review', text: `${overview.staffWithout2fa} admin/staff account(s) without two-factor authentication.` },
+    overview.staleKeyCount === 0
+      ? { status: 'ok', text: `No active API keys older than ${KEY_ROTATION_DAYS} days.` }
+      : { status: 'review', text: `${overview.staleKeyCount} active API key(s) not rotated in ${KEY_ROTATION_DAYS}+ days.` },
   ]
 
   return (

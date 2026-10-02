@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Prisma } from '@prisma/client'
 
-const { db, inventory, events } = vi.hoisted(() => ({
+const { db, inventory, events, tax } = vi.hoisted(() => ({
   db: { orderCreate: vi.fn(), orderFindUnique: vi.fn(), paymentCreate: vi.fn(), findMany: vi.fn() },
   inventory: { adjust: vi.fn(), alerts: vi.fn() },
   events: { orderCreated: vi.fn(), domain: vi.fn() },
+  tax: { quote: vi.fn() },
 }))
 
 vi.mock('@/lib/prisma', () => ({
@@ -22,13 +23,14 @@ vi.mock('@/lib/inventory-manager', () => ({
 }))
 vi.mock('@/lib/orders/events', () => ({ emitOrderCreated: events.orderCreated }))
 vi.mock('@/lib/domain-events/emit', () => ({ emitDomainEvent: events.domain }))
+vi.mock('@/lib/pos/tax', () => ({ quotePosTaxCents: (...a: unknown[]) => tax.quote(...a) }))
 
 import { CashSaleError, recordCashSale } from '@/lib/pos/cash-sale'
 
 const attemptId = '0f8fad5b-d9cb-469f-a165-70867728950e'
 const ORDER_NUMBER = 'POS-0F8FAD5BD9CB'
 const items = [{ productId: 'p1', quantity: 2 }]
-const sale = { items, taxCents: 145, totalCents: 2145, tenderedCents: 3000, attemptId, userId: 'cashier' }
+const sale = { items, totalCents: 2145, tenderedCents: 3000, attemptId, userId: 'cashier' }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -36,6 +38,7 @@ beforeEach(() => {
   db.findMany.mockResolvedValue([{ id: 'p1', name: 'Mild', sku: 'M1', price: 10, costPrice: 2.32 }])
   db.orderCreate.mockResolvedValue({ id: 'o1', orderNumber: ORDER_NUMBER, total: 21.45 })
   inventory.adjust.mockResolvedValue([{ product: { id: 'p1', lowStockThreshold: 3 }, newStock: 8 }])
+  tax.quote.mockResolvedValue(145)
 })
 
 describe('recordCashSale', () => {
@@ -79,6 +82,21 @@ describe('recordCashSale', () => {
 
     await expect(recordCashSale(sale)).rejects.toMatchObject({ status: 409 })
     expect(db.orderCreate).not.toHaveBeenCalled()
+  })
+
+  it('quotes tax from the server-priced lines and refuses a register total built on other tax', async () => {
+    tax.quote.mockResolvedValue(0)
+
+    await expect(recordCashSale(sale)).rejects.toMatchObject({ status: 409 })
+    expect(tax.quote).toHaveBeenCalledWith([{ productId: 'p1', unitPriceCents: 1000, quantity: 2 }])
+    expect(db.orderCreate).not.toHaveBeenCalled()
+  })
+
+  it('does not re-quote tax when a recorded attempt is retried', async () => {
+    db.orderFindUnique.mockResolvedValue({ id: 'o1' })
+
+    await recordCashSale(sale)
+    expect(tax.quote).not.toHaveBeenCalled()
   })
 
   it('refuses an item that is not an active product', async () => {

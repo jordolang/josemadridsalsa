@@ -1,12 +1,13 @@
 ---
 title: Loyalty Program
-description: Points, tiers and the discounts they earn.
+description: Points, tiers, and the reward catalog customers redeem points against.
 ---
 
 # Loyalty Program
 
-Customers accumulate points, points determine a tier, and a tier carries a standing
-discount. Implemented in `lib/loyalty.ts`, exposed through `/api/loyalty`.
+Customers accumulate points, points determine a tier, and points are spent on rewards from a
+catalog staff manage. Implemented in `lib/loyalty.ts` and `lib/loyalty-rewards.ts`, exposed
+through `/api/loyalty` and the customer page `/account/rewards`.
 
 ## Earning
 
@@ -20,14 +21,37 @@ discount. Implemented in `lib/loyalty.ts`, exposed through `/api/loyalty`.
 ## Tiers
 
 Tier is derived from **lifetime** points, so it never goes down when points are
-redeemed.
+redeemed. A tier gates which rewards a customer may redeem.
 
-| Tier | Lifetime points | Standing discount |
-|---|---|---|
-| `BRONZE` | 0 | — |
-| `SILVER` | 500 | 5% |
-| `GOLD` | 1,000 | 10% |
-| `PLATINUM` | 2,500 | 15% |
+| Tier | Lifetime points |
+|---|---|
+| `BRONZE` | 0 |
+| `SILVER` | 500 |
+| `GOLD` | 1,000 |
+| `PLATINUM` | 2,500 |
+
+`TIER_BENEFITS` in `lib/loyalty.ts` lists 5/10/15% "standing discounts", but **nothing applies
+them** — checkout does not read a customer's tier. Treat them as unbuilt.
+
+## Rewards
+
+Staff manage the catalog at **Admin → Settings → Loyalty Rewards**
+(`/admin/settings/loyalty-rewards`, `settings:read` to view, `settings:write` to change), or in
+the desktop app under **Customers → Loyalty rewards**. Both call the same rules in
+`lib/loyalty-rewards.ts`.
+
+A reward has a points cost, a dollar discount, a minimum tier, an optional total redemption
+limit and an on/off switch. The screen shows each reward's **return** — the discount as a share
+of the spend that earned the points (at 10 points per $1, $5 for 500 points is 10%).
+
+Only `DISCOUNT` rewards exist. Redeeming one (`POST /api/loyalty/redeem`) runs in one
+transaction: it checks the tier, claims a slot under the limit, debits the balance only if it
+covers the cost, records a `REDEEMED_REWARD` transaction, and issues a single-use, fixed-amount
+`REWARD-…` discount code valid for 90 days. The customer sees the code on `/account/rewards` and
+enters it at checkout.
+
+A reward that has been redeemed cannot be deleted — redemptions and issued codes point at it —
+so switch it off instead. Its limit also cannot be lowered below the number already redeemed.
 
 ## Data model
 

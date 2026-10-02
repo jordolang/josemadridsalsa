@@ -43,6 +43,14 @@ import { insertRecipientsFromList } from '@/lib/email/recipients'
 import { canClearNotification, completeStep, reopenStep } from '@/lib/inbox/resolution'
 import { markAllNotificationsRead } from '@/lib/notifications/dispatch'
 import { checkPostSeo } from '@/lib/blog/schemas'
+import {
+  RewardAdminError,
+  createReward,
+  deleteReward,
+  setRewardActive,
+  updateReward,
+} from '@/lib/loyalty-rewards'
+import { rewardInputSchema } from '@/lib/loyalty-rewards-schema'
 import { PRODUCT_IMAGE_LIMIT, slugify, type WriteOpId } from './forms'
 import type { DesktopSectionId } from './sections'
 
@@ -4310,6 +4318,71 @@ const opsHandlers: Record<string, WriteHandler> = {
 // the registry
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// loyalty rewards
+// ---------------------------------------------------------------------------
+
+/** The rules live in lib/loyalty-rewards, shared with the web screen; this only translates refusals. */
+async function rewardWrite<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (error) {
+    if (error instanceof RewardAdminError) throw new WriteError(error.message, error.field)
+    return friendly(error, 'That reward could not be saved.')
+  }
+}
+
+const rewardHandlers: Record<string, WriteHandler> = {
+  'reward.create': handler({
+    permission: 'settings:write',
+    entity: 'LoyaltyReward',
+    action: 'create',
+    schema: rewardInputSchema,
+    async run(values) {
+      const reward = await rewardWrite(() => createReward(values))
+      return { message: `${reward.name} added to the reward catalog`, recordId: reward.id }
+    },
+  }),
+
+  'reward.edit': handler({
+    permission: 'settings:write',
+    entity: 'LoyaltyReward',
+    action: 'update',
+    schema: rewardInputSchema,
+    async run(values, context) {
+      const id = requireRecord(context)
+      const reward = await rewardWrite(() => updateReward(id, values))
+      return { message: `${reward.name} saved`, recordId: id }
+    },
+  }),
+
+  'reward.toggle': handler({
+    permission: 'settings:write',
+    entity: 'LoyaltyReward',
+    action: 'update',
+    schema: z.object({}),
+    async run(_values, context) {
+      const id = requireRecord(context)
+      const current = await prisma.loyaltyReward.findUnique({ where: { id }, select: { isActive: true, name: true } })
+      if (!current) throw new WriteError('That reward no longer exists.')
+      await rewardWrite(() => setRewardActive(id, !current.isActive))
+      return { message: `${current.name} ${current.isActive ? 'is off' : 'can be redeemed'}`, recordId: id }
+    },
+  }),
+
+  'reward.delete': handler({
+    permission: 'settings:write',
+    entity: 'LoyaltyReward',
+    action: 'delete',
+    schema: z.object({}),
+    async run(_values, context) {
+      const id = requireRecord(context)
+      await rewardWrite(() => deleteReward(id))
+      return { message: 'Reward deleted' }
+    },
+  }),
+}
+
 export const WRITE_HANDLERS: Record<string, WriteHandler> = {
   ...orderHandlers,
   ...productHandlers,
@@ -4337,6 +4410,7 @@ export const WRITE_HANDLERS: Record<string, WriteHandler> = {
   ...emailPageHandlers,
   ...cmsHandlers,
   ...opsHandlers,
+  ...rewardHandlers,
 }
 
 export function findWriteHandler(op: WriteOpId | string): WriteHandler | undefined {

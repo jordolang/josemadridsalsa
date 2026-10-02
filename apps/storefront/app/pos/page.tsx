@@ -72,18 +72,6 @@ const INITIAL_CHECKOUT_STATE: CheckoutState = {
   error: null,
 }
 
-// Fallback products while API loads or if it fails
-const FALLBACK_PRODUCTS: POSProduct[] = [
-  { id: '1', name: 'Mild Salsa (16 oz)', sku: 'JMS-MILD-16', price: 7.99, heatLevel: 'Mild' },
-  { id: '2', name: 'Medium Salsa (16 oz)', sku: 'JMS-MED-16', price: 7.99, heatLevel: 'Medium' },
-  { id: '3', name: 'Hot Salsa (16 oz)', sku: 'JMS-HOT-16', price: 7.99, heatLevel: 'Hot' },
-  { id: '4', name: 'Mild Salsa (8 oz)', sku: 'JMS-MILD-8', price: 4.99, heatLevel: 'Mild' },
-  { id: '5', name: 'Medium Salsa (8 oz)', sku: 'JMS-MED-8', price: 4.99, heatLevel: 'Medium' },
-  { id: '6', name: 'Hot Salsa (8 oz)', sku: 'JMS-HOT-8', price: 4.99, heatLevel: 'Hot' },
-  { id: '7', name: 'Variety 3-Pack', sku: 'JMS-VARIETY-3', price: 21.99, heatLevel: 'Variety' },
-  { id: '8', name: 'Gift Box (6-Pack)', sku: 'JMS-GIFT-6', price: 39.99, heatLevel: 'Variety' },
-]
-
 const HEAT_COLORS: Record<string, string> = {
   Mild: 'bg-green-100 text-green-800',
   Medium: 'bg-yellow-100 text-yellow-800',
@@ -95,8 +83,11 @@ const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 60_000
 
 export default function POSPage() {
-  const [products, setProducts] = useState<POSProduct[]>(FALLBACK_PRODUCTS)
+  const [products, setProducts] = useState<POSProduct[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
+  const [productsError, setProductsError] = useState(false)
+  const [taxCents, setTaxCents] = useState<number | null>(0)
+  const [taxError, setTaxError] = useState<string | null>(null)
   const [cart, setCart] = useState<POSCartItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [barcodeBuffer, setBarcodeBuffer] = useState('')
@@ -112,7 +103,10 @@ export default function POSPage() {
     async function loadProducts() {
       try {
         const res = await fetch('/api/products?limit=100')
-        if (!res.ok) return
+        if (!res.ok) {
+          if (!cancelled) setProductsError(true)
+          return
+        }
         const data = await res.json()
         const items: unknown[] = Array.isArray(data) ? data : data.data ?? data.products ?? []
         if (!cancelled && items.length > 0) {
@@ -130,7 +124,7 @@ export default function POSPage() {
           )
         }
       } catch {
-        // Keep fallback products
+        if (!cancelled) setProductsError(true)
       } finally {
         if (!cancelled) setProductsLoading(false)
       }
@@ -225,9 +219,45 @@ export default function POSPage() {
   }
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const taxRate = 0.0725
-  const tax = subtotal * taxRate
+  const tax = (taxCents ?? 0) / 100
   const total = subtotal + tax
+  const taxReady = taxCents !== null && !taxError
+
+  // Live tax line from Stripe Tax at the store address; the server recomputes it at charge time.
+  useEffect(() => {
+    if (cart.length === 0) {
+      setTaxCents(0)
+      setTaxError(null)
+      return
+    }
+    setTaxCents(null)
+    setTaxError(null)
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/pos/tax-quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cart.map((item) => ({ productId: item.id, price: item.price, quantity: item.quantity })),
+          }),
+          signal: controller.signal,
+        })
+        const data = (await res.json().catch(() => ({}))) as { taxCents?: number; error?: string }
+        if (!res.ok || typeof data.taxCents !== 'number') {
+          setTaxError(data.error ?? 'Could not calculate tax')
+          return
+        }
+        setTaxCents(data.taxCents)
+      } catch (error) {
+        if (!controller.signal.aborted) setTaxError('Could not calculate tax')
+      }
+    }, 250)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [cart])
 
   const filteredProducts = searchQuery
     ? products.filter(
@@ -239,11 +269,8 @@ export default function POSPage() {
 
   // --- Payment flow ---
 
-  // Placeholder products have no database records, so a sale of one could never be recorded.
-  const usingFallbackProducts = products === FALLBACK_PRODUCTS
-
   function handleChargeClick() {
-    if (cart.length === 0 || usingFallbackProducts) return
+    if (cart.length === 0 || !taxReady) return
     setCheckout({
       ...INITIAL_CHECKOUT_STATE,
       status: 'selecting_payment',
@@ -270,10 +297,10 @@ export default function POSPage() {
 
   async function handleCashSubmit(tendered: number) {
     setCheckout((prev) => ({ ...prev, status: 'creating', error: null }))
-    // Sent as subtotal + tax in whole cents so the server's total check cannot be off by a
-    // rounding cent.
-    const taxCents = Math.round(tax * 100)
-    const totalCents = Math.round(subtotal * 100) + taxCents
+    // Same cents arithmetic as the server (prices x quantity, plus the quoted tax), so its
+    // total check cannot be off by a rounding cent.
+    const totalCents =
+      cart.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0) + (taxCents ?? 0)
     try {
       const res = await fetch('/api/pos/cash-sale', {
         method: 'POST',
@@ -281,7 +308,6 @@ export default function POSPage() {
         body: JSON.stringify({
           items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
           total: totalCents,
-          taxAmount: taxCents,
           tendered: Math.round(tendered * 100),
           attemptId: checkout.attemptId,
         }),
@@ -325,8 +351,10 @@ export default function POSPage() {
             price: item.price,
             quantity: item.quantity,
           })),
-          total: Math.round(total * 100),
-          taxAmount: Math.round(tax * 100),
+          // Same cents arithmetic as the server, so the totals compare exactly.
+          total:
+            cart.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0) +
+            (taxCents ?? 0),
           deviceId: 'default',
         }),
       })
@@ -513,7 +541,7 @@ export default function POSPage() {
 
         {/* Product grid */}
         <div className="flex-1 overflow-y-auto p-4">
-          {productsLoading && products === FALLBACK_PRODUCTS ? (
+          {productsLoading ? (
             <div className="flex items-center justify-center py-16 text-slate-400">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />
               Loading products...
@@ -552,7 +580,7 @@ export default function POSPage() {
 
           {!productsLoading && filteredProducts.length === 0 && (
             <div className="flex items-center justify-center py-16 text-slate-400">
-              No products found
+              {productsError ? 'Could not load products. Reload the page to try again.' : 'No products found'}
             </div>
           )}
         </div>
@@ -643,9 +671,10 @@ export default function POSPage() {
               <span>{formatPrice(subtotal)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Tax (7.25%)</span>
-              <span>{formatPrice(tax)}</span>
+              <span>Tax</span>
+              <span>{taxCents === null && !taxError ? 'Calculating…' : taxError ? '—' : formatPrice(tax)}</span>
             </div>
+            {taxError && <p className="text-xs text-red-600">{taxError}</p>}
             <div className="flex justify-between border-t pt-2 text-lg font-bold text-slate-900">
               <span>Total</span>
               <span>{formatPrice(total)}</span>
@@ -654,16 +683,11 @@ export default function POSPage() {
 
           <Button
             className="mt-4 h-14 w-full text-lg font-semibold bg-salsa-500 hover:bg-salsa-600"
-            disabled={cart.length === 0 || showOverlay || usingFallbackProducts}
+            disabled={cart.length === 0 || showOverlay || !taxReady}
             onClick={handleChargeClick}
           >
             Charge {cart.length > 0 ? formatPrice(total) : ''}
           </Button>
-          {usingFallbackProducts && !productsLoading && (
-            <p className="mt-2 text-center text-sm text-red-600">
-              Products could not be loaded. Reload the page to take payments.
-            </p>
-          )}
         </div>
 
         {/* Checkout overlay */}
