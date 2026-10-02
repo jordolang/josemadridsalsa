@@ -466,6 +466,8 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
       setMessages((prev) => [posted, ...prev.filter((m) => m.id !== posted.id)])
       setMessage('')
       playSound('message')
+    } catch {
+      setPostError('Could not reach the arena. Check your connection and try again.')
     } finally {
       setPosting(false)
     }

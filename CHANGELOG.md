@@ -354,6 +354,18 @@ the root `package.json` is canonical.
 - **Storefront type-checks on nodemailer 10.** nodemailer 10 ships its own ESM types with no
   `nodemailer` namespace, so `nodemailer.SentMessageInfo` in `lib/email/sender.ts` failed (TS2503);
   it is now a named type import.
+- **Single-use discount codes can only be spent once.** Checkout validated `maxUses` before
+  payment, so two checkouts carrying the same loyalty reward code both passed and payment
+  completion counted both. Completion now claims the use conditionally and fails the second
+  order for staff review, like an unredeemable gift certificate. A spent reward code is marked
+  `USED` and drops off the customer's rewards page.
+- **Loyalty reward limits cannot fall below redemptions under a race.** Lowering a reward's limit
+  now checks usage in the same write instead of a separate read.
+- **Key rotation age ignores enable/disable.** `ServiceKey.rotatedAt` (new column, backfilled from
+  `updatedAt`) moves only when a new secret is saved; the security checklist reads it.
+- **POS re-quotes tax after a stale-total rejection**, so Retry no longer resubmits the same
+  outdated total. Reward redemption and arena messages report dropped connections instead of
+  failing silently; a lost redemption response refreshes the page so an issued code shows first.
 - **POS cash sales are recorded.** Cash checkout used to invent an order number in the browser and
   write nothing. `POST /api/pos/cash-sale` (`lib/pos/cash-sale.ts`) now creates the paid order, a
   cash `Payment` and the stock deduction in one transaction. Lines are priced from the product

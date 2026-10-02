@@ -51,7 +51,8 @@ async function getSettingsOverview() {
     prisma.serviceKey.count({
       where: {
         isActive: true,
-        updatedAt: { lt: new Date(Date.now() - KEY_ROTATION_DAYS * DAY_MS) },
+        // rotatedAt moves only when a new secret is saved; updatedAt also moves on enable/disable.
+        rotatedAt: { lt: new Date(Date.now() - KEY_ROTATION_DAYS * DAY_MS) },
       },
     }),
   ])

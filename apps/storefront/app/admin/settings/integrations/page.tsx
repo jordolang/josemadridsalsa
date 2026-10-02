@@ -145,6 +145,7 @@ async function saveServiceKey(formData: FormData) {
           ...baseData,
           encryptedValue: encrypted.encryptedValue,
           iv: encrypted.iv,
+          rotatedAt: new Date(),
         }
       : baseData,
     create: createData,

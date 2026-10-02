@@ -35,6 +35,11 @@ export function RedeemRewardButton({
         description: 'Enter it at checkout.',
       })
       router.refresh()
+    } catch {
+      // The redemption may have committed before the response was lost, so show the
+      // account's current codes before the customer tries again.
+      toast.error('Connection lost. Check your codes below before trying again.')
+      router.refresh()
     } finally {
       setPending(false)
     }

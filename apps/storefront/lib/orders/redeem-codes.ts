@@ -59,9 +59,26 @@ export async function redeemOrderCodesInTx(
           },
         })
 
-        await tx.discountCode.update({
-          where: { id: code.id },
+        // Claim the use conditionally: checkout validates maxUses before payment, so two
+        // checkouts carrying the same single-use code both pass validation. Only the first
+        // to complete may consume it; the rest fail like an unredeemable gift certificate.
+        const claim = await tx.discountCode.updateMany({
+          where: {
+            id: code.id,
+            ...(code.maxUses != null && { usedCount: { lt: code.maxUses } }),
+          },
           data: { usedCount: { increment: 1 } },
+        })
+        if (claim.count === 0) {
+          throw new Error(
+            `[Redeem] Discount code ${code.code} reached its usage limit before order ${orderId} completed`
+          )
+        }
+
+        // A loyalty reward code is now spent; stop offering it on the rewards page.
+        await tx.rewardRedemption.updateMany({
+          where: { discountCode: code.code, status: 'ACTIVE' },
+          data: { status: 'USED', usedAt: new Date() },
         })
       }
     } else {
