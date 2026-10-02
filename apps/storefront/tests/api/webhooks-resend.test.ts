@@ -155,6 +155,19 @@ describe('POST /api/webhooks/resend', () => {
     })
   })
 
+  describe('matching the message', () => {
+    it('updates only the log for the message the event is about', async () => {
+      await POST(webhook({ type: 'email.opened', data: { email_id: 're_123', to: ['reader@example.com'] } }))
+
+      expect(emailLogUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ metadata: { path: ['messageId'], equals: 're_123' } }),
+        })
+      )
+      expect(emailLogUpdateMany.mock.calls[0][0].where).not.toHaveProperty('recipientEmail')
+    })
+  })
+
   describe('malformed and hostile input', () => {
     it('reads the recipient from the `to` array Resend actually sends', async () => {
       await POST(

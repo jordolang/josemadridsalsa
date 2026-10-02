@@ -15,6 +15,7 @@ const field = (max: number) => z.string().trim().max(max).optional().default('')
 const contactSchema = z
   .object({
     fundraiserSlug: z.string().trim().min(1).max(200),
+    blockIndex: z.number().int().min(0).max(29).optional(),
     name: field(100),
     email: z.union([z.literal(''), z.string().trim().email().max(320)]).optional().default(''),
     phone: field(40),
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return fail(`Validation error: ${parsed.error.issues[0].message}`)
     }
-    const { fundraiserSlug, name, email, phone, organization, message } = parsed.data
+    const { fundraiserSlug, blockIndex, name, email, phone, organization, message } = parsed.data
 
     const fundraiser = await prisma.fundraiser.findUnique({
       where: { slug: fundraiserSlug },
@@ -62,9 +63,9 @@ export async function POST(req: NextRequest) {
     if (!fundraiser) return fail('Fundraiser not found', 404)
 
     const config = validatePageConfig(fundraiser.pageConfig)
-    const formBlock = config.success
-      ? config.data.blocks.find((b) => b.type === 'contact_form')
-      : undefined
+    // A page may hold several forms with different recipients; use the one that was submitted.
+    const formBlock =
+      config.success && blockIndex !== undefined ? config.data.blocks[blockIndex] : undefined
     const recipient =
       (formBlock?.type === 'contact_form' && formBlock.recipientEmail) || fundraiser.contactEmail
 

@@ -346,8 +346,9 @@ the root `package.json` is canonical.
 ### Fixed
 - **POS cash sales are recorded.** Cash checkout used to invent an order number in the browser and
   write nothing. `POST /api/pos/cash-sale` (`lib/pos/cash-sale.ts`) now creates the paid order, a
-  cash `Payment` and the stock deduction in one transaction, refusing a short tender or a total that
-  doesn't match the items.
+  cash `Payment` and the stock deduction in one transaction. Lines are priced from the product
+  records; a short tender or a stale total is refused. Each payment carries an `attemptId`, so a
+  retried request returns the recorded sale instead of a second one.
 - **Fundraiser page contact form delivers messages.** The route was a TODO that reported success.
   Messages are now stored as a `ContactSubmission` and emailed to the campaign; the recipient comes
   from the saved page config (or the fundraiser's contact email), never from the request.
@@ -355,7 +356,8 @@ the root `package.json` is canonical.
   route that only accepted `PUT`; the route now accepts both.
 - **Resend webhook records bounces and complaints.** Recipients arrive as plain strings, not
   `{ email }` objects, so every event exited early; bounce type is now compared case-insensitively,
-  so Resend's `Permanent` files as a hard bounce.
+  so Resend's `Permanent` files as a hard bounce. Sends now record Resend's message id, and delivery, open and click
+  events update only that message's log rather than every log for the address.
 - **"Shop by heat" links filter.** Header and homepage links sent `?heat=mild`; they now send
   `?heatLevel=MILD`, which the products page reads.
 - **Dead links.** Stripe's `return_url` pointed to the missing `/orders/{id}` (now

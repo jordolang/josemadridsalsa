@@ -34,14 +34,17 @@ beforeEach(() => {
     pageConfig: {
       version: 1,
       theme: 'default',
-      blocks: [{ type: 'contact_form', fields: ['name', 'email', 'message'], recipientEmail: 'booster@example.com' }],
+      blocks: [
+        { type: 'contact_form', fields: ['name', 'email', 'message'], recipientEmail: 'booster@example.com' },
+        { type: 'contact_form', fields: ['name', 'message'], recipientEmail: 'sponsors@example.com' },
+      ],
     },
   })
 })
 
 describe('POST /api/fundraiser-portal/contact', () => {
   it('stores the message and emails the recipient from the saved page config', async () => {
-    const res = await post({ fundraiserSlug: 'band', name: 'Ana', email: 'ana@example.com', message: 'Hi' })
+    const res = await post({ fundraiserSlug: 'band', blockIndex: 0, name: 'Ana', email: 'ana@example.com', message: 'Hi' })
 
     expect(res.status).toBe(201)
     expect(submissionCreate).toHaveBeenCalledWith({
@@ -50,6 +53,12 @@ describe('POST /api/fundraiser-portal/contact', () => {
     expect(sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'booster@example.com', replyTo: 'ana@example.com' })
     )
+  })
+
+  it('sends to the form that was submitted when a page has several', async () => {
+    await post({ fundraiserSlug: 'band', blockIndex: 1, message: 'Sponsor us?' })
+
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'sponsors@example.com' }))
   })
 
   it('ignores a recipient supplied by the browser', async () => {

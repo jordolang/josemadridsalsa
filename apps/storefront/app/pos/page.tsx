@@ -56,6 +56,8 @@ interface CheckoutState {
   orderNumber: string | null
   cashTendered: number | null
   changeAmount: number | null
+  /** One per cash payment, reused on retry so a lost response can't record the sale twice. */
+  attemptId: string | null
   error: string | null
 }
 
@@ -66,6 +68,7 @@ const INITIAL_CHECKOUT_STATE: CheckoutState = {
   orderNumber: null,
   cashTendered: null,
   changeAmount: null,
+  attemptId: null,
   error: null,
 }
 
@@ -236,8 +239,11 @@ export default function POSPage() {
 
   // --- Payment flow ---
 
+  // Placeholder products have no database records, so a sale of one could never be recorded.
+  const usingFallbackProducts = products === FALLBACK_PRODUCTS
+
   function handleChargeClick() {
-    if (cart.length === 0) return
+    if (cart.length === 0 || usingFallbackProducts) return
     setCheckout({
       ...INITIAL_CHECKOUT_STATE,
       status: 'selecting_payment',
@@ -258,6 +264,7 @@ export default function POSPage() {
       ...prev,
       paymentMethod: 'cash',
       status: 'cash_tendered',
+      attemptId: crypto.randomUUID(),
     }))
   }
 
@@ -272,16 +279,11 @@ export default function POSPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cart.map((item) => ({
-            productId: item.id,
-            name: item.name,
-            sku: item.sku,
-            price: item.price,
-            quantity: item.quantity,
-          })),
+          items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
           total: totalCents,
           taxAmount: taxCents,
           tendered: Math.round(tendered * 100),
+          attemptId: checkout.attemptId,
         }),
       })
       const body = await res.json().catch(() => ({}))
@@ -652,11 +654,16 @@ export default function POSPage() {
 
           <Button
             className="mt-4 h-14 w-full text-lg font-semibold bg-salsa-500 hover:bg-salsa-600"
-            disabled={cart.length === 0 || showOverlay}
+            disabled={cart.length === 0 || showOverlay || usingFallbackProducts}
             onClick={handleChargeClick}
           >
             Charge {cart.length > 0 ? formatPrice(total) : ''}
           </Button>
+          {usingFallbackProducts && !productsLoading && (
+            <p className="mt-2 text-center text-sm text-red-600">
+              Products could not be loaded. Reload the page to take payments.
+            </p>
+          )}
         </div>
 
         {/* Checkout overlay */}

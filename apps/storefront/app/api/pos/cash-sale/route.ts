@@ -8,9 +8,6 @@ const CashSaleSchema = z.object({
     .array(
       z.object({
         productId: z.string(),
-        name: z.string(),
-        sku: z.string().optional(),
-        price: z.number().positive(),
         quantity: z.number().int().positive(),
       })
     )
@@ -18,11 +15,13 @@ const CashSaleSchema = z.object({
   total: z.number().int().positive(),
   taxAmount: z.number().int().min(0).optional().default(0),
   tendered: z.number().int().positive(),
+  attemptId: z.string().uuid(),
 })
 
 /**
  * POST /api/pos/cash-sale
  * Records a completed cash sale: order, payment and stock deduction. Amounts are cents.
+ * Prices come from the product records; `attemptId` makes a retried request return the same sale.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,18 +35,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, total, taxAmount, tendered } = parsed.data
+    const { items, total, taxAmount, tendered, attemptId } = parsed.data
     const result = await recordCashSale({
-      items: items.map((item) => ({
-        productId: item.productId,
-        name: item.name,
-        sku: item.sku,
-        unitPriceCents: Math.round(item.price * 100),
-        quantity: item.quantity,
-      })),
+      items,
       taxCents: taxAmount,
       totalCents: total,
       tenderedCents: tendered,
+      attemptId,
       userId: user.id,
     })
 

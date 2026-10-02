@@ -128,6 +128,7 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
         <BlockRenderer
           key={`${block.type}-${index}`}
           block={block}
+          blockIndex={index}
           fundraiser={fundraiserWithStore}
         />
       ))}

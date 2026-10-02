@@ -5,12 +5,13 @@ import type { ContactFormBlock as ContactFormBlockType } from '@/lib/fundraiser-
 
 type Props = {
   block: ContactFormBlockType
+  blockIndex: number
   fundraiserSlug: string
 }
 
 type FormData = Record<string, string>
 
-export function ContactFormBlock({ block, fundraiserSlug }: Props) {
+export function ContactFormBlock({ block, blockIndex, fundraiserSlug }: Props) {
   const { title, fields, submitLabel } = block
   const [formData, setFormData] = useState<FormData>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -29,7 +30,7 @@ export function ContactFormBlock({ block, fundraiserSlug }: Props) {
       const res = await fetch('/api/fundraiser-portal/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, fundraiserSlug }),
+        body: JSON.stringify({ ...formData, fundraiserSlug, blockIndex }),
       })
       if (res.ok) {
         setSubmitted(true)
