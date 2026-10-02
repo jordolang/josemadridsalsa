@@ -140,7 +140,7 @@ sandbox Terminal) before the first show.
 
 ## The iPad app
 
-`apps/ios-kiosk` is a Swift app (`net.josemadrid.kiosk`, iPadOS 16+) with the same
+`apps/ios-kiosk` is a Swift app (`net.josemadrid.kiosk`, iPadOS 17.1+) with the same
 `window.JMKiosk` bridge. The project is generated from `project.yml` with XcodeGen;
 the header of `project.yml` holds the full build, sign and install steps.
 
@@ -156,6 +156,32 @@ the header of `project.yml` holds the full build, sign and install steps.
   and triple-click the top button. The staff menu is the same 3-second press in the
   top-right corner, then the PIN.
 
+### Card payments on a Square Reader
+
+The iPad can take cards on a Bluetooth Square Reader instead of a Square Terminal,
+through Square's Mobile Payments SDK (2.6.0). Square only allows this on an attended
+kiosk, so a staff member must be present for every sale.
+
+1. **Connect Square once.** In *Admin → Settings → Payments*, click **Connect Square**
+   and sign in with the Square account the kiosk sells for. The SDK only accepts an
+   OAuth token in production, not `SQUARE_ACCESS_TOKEN`; the tokens are stored
+   encrypted with `MASTER_KEY` and refreshed before their 30-day expiry
+   (`lib/square/oauth.ts`). The redirect URL
+   `https://www.josemadrid.net/api/admin/square/oauth/callback` must be registered on
+   the Square app's OAuth page.
+2. **Pair the reader.** Staff menu → **Card reader**, then follow Square's screens. The
+   staff menu shows *Card reader: ready* once it is paired and signed in.
+
+During a sale the kiosk creates the order (`method: "reader"`), the iPad takes the card
+with Square's own payment screen, and the server confirms the payment with Square
+before marking the order paid (`POST /api/kiosk/checkout/reader/{orderId}`). The iPad
+only ever receives the OAuth token through `/api/kiosk/square/authorization`, which
+requires a device token.
+
+To test against the sandbox, set `SQUARE_APPLICATION_ID_OVERRIDE` in
+`Config/Signing.xcconfig` to the sandbox application ID. The app then offers Square's
+simulated reader.
+
 ## Configuration
 
 | Variable | Purpose |
@@ -164,6 +190,8 @@ the header of `project.yml` holds the full build, sign and install steps.
 | `SQUARE_ACCESS_TOKEN` | Square API access (shared with the POS) |
 | `SQUARE_TERMINAL_DEVICE_ID` | The Square Terminal the kiosk charges |
 | `SQUARE_SANDBOX` | `false` for real charges; anything else uses the Square sandbox |
+| `SQUARE_APPLICATION_ID` | The Square app the iPad's card reader connects through |
+| `SQUARE_APPLICATION_SECRET` | That app's OAuth secret, for **Connect Square** |
 
 ## Related
 

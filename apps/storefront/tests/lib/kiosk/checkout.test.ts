@@ -2,12 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const findMany = vi.fn()
 const createTerminalCheckout = vi.fn()
+const createReaderOrder = vi.fn()
 
 vi.mock('@/lib/prisma', () => ({ default: { product: { findMany: (...a: unknown[]) => findMany(...a) } } }))
 vi.mock('@/lib/pos/terminal-checkout', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/pos/terminal-checkout')>()
   return { ...actual, createTerminalCheckout: (...a: unknown[]) => createTerminalCheckout(...a) }
 })
+
+vi.mock('@/lib/pos/reader-checkout', () => ({ createReaderOrder: (...a: unknown[]) => createReaderOrder(...a) }))
 
 import { KioskCartSchema, startKioskCheckout } from '@/lib/kiosk/checkout'
 import { TerminalCheckoutError } from '@/lib/pos/terminal-checkout'
@@ -20,6 +23,7 @@ const products = [
 beforeEach(() => {
   findMany.mockResolvedValue(products)
   createTerminalCheckout.mockReset().mockResolvedValue({ checkoutId: 'chk_1', orderId: 'o1', orderNumber: 'KIOSK-1' })
+  createReaderOrder.mockReset().mockResolvedValue({ orderId: 'o7', alreadyPaid: false })
 })
 
 describe('startKioskCheckout', () => {
@@ -74,6 +78,30 @@ describe('startKioskCheckout', () => {
       TerminalCheckoutError
     )
     expect(createTerminalCheckout).not.toHaveBeenCalled()
+  })
+})
+
+describe('startKioskCheckout on the iPad card reader', () => {
+  it('records the priced order for the reader and never touches the Terminal', async () => {
+    const attemptId = '11111111-2222-4333-8444-555555555555'
+    const result = await startKioskCheckout({ items: [{ key: 'mango-habanero', quantity: 4 }], attemptId, method: 'reader' })
+
+    expect(createTerminalCheckout).not.toHaveBeenCalled()
+    expect(createReaderOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalCents: 3200,
+        taxCents: 0,
+        orderPrefix: 'KIOSK',
+        // The same attempt always lands on the same order number, so a retry finds it.
+        orderNumber: 'KIOSK-111111112222',
+        items: [expect.objectContaining({ productId: 'p-mango', unitPriceCents: 1000, quantity: 4 })],
+      })
+    )
+    expect(result).toMatchObject({ checkoutId: 'o7', orderId: 'o7', alreadyPaid: false, quote: { totalCents: 3200 } })
+  })
+
+  it('defaults to the Terminal when the device sends no method', () => {
+    expect(KioskCartSchema.parse({ items: [{ key: 'mango-habanero', quantity: 1 }] }).method).toBe('terminal')
   })
 })
 

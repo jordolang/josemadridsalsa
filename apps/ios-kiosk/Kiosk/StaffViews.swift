@@ -209,6 +209,7 @@ struct PinView: View {
 /// What staff can do after the PIN: reload the page, test the printer, change settings.
 struct StaffMenu: View {
     @ObservedObject private var hub = PrinterHub.shared
+    @ObservedObject private var reader = SquareCardReader.shared
     let reload: () -> Void
     let settings: () -> Void
     let close: () -> Void
@@ -219,6 +220,14 @@ struct StaffMenu: View {
             Text("Staff menu").font(.system(size: 40, weight: .black)).foregroundStyle(Color.cream)
             Text(hub.status.name.isEmpty ? "No printer" : "\(hub.status.name): \(hub.status.connected ? "ready" : "not reachable")")
                 .foregroundStyle(hub.status.connected ? Color.amber : Color.chili)
+            Text("Card reader: \(reader.state.label)\(reader.isSandbox ? " (Square sandbox)" : "")")
+                .foregroundStyle(reader.state == .ready ? Color.amber : Color.chili)
+            menuButton("Card reader") {
+                Task { @MainActor in
+                    guard let top = UIApplication.shared.topViewController else { return }
+                    message = await reader.presentReaderSettings(from: top)
+                }
+            }
             menuButton("Reload kiosk", action: reload)
             menuButton("Printer test") {
                 Task {

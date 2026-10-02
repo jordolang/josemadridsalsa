@@ -1,13 +1,16 @@
 /**
  * Kiosk sales: the tablet sends flavors and quantities, never prices. The server prices
- * the cart from the booth sign (lib/kiosk/pricing) and hands it to the shared Square
- * Terminal checkout. Kiosk sales carry no sales tax: Ohio exempts grocery food like salsa.
+ * the cart from the booth sign (lib/kiosk/pricing) and either hands it to the shared Square
+ * Terminal checkout, or — on the iPad with a Square Reader — records the order and lets the
+ * iPad take the card (lib/pos/reader-checkout). Kiosk sales carry no sales tax: Ohio exempts
+ * grocery food like salsa.
  */
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { KIOSK_FLAVORS, matchKioskProducts } from '@/lib/kiosk/catalog'
 import { JAR_PRICE_CENTS, dealLabel, quoteJars } from '@/lib/kiosk/pricing'
-import { TerminalCheckoutError, createTerminalCheckout } from '@/lib/pos/terminal-checkout'
+import { TerminalCheckoutError, createTerminalCheckout, inPersonOrderNumber } from '@/lib/pos/terminal-checkout'
+import { createReaderOrder } from '@/lib/pos/reader-checkout'
 
 const MAX_JARS = 120
 
@@ -23,9 +26,15 @@ export const KioskCartSchema = z.object({
     .max(KIOSK_FLAVORS.length),
   /** Reused across retries of one payment so a lost response can't start a second charge. */
   attemptId: z.string().uuid().optional(),
+  /**
+   * `terminal`: send the total to the Square Terminal. `reader`: the iPad takes the card on
+   * its paired Square Reader, so only the order is created here.
+   */
+  method: z.enum(['terminal', 'reader']).default('terminal'),
 })
 
-export type KioskCart = z.infer<typeof KioskCartSchema>
+/** The cart as sent; `method` may be left out and means the Square Terminal. */
+export type KioskCart = z.input<typeof KioskCartSchema>
 
 export async function loadKioskCatalog() {
   const products = await prisma.product.findMany({
@@ -56,7 +65,7 @@ export async function startKioskCheckout(cart: KioskCart) {
   const quote = quoteJars(jars)
   const notes = ['Self-order kiosk', dealLabel(quote.deals), quote.freeChips ? `${quote.freeChips} free bag(s) of chips` : '']
 
-  const checkout = await createTerminalCheckout({
+  const sale = {
     items: lines.map(({ flavor, quantity }) => ({
       productId: flavor.productId as string,
       name: flavor.name,
@@ -66,10 +75,17 @@ export async function startKioskCheckout(cart: KioskCart) {
     })),
     discountCents: quote.savingsCents,
     totalCents: quote.totalCents,
-    orderPrefix: 'KIOSK',
-    attemptId: cart.attemptId,
+    orderPrefix: 'KIOSK' as const,
     adminNotes: notes.filter(Boolean).join(' · '),
-  })
+  }
 
+  if (cart.method === 'reader') {
+    const orderNumber = inPersonOrderNumber('KIOSK', cart.attemptId)
+    const { orderId, alreadyPaid } = await createReaderOrder({ ...sale, taxCents: 0, orderNumber })
+    // The order id doubles as the checkout id the page tracks the payment by.
+    return { checkoutId: orderId, orderId, orderNumber, alreadyPaid, quote }
+  }
+
+  const checkout = await createTerminalCheckout({ ...sale, attemptId: cart.attemptId })
   return { ...checkout, quote }
 }

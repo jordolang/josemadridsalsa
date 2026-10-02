@@ -2,12 +2,14 @@ import Combine
 import UIKit
 import WebKit
 
-/// Full-screen web view showing the kiosk page, plus the `window.JMKiosk` bridge the page prints through.
+/// Full-screen web view showing the kiosk page, plus the `window.JMKiosk` bridge the page prints and
+/// takes card payments through.
 final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     private var webView: KioskWebView!
     private let offline = OfflineView()
     private var retryTimer: Timer?
     private var statusSub: AnyCancellable?
+    private var readerSub: AnyCancellable?
     var onStaffGesture: (() -> Void)?
 
     private var settings: KioskSettings { .shared }
@@ -24,6 +26,7 @@ final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUI
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.userContentController.add(WeakHandler(self), name: "jmkioskPrint")
+        config.userContentController.add(WeakHandler(self), name: "jmkioskPay")
 
         webView = KioskWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
@@ -61,6 +64,9 @@ final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUI
         corner.addGestureRecognizer(hold)
 
         statusSub = PrinterHub.shared.$status.sink { [weak self] _ in
+            DispatchQueue.main.async { self?.pushStatus() }
+        }
+        readerSub = SquareCardReader.shared.$state.sink { [weak self] _ in
             DispatchQueue.main.async { self?.pushStatus() }
         }
         reload()
@@ -109,6 +115,7 @@ final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUI
         (function () {
           if (location.origin !== \(js(settings.origin ?? ""))) return;
           var status = { connected: \(status.connected), name: \(js(status.name)), permission: true };
+          var reader = \(cardReaderJSON());
           window.JMKiosk = {
             getDeviceToken: function () { return \(js(settings.deviceToken)); },
             getAppVersion: function () { return \(js(version)); },
@@ -118,7 +125,15 @@ final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUI
               window.webkit.messageHandlers.jmkioskPrint.postMessage(String(json));
               return 'ok';
             },
-            __setStatus: function (s) { status = s; }
+            __setStatus: function (s) { status = s; },
+            cardReaderStatus: function () { return JSON.stringify(reader); },
+            takeCardPayment: function (json) {
+              if (!reader.available) return 'error: card payments are not set up on this kiosk';
+              window.webkit.messageHandlers.jmkioskPay.postMessage(String(json));
+              return 'ok';
+            },
+            __setCardReader: function (r) { reader = r; },
+            __cardResult: function (r) { window.dispatchEvent(new CustomEvent('jmkiosk:card-result', { detail: r })); }
           };
         })();
         """
@@ -130,12 +145,56 @@ final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUI
         let payload = (try? JSONSerialization.data(withJSONObject: ["connected": s.connected, "name": s.name, "permission": true]))
             .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
         webView.evaluateJavaScript("window.JMKiosk && window.JMKiosk.__setStatus(\(payload))")
+        webView.evaluateJavaScript("window.JMKiosk && window.JMKiosk.__setCardReader(\(cardReaderJSON()))")
+    }
+
+    /// What the page sees of the card reader: whether it can take cards right now.
+    private func cardReaderJSON() -> String {
+        let reader = SquareCardReader.shared
+        let object: [String: Any] = [
+            "available": reader.state != .unavailable,
+            "ready": reader.state == .ready,
+            "sandbox": reader.isSandbox,
+            "state": reader.state.label,
+        ]
+        return (try? JSONSerialization.data(withJSONObject: object)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+    }
+
+    /// A payment the page asked for: `{ amountCents, referenceId, note }`. The result goes back
+    /// as a `jmkiosk:card-result` event carrying the same referenceId.
+    private func takeCardPayment(_ json: String) {
+        struct Request: Decodable {
+            let amountCents: Int
+            let referenceId: String
+            let note: String?
+        }
+        guard let request = try? JSONDecoder().decode(Request.self, from: Data(json.utf8)) else {
+            return sendCardResult(["status": "failed", "error": "Bad payment request"], referenceId: "")
+        }
+        Task { @MainActor in
+            let result = await SquareCardReader.shared.takePayment(
+                amountCents: request.amountCents,
+                referenceID: request.referenceId,
+                note: request.note ?? "",
+                from: self
+            )
+            sendCardResult(result.json, referenceId: request.referenceId)
+            focusWebView()
+        }
+    }
+
+    private func sendCardResult(_ result: [String: Any], referenceId: String) {
+        var payload = result
+        payload["referenceId"] = referenceId
+        let json = (try? JSONSerialization.data(withJSONObject: payload)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        webView.evaluateJavaScript("window.JMKiosk && window.JMKiosk.__cardResult(\(json))")
     }
 
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
         let origin = message.frameInfo.securityOrigin
         let messageOrigin = origin.port == 0 ? "\(origin.protocol)://\(origin.host)" : "\(origin.protocol)://\(origin.host):\(origin.port)"
         guard message.frameInfo.isMainFrame, messageOrigin == settings.origin, let json = message.body as? String else { return }
+        if message.name == "jmkioskPay" { return takeCardPayment(json) }
         do {
             let receipt = try JSONDecoder().decode(Receipt.self, from: Data(json.utf8))
             Task { @MainActor in

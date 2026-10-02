@@ -8,10 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		0AE56F73CDEE95C4B21068A0 /* StaffViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DEEA09EF05138C8208F92F5 /* StaffViews.swift */; };
+		164E8043643636219215607C /* SquareCardReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 713FFAFB22F60CB3BB79F5E7 /* SquareCardReader.swift */; };
+		1FC31D48465E51F039A47D86 /* MockReaderUI in Frameworks */ = {isa = PBXBuildFile; productRef = 54B4A7A963B24A7399692141 /* MockReaderUI */; };
 		3344971262BAA2132BAE582B /* StarReceiptPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9661FA7DE32825A24F0AE461 /* StarReceiptPrinter.swift */; };
 		36EA286863507DC182191245 /* ReceiptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31010A2ABBDE9BC6D92BD3A1 /* ReceiptTests.swift */; };
 		38BFE85AF4A77FAFA1CFC66E /* ReceiptPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D55D7341BD4EC3CC92F799 /* ReceiptPrinter.swift */; };
 		40BD19AFF7579334A337D300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D34E9EF9ABBDFB1FECEC8864 /* Assets.xcassets */; };
+		6E97EFE5352A672B77C2FF26 /* SquareMobilePaymentsSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 8B50827057F6A1D09CE0D56E /* SquareMobilePaymentsSDK */; };
 		72F4BF138A6DA622B5C8BBE7 /* BluetoothPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E33C2F0C171F2D091DF77488 /* BluetoothPrinter.swift */; };
 		7F5A3413B3866E41CE7FDF5B /* KioskWebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A6B97E300819D06A4ECF71 /* KioskWebViewController.swift */; };
 		953EB4C3A1FFD43662440FB2 /* Receipt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FAD88A816661480CD84375 /* Receipt.swift */; };
@@ -38,6 +41,7 @@
 		3F85E17BF51368F547243700 /* AirPrintPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPrintPrinter.swift; sourceTree = "<group>"; };
 		6EC4A0EF242326CE3A42093F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		70BE418FA4549D7B442981D0 /* KioskSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskSettings.swift; sourceTree = "<group>"; };
+		713FFAFB22F60CB3BB79F5E7 /* SquareCardReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquareCardReader.swift; sourceTree = "<group>"; };
 		73A6B97E300819D06A4ECF71 /* KioskWebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskWebViewController.swift; sourceTree = "<group>"; };
 		7519DE349EDCD1CC710597DE /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		89FAD88A816661480CD84375 /* Receipt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Receipt.swift; sourceTree = "<group>"; };
@@ -57,6 +61,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D980C258FF8388CDF8EA0726 /* StarIO10 in Frameworks */,
+				6E97EFE5352A672B77C2FF26 /* SquareMobilePaymentsSDK in Frameworks */,
+				1FC31D48465E51F039A47D86 /* MockReaderUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -89,9 +95,18 @@
 				73A6B97E300819D06A4ECF71 /* KioskWebViewController.swift */,
 				89FAD88A816661480CD84375 /* Receipt.swift */,
 				2DEEA09EF05138C8208F92F5 /* StaffViews.swift */,
+				45BFD82A5D7F6981B14598B4 /* Payments */,
 				F016941F44353857741466A9 /* Printers */,
 			);
 			path = Kiosk;
+			sourceTree = "<group>";
+		};
+		45BFD82A5D7F6981B14598B4 /* Payments */ = {
+			isa = PBXGroup;
+			children = (
+				713FFAFB22F60CB3BB79F5E7 /* SquareCardReader.swift */,
+			);
+			path = Payments;
 			sourceTree = "<group>";
 		};
 		C7C2DF53DF653299C6AEDD08 = {
@@ -135,6 +150,7 @@
 				A48FD826C1A3CF91E31244B1 /* Sources */,
 				2B983C7F8C28225DABEBD08F /* Resources */,
 				CE7FEF3FC8623D109AFD6AE0 /* Frameworks */,
+				F9B3C4159A9BD88FD82D72B9 /* Square Mobile Payments SDK setup */,
 			);
 			buildRules = (
 			);
@@ -143,6 +159,8 @@
 			name = JoseMadridKiosk;
 			packageProductDependencies = (
 				ECC781735EED2844B8FFA700 /* StarIO10 */,
+				8B50827057F6A1D09CE0D56E /* SquareMobilePaymentsSDK */,
+				54B4A7A963B24A7399692141 /* MockReaderUI */,
 			);
 			productName = JoseMadridKiosk;
 			productReference = D55173295C918788DAF2747E /* JoseMadridKiosk.app */;
@@ -190,6 +208,7 @@
 			mainGroup = C7C2DF53DF653299C6AEDD08;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				C6FAC5AC94A26C5EE2DBD5AC /* XCRemoteSwiftPackageReference "mobile-payments-sdk-ios" */,
 				BDA1BFE0C53E590B567B8DFB /* XCRemoteSwiftPackageReference "StarXpand-SDK-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -214,6 +233,28 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		F9B3C4159A9BD88FD82D72B9 /* Square Mobile Payments SDK setup */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Square Mobile Payments SDK setup";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "SETUP=\"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/SquareMobilePaymentsSDK.framework/setup\"\nif [ -x \"$SETUP\" ]; then \"$SETUP\"; else echo \"warning: $SETUP not found\"; fi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		A48FD826C1A3CF91E31244B1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -227,6 +268,7 @@
 				A50EB4F92D85AF4F7700C290 /* NetworkPrinter.swift in Sources */,
 				953EB4C3A1FFD43662440FB2 /* Receipt.swift in Sources */,
 				38BFE85AF4A77FAFA1CFC66E /* ReceiptPrinter.swift in Sources */,
+				164E8043643636219215607C /* SquareCardReader.swift in Sources */,
 				0AE56F73CDEE95C4B21068A0 /* StaffViews.swift in Sources */,
 				3344971262BAA2132BAE582B /* StarReceiptPrinter.swift in Sources */,
 			);
@@ -257,6 +299,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Kiosk/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -265,6 +308,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = net.josemadrid.kiosk;
 				PRODUCT_NAME = JoseMadridKiosk;
 				SDKROOT = iphoneos;
+				SQUARE_APPLICATION_ID = "$(SQUARE_APPLICATION_ID_OVERRIDE:default=sq0idp-yOtCWDhACLrw1cjKHPNFNA)";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				TARGETED_DEVICE_FAMILY = 2;
@@ -352,7 +396,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.1;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -370,6 +414,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Kiosk/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -378,6 +423,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = net.josemadrid.kiosk;
 				PRODUCT_NAME = JoseMadridKiosk;
 				SDKROOT = iphoneos;
+				SQUARE_APPLICATION_ID = "$(SQUARE_APPLICATION_ID_OVERRIDE:default=sq0idp-yOtCWDhACLrw1cjKHPNFNA)";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				TARGETED_DEVICE_FAMILY = 2;
@@ -437,7 +483,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.1;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -491,9 +537,27 @@
 				version = 2.9.0;
 			};
 		};
+		C6FAC5AC94A26C5EE2DBD5AC /* XCRemoteSwiftPackageReference "mobile-payments-sdk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/square/mobile-payments-sdk-ios";
+			requirement = {
+				kind = exactVersion;
+				version = 2.6.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		54B4A7A963B24A7399692141 /* MockReaderUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6FAC5AC94A26C5EE2DBD5AC /* XCRemoteSwiftPackageReference "mobile-payments-sdk-ios" */;
+			productName = MockReaderUI;
+		};
+		8B50827057F6A1D09CE0D56E /* SquareMobilePaymentsSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6FAC5AC94A26C5EE2DBD5AC /* XCRemoteSwiftPackageReference "mobile-payments-sdk-ios" */;
+			productName = SquareMobilePaymentsSDK;
+		};
 		ECC781735EED2844B8FFA700 /* StarIO10 */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BDA1BFE0C53E590B567B8DFB /* XCRemoteSwiftPackageReference "StarXpand-SDK-iOS" */;

@@ -22,7 +22,8 @@ name: JoseMadridKiosk
 options:
   bundleIdPrefix: net.josemadrid
   deploymentTarget:
-    iOS: "16.0"
+    # Square's Mobile Payments SDK needs iOS 17.1.
+    iOS: "17.1"
   createIntermediateGroups: true
 
 configFiles:
@@ -33,6 +34,11 @@ packages:
   StarIO10:
     url: https://github.com/star-micronics/StarXpand-SDK-iOS
     exactVersion: 2.9.0
+  # Card payments on a Bluetooth Square Reader. MockReaderUI is a simulated reader for
+  # Square's sandbox; the app only shows it when signed in to a sandbox account.
+  SquareMobilePaymentsSDK:
+    url: https://github.com/square/mobile-payments-sdk-ios
+    exactVersion: 2.6.0
 
 settings:
   base:
@@ -47,6 +53,18 @@ targets:
     sources: [Kiosk]
     dependencies:
       - package: StarIO10
+      - package: SquareMobilePaymentsSDK
+        product: SquareMobilePaymentsSDK
+      - package: SquareMobilePaymentsSDK
+        product: MockReaderUI
+    # Square's SDK must run its setup script as the last build phase, outside the
+    # script sandbox (ENABLE_USER_SCRIPT_SANDBOXING below).
+    postBuildScripts:
+      - name: Square Mobile Payments SDK setup
+        script: |
+          SETUP="${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/SquareMobilePaymentsSDK.framework/setup"
+          if [ -x "$SETUP" ]; then "$SETUP"; else echo "warning: $SETUP not found"; fi
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_NAME: JoseMadridKiosk
@@ -57,6 +75,10 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # Square's application id. Not a secret; it identifies the app to Square. Set
+        # SQUARE_APPLICATION_ID_OVERRIDE in Config/Signing.xcconfig to use a sandbox app instead.
+        SQUARE_APPLICATION_ID: $(SQUARE_APPLICATION_ID_OVERRIDE:default=sq0idp-yOtCWDhACLrw1cjKHPNFNA)
 
   JoseMadridKioskTests:
     type: bundle.unit-test
