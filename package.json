@@ -39,6 +39,8 @@
     "prepare": "husky install"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "5.0.1",
+    "@vitest/ui": "5.0.1",
     "husky": "^8.0.3",
     "turbo": "^2.5.4",
     "vitest": "5.0.1"

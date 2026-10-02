@@ -341,7 +341,8 @@ the root `package.json` is canonical.
 - **Tests run on vitest 5 again.** The vitest 5 bump left `@vitest/coverage-v8` and `@vitest/ui` on
   4.x, which pulled in a second vitest that the test setup extended; every `rejects.toThrow()`
   then failed (70 tests in CI). Both are pinned to the same vitest, vitest is declared once at the
-  root so all workspaces share it, and `vite` (its peer) is listed explicitly.
+  root, with its coverage and UI add-ons, so all workspaces share one copy; `vite` (its peer) is
+  listed explicitly.
 - **A kiosk retry can't start a second charge.** The tablet sends a per-payment attempt id, reused
   only when a request got no answer; it becomes the Square idempotency key and fixes the order
   number, so a retry finds the checkout already on the Terminal.
