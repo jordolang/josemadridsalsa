@@ -103,11 +103,12 @@ function readDedupeKey(triggerData: unknown): string | null {
  * Always checked, not only when the builder's "stop on unsubscribe" switch is on: the suppression
  * list holds hard bounces and spam complaints, and mailing those is never an admin's choice.
  * Automation series are marketing, so a `marketing` category opt-out applies to all of them;
- * a series that has its own category (the unsubscribe form's `reengagement`, the built-in cart
- * sequence's `abandoned_cart`) honours that one too.
+ * a series that has its own category (the unsubscribe form's `reengagement` and `newsletter`, the
+ * built-in cart sequence's `abandoned_cart`) honours that one too.
  */
 const EXTRA_OPT_OUT_CATEGORY: Partial<Record<string, string>> = {
   REENGAGEMENT: 'reengagement',
+  SUBSCRIPTION_CREATED: 'newsletter',
   ABANDONED_CART: 'abandoned_cart',
 }
 
@@ -118,12 +119,21 @@ async function isOptedOut(email: string, trigger: string): Promise<boolean> {
   return checkUnsubscribed({ email: email.trim().toLowerCase(), category })
 }
 
-/** Has this address paid for an order since the enrollment started? */
+/**
+ * Has this address paid for an order since the enrollment started?
+ *
+ * Measured by when the payment landed, not when the order was created: checkout creates the order
+ * before payment, so an abandoned-cart enrollment can start between the two and the shopper then
+ * pays for that same, older order.
+ */
 async function hasPurchasedSince(email: string, since: Date): Promise<boolean> {
   const order = await prisma.order.findFirst({
     where: {
       paymentStatus: { in: PAID_PAYMENT_STATUSES },
-      createdAt: { gt: since },
+      AND: [
+        // Orders recorded without a Payment row (imports, manual entries) fall back to createdAt.
+        { OR: [{ payments: { some: { status: 'SUCCEEDED', paidAt: { gt: since } } } }, { createdAt: { gt: since } }] },
+      ],
       OR: [
         { guestEmail: { equals: email, mode: 'insensitive' } },
         { user: { email: { equals: email, mode: 'insensitive' } } },

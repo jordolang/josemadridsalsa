@@ -25,13 +25,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
     }
 
-    // Rate limit
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-    const { allowed } = checkRateLimit(`unsub:${ip}`, { maxRequests: 10, windowMs: 60_000 })
-    if (!allowed) {
-      return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
-    }
-
     // RFC 8058 one-click: the mailbox provider POSTs a form body to the List-Unsubscribe URL,
     // which carries the address and its signed token. No page, no JSON, so handle it first.
     if (request.headers.get('content-type')?.includes('application/x-www-form-urlencoded')) {
@@ -45,12 +38,23 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid unsubscribe link.' }, { status: 400 })
       }
       const oneClickEmail = oneClick.data.email.trim().toLowerCase()
+      // Keyed by recipient, not IP: Gmail and Yahoo send these from shared provider addresses, so
+      // an IP limit would refuse unrelated recipients' valid requests.
+      if (!checkRateLimit(`unsub-oneclick:${oneClickEmail}`, { maxRequests: 10, windowMs: 60_000 }).allowed) {
+        return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
+      }
       await prisma.unsubscribePreference.upsert({
         where: { email: oneClickEmail },
         create: { email: oneClickEmail, unsubscribeAll: true, unsubscribedFrom: [] },
         update: { unsubscribeAll: true, updatedAt: new Date() },
       })
       return NextResponse.json({ success: true })
+    }
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const { allowed } = checkRateLimit(`unsub:${ip}`, { maxRequests: 10, windowMs: 60_000 })
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
     }
 
     const payload = await request.json()

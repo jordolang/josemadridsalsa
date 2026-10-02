@@ -351,6 +351,14 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Email automations and shop sync, after #540's review.** A purchase stops an automation when its
+  payment lands after enrollment, so paying for an order begun before an abandoned-cart enrollment
+  now counts. Newsletter-triggered series honour the unsubscribe form's Newsletter opt-out. One-click
+  unsubscribes are rate-limited per recipient rather than per IP, since Gmail and Yahoo send them
+  from shared addresses. The re-engagement scan pages through its whole window instead of re-reading
+  the newest 500 orders each tick. Each refund of an order enrolls its own automation run. Facebook
+  catalog sync always upserts, so Shop and Marketplace exports of one product share its catalog
+  item. `.env.example` names the Merchant API, not the sunset Content API.
 - **28 dependency advisories closed.** Patched transitively through root `overrides` and in-place
   lockfile updates: undici (6.28.1, 7.29.1, 8.10.2), js-yaml (3.15.2, 4.3.2), `@grpc/grpc-js` 1.14.5
   and dompurify 3.4.16. Every patch release has the same dependencies as the version it replaces.

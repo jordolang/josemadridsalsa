@@ -349,6 +349,19 @@ describe('processDueAutomationSteps', () => {
     })
   })
 
+  it("honours the form's newsletter category for newsletter-triggered series", async () => {
+    enrollmentFindMany.mockResolvedValue([
+      enrollment({ automation: automation({ trigger: 'SUBSCRIPTION_CREATED' }) }),
+    ])
+
+    await processDueAutomationSteps()
+
+    expect(checkUnsubscribed).toHaveBeenCalledWith({
+      email: 'buyer@example.com',
+      category: ['marketing', 'newsletter'],
+    })
+  })
+
   it('stops the series once the recipient buys, when the automation says to', async () => {
     enrollmentFindMany.mockResolvedValue([
       enrollment({ automation: automation({ stopConditions: { onPurchase: true } }) }),
@@ -357,9 +370,12 @@ describe('processDueAutomationSteps', () => {
 
     await processDueAutomationSteps()
 
-    expect(orderFindFirst.mock.calls[0][0].where.createdAt).toEqual({
-      gt: new Date('2026-08-09T12:00:00Z'),
-    })
+    // Measured by when the payment landed, so paying for an order created before enrollment
+    // (an abandoned checkout completed later) still counts; createdAt covers payment-less orders.
+    const since = new Date('2026-08-09T12:00:00Z')
+    expect(orderFindFirst.mock.calls[0][0].where.AND).toEqual([
+      { OR: [{ payments: { some: { status: 'SUCCEEDED', paidAt: { gt: since } } } }, { createdAt: { gt: since } }] },
+    ])
     expect(sendEmail).not.toHaveBeenCalled()
     expect(enrollmentUpdate).toHaveBeenCalledWith({
       where: { id: 'enr_1' },

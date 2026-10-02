@@ -113,11 +113,14 @@ async function resolveRecipients(event: DomainEventRecord): Promise<string[]> {
  * may still be recorded twice: the checkout route and the Stripe webhook race and both emit
  * `payment.completed`. Keying on the entity collapses those. A product, though, can go low
  * again after every restock, and each of those is a new alert, so it keys on the event itself.
+ * An order can likewise be refunded more than once (partial refunds), so a refund keys on the
+ * refund it records.
  */
 function dedupeKeyFor(event: DomainEventRecord): string {
-  return event.entityType === 'product'
-    ? `${event.type}:${event.id}`
-    : `${event.type}:${event.entityId}`
+  if (event.entityType === 'product') return `${event.type}:${event.id}`
+  const refundId = payloadOf(event).refundId
+  if (event.type === 'payment.refunded' && typeof refundId === 'string') return `${event.type}:${refundId}`
+  return `${event.type}:${event.entityId}`
 }
 
 /**

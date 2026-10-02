@@ -182,6 +182,18 @@ describe('automation enrollment handler', () => {
     expect(enrollInAutomation.mock.calls[1][3]).toBe('payment.completed:order_1')
   })
 
+  it('keys each refund of an order separately, so a later partial refund still enrolls', async () => {
+    orderFindUnique.mockResolvedValue({ guestEmail: 'g@example.com', user: null })
+
+    await handleAutomationEnrollment(event({ type: 'payment.refunded', payload: { refundId: 'ref_1' } }))
+    await handleAutomationEnrollment(event({ type: 'payment.refunded', payload: { refundId: 'ref_2' } }))
+
+    expect(enrollInAutomation.mock.calls.map((c) => c[3])).toEqual([
+      'payment.refunded:ref_1',
+      'payment.refunded:ref_2',
+    ])
+  })
+
   it.each([
     ['loyalty.points_earned', 'LOYALTY_POINTS_EARNED'],
     ['loyalty.tier_upgraded', 'LOYALTY_TIER_UPGRADE'],
