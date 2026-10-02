@@ -1,0 +1,505 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0AE56F73CDEE95C4B21068A0 /* StaffViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DEEA09EF05138C8208F92F5 /* StaffViews.swift */; };
+		3344971262BAA2132BAE582B /* StarReceiptPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9661FA7DE32825A24F0AE461 /* StarReceiptPrinter.swift */; };
+		36EA286863507DC182191245 /* ReceiptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31010A2ABBDE9BC6D92BD3A1 /* ReceiptTests.swift */; };
+		38BFE85AF4A77FAFA1CFC66E /* ReceiptPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D55D7341BD4EC3CC92F799 /* ReceiptPrinter.swift */; };
+		40BD19AFF7579334A337D300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D34E9EF9ABBDFB1FECEC8864 /* Assets.xcassets */; };
+		72F4BF138A6DA622B5C8BBE7 /* BluetoothPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E33C2F0C171F2D091DF77488 /* BluetoothPrinter.swift */; };
+		7F5A3413B3866E41CE7FDF5B /* KioskWebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A6B97E300819D06A4ECF71 /* KioskWebViewController.swift */; };
+		953EB4C3A1FFD43662440FB2 /* Receipt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FAD88A816661480CD84375 /* Receipt.swift */; };
+		A50EB4F92D85AF4F7700C290 /* NetworkPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9172D117CB3B3F66409F8D7 /* NetworkPrinter.swift */; };
+		B598458F9FC20D3C4AB655E5 /* KioskSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70BE418FA4549D7B442981D0 /* KioskSettings.swift */; };
+		BA83CC78E97D4A20E6C7A51C /* AirPrintPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F85E17BF51368F547243700 /* AirPrintPrinter.swift */; };
+		CAF0046243E25D8DDF2F1D92 /* KioskApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10CE979903BD564A9028A48 /* KioskApp.swift */; };
+		D980C258FF8388CDF8EA0726 /* StarIO10 in Frameworks */ = {isa = PBXBuildFile; productRef = ECC781735EED2844B8FFA700 /* StarIO10 */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0C221C2B61245BA523B4014D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B9C25D8951397029E2D49A27 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0027324DF6CF64ACC3D13BC5;
+			remoteInfo = JoseMadridKiosk;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		2DEEA09EF05138C8208F92F5 /* StaffViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaffViews.swift; sourceTree = "<group>"; };
+		31010A2ABBDE9BC6D92BD3A1 /* ReceiptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptTests.swift; sourceTree = "<group>"; };
+		3F85E17BF51368F547243700 /* AirPrintPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPrintPrinter.swift; sourceTree = "<group>"; };
+		6EC4A0EF242326CE3A42093F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		70BE418FA4549D7B442981D0 /* KioskSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskSettings.swift; sourceTree = "<group>"; };
+		73A6B97E300819D06A4ECF71 /* KioskWebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskWebViewController.swift; sourceTree = "<group>"; };
+		7519DE349EDCD1CC710597DE /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		89FAD88A816661480CD84375 /* Receipt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Receipt.swift; sourceTree = "<group>"; };
+		9661FA7DE32825A24F0AE461 /* StarReceiptPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarReceiptPrinter.swift; sourceTree = "<group>"; };
+		B10CE979903BD564A9028A48 /* KioskApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskApp.swift; sourceTree = "<group>"; };
+		D34E9EF9ABBDFB1FECEC8864 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D55173295C918788DAF2747E /* JoseMadridKiosk.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JoseMadridKiosk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E33C2F0C171F2D091DF77488 /* BluetoothPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothPrinter.swift; sourceTree = "<group>"; };
+		EC5B1F3B06D2207AA9493CCA /* JoseMadridKioskTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = JoseMadridKioskTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4D55D7341BD4EC3CC92F799 /* ReceiptPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptPrinter.swift; sourceTree = "<group>"; };
+		F9172D117CB3B3F66409F8D7 /* NetworkPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkPrinter.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CE7FEF3FC8623D109AFD6AE0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D980C258FF8388CDF8EA0726 /* StarIO10 in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0366958B26610C1546479401 /* KioskTests */ = {
+			isa = PBXGroup;
+			children = (
+				31010A2ABBDE9BC6D92BD3A1 /* ReceiptTests.swift */,
+			);
+			path = KioskTests;
+			sourceTree = "<group>";
+		};
+		2E4A62BCF45D7EDAD6F9F5CA /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				7519DE349EDCD1CC710597DE /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		2EB33CB93BF20F5C521AD9E4 /* Kiosk */ = {
+			isa = PBXGroup;
+			children = (
+				D34E9EF9ABBDFB1FECEC8864 /* Assets.xcassets */,
+				6EC4A0EF242326CE3A42093F /* Info.plist */,
+				B10CE979903BD564A9028A48 /* KioskApp.swift */,
+				70BE418FA4549D7B442981D0 /* KioskSettings.swift */,
+				73A6B97E300819D06A4ECF71 /* KioskWebViewController.swift */,
+				89FAD88A816661480CD84375 /* Receipt.swift */,
+				2DEEA09EF05138C8208F92F5 /* StaffViews.swift */,
+				F016941F44353857741466A9 /* Printers */,
+			);
+			path = Kiosk;
+			sourceTree = "<group>";
+		};
+		C7C2DF53DF653299C6AEDD08 = {
+			isa = PBXGroup;
+			children = (
+				2E4A62BCF45D7EDAD6F9F5CA /* Config */,
+				2EB33CB93BF20F5C521AD9E4 /* Kiosk */,
+				0366958B26610C1546479401 /* KioskTests */,
+				E58AD23943C09C5C2FDA64D3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E58AD23943C09C5C2FDA64D3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D55173295C918788DAF2747E /* JoseMadridKiosk.app */,
+				EC5B1F3B06D2207AA9493CCA /* JoseMadridKioskTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F016941F44353857741466A9 /* Printers */ = {
+			isa = PBXGroup;
+			children = (
+				3F85E17BF51368F547243700 /* AirPrintPrinter.swift */,
+				E33C2F0C171F2D091DF77488 /* BluetoothPrinter.swift */,
+				F9172D117CB3B3F66409F8D7 /* NetworkPrinter.swift */,
+				F4D55D7341BD4EC3CC92F799 /* ReceiptPrinter.swift */,
+				9661FA7DE32825A24F0AE461 /* StarReceiptPrinter.swift */,
+			);
+			path = Printers;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0027324DF6CF64ACC3D13BC5 /* JoseMadridKiosk */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 05D9DE0BDAA039972D52FFB1 /* Build configuration list for PBXNativeTarget "JoseMadridKiosk" */;
+			buildPhases = (
+				A48FD826C1A3CF91E31244B1 /* Sources */,
+				2B983C7F8C28225DABEBD08F /* Resources */,
+				CE7FEF3FC8623D109AFD6AE0 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JoseMadridKiosk;
+			packageProductDependencies = (
+				ECC781735EED2844B8FFA700 /* StarIO10 */,
+			);
+			productName = JoseMadridKiosk;
+			productReference = D55173295C918788DAF2747E /* JoseMadridKiosk.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E0492BFCB1EF096A0F435421 /* JoseMadridKioskTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F69C3BBD07217EA3F554ADF4 /* Build configuration list for PBXNativeTarget "JoseMadridKioskTests" */;
+			buildPhases = (
+				D6D2AE676DBF0558A2B869B8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C469CF3E5D0062712C9BB039 /* PBXTargetDependency */,
+			);
+			name = JoseMadridKioskTests;
+			packageProductDependencies = (
+			);
+			productName = JoseMadridKioskTests;
+			productReference = EC5B1F3B06D2207AA9493CCA /* JoseMadridKioskTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B9C25D8951397029E2D49A27 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0027324DF6CF64ACC3D13BC5 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 189B6CDF71D8AC0352DFB15A /* Build configuration list for PBXProject "JoseMadridKiosk" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C7C2DF53DF653299C6AEDD08;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BDA1BFE0C53E590B567B8DFB /* XCRemoteSwiftPackageReference "StarXpand-SDK-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E58AD23943C09C5C2FDA64D3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0027324DF6CF64ACC3D13BC5 /* JoseMadridKiosk */,
+				E0492BFCB1EF096A0F435421 /* JoseMadridKioskTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2B983C7F8C28225DABEBD08F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				40BD19AFF7579334A337D300 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A48FD826C1A3CF91E31244B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA83CC78E97D4A20E6C7A51C /* AirPrintPrinter.swift in Sources */,
+				72F4BF138A6DA622B5C8BBE7 /* BluetoothPrinter.swift in Sources */,
+				CAF0046243E25D8DDF2F1D92 /* KioskApp.swift in Sources */,
+				B598458F9FC20D3C4AB655E5 /* KioskSettings.swift in Sources */,
+				7F5A3413B3866E41CE7FDF5B /* KioskWebViewController.swift in Sources */,
+				A50EB4F92D85AF4F7700C290 /* NetworkPrinter.swift in Sources */,
+				953EB4C3A1FFD43662440FB2 /* Receipt.swift in Sources */,
+				38BFE85AF4A77FAFA1CFC66E /* ReceiptPrinter.swift in Sources */,
+				0AE56F73CDEE95C4B21068A0 /* StaffViews.swift in Sources */,
+				3344971262BAA2132BAE582B /* StarReceiptPrinter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D6D2AE676DBF0558A2B869B8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				36EA286863507DC182191245 /* ReceiptTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C469CF3E5D0062712C9BB039 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0027324DF6CF64ACC3D13BC5 /* JoseMadridKiosk */;
+			targetProxy = 0C221C2B61245BA523B4014D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4F8E8CABA07B2B14FFB1A593 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Kiosk/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.josemadrid.kiosk;
+				PRODUCT_NAME = JoseMadridKiosk;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Debug;
+		};
+		59C656BE12CB7C67815EBEB8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.josemadrid.kiosk.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 2;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoseMadridKiosk.app/JoseMadridKiosk";
+			};
+			name = Debug;
+		};
+		85E3C9B256D41EAEF72717C7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.josemadrid.kiosk.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 2;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoseMadridKiosk.app/JoseMadridKiosk";
+			};
+			name = Release;
+		};
+		9442301776DC6BAB8B699DFC /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7519DE349EDCD1CC710597DE /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		B86E990192874D99D3735093 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Kiosk/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.josemadrid.kiosk;
+				PRODUCT_NAME = JoseMadridKiosk;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Release;
+		};
+		CACA5C4ED54A286861C3B67E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7519DE349EDCD1CC710597DE /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		05D9DE0BDAA039972D52FFB1 /* Build configuration list for PBXNativeTarget "JoseMadridKiosk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4F8E8CABA07B2B14FFB1A593 /* Debug */,
+				B86E990192874D99D3735093 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		189B6CDF71D8AC0352DFB15A /* Build configuration list for PBXProject "JoseMadridKiosk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CACA5C4ED54A286861C3B67E /* Debug */,
+				9442301776DC6BAB8B699DFC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F69C3BBD07217EA3F554ADF4 /* Build configuration list for PBXNativeTarget "JoseMadridKioskTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				59C656BE12CB7C67815EBEB8 /* Debug */,
+				85E3C9B256D41EAEF72717C7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BDA1BFE0C53E590B567B8DFB /* XCRemoteSwiftPackageReference "StarXpand-SDK-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/star-micronics/StarXpand-SDK-iOS";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		ECC781735EED2844B8FFA700 /* StarIO10 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BDA1BFE0C53E590B567B8DFB /* XCRemoteSwiftPackageReference "StarXpand-SDK-iOS" */;
+			productName = StarIO10;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B9C25D8951397029E2D49A27 /* Project object */;
+}

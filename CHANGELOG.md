@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Salsa Kings self-order kiosk.** `/kiosk` is a touch-screen till for shows and the shop:
+  an animated splash screen (the website hero's burning logo, jars over a fire bed, the price
+  chart), a menu of real jar photos with heat filters, and a Square Terminal checkout with a
+  printed receipt that returns to the splash screen after 10 seconds. The server prices every
+  cart from the booth sign (1 for $10, 3 for $25, 4 for $32, 5 + chips for $40, 12 for $80;
+  cheapest combination wins), so the tablet never sends a price. Tablets pair with a device
+  token in `KIOSK_DEVICE_TOKENS`. `apps/android-kiosk` locks an Android tablet to the kiosk and
+  prints to a USB ESC/POS receipt printer; a USB barcode scanner adds jars by UPC.
 - **Pay by card online on fundraising `/submit`.** Choosing "Credit card online" asks for the group (the
   fundraising store's live checkout dropdown) and, once the order is submitted, builds a cart in the
   BigCommerce fundraising store with every jar at the group price (`DUE_PER_JAR`, $5), pre-filled with the
@@ -330,6 +338,9 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Staff POS could not take a card payment.** `POST /api/pos/create-terminal-checkout` required a
+  permission named `orders:create`, which is never seeded (the real one is `orders:write`), so it
+  answered 403 Forbidden to every staff member. It now checks `orders:write`.
 - **The Desktop Apps workflow failed at its release step on every run after the first.** It
   deleted and recreated a rolling `desktop-latest` release, but the repository's immutable releases
   reserve a tag name for good, so the tag could never be created again — and the update-feed step
