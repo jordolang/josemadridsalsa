@@ -6,6 +6,7 @@ import { sendOrderConfirmationEmail } from '@/lib/email/automation'
 import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
+import { isFundraiserAppCardOrder, settleFundraiserAppPaymentFromWebhook } from '@/lib/fundraiser-app/card-payments'
 import { creditPurchaseLoyaltyPoints } from '@/lib/loyalty'
 import { deductWebhookOrderStockInTx, settleWebhookStock } from '@/lib/payments/webhook-stock'
 import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
@@ -119,6 +120,29 @@ export async function POST(request: Request) {
         }
 
         if (order.paymentStatus === 'SUCCEEDED' || order.paymentStatus === 'PAID') {
+          break
+        }
+
+        // Fundraiser-app card orders are paid from a seller's phone, which holds a Square token;
+        // they settle only through the checks that prove the payment pays the order (amount,
+        // location, reference), the same step the app's own confirmation uses.
+        if (isFundraiserAppCardOrder(order)) {
+          const result = await settleFundraiserAppPaymentFromWebhook(order.id, {
+            id: squarePaymentId,
+            status: payment.status,
+            referenceId: payment.reference_id,
+            locationId: payment.location_id,
+            amountMoney: payment.amount_money
+              ? { amount: BigInt(payment.amount_money.amount ?? 0), currency: payment.amount_money.currency as 'USD' }
+              : undefined,
+          })
+          if (result.problem) {
+            console.error('Square payment does not pay fundraiser app order', {
+              orderId: order.id,
+              squarePaymentId,
+              problem: result.problem,
+            })
+          }
           break
         }
 

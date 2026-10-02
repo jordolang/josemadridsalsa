@@ -67,6 +67,15 @@ describe('participant milestone handler', () => {
     )
   })
 
+  it('skips a seller who joined through the mobile app without an email', async () => {
+    orderFindUnique.mockResolvedValue({ participantId: 'p_1' })
+    participantFindUnique.mockResolvedValue(participant({ email: null }))
+
+    await handleParticipantMilestone(event)
+
+    expect(sendParticipantMilestoneEmail).not.toHaveBeenCalled()
+  })
+
   it('records the milestone so a replayed event sends nothing', async () => {
     orderFindUnique.mockResolvedValue({ participantId: 'p_1' })
     participantFindUnique.mockResolvedValue(participant())

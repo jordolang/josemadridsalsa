@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DollarSign, TrendingUp, Users, Package,
   Edit, Calendar, Target, Mail, Phone, Building2,
-  Trophy, BarChart3, Activity
+  Trophy, BarChart3, Activity, Smartphone
 } from 'lucide-react'
 import Link from 'next/link'
 import { FundraiserStatus } from '@prisma/client'
@@ -187,6 +187,12 @@ export default async function FundraiserDetailPage({
                 <Link href={`/admin/fundraisers/${fundraiser.id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Campaign
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/admin/fundraisers/${fundraiser.id}/mobile-app`}>
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  Mobile App
                 </Link>
               </Button>
               <Button asChild>

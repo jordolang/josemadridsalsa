@@ -14,6 +14,25 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Mobile fundraiser app for iOS and Android** (`apps/fundraiser-app`, Expo). Sellers set it
+  up with three things: the group ID, the group PIN, and their first and last name, then choose a
+  personal PIN that unlocks the app every time it opens. Phones stay signed in for the campaign;
+  a seller who loses access taps **I already joined**, picks their name and enters their PIN.
+  Sellers take phone orders priced from the group's own store; every order is recorded against
+  the fundraiser and the seller (cash or check is credited to the group at once, pay-later when
+  Jose Madrid marks it paid). One seller per group holds the **organizer seat** and can reset
+  other sellers' PINs and change the group PIN from the app. Admins control it all from
+  **Fundraisers › campaign › Mobile App**: turn the app on, issue the group ID, set the group
+  PIN, assign the organizer, reset PINs and sign phones out. Wrong PINs lock out a seller after 5
+  tries and pause group sign-ups after 25. Schema: new `FundraiserAppSession` model, app fields on
+  `Fundraiser` and `FundraiserParticipant`, and `FundraiserParticipant.email` is now optional.
+- **Card payments in the fundraiser app with Square.** Sellers in groups with card payments turned
+  on (admin › Mobile App) can take cards on their phone with Square's Mobile Payments SDK: Tap to
+  Pay on iPhone and Android, keyed entry for phone orders, or a paired Square Reader. Payments go
+  to the shop's Square account; the storefront confirms each one with Square (status, location,
+  amount, order reference) before marking the order paid, recording the `Payment` and crediting
+  the group. The phone gets the Square token from the storefront at runtime, never from the build.
+  Tap to Pay on iPhone needs Apple's entitlement (see the docs). Schema: `Fundraiser.appCardPayments`.
 - **Create invoices on the web.** `/admin/invoices` has a working **New invoice** button (for
   `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
   customer, status, notes and free-text lines. Totals are computed on the server. The web form and

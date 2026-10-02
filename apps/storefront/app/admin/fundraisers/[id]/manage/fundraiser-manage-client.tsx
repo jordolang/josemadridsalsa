@@ -54,7 +54,7 @@ interface FundraiserProductRecord {
 interface ParticipantRecord {
   id: string
   name: string
-  email: string
+  email: string | null
   referralCode: string
   totalRevenue: string | number
   totalOrders: number
