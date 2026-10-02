@@ -16,6 +16,22 @@ const OneClickSchema = z.object({
   action: z.literal('One-Click'),
 })
 
+// ponytail: in-memory per instance, like checkRateLimit; move to a shared store if abuse spans instances.
+const ONE_CLICK_FAILURE_LIMIT = 20
+const oneClickFailures = new Map<string, { count: number; resetAt: number }>()
+
+function isOneClickBlocked(ip: string): boolean {
+  const entry = oneClickFailures.get(ip)
+  return Boolean(entry && Date.now() < entry.resetAt && entry.count >= ONE_CLICK_FAILURE_LIMIT)
+}
+
+function recordOneClickFailure(ip: string) {
+  const now = Date.now()
+  const entry = oneClickFailures.get(ip)
+  if (!entry || now >= entry.resetAt) oneClickFailures.set(ip, { count: 1, resetAt: now + 60_000 })
+  else entry.count++
+}
+
 export async function POST(request: Request) {
   try {
     // CSRF: verify request origin
@@ -25,9 +41,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
     }
 
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+
     // RFC 8058 one-click: the mailbox provider POSTs a form body to the List-Unsubscribe URL,
     // which carries the address and its signed token. No page, no JSON, so handle it first.
     if (request.headers.get('content-type')?.includes('application/x-www-form-urlencoded')) {
+      // Mailbox providers share IPs, so valid requests are limited per recipient below. Invalid
+      // ones are capped per IP before any work, so forged links can't be sent without bound.
+      if (isOneClickBlocked(ip)) {
+        return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
+      }
       const { searchParams } = new URL(request.url)
       const oneClick = OneClickSchema.safeParse({
         email: searchParams.get('email'),
@@ -35,6 +58,7 @@ export async function POST(request: Request) {
         action: new URLSearchParams(await request.text()).get('List-Unsubscribe'),
       })
       if (!oneClick.success || !verifyUnsubscribeToken(oneClick.data.email, oneClick.data.token)) {
+        recordOneClickFailure(ip)
         return NextResponse.json({ error: 'Invalid unsubscribe link.' }, { status: 400 })
       }
       const oneClickEmail = oneClick.data.email.trim().toLowerCase()
@@ -51,7 +75,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true })
     }
 
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     const { allowed } = checkRateLimit(`unsub:${ip}`, { maxRequests: 10, windowMs: 60_000 })
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })

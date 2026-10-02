@@ -49,6 +49,18 @@ describe('POST /api/unsubscribe (one-click)', () => {
     }
   })
 
+  it('caps forged one-click requests per IP before verifying them', async () => {
+    const forged = (i: number) => {
+      const req = oneClick(`https://www.josemadrid.net/api/unsubscribe?email=x${i}@example.com&token=bad`)
+      return new Request(req, { headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-forwarded-for': '203.0.113.9' } })
+    }
+    const statuses = []
+    for (let i = 0; i < 21; i++) statuses.push((await POST(forged(i))).status)
+
+    expect(statuses.slice(0, 20).every((s) => s === 400)).toBe(true)
+    expect(statuses[20]).toBe(429)
+  })
+
   it('refuses a URL whose token does not match the address', async () => {
     const forged = buildOneClickUnsubscribeUrl('buyer@example.com').replace(
       'buyer%40example.com',

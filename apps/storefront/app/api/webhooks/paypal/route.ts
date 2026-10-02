@@ -225,10 +225,12 @@ export async function POST(request: Request) {
               providerPaymentId: orderId,
               channel: 'ONLINE',
               methodType: 'PAYPAL',
+              paidAt: new Date(),
             },
             update: {
               paypalCaptureId: captureId,
               status: 'SUCCEEDED',
+              paidAt: new Date(),
             },
           })
 
