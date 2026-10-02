@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Create invoices on the web.** `/admin/invoices` has a working **New invoice** button (for
+  `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
+  customer, status, notes and free-text lines. Totals are computed on the server. The web form and
+  the desktop app's `invoice.create` now share one create function (`lib/invoices/create-invoice.ts`).
 - **Loyalty reward catalog management.** Admin → Settings → Loyalty Rewards
   (`/admin/settings/loyalty-rewards`) and, in the desktop app, Customers → Loyalty rewards let
   staff create, edit, switch off and delete the rewards customers spend points on: points cost,
@@ -359,6 +363,34 @@ the root `package.json` is canonical.
   the newest 500 orders each tick. Each refund of an order enrolls its own automation run. Facebook
   catalog sync always upserts, so Shop and Marketplace exports of one product share its catalog
   item. `.env.example` names the Merchant API, not the sunset Content API.
+- **PayPal and Square webhooks deduct stock.** They marked orders paid without turning the stock
+  reservation into a sale, so an order finalized by the webhook (customer never returned to the
+  site) left its stock reserved. They now deduct through the same once-per-order-item guard as
+  Stripe and the capture routes, so whichever path finalizes the order deducts once. If the
+  reservation was already released, the order is still marked paid and staff get an alert to
+  adjust stock by hand (`lib/payments/webhook-stock.ts`).
+- **POS orders list shows POS orders; POS needs sign-in.** `/api/admin/orders` ignored
+  `?channel=` and returned every order; it now filters by sales channel (an unknown channel is a
+  400) and returns each order's latest payment method, so the list shows Cash/Card instead of
+  "Unknown". The `/pos` layout now requires sign-in and `orders:write` on the server.
+- **BigCommerce fundraising-store orders deal arena damage.** The mirror only recalculated
+  fundraiser totals. A counted (paid/shipped) order now damages its team once, keyed on the
+  existing unique `FundraiserSaleEvent.orderId`, so cron re-runs and webhook re-deliveries don't
+  repeat it. Orders placed before the team existed are skipped, so the history backfill doesn't
+  replay years of damage.
+- **Fundraiser page settings are used.** On `/f/[subdomain]`, with advanced mode on: custom CSS
+  (sanitised and confined with `@scope` to the fundraiser's own section), YouTube video and live
+  stream embeds (YouTube, Twitch, Facebook; Kick as a link), and a TikTok profile link. The Google
+  Analytics ID (`G-…`/`UA-…`) loads GA on that page only; a Google Place ID adds a "Find us on
+  Google" link. Clearing a field no longer fails the save. CSP now allows Twitch frames and GA
+  collection hosts.
+- **Fundraiser streak is a real daily streak** (consecutive days in America/New_York), counted
+  when the portal dashboard is opened and shown there with points. The gamification API now
+  requires access to the fundraiser and only accepts known actions; it previously let any
+  signed-in user add points to any fundraiser.
+- **Avatar upload requires sign-in and checks the file.** The type is read from the file's bytes
+  (JPEG, PNG or WebP only, 4 MB max) and the path is built from the user id; the caller-supplied
+  filename is ignored.
 - **28 dependency advisories closed.** Patched transitively through root `overrides` and in-place
   lockfile updates: undici (6.28.1, 7.29.1, 8.10.2), js-yaml (3.15.2, 4.3.2), `@grpc/grpc-js` 1.14.5
   and dompurify 3.4.16. Every patch release has the same dependencies as the version it replaces.
