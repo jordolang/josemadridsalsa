@@ -119,29 +119,34 @@ describe('enrollLapsedCustomers', () => {
   })
 
   it('enrolls a lapsed customer once per lapse, keyed on their last order', async () => {
+    // Oldest first: the earlier order has a later one after it, so only the last one enrolls.
     orderFindMany.mockResolvedValue([
-      { id: 'order_new', createdAt: new Date(NOW.getTime() - 91 * DAY), guestEmail: 'gone@example.com', user: null },
       { id: 'order_old', createdAt: new Date(NOW.getTime() - 95 * DAY), guestEmail: 'gone@example.com', user: null },
+      { id: 'order_new', createdAt: new Date(NOW.getTime() - 91 * DAY), guestEmail: 'gone@example.com', user: null },
     ])
+    orderCount.mockResolvedValueOnce(1).mockResolvedValueOnce(0)
 
     await enrollLapsedCustomers(NOW)
 
+    expect(orderFindMany.mock.calls[0][0].orderBy).toEqual([{ createdAt: 'asc' }, { id: 'asc' }])
     expect(enrollInAutomation).toHaveBeenCalledOnce()
     expect(enrollInAutomation.mock.calls[0][3]).toBe('REENGAGEMENT:order_new')
   })
 
-  it('pages past a full first batch so candidates further back are still reached', async () => {
-    const repeat = { id: 'r', createdAt: new Date(NOW.getTime() - 91 * DAY), guestEmail: 'regular@example.com', user: null }
-    orderFindMany
-      .mockResolvedValueOnce(Array.from({ length: 500 }, (_, i) => ({ ...repeat, id: `r${i}` })))
-      .mockResolvedValueOnce([
-        { id: 'order_far', createdAt: new Date(NOW.getTime() - 96 * DAY), guestEmail: 'far@example.com', user: null },
-      ])
+  it('caps the per-address checks a single tick makes', async () => {
+    orderFindMany.mockResolvedValue(
+      Array.from({ length: 600 }, (_, i) => ({
+        id: `o${i}`,
+        createdAt: new Date(NOW.getTime() - 92 * DAY),
+        guestEmail: `c${i}@example.com`,
+        user: null,
+      }))
+    )
 
     await enrollLapsedCustomers(NOW)
 
-    expect(orderFindMany.mock.calls[1][0].skip).toBe(500)
-    expect(enrollInAutomation.mock.calls.map((c) => c[1])).toEqual(['regular@example.com', 'far@example.com'])
+    expect(orderCount).toHaveBeenCalledTimes(500)
+    expect(enrollInAutomation.mock.calls[0][1]).toBe('c0@example.com')
   })
 
   it('leaves alone a customer who has ordered since', async () => {

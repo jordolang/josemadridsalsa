@@ -351,6 +351,10 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Follow-ups from #541's review.** Stripe and PayPal webhook payments now record `paidAt`, which
+  the automation purchase stop reads, so a Stripe-paid abandoned checkout stops its series. The
+  re-engagement scan is bounded again (oldest orders first, at most 500 address checks a tick). Forged
+  one-click unsubscribe requests are capped per IP before verification.
 - **Email automations and shop sync, after #540's review.** A purchase stops an automation when its
   payment lands after enrollment, so paying for an order begun before an abandoned-cart enrollment
   now counts. Newsletter-triggered series honour the unsubscribe form's Newsletter opt-out. One-click

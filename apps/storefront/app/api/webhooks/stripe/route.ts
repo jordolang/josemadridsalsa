@@ -145,10 +145,12 @@ export async function POST(request: Request) {
               currency: paymentIntent.currency,
               status: 'SUCCEEDED',
               paymentMethod: paymentIntent.payment_method_types?.[0],
+              paidAt: new Date(),
             },
             update: {
               status: 'SUCCEEDED',
               paymentMethod: paymentIntent.payment_method_types?.[0],
+              paidAt: new Date(),
             },
           })
 

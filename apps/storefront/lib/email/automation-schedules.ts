@@ -151,37 +151,34 @@ export async function enrollLapsedCustomers(now: Date): Promise<number> {
     lapsedBefore.getTime() - REENGAGEMENT_WINDOW_DAYS * DAY_MS
   )
 
-  // Paged through the whole window: a single capped read returns the same newest rows every
-  // tick, and repeat orders or still-active customers could fill it while real candidates
-  // further back aged out of the window unseen.
-  const orders = []
-  for (let skip = 0; ; skip += SCAN_LIMIT) {
-    const page = await prisma.order.findMany({
-      where: {
-        paymentStatus: { in: PAID_PAYMENT_STATUSES },
-        createdAt: { gte: windowStart, lte: lapsedBefore },
-      },
-      select: { id: true, createdAt: true, guestEmail: true, user: { select: { email: true } } },
-      // Newest first, so the first order seen per address is its latest in the window.
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      skip,
-      take: SCAN_LIMIT,
-    })
-    orders.push(...page)
-    if (page.length < SCAN_LIMIT) break
-  }
+  // Oldest first, so the orders about to age out of the window are checked before the newest.
+  // Each tick does at most SCAN_LIMIT per-address checks, which bounds the cron's run time.
+  // ponytail: a window holding more than SCAN_LIMIT lapsed addresses still starves its newest
+  // ones until older ones age out; persist a cursor across ticks if that ever happens.
+  const orders = await prisma.order.findMany({
+    where: {
+      paymentStatus: { in: PAID_PAYMENT_STATUSES },
+      createdAt: { gte: windowStart, lte: lapsedBefore },
+    },
+    select: { id: true, createdAt: true, guestEmail: true, user: { select: { email: true } } },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  })
 
   let enrolled = 0
+  let checks = 0
   const seen = new Set<string>()
   for (const order of orders) {
     const email = orderEmail(order)?.toLowerCase()
     if (!email || seen.has(email)) continue
-    seen.add(email)
+    if (checks++ >= SCAN_LIMIT) break
 
+    // A later paid order, in the window or after it, means this is not the address's last one;
+    // that later order, if still in the window, comes up further down the list.
     const since = await prisma.order.count({
       where: { ...paidOrdersFor(email), createdAt: { gt: order.createdAt } },
     })
     if (since > 0) continue
+    seen.add(email)
 
     await enrollInAutomation(
       'REENGAGEMENT',
