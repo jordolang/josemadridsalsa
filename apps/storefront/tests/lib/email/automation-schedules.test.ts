@@ -130,6 +130,20 @@ describe('enrollLapsedCustomers', () => {
     expect(enrollInAutomation.mock.calls[0][3]).toBe('REENGAGEMENT:order_new')
   })
 
+  it('pages past a full first batch so candidates further back are still reached', async () => {
+    const repeat = { id: 'r', createdAt: new Date(NOW.getTime() - 91 * DAY), guestEmail: 'regular@example.com', user: null }
+    orderFindMany
+      .mockResolvedValueOnce(Array.from({ length: 500 }, (_, i) => ({ ...repeat, id: `r${i}` })))
+      .mockResolvedValueOnce([
+        { id: 'order_far', createdAt: new Date(NOW.getTime() - 96 * DAY), guestEmail: 'far@example.com', user: null },
+      ])
+
+    await enrollLapsedCustomers(NOW)
+
+    expect(orderFindMany.mock.calls[1][0].skip).toBe(500)
+    expect(enrollInAutomation.mock.calls.map((c) => c[1])).toEqual(['regular@example.com', 'far@example.com'])
+  })
+
   it('leaves alone a customer who has ordered since', async () => {
     orderFindMany.mockResolvedValue([
       { id: 'order_1', createdAt: new Date(NOW.getTime() - 91 * DAY), guestEmail: 'back@example.com', user: null },

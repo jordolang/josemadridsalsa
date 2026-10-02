@@ -41,6 +41,14 @@ describe('POST /api/unsubscribe (one-click)', () => {
     })
   })
 
+  it('does not rate-limit by the shared provider IP that one-click requests arrive from', async () => {
+    // Gmail and Yahoo send every recipient's request from their own infrastructure.
+    for (let i = 0; i < 12; i++) {
+      const response = await POST(oneClick(buildOneClickUnsubscribeUrl(`reader${i}@example.com`)))
+      expect(response.status).toBe(200)
+    }
+  })
+
   it('refuses a URL whose token does not match the address', async () => {
     const forged = buildOneClickUnsubscribeUrl('buyer@example.com').replace(
       'buyer%40example.com',

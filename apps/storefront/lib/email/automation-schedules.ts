@@ -151,16 +151,25 @@ export async function enrollLapsedCustomers(now: Date): Promise<number> {
     lapsedBefore.getTime() - REENGAGEMENT_WINDOW_DAYS * DAY_MS
   )
 
-  const orders = await prisma.order.findMany({
-    where: {
-      paymentStatus: { in: PAID_PAYMENT_STATUSES },
-      createdAt: { gte: windowStart, lte: lapsedBefore },
-    },
-    select: { id: true, createdAt: true, guestEmail: true, user: { select: { email: true } } },
-    // Newest first, so the first order seen per address is its latest in the window.
-    orderBy: { createdAt: 'desc' },
-    take: SCAN_LIMIT,
-  })
+  // Paged through the whole window: a single capped read returns the same newest rows every
+  // tick, and repeat orders or still-active customers could fill it while real candidates
+  // further back aged out of the window unseen.
+  const orders = []
+  for (let skip = 0; ; skip += SCAN_LIMIT) {
+    const page = await prisma.order.findMany({
+      where: {
+        paymentStatus: { in: PAID_PAYMENT_STATUSES },
+        createdAt: { gte: windowStart, lte: lapsedBefore },
+      },
+      select: { id: true, createdAt: true, guestEmail: true, user: { select: { email: true } } },
+      // Newest first, so the first order seen per address is its latest in the window.
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip,
+      take: SCAN_LIMIT,
+    })
+    orders.push(...page)
+    if (page.length < SCAN_LIMIT) break
+  }
 
   let enrolled = 0
   const seen = new Set<string>()

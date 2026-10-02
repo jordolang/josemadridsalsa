@@ -175,9 +175,11 @@ async function syncToFacebookCatalog(
     // items_batch uses feed-style field names (title/link/image_link) and
     // decimal prices like "9.99 USD" — not the cents format of the older
     // /batch endpoint.
-    const method = existingExternalId ? 'UPDATE' : 'CREATE'
+    // Always UPDATE, which upserts (`allow_upsert` defaults to true): Shop and Marketplace
+    // listings for one product share a catalog item keyed by SKU, so whichever exports second
+    // must update the item the first created rather than CREATE a duplicate.
     const requestData: Record<string, unknown> = {
-      method,
+      method: 'UPDATE',
       data: {
         id: listing.product.sku,
         title,
