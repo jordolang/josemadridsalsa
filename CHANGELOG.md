@@ -351,6 +351,11 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **28 dependency advisories closed.** Patched transitively through root `overrides` and in-place
+  lockfile updates: undici (6.28.1, 7.29.1, 8.10.2), js-yaml (3.15.2, 4.3.2), `@grpc/grpc-js` 1.14.5
+  and dompurify 3.4.16. Every patch release has the same dependencies as the version it replaces.
+  deepmerge-ts stays open on purpose: `@prisma/config` pins it exactly, and its advisory needs a
+  crafted recursive object, which Prisma's own config never is.
 - **iPad kiosk card reader asks for location permission.** Square's Mobile Payments SDK refuses
   payments without it, and the app never asked, so the reader could not take a card.
 - **Storefront type-checks on nodemailer 10.** nodemailer 10 ships its own ESM types with no
