@@ -76,6 +76,26 @@ Each group has exactly one (`Fundraiser.appOrganizerId`), assigned by an admin. 
 **Organizer tools** in the app: every seller's orders and sales, who is signed in or locked out,
 **Reset PIN**, and **Change group PIN** (phones already signed in stay signed in).
 
+## Selling (the register)
+
+**Sell** on the home screen opens a Square-style register for selling face to face:
+
+1. The group's salsas fill the screen as photo tiles, with the group's own prices, loaded from
+   the storefront (`GET /api/fundraiser-app/catalog`). Tap a tile to add a jar; the badge counts
+   them, and **−** takes one off.
+2. **Charge $X** opens Square's payment screen. The buyer taps their card, phone or watch on the
+   back of the seller's phone (Tap to Pay), and the sale is recorded and confirmed with Square.
+   The app signs in to Square as the register opens, so the tap screen appears straight away.
+3. **Cash** or **Check** records the sale as paid once the money is in hand.
+
+A register sale needs no customer details; it is recorded as a walk-up sale against the group
+and the seller. If a card is declined, **Try again** or **Cancel this sale** (the cart stays, so
+the buyer can pay another way).
+
+**Phone order (deliver later)** keeps the full form for orders taken over the phone: customer
+name and phone, optional delivery address, and **Pay later**. Pay-later and delivery orders
+require the customer's name and phone.
+
 ## Taking an order
 
 The seller picks salsas and quantities, enters the customer's name and phone (email and a

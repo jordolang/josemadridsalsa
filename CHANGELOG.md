@@ -14,6 +14,12 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Square-style register in the fundraiser app.** **Sell** opens a photo grid of the group's
+  salsas at the group's prices (loaded from the storefront). Tap jars, tap **Charge**, and the buyer
+  taps their card, phone or watch on the seller's phone (Square Tap to Pay); Square is signed in as
+  the register opens so the tap screen appears at once. Cash and check are one tap. Register sales
+  need no customer details (recorded as walk-up sales); the full form stays as **Phone order
+  (deliver later)**, where pay-later and delivery still require the customer's name and phone.
 - **Mobile fundraiser app for iOS and Android** (`apps/fundraiser-app`, Expo). Sellers set it
   up with three things: the group ID, the group PIN, and their first and last name, then choose a
   personal PIN that unlocks the app every time it opens. Phones stay signed in for the campaign;
