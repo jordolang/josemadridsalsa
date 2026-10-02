@@ -353,6 +353,9 @@ the root `package.json` is canonical.
 ### Fixed
 - **iPad kiosk card reader asks for location permission.** Square's Mobile Payments SDK refuses
   payments without it, and the app never asked, so the reader could not take a card.
+- **Storefront type-checks on nodemailer 10.** nodemailer 10 ships its own ESM types with no
+  `nodemailer` namespace, so `nodemailer.SentMessageInfo` in `lib/email/sender.ts` failed (TS2503);
+  it is now a named type import.
 - **POS cash sales are recorded.** Cash checkout used to invent an order number in the browser and
   write nothing. `POST /api/pos/cash-sale` (`lib/pos/cash-sale.ts`) now creates the paid order, a
   cash `Payment` and the stock deduction in one transaction. Lines are priced from the product
