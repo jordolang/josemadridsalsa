@@ -398,7 +398,7 @@ the root `package.json` is canonical.
   (`lib/arena/standings.ts`): the season's own roster ranked by sales placed during that battle,
   earliest team on a tie, with exact takings and the top seller from that battle's sale events. A
   season with no sales crowns nobody. Sale events now record the `period` they struck (migration
-  `20261003120000_sale_event_period`, backfilled from `createdAt`).
+  `20261003140000_sale_event_period`, backfilled from `createdAt`).
 - **Arena chat answers 401, not 500, for a session whose account no longer exists.**
 - **Only sales made during a battle deal arena damage.** `applyPurchaseDamage` now takes the
   sale's `placedAt` (the order's own creation time) and refuses any sale placed before the team
