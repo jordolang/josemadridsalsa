@@ -13,6 +13,7 @@ import {
   VolumeX,
 } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useSession } from 'next-auth/react'
 import type { ArenaSnapshot, ArenaTeam } from '@/lib/arena/server-state'
 import { useArenaState } from '@/lib/arena/use-arena-state'
 import { LeaderboardTable } from '@/components/arena/leaderboard-table'
@@ -24,8 +25,6 @@ type ArenaMessage = {
   teamId: string | null
   author: string
   body: string
-  x: number
-  y: number
   createdAt: number
 }
 
@@ -42,7 +41,7 @@ const ARENA_HEIGHT = 720
 const PLAYER_SIZE = 42
 const TEAM_SIZE = 78
 const MOVE_STEP = 28
-const MESSAGE_LIMIT = 9
+const MESSAGE_POLL_MS = 5000
 
 const CLASS_EMBLEM: Record<string, string> = {
   warrior: 'W',
@@ -304,29 +303,15 @@ function DamageLayer({
   )
 }
 
-function loadMessages(period: string): ArenaMessage[] {
-  if (typeof window === 'undefined') return []
-  const raw = window.localStorage.getItem(`arena-messages:${period}`)
-  if (!raw) return []
+async function fetchMessages(period: string): Promise<ArenaMessage[] | null> {
   try {
-    const parsed = JSON.parse(raw) as ArenaMessage[]
-    return parsed.filter(
-      (item) =>
-        typeof item.id === 'string' &&
-        typeof item.body === 'string' &&
-        typeof item.author === 'string',
-    )
+    const res = await fetch(`/api/fundraiser/arena/${period}/messages`, { cache: 'no-store' })
+    if (!res.ok) return null
+    const data = (await res.json()) as { messages?: ArenaMessage[] }
+    return data.messages ?? null
   } catch {
-    return []
+    return null
   }
-}
-
-function saveMessages(period: string, messages: ArenaMessage[]) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(
-    `arena-messages:${period}`,
-    JSON.stringify(messages.slice(0, MESSAGE_LIMIT)),
-  )
 }
 
 export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }) {
@@ -335,8 +320,11 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
   const [player, setPlayer] = useState<Position>({ x: ARENA_WIDTH / 2, y: ARENA_HEIGHT / 2 })
   const [stageScale, setStageScale] = useState(1)
   const [messages, setMessages] = useState<ArenaMessage[]>([])
-  const [author, setAuthor] = useState('Fan')
   const [message, setMessage] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
+  const { status: authStatus } = useSession()
+  const signedIn = authStatus === 'authenticated'
   const [sound, setSound] = useState(true)
   const [music, setMusic] = useState(false)
   const [damageEvents, setDamageEvents] = useState<DamageEvent[]>([])
@@ -355,7 +343,17 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
   const healthy = status === 'ok' && staleness < 10_000
 
   useEffect(() => {
-    setMessages(loadMessages(initial.period))
+    let cancelled = false
+    async function poll() {
+      const next = await fetchMessages(initial.period)
+      if (!cancelled && next) setMessages(next)
+    }
+    poll()
+    const timer = window.setInterval(poll, MESSAGE_POLL_MS)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
   }, [initial.period])
 
   useEffect(() => {
@@ -445,26 +443,39 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
     return () => window.clearInterval(timer)
   }, [music, playSound, sound])
 
-  function addMessage() {
+  async function addMessage() {
     const body = safeMessage(message)
-    const by = safeMessage(author) || 'Fan'
-    if (!body) return
-    const next = [
-      {
-        id: `${Date.now()}:${Math.random().toString(36).slice(2)}`,
-        teamId: selectedTeam?.id ?? null,
-        author: by.slice(0, 24),
-        body,
-        x: selectedTeam ? (positions.get(selectedTeam.id)?.x ?? player.x) : player.x,
-        y: selectedTeam ? (positions.get(selectedTeam.id)?.y ?? player.y) - 70 : player.y - 54,
-        createdAt: Date.now(),
-      },
-      ...messages,
-    ].slice(0, MESSAGE_LIMIT)
-    setMessages(next)
-    saveMessages(initial.period, next)
-    setMessage('')
-    playSound('message')
+    if (!body || posting) return
+    setPosting(true)
+    setPostError(null)
+    try {
+      const res = await fetch(`/api/fundraiser/arena/${initial.period}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body, teamId: selectedTeam?.id ?? null }),
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        message?: ArenaMessage
+      }
+      if (!res.ok || !data.message) {
+        setPostError(data.error ?? 'Could not post message')
+        return
+      }
+      const posted = data.message
+      setMessages((prev) => [posted, ...prev.filter((m) => m.id !== posted.id)])
+      setMessage('')
+      playSound('message')
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  // Bubbles sit above the team's camp; messages without a team float mid-arena.
+  function messagePosition(item: ArenaMessage, index: number): Position {
+    const camp = item.teamId ? positions.get(item.teamId) : undefined
+    if (camp) return { x: camp.x, y: camp.y - 70 }
+    return { x: ARENA_WIDTH / 2 + ((index % 3) - 1) * 200, y: 90 + Math.floor(index / 3) * 70 }
   }
 
   function moveBy(delta: Position) {
@@ -558,11 +569,13 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
               })}
 
               <AnimatePresence>
-                {messages.map((item) => (
+                {messages.map((item, index) => {
+                  const pos = messagePosition(item, index)
+                  return (
                   <motion.div
                     key={item.id}
                     className="absolute max-w-[190px] rounded border border-amber-200/40 bg-black/80 px-3 py-2 text-xs text-amber-50 shadow-xl"
-                    style={{ left: item.x - 88, top: item.y - 38 }}
+                    style={{ left: pos.x - 88, top: pos.y - 38 }}
                     initial={{ opacity: 0, y: 14, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0 }}
@@ -570,7 +583,8 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
                     <div className="truncate font-bold text-amber-300">{item.author}</div>
                     <div className="break-words">{item.body}</div>
                   </motion.div>
-                ))}
+                  )
+                })}
               </AnimatePresence>
 
               <motion.div
@@ -634,17 +648,8 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
               </div>
             )}
 
+            {signedIn ? (
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-widest text-neutral-400" htmlFor="arena-author">
-                Name
-              </label>
-              <input
-                id="arena-author"
-                value={author}
-                onChange={(event) => setAuthor(event.target.value)}
-                className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-amber-300"
-                maxLength={24}
-              />
               <label className="text-xs font-semibold uppercase tracking-widest text-neutral-400" htmlFor="arena-message">
                 Message
               </label>
@@ -659,12 +664,21 @@ export function PlayableArena({ snapshot: initial }: { snapshot: ArenaSnapshot }
                 type="button"
                 onClick={addMessage}
                 className="inline-flex w-full items-center justify-center gap-2 rounded bg-white px-3 py-2 text-sm font-bold text-slate-950 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!safeMessage(message)}
+                disabled={!safeMessage(message) || posting}
               >
                 <Send className="h-4 w-4" />
-                Leave message
+                {posting ? 'Posting…' : 'Leave message'}
               </button>
+              {postError && <p className="text-xs text-rose-300">{postError}</p>}
             </div>
+            ) : (
+              <a
+                href={`/auth/signin?callbackUrl=${encodeURIComponent(`/arena/${initial.period}`)}`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded bg-white px-3 py-2 text-sm font-bold text-slate-950 hover:bg-amber-100"
+              >
+                Sign in to leave a message
+              </a>
+            )}
 
             <div className="grid grid-cols-3 gap-2 sm:hidden">
               <span />

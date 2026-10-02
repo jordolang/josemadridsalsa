@@ -45,6 +45,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { createMetadata } from '@/lib/metadata'
+import { approveWholesaleAccount, rejectWholesaleAccount } from './actions'
 
 export const metadata: Metadata = createMetadata({
   title: 'Wholesale Accounts - Jose Madrid Salsa Admin',
@@ -272,16 +273,23 @@ export default async function WholesalePage({
                         </Button>
                         {canWrite && account.status === 'PENDING' && (
                           <>
-                            <Button size="sm" variant="outline">
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-destructive hover:text-destructive"
-                            >
-                              Reject
-                            </Button>
+                            <form action={approveWholesaleAccount}>
+                              <input type="hidden" name="id" value={account.id} />
+                              <Button size="sm" variant="outline" type="submit">
+                                Approve
+                              </Button>
+                            </form>
+                            <form action={rejectWholesaleAccount}>
+                              <input type="hidden" name="id" value={account.id} />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                type="submit"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                Reject
+                              </Button>
+                            </form>
                           </>
                         )}
                       </div>

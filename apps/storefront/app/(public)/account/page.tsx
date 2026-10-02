@@ -79,6 +79,9 @@ export default async function AccountPage() {
             <Link href="/account/orders">
               <Button variant="default">View Orders</Button>
             </Link>
+            <Link href="/account/rewards">
+              <Button variant="secondary">Rewards</Button>
+            </Link>
             <Link href="/account/settings">
               <Button variant="secondary">Account Settings</Button>
             </Link>
@@ -141,6 +144,7 @@ export default async function AccountPage() {
             <Link href="/account/settings" className="text-sm hover:underline">Update profile</Link>
             <Link href="/account/settings" className="text-sm hover:underline">Manage addresses</Link>
             <Link href="/account/orders" className="text-sm hover:underline">Track an order</Link>
+            <Link href="/account/rewards" className="text-sm hover:underline">Loyalty points & rewards</Link>
             {(user?.role === UserRole.FUNDRAISER || user?.fundraiserAccount) && (
               <Link href="/fundraiser-portal/dashboard" className="text-sm font-semibold text-verde-600 hover:underline">
                 → Go to Fundraising Portal

@@ -368,6 +368,30 @@ the root `package.json` is canonical.
   `/find-us`, was a 404.
 - **`apps/admin` and `apps/fundraising` no longer redirect to a 404.** Their only page now redirects
   to the storefront's `/admin` and `/fundraising` on `NEXT_PUBLIC_SITE_URL`.
+- **Features that pretended to work now do.**
+  - Wholesale **Approve/Reject** buttons record the decision (status, approver, time, audit
+    entry). Only a pending application can be decided, and approval feeds the existing resale
+    tax exemption.
+  - The admin **Settings security checklist** checks real state: `MASTER_KEY` format, seeded
+    permissions, audit-log activity in the last 30 days, staff without 2FA, and active API keys
+    not rotated in 180 days. It no longer shows OK unconditionally.
+  - Product pages no longer say "Reviews are coming soon" above the working reviews section.
+  - Supporter-feed **Comment** lets staff post the organizer reply through the existing reply
+    API. For everyone else the button is disabled instead of showing a "coming soon" toast.
+  - **Arena chat** is stored server-side (`ArenaMessage`, migration
+    `20261002120000_arena_messages`), so every spectator sees it. Posting requires sign-in, is
+    limited to one message per 15 s, and shows only the poster's first name.
+  - **Share for shield** now uses the signed share-link flow (`/s/[nonce]`). The direct
+    `POST /api/fundraiser/arena/share` endpoint, which granted a shield with no share, has been
+    removed.
+  - **POS** charges sales tax from Stripe Tax at the store address with the packaged-food tax
+    code (`/api/pos/tax-quote`), replacing a flat 7.25%. The terminal-checkout route recomputes
+    tax itself instead of trusting the till, and so does the new cash-sale route. The hardcoded
+    fallback product list is gone, so a failed load shows an error rather than fake products.
+  - **Loyalty**: `/account/rewards` shows the points balance, tier and history, and redeems
+    rewards. Redeeming used to deduct points and give nothing back; it now issues a single-use
+    `REWARD-…` discount code in one atomic transaction that cannot overspend the balance or the
+    reward's cap.
 - **Tests run on vitest 5 again.** The vitest 5 bump left `@vitest/coverage-v8` and `@vitest/ui` on
   4.x, which pulled in a second vitest that the test setup extended; every `rejects.toThrow()`
   then failed (70 tests in CI). Both are pinned to the same vitest, vitest is declared once at the

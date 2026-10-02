@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requirePermission } from '@/lib/rbac'
 import { recordCashSale, CashSaleError } from '@/lib/pos/cash-sale'
+import { PosTaxError } from '@/lib/pos/tax'
 
 const CashSaleSchema = z.object({
   items: z
@@ -13,7 +14,6 @@ const CashSaleSchema = z.object({
     )
     .min(1, 'Cart is empty'),
   total: z.number().int().positive(),
-  taxAmount: z.number().int().min(0).optional().default(0),
   tendered: z.number().int().positive(),
   attemptId: z.string().uuid(),
 })
@@ -35,10 +35,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, total, taxAmount, tendered, attemptId } = parsed.data
+    const { items, total, tendered, attemptId } = parsed.data
     const result = await recordCashSale({
       items,
-      taxCents: taxAmount,
       totalCents: total,
       tenderedCents: tendered,
       attemptId,
@@ -47,6 +46,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
+    if (error instanceof PosTaxError) {
+      return NextResponse.json({ error: error.message }, { status: 503 })
+    }
     if (error instanceof CashSaleError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
