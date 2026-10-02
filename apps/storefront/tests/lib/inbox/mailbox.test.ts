@@ -53,6 +53,24 @@ describe('parsing', () => {
     expect(message.attachments).toEqual([{ attachmentId: 'A1', filename: 'inv.pdf', mimeType: 'application/pdf', size: 10 }])
   })
 
+  it('keeps inline-data attachments as files, not bodies, and derives text from HTML-only mail', () => {
+    const message = parseMailMessage({
+      id: 'm2',
+      internalDate: '1',
+      payload: {
+        mimeType: 'multipart/mixed',
+        headers: [{ name: 'Reply-To', value: 'pat@x.com' }],
+        parts: [
+          { partId: '0', mimeType: 'text/html', body: { data: b64url('<p>Hello <b>there</b></p>') } },
+          { partId: '1', mimeType: 'text/plain', filename: 'notes.txt', body: { data: b64url('file'), size: 4 } },
+        ],
+      },
+    })
+    expect(message.text).toBe('Hello there')
+    expect(message.replyTo).toBe('pat@x.com')
+    expect(message.attachments).toEqual([{ attachmentId: 'part:1', filename: 'notes.txt', mimeType: 'text/plain', size: 4 }])
+  })
+
   it('summarizes a thread by its first subject and latest sender', () => {
     const summary = summarizeThread({
       id: 't1',

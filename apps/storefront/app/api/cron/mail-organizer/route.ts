@@ -28,7 +28,19 @@ export async function GET(request: Request) {
 
   try {
     const result = await organizeInbox(connection)
-    return NextResponse.json({ mailbox: connection.mailbox, ...result })
+    if (result.errors.length > 0) {
+      await notifyOperators({
+        type: 'INTEGRATION_FAILED',
+        severity: 'WARNING',
+        title: 'Inbox organizing partly failed',
+        message: `${result.errors.length} of ${result.scanned} conversations in ${connection.mailbox} could not be filed (first: ${result.errors[0]}). They stay in the inbox until the next run.`,
+        entityType: 'GmailConnection',
+        entityId: connection.id,
+        link: '/admin/inbox/settings',
+        dedupeKey: 'integration-failed:mail-organizer',
+      })
+    }
+    return NextResponse.json({ mailbox: connection.mailbox, ...result }, { status: result.errors.length ? 207 : 200 })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('[mail-organizer] Run failed:', error)

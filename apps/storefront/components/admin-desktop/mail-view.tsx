@@ -41,6 +41,7 @@ interface MailAttachment {
 interface MailMessage {
   id: string
   from: string
+  replyTo: string | null
   to: string
   cc: string
   date: string
@@ -209,7 +210,8 @@ export function draftFrom(original: MailMessage, mode: 'reply' | 'replyAll' | 'f
     }
   }
 
-  const sender = addressesIn(original.from)[0] ?? ''
+  // Reply-To wins: contact forms and list mail send From a service address.
+  const sender = addressesIn(original.replyTo || original.from)[0] ?? ''
   // Replying to something this mailbox sent goes back to its recipients.
   const to = sender === mine ? addressesIn(original.to) : [sender]
   const cc = mode === 'replyAll' ? unique([...addressesIn(original.to), ...addressesIn(original.cc)], mine) : []
@@ -263,8 +265,15 @@ function size(bytes: number): string {
  * without scripts or same-origin, so a mail cannot run code or read the admin's
  * session; `<base target>` sends every link to a new window.
  */
-function mailDocument(html: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>body{margin:12px;font:13px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;color:#1d1512;background:#fff;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${html}</body></html>`
+/**
+ * Remote images, fonts and stylesheets stay blocked until the operator asks for them:
+ * loading them would tell the sender (and any tracker) the mail was opened, and from where.
+ */
+function mailDocument(html: string, remote = false): string {
+  const csp = remote
+    ? "default-src 'none'; img-src https: http: data: cid:; style-src 'unsafe-inline' https:; font-src https: data:"
+    : "default-src 'none'; img-src data: cid:; style-src 'unsafe-inline'; font-src data:"
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>body{margin:12px;font:13px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;color:#1d1512;background:#fff;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${html}</body></html>`
 }
 
 function organizeSummary(result: OrganizeResult): string {
@@ -301,6 +310,8 @@ export function MailView({ onOpenPath }: { onOpenPath: (path: string) => void })
   const [banner, setBanner] = useState<{ text: string; bad?: boolean } | null>(null)
   // Inline, not window.prompt: the macOS window draws no JavaScript dialogs.
   const [folderName, setFolderName] = useState<string | null>(null)
+  // Messages whose remote images the operator chose to load.
+  const [remoteFor, setRemoteFor] = useState<Set<string>>(() => new Set())
   const [organizing, setOrganizing] = useState(false)
   const [compose, setCompose] = useState<ComposeDraft | null>(null)
 
@@ -329,6 +340,8 @@ export function MailView({ onOpenPath }: { onOpenPath: (path: string) => void })
       const ticket = ++listTicket.current
       setListLoading(true)
       setListError('')
+      // A new folder or search must not leave the old folder's rows clickable under it.
+      if (!pageToken) setThreads([])
       const params = new URLSearchParams()
       // A search looks through all mail, the way Gmail's search box does.
       if (activeSearch) params.set('q', activeSearch)
@@ -784,6 +797,7 @@ export function MailView({ onOpenPath }: { onOpenPath: (path: string) => void })
               onChange={(event) => event.target.value && moveTo(event.target.value)}
             >
               <option value="">Move to…</option>
+              {!target.labelIds.includes('INBOX') ? <option value="INBOX">Inbox</option> : null}
               {user
                 .filter((entry) => entry.id !== label)
                 .map((entry) => (
@@ -838,7 +852,7 @@ export function MailView({ onOpenPath }: { onOpenPath: (path: string) => void })
                     className="jmsd-mail-frame"
                     title={`Message from ${senderName(entry.from)}`}
                     sandbox="allow-popups allow-popups-to-escape-sandbox"
-                    srcDoc={mailDocument(entry.html)}
+                    srcDoc={mailDocument(entry.html, remoteFor.has(entry.id))}
                   />
                 ) : (
                   <div className="jmsd-mail-text">{entry.text}</div>
@@ -865,6 +879,16 @@ export function MailView({ onOpenPath }: { onOpenPath: (path: string) => void })
                   </div>
                 ) : null}
                 <div className="jmsd-mail-msg-actions">
+                  {entry.html && !remoteFor.has(entry.id) ? (
+                    <button
+                      type="button"
+                      className="jmsd-chip"
+                      title="Remote images are blocked so the sender cannot tell you opened this"
+                      onClick={() => setRemoteFor((previous) => new Set(previous).add(entry.id))}
+                    >
+                      Load images
+                    </button>
+                  ) : null}
                   <button type="button" className="jmsd-chip" onClick={() => respond('reply', entry)}>
                     Reply
                   </button>

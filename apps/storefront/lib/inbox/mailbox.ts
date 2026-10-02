@@ -6,7 +6,7 @@
  * can never permanently delete mail: that needs the broader `mail.google.com` scope, which
  * is deliberately not requested. "Delete" here means Gmail's Trash, recoverable for 30 days.
  */
-import { gmailFetch, headerValue, parseAddress, readGmailError } from '@/lib/inbox/gmail'
+import { extractBody, gmailFetch, headerValue, parseAddress, readGmailError } from '@/lib/inbox/gmail'
 
 // ---------------------------------------------------------------------------
 // labels
@@ -169,6 +169,8 @@ export interface MailAttachment {
 export interface MailMessage {
   id: string
   from: string
+  /** Where replies should go when it differs from From (contact forms, list mail). */
+  replyTo: string | null
   to: string
   cc: string
   date: string
@@ -206,12 +208,16 @@ export function parseMailMessage(raw: RawMessage): MailMessage {
   const attachments: MailAttachment[] = []
 
   walk(raw.payload, (part) => {
-    if (part.filename && part.body?.attachmentId) {
+    // Anything with a filename is a file, even a .html or .txt one, and even when Gmail
+    // returned it inline in body.data instead of giving it an attachmentId.
+    if (part.filename) {
+      const attachmentId = part.body?.attachmentId ?? (part.partId ? `${INLINE_PART}${part.partId}` : null)
+      if (!attachmentId) return
       attachments.push({
-        attachmentId: part.body.attachmentId,
+        attachmentId,
         filename: part.filename,
         mimeType: part.mimeType ?? 'application/octet-stream',
-        size: part.body.size ?? 0,
+        size: part.body?.size ?? 0,
       })
     } else if (part.mimeType === 'text/html' && part.body?.data && html === null) {
       html = decode(part.body.data)
@@ -220,9 +226,13 @@ export function parseMailMessage(raw: RawMessage): MailMessage {
     }
   })
 
+  // HTML-only mail still needs text, for reply quoting and forwarding.
+  if (!text && html) text = extractBody({ mimeType: 'text/html', body: { data: Buffer.from(html, 'utf8').toString('base64url') } })
+
   return {
     id: raw.id,
     from: headerValue(headers, 'From') ?? '',
+    replyTo: headerValue(headers, 'Reply-To'),
     to: headerValue(headers, 'To') ?? '',
     cc: headerValue(headers, 'Cc') ?? '',
     date: new Date(Number(raw.internalDate) || Date.now()).toISOString(),
@@ -293,11 +303,25 @@ export async function applyThreadAction(
   await modifyThread(accessToken, threadId, THREAD_ACTIONS[action])
 }
 
+/** Prefix for a small attachment Gmail returned inline: the id is its MIME part id. */
+const INLINE_PART = 'part:'
+
 export async function getAttachment(
   accessToken: string,
   messageId: string,
   attachmentId: string,
 ): Promise<Buffer> {
+  if (attachmentId.startsWith(INLINE_PART)) {
+    const partId = attachmentId.slice(INLINE_PART.length)
+    const res = await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}?format=full`)
+    if (!res.ok) throw new Error(await readGmailError(res))
+    let data: string | undefined
+    walk((await res.json()).payload, (part) => {
+      if (part.partId === partId && part.filename) data = part.body?.data
+    })
+    if (data === undefined) throw new Error('Not found - attachment')
+    return Buffer.from(data, 'base64url')
+  }
   const response = await gmailFetch(
     accessToken,
     `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,

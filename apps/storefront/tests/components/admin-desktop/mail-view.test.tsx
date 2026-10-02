@@ -101,6 +101,10 @@ describe('MailView', () => {
     expect(sandbox).not.toContain('allow-scripts')
     expect(sandbox).not.toContain('allow-same-origin')
     expect(frame.getAttribute('srcdoc')).toContain('<base target="_blank">')
+    // Remote content is blocked until asked for.
+    expect(frame.getAttribute('srcdoc')).toContain("img-src data: cid:")
+    fireEvent.click(screen.getByRole('button', { name: 'Load images' }))
+    expect(screen.getByTitle('Message from Ann Buyer').getAttribute('srcdoc')).toContain('img-src https:')
 
     await waitFor(() => expect(posts(fetchMock, '/api/admin/mailbox/threads/t1')).toEqual([{ action: 'read' }]))
   })
@@ -134,6 +138,15 @@ describe('MailView', () => {
     expect(draft.to).toBe('ann@shop.com')
     expect(draft.cc).toBe('boss@shop.com')
     expect(draft.subject).toBe('RE: jars')
+  })
+
+  it('replies to Reply-To rather than a service From address', () => {
+    const draft = draftFrom(
+      { ...detail.messages[0], from: 'Website <noreply@josemadrid.net>', replyTo: 'Pat <pat@gmail.com>' },
+      'reply',
+      'mike@josemadridsalsa.com',
+    )
+    expect(draft.to).toBe('pat@gmail.com')
   })
 
   it('shows the organizer summary', async () => {
