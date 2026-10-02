@@ -88,7 +88,7 @@ export function BlockRenderer({ block, fundraiser }: BlockRendererProps) {
     case 'testimonial':
       return <TestimonialBlock block={block} />
     case 'contact_form':
-      return <ContactFormBlock block={block} />
+      return <ContactFormBlock block={block} fundraiserSlug={fundraiser.slug} />
     case 'divider':
       return <DividerBlock block={block} />
     case 'image_text':

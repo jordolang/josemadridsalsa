@@ -31,16 +31,16 @@ export async function POST(request: NextRequest) {
     }
 
     const { type, data } = event
-    const email =
-      (data?.to as { email: string }[])?.[0]?.email ??
-      (data?.email as string | undefined)
+    // Resend sends recipients as plain address strings (`to: string[]`).
+    const email = (data?.to as string[] | undefined)?.[0]
 
     if (!email) return NextResponse.json({ ok: true })
 
     switch (type) {
       case 'email.bounced': {
+        // Resend reports `Permanent` / `Transient` / `Undetermined`; compare case-insensitively.
         const bounceType =
-          data.bounce?.type === 'permanent' ? 'HARD' : 'SOFT'
+          String(data.bounce?.type ?? '').toLowerCase() === 'permanent' ? 'HARD' : 'SOFT'
         const reason =
           (data.bounce?.message as string) ?? 'Unknown bounce reason'
 
