@@ -7,6 +7,7 @@ import { PAID_PAYMENT_STATUS } from '@/lib/payments/status'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
 import { creditPurchaseLoyaltyPoints } from '@/lib/loyalty'
+import { deductWebhookOrderStockInTx, settleWebhookStock } from '@/lib/payments/webhook-stock'
 import { reverseFundraiserCommission } from '@/lib/fundraising/reverse-commission'
 
 export const runtime = 'nodejs'
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
           break
         }
 
-        await prisma.$transaction(async (tx) => {
+        const stock = await prisma.$transaction(async (tx) => {
           await tx.order.update({
             where: { id: order.id },
             data: {
@@ -239,7 +240,13 @@ export async function POST(request: Request) {
 
           // Award purchase loyalty points, idempotent on the order like the credit above.
           await creditPurchaseLoyaltyPoints(tx, order.id)
-        })
+
+          // Turn the reservation into a sale, as the Stripe webhook does — idempotent per
+          // order item, so the capture route finalizing the same order deducts once.
+          return deductWebhookOrderStockInTx(tx, order, 'PayPal')
+        }, { isolationLevel: 'Serializable' })
+
+        await settleWebhookStock(order, 'PayPal', stock)
 
         // Send confirmation email
         if (!order.confirmationEmailSentAt) {
