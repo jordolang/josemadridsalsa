@@ -25,6 +25,11 @@ const db = vi.hoisted(() => ({
   $transaction: vi.fn(),
 }))
 vi.mock('@/lib/prisma', () => ({ prisma: db, default: db }))
+const dealArenaDamage = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/bigcommerce/fundraising-orders', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/bigcommerce/fundraising-orders')>()),
+  dealBigCommerceArenaDamage: dealArenaDamage,
+}))
 
 const API = 'https://api.bigcommerce.com/stores/testhash'
 const [originalHotRaw, chooseSixRaw] = fixtures as unknown as RawBigCommerceProduct[]
@@ -397,6 +402,7 @@ describe('mirrorBigCommerceOrder — fundraising store', () => {
       for (const fn of Object.values(table)) fn.mockReset()
     }
     db.$transaction.mockReset().mockImplementation(async (fn: (tx: typeof db) => unknown) => fn(db))
+    dealArenaDamage.mockReset()
     db.order.create.mockResolvedValue({ id: 'o-f1' })
     db.order.aggregate.mockResolvedValue({ _count: { _all: 1 }, _sum: { total: 30, fundraiserCommission: 10 } })
     db.user.findFirst.mockResolvedValue(null)
@@ -432,6 +438,14 @@ describe('mirrorBigCommerceOrder — fundraising store', () => {
       paymentStatus: 'PAID',
     })
     expect(data.adminNotes).toContain('BigCommerce fundraising store order #4821')
+    // A Shipped order counts as paid: it strikes in the arena, keyed on this site's order id.
+    expect(dealArenaDamage).toHaveBeenCalledExactlyOnceWith({
+      orderId: 'o-f1',
+      fundraiserId: 'f-lsa',
+      orderDate: new Date('2023-03-14T16:00:00Z'),
+      saleAmount: 20,
+      donorEmail: 'pat@example.com',
+    })
     expect(db.fundraiser.update).toHaveBeenCalledWith({
       where: { id: 'f-lsa' },
       data: { totalOrders: 1, totalRevenue: 30, totalCommission: 10 },
@@ -451,6 +465,7 @@ describe('mirrorBigCommerceOrder — fundraising store', () => {
       fundraiser: { connect: { id: 'f-lsa' } },
     })
     expect(db.order.aggregate).toHaveBeenCalledTimes(1)
+    expect(dealArenaDamage).not.toHaveBeenCalled()
   })
 
   it('mirrors an order with no group without crediting anyone', async () => {
@@ -465,6 +480,7 @@ describe('mirrorBigCommerceOrder — fundraising store', () => {
     expect(data).toMatchObject({ sellerName: 'Jamie', fundraiserCommission: null, commissionCreditedAt: null })
     expect(db.fundraiser.findUnique).not.toHaveBeenCalled()
     expect(db.order.aggregate).not.toHaveBeenCalled()
+    expect(dealArenaDamage).not.toHaveBeenCalled()
   })
 
   it('defers totals to the caller during a sweep', async () => {

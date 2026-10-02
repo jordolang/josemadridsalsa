@@ -162,6 +162,17 @@ describe('Security Headers Configuration', () => {
       expect(csp).toContain("connect-src 'self' https://*.sentry.io")
     })
 
+    it('should allow the fundraiser page embeds and GA4 collection', async () => {
+      const headers = await getHeadersConfig('production')
+      const csp = findHeader(headers, 'Content-Security-Policy')
+
+      expect(getCspDirective(csp, 'frame-src')).toContain('https://player.twitch.tv')
+      expect(getCspDirective(csp, 'frame-src')).toContain('https://www.youtube-nocookie.com')
+      expect(getCspDirective(csp, 'script-src')).toContain('https://www.googletagmanager.com')
+      expect(getCspDirective(csp, 'connect-src')).toContain('https://*.google-analytics.com')
+      expect(getCspDirective(csp, 'connect-src')).toContain('https://*.analytics.google.com')
+    })
+
     it('should include frame-ancestors none directive', async () => {
       const headers = await getHeadersConfig('development')
       const csp = findHeader(headers, 'Content-Security-Policy')

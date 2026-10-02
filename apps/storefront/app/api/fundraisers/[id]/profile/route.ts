@@ -3,12 +3,30 @@ import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 import prisma from '@/lib/prisma'
+import { CUSTOM_CSS_MAX_LENGTH } from '@/lib/fundraising/custom-css'
+import { toLiveStream, toTikTokProfileUrl, toYouTubeEmbedUrl } from '@/lib/fundraising/public-page-settings'
+
+// The portal form sends '' for a cleared field; store that as null.
+const emptyToNull = (value: unknown) => (typeof value === 'string' && value.trim() === '' ? null : value)
+
+// Reject at save time what the public page would silently drop at render time.
+const supportedUrl = (isSupported: (url: string) => boolean, message: string) =>
+  z.preprocess(emptyToNull, z.string().trim().max(2048).refine(isSupported, message).nullable()).optional()
 
 const ProfileUpdateSchema = z.object({
-  customCss: z.string().nullable().optional(),
-  liveStreamUrl: z.string().url().nullable().optional(),
-  youtubeVideoUrl: z.string().url().nullable().optional(),
-  tiktokFeedUrl: z.string().url().nullable().optional(),
+  customCss: z.preprocess(emptyToNull, z.string().max(CUSTOM_CSS_MAX_LENGTH).nullable()).optional(),
+  liveStreamUrl: supportedUrl(
+    (url) => toLiveStream(url, 'localhost') !== null,
+    'Use an https YouTube, Twitch, Facebook video or Kick channel URL',
+  ),
+  youtubeVideoUrl: supportedUrl(
+    (url) => toYouTubeEmbedUrl(url) !== null,
+    'Use an https YouTube video, short, live or playlist URL',
+  ),
+  tiktokFeedUrl: supportedUrl(
+    (url) => toTikTokProfileUrl(url) !== null,
+    'Use an https TikTok profile URL (https://www.tiktok.com/@name)',
+  ),
   isAdvancedMode: z.boolean().optional(),
 })
 

@@ -3,18 +3,31 @@ import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 import prisma from '@/lib/prisma'
+import {
+  POINTS_AWARDS,
+  recordGamificationAction,
+  type GamificationActionType,
+} from '@/lib/fundraising/gamification'
 
 const ActionSchema = z.object({
-  actionType: z.string().min(1, 'Action type is required'),
+  actionType: z.enum(Object.keys(POINTS_AWARDS) as [GamificationActionType, ...GamificationActionType[]]),
 })
 
-// Points dictionary
-const POINTS_AWARDS: Record<string, number> = {
-  'DAILY_LOGIN': 5,
-  'SHARED_ON_FB': 10,
-  'SHARED_ON_X': 10,
-  'TIKTOK_CHALLENGE': 50,
-  'YOUTUBE_VIDEO': 100,
+async function hasFundraiserAccess(userId: string, userEmail: string, fundraiserId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (user && await hasPermission(user, 'orders:write')) return true
+
+  const mainAccount = await prisma.fundraiserAccount.findFirst({
+    where: { userId, fundraiserId },
+  })
+  if (mainAccount) return true
+
+  const teamAccess = await prisma.fundraiserAccess.findFirst({
+    where: { email: userEmail, fundraiserId },
+  })
+  if (teamAccess) return true
+
+  return false
 }
 
 export async function GET(
@@ -55,8 +68,7 @@ export async function POST(
     const user = await getCurrentUser()
     const { id: fundraiserId } = await params
 
-    // Only logged in users (or the mobile app providing auth) can perform actions
-    if (!user) {
+    if (!user || !(await hasFundraiserAccess(user.id, user.email, fundraiserId))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -70,69 +82,13 @@ export async function POST(
       )
     }
 
-    const { actionType } = parsed.data
-    const pointsAwarded = POINTS_AWARDS[actionType] || 0
+    const { recorded, gamification } = await recordGamificationAction(fundraiserId, parsed.data.actionType)
 
-    // Only allow once per day for things like DAILY_LOGIN
-    if (actionType === 'DAILY_LOGIN') {
-      const startOfDay = new Date()
-      startOfDay.setHours(0, 0, 0, 0)
-      
-      const existingLogin = await prisma.gamificationAction.findFirst({
-        where: {
-          fundraiserId,
-          actionType: 'DAILY_LOGIN',
-          createdAt: {
-            gte: startOfDay,
-          },
-        },
-      })
-
-      if (existingLogin) {
-        return NextResponse.json(
-          { error: 'Daily login already recorded for today' },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Record the action
-    await prisma.gamificationAction.create({
-      data: {
-        fundraiserId,
-        actionType,
-        pointsAwarded,
-      },
-    })
-
-    // Update the master gamification totals
-    const gamification = await prisma.fundraiserGamification.upsert({
-      where: { fundraiserId },
-      create: {
-        fundraiserId,
-        pointsBalance: pointsAwarded,
-        tiktokChallengesCompleted: actionType === 'TIKTOK_CHALLENGE' ? 1 : 0,
-        currentStreak: actionType === 'DAILY_LOGIN' ? 1 : 0,
-        longestStreak: actionType === 'DAILY_LOGIN' ? 1 : 0,
-      },
-      update: {
-        pointsBalance: {
-          increment: pointsAwarded,
-        },
-        tiktokChallengesCompleted: {
-          increment: actionType === 'TIKTOK_CHALLENGE' ? 1 : 0,
-        },
-        // Naive streak update for demonstration. In reality, check if previous login was exactly yesterday.
-        currentStreak: actionType === 'DAILY_LOGIN' ? { increment: 1 } : undefined,
-      },
-    })
-
-    // If streak exceeded longest streak, we need an extra query since upsert can't easily do Math.max inside Prisma directly
-    if (gamification.currentStreak > gamification.longestStreak) {
-      await prisma.fundraiserGamification.update({
-        where: { fundraiserId },
-        data: { longestStreak: gamification.currentStreak },
-      })
+    if (!recorded) {
+      return NextResponse.json(
+        { error: 'Daily login already recorded for today' },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json(gamification)
