@@ -6,8 +6,11 @@ const ORDER_ID = 'clorderaaaaaaaaaaaaaaaaaa'
 function buildTx(overrides: Record<string, unknown> = {}) {
   return {
     discountCode: {
-      findUnique: vi.fn().mockResolvedValue({ id: 'disc1', code: 'WELCOME15' }),
-      update: vi.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockResolvedValue({ id: 'disc1', code: 'WELCOME15', maxUses: null }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
+    rewardRedemption: {
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     discountUsage: {
       findFirst: vi.fn().mockResolvedValue(null),
@@ -53,9 +56,39 @@ describe('redeemOrderCodesInTx', () => {
         data: expect.objectContaining({ discountCodeId: 'disc1', orderId: ORDER_ID, discountAmount: 3 }),
       })
     )
-    expect((tx as any).discountCode.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { usedCount: { increment: 1 } } })
-    )
+    expect((tx as any).discountCode.updateMany).toHaveBeenCalledWith({
+      where: { id: 'disc1' },
+      data: { usedCount: { increment: 1 } },
+    })
+  })
+
+  it('fails completion when a single-use code was already claimed by another order', async () => {
+    const tx = buildTx({
+      discountCode: {
+        findUnique: vi.fn().mockResolvedValue({ id: 'disc1', code: 'REWARD-AB12', maxUses: 1 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      },
+    })
+
+    await expect(
+      redeemOrderCodesInTx(tx, { ...baseParams, discountCode: 'REWARD-AB12', discountAmount: 5 })
+    ).rejects.toThrow(/usage limit/)
+    expect((tx as any).discountCode.updateMany).toHaveBeenCalledWith({
+      where: { id: 'disc1', usedCount: { lt: 1 } },
+      data: { usedCount: { increment: 1 } },
+    })
+    expect((tx as any).rewardRedemption.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('marks the loyalty redemption used once its code is consumed', async () => {
+    const tx = buildTx()
+
+    await redeemOrderCodesInTx(tx, { ...baseParams, discountCode: 'WELCOME15', discountAmount: 3 })
+
+    expect((tx as any).rewardRedemption.updateMany).toHaveBeenCalledWith({
+      where: { discountCode: 'WELCOME15', status: 'ACTIVE' },
+      data: { status: 'USED', usedAt: expect.any(Date) },
+    })
   })
 
   it('does not double-count a discount when both completion paths run for one order', async () => {
@@ -74,7 +107,7 @@ describe('redeemOrderCodesInTx', () => {
     })
 
     expect((tx as any).discountUsage.create).not.toHaveBeenCalled()
-    expect((tx as any).discountCode.update).not.toHaveBeenCalled()
+    expect((tx as any).discountCode.updateMany).not.toHaveBeenCalled()
   })
 
   it('decrements the gift certificate balance and records the usage', async () => {

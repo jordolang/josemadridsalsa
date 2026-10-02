@@ -3,7 +3,6 @@ import { Prisma } from '@prisma/client'
 
 const rewardFindUnique = vi.fn()
 const rewardCreate = vi.fn()
-const rewardUpdate = vi.fn()
 const rewardUpdateMany = vi.fn()
 const rewardDeleteMany = vi.fn()
 const redemptionCount = vi.fn()
@@ -13,7 +12,6 @@ vi.mock('@/lib/prisma', () => {
     loyaltyReward: {
       findUnique: rewardFindUnique,
       create: rewardCreate,
-      update: rewardUpdate,
       updateMany: rewardUpdateMany,
       deleteMany: rewardDeleteMany,
     },
@@ -92,16 +90,19 @@ describe('reward writes', () => {
   })
 
   it('will not lower the limit below what has already been redeemed', async () => {
+    rewardUpdateMany.mockResolvedValue({ count: 0 })
     rewardFindUnique.mockResolvedValue({ usedCount: 7 })
     await expect(
       updateReward('r1', rewardInputSchema.parse({ ...formInput, maxRedemptions: '5' })),
     ).rejects.toThrow('already been redeemed 7 times')
-    expect(rewardUpdate).not.toHaveBeenCalled()
+    // The cap is enforced in the write itself, not by a read that could go stale.
+    expect(rewardUpdateMany.mock.calls[0][0].where).toEqual({ id: 'r1', usedCount: { lte: 5 } })
   })
 
   it('reports a vanished reward instead of a Prisma error', async () => {
-    rewardUpdate.mockRejectedValue(knownError('P2025'))
-    await expect(updateReward('r1', rewardInputSchema.parse(formInput))).rejects.toBeInstanceOf(RewardAdminError)
+    rewardUpdateMany.mockResolvedValue({ count: 0 })
+    rewardFindUnique.mockResolvedValue(null)
+    await expect(updateReward('r1', rewardInputSchema.parse(formInput))).rejects.toThrow('no longer exists')
     rewardUpdateMany.mockResolvedValue({ count: 0 })
     await expect(setRewardActive('r1', false)).rejects.toBeInstanceOf(RewardAdminError)
   })

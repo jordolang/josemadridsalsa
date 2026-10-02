@@ -88,6 +88,9 @@ export default function POSPage() {
   const [productsError, setProductsError] = useState(false)
   const [taxCents, setTaxCents] = useState<number | null>(0)
   const [taxError, setTaxError] = useState<string | null>(null)
+  // Bumped when the server rejects a charge as stale (409), forcing a fresh tax quote
+  // so Retry doesn't resubmit the same outdated total.
+  const [taxQuoteVersion, setTaxQuoteVersion] = useState(0)
   const [cart, setCart] = useState<POSCartItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [barcodeBuffer, setBarcodeBuffer] = useState('')
@@ -257,7 +260,7 @@ export default function POSPage() {
       clearTimeout(timer)
       controller.abort()
     }
-  }, [cart])
+  }, [cart, taxQuoteVersion])
 
   const filteredProducts = searchQuery
     ? products.filter(
@@ -314,6 +317,7 @@ export default function POSPage() {
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
+        if (res.status === 409) setTaxQuoteVersion((v) => v + 1)
         setCheckout((prev) => ({
           ...prev,
           status: 'failed',
@@ -360,6 +364,7 @@ export default function POSPage() {
       })
 
       if (!res.ok) {
+        if (res.status === 409) setTaxQuoteVersion((v) => v + 1)
         const body = await res.json().catch(() => ({ error: 'Failed to create checkout' }))
         setCheckout((prev) => ({
           ...prev,
@@ -476,6 +481,7 @@ export default function POSPage() {
   }
 
   function handleRetry() {
+    if (!taxReady) return
     if (checkout.paymentMethod === 'card') {
       setCheckout((prev) => ({
         ...prev,
@@ -704,6 +710,7 @@ export default function POSPage() {
               onCashSubmit={handleCashSubmit}
               onCancel={handleCancelCheckout}
               onRetry={handleRetry}
+              retryReady={taxReady}
               onNewSale={handleNewSale}
               onPrint={handlePrintReceipt}
             />
@@ -727,6 +734,7 @@ interface CheckoutOverlayProps {
   onCashSubmit: (tendered: number) => void
   onCancel: () => void
   onRetry: () => void
+  retryReady: boolean
   onNewSale: () => void
   onPrint: () => void
 }
@@ -742,6 +750,7 @@ function CheckoutOverlay({
   onCashSubmit,
   onCancel,
   onRetry,
+  retryReady,
   onNewSale,
   onPrint,
 }: CheckoutOverlayProps) {
@@ -913,7 +922,7 @@ function CheckoutOverlay({
         <Button variant="outline" onClick={onCancel} className="h-12">
           Cancel
         </Button>
-        <Button onClick={onRetry} className="h-12 bg-salsa-500 hover:bg-salsa-600">
+        <Button onClick={onRetry} disabled={!retryReady} className="h-12 bg-salsa-500 hover:bg-salsa-600">
           <RotateCcw className="mr-2 h-4 w-4" />
           Retry
         </Button>

@@ -31,16 +31,16 @@ function rewardData(input: RewardInput) {
   }
 }
 
-async function assertCapAboveUsage(id: string, maxRedemptions: number | null) {
-  if (maxRedemptions === null) return
+async function explainRefusedUpdate(id: string, maxRedemptions: number | null): Promise<never> {
   const current = await prisma.loyaltyReward.findUnique({ where: { id }, select: { usedCount: true } })
   if (!current) throw new RewardAdminError('That reward no longer exists.')
-  if (maxRedemptions < current.usedCount) {
+  if (maxRedemptions !== null && maxRedemptions < current.usedCount) {
     throw new RewardAdminError(
       `This reward has already been redeemed ${current.usedCount} times; the limit cannot be lower.`,
       'maxRedemptions',
     )
   }
+  throw new RewardAdminError('This reward changed while you were editing it. Try again.')
 }
 
 export async function createReward(input: RewardInput) {
@@ -48,19 +48,17 @@ export async function createReward(input: RewardInput) {
 }
 
 export async function updateReward(id: string, input: RewardInput) {
-  await assertCapAboveUsage(id, input.maxRedemptions)
-  try {
-    return await prisma.loyaltyReward.update({
-      where: { id },
-      data: rewardData(input),
-      select: { id: true, name: true },
-    })
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      throw new RewardAdminError('That reward no longer exists.')
-    }
-    throw error
-  }
+  // The cap check is part of the write's WHERE, so a redemption landing between a
+  // separate read and the write can never leave usedCount above the new limit.
+  const { count } = await prisma.loyaltyReward.updateMany({
+    where: {
+      id,
+      ...(input.maxRedemptions !== null && { usedCount: { lte: input.maxRedemptions } }),
+    },
+    data: rewardData(input),
+  })
+  if (count === 0) await explainRefusedUpdate(id, input.maxRedemptions)
+  return { id, name: input.name }
 }
 
 export async function setRewardActive(id: string, isActive: boolean) {
