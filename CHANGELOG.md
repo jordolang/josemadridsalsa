@@ -34,12 +34,12 @@ the root `package.json` is canonical.
   the group. The phone gets the Square token from the storefront at runtime, never from the build.
   Tap to Pay on iPhone needs Apple's entitlement (see the docs). Schema: `Fundraiser.appCardPayments`.
 - **Thermometer style for the fundraiser page's Progress block.** In the page editor, the
-  Progress block has a Style option (Progress bar / Thermometer); Thermometer draws the existing
-  `FundraisingThermometer` against the fundraiser's goal.
+  Progress block has a Style option (Progress bar / Thermometer). The thermometer is drawn in SVG
+  and honours the block's show-amount and show-percentage toggles.
 - **Fundraiser SEO keywords reach the page.** The keywords saved under the portal's analytics
-  settings now become the `/f/[subdomain]` page's `<meta name="keywords">` (trimmed,
-  de-duplicated, at most 20 of 60 characters each); pages without their own keep the site
-  default. The help text notes that Google ignores this tag.
+  settings now become the `<meta name="keywords">` of the campaign's indexed page,
+  `/fundraisers/[slug]`, and of `/f/[subdomain]` (trimmed, de-duplicated, at most 20 of 60
+  characters each). The help text notes that Google ignores this tag.
 - **Create invoices on the web.** `/admin/invoices` has a working **New invoice** button (for
   `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
   customer, status, notes and free-text lines. Totals are computed on the server. The web form and
@@ -392,10 +392,13 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
-- **`/battles` shows the real monthly championship.** It ranked every active fundraiser by
-  all-time revenue. It now ranks the month's battle teams exactly as season end crowns the
-  champion (battle sales, earliest team on a tie), shows "raised this month" from that month's
-  sale events, and links to each team's page.
+- **`/battles` and season end crown the same, real champion.** `/battles` ranked every active
+  fundraiser by all-time revenue, and season end ranked by the team's lifetime `salesCount`,
+  which carries sales across seasons. Both now use `getBattleStandings`
+  (`lib/arena/standings.ts`): the season's own roster ranked by sales placed during that battle,
+  earliest team on a tie, with exact takings and the top seller from that battle's sale events. A
+  season with no sales crowns nobody. Sale events now record the `period` they struck (migration
+  `20261003120000_sale_event_period`, backfilled from `createdAt`).
 - **Arena chat answers 401, not 500, for a session whose account no longer exists.**
 - **Only sales made during a battle deal arena damage.** `applyPurchaseDamage` now takes the
   sale's `placedAt` (the order's own creation time) and refuses any sale placed before the team

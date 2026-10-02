@@ -24,7 +24,7 @@ export function ProgressBarBlock({ block, fundraiser }: Props) {
         <h3 className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-500">
           {label}
         </h3>
-        <FundraisingThermometer raised={raised} goal={goal} />
+        <FundraisingThermometer raised={raised} goal={goal} showAmount={block.showAmount} showPercentage={block.showPercentage} />
       </section>
     )
   }

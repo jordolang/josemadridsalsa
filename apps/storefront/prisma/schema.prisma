@@ -3507,6 +3507,9 @@ model FundraiserSaleEvent {
   donorComment       String?
   isAnonymous        Boolean                       @default(false)
   sellingCharacterId String?
+  /// The battle period (YYYY-MM) this sale struck. Standings and the season champion count
+  /// these, not the team's lifetime salesCount.
+  period             String?
   reactions          FundraiserSaleEventReaction[]
   replies            FundraiserSaleEventReply[]
   donor              User?                         @relation(fields: [donorUserId], references: [id])
@@ -3516,6 +3519,7 @@ model FundraiserSaleEvent {
   @@index([teamId])
   @@index([donorUserId])
   @@index([sellingCharacterId])
+  @@index([period, teamId])
   @@map("fundraiser_sale_events")
 }
 

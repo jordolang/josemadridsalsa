@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { createMetadata } from '@/lib/metadata'
+import { normalizeSeoKeywords } from '@/lib/fundraising/seo-keywords'
 import { MessageBoard } from '@/components/fundraiser/MessageBoard'
 import { FundraisingProgress } from '@/components/fundraiser/fundraising-progress'
 import { TeamMembersStrip, type TeamMember } from '@/components/fundraiser/team-members-strip'
@@ -58,6 +59,7 @@ async function getFundraiser(slug: string) {
       _count: {
         select: { orders: true, participants: true },
       },
+      analytics: { select: { seoKeywords: true } },
     },
   })
 }
@@ -73,12 +75,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     })
   }
 
+  const keywords = normalizeSeoKeywords(fundraiser.analytics?.seoKeywords)
+
   return createMetadata({
     title: `${fundraiser.name} - Jose Madrid Salsa Fundraiser`,
     description:
       fundraiser.description ||
       `Support ${fundraiser.organizationName} by ordering delicious Jose Madrid Salsa!`,
     pathname: `/fundraisers/${slug}`,
+    // The organizer's own keywords; this is the indexed page (in the sitemap), unlike /f/.
+    keywords: keywords.length > 0 ? keywords : undefined,
   })
 }
 

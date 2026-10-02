@@ -219,10 +219,19 @@ Coordinators sign in to `/fundraiser-portal`:
 | `page-editor` | Edit the public campaign page |
 | `advanced-profile` | Mission statement, bio, branding |
 | `assets` | Logos and cover photos |
-| `analytics` | Traffic and conversion for the campaign |
+| `analytics` | Google Analytics ID, Google Place ID and SEO keywords for the campaign pages |
 | `character` | The arena avatar (see below) |
 | `settings` | Contact details, subdomain, and the thank-you page |
 | `pending` | Holding page before access is approved |
+
+In the **page editor**, the Progress block has a **Style** option: a horizontal progress bar or
+a thermometer. Both honour the block's "show amount raised" and "show percentage" toggles and
+measure gross sales against the campaign goal.
+
+**SEO keywords** (under `analytics`) are trimmed, de-duplicated and capped at 20, then emitted
+as the `<meta name="keywords">` of the campaign's indexed page, `/fundraisers/[slug]` (the one
+in the sitemap). `/f/[subdomain]` carries them too but is `noindex` to avoid duplicate content.
+Google ignores the keywords tag; the page title and mission statement do more for search.
 
 Access is governed by `FundraiserAccount`, `FundraiserProfile` and
 `FundraiserAccess`, checked through `lib/fundraiser-auth.ts` — a separate boundary

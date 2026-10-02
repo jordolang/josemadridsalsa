@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { getBattleStandings } from '@/lib/arena/standings'
 
 export async function getFundraiserTimeline(fundraiserSlug: string) {
   const fundraiser = await prisma.fundraiser.findUnique({
@@ -117,66 +118,34 @@ export async function getFundraiserHeavyHitters(fundraiserSlug: string) {
 }
 
 /**
- * The live standings for one month's battle, ranked exactly as the season-end route crowns
- * the champion: ACTIVE teams in that period by `salesCount` (sales placed during the battle —
- * `applyPurchaseDamage` refuses anything older), earliest team first on a tie. "Raised" is the
- * battle's own sale events in that month, never a fundraiser's all-time revenue.
+ * The live standings for one month's battle, from the same `getBattleStandings` the season-end
+ * route crowns its champion with — the season's roster ranked by sales placed during the battle.
  */
 export async function getMonthlyChampionship(month: number, year: number) {
   if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) {
     throw new Error('Invalid month')
   }
   const period = `${year}-${String(month).padStart(2, '0')}`
-  const monthStart = new Date(Date.UTC(year, month - 1, 1))
-  const monthEnd = new Date(Date.UTC(year, month, 1))
 
-  const teams = await prisma.fundraiserTeam.findMany({
-    where: { status: 'ACTIVE', activePeriod: period },
-    orderBy: [{ salesCount: 'desc' }, { createdAt: 'asc' }],
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      school: true,
-      logoUrl: true,
-      salesCount: true,
-      characters: {
-        where: { amountRaised: { gt: 0 } },
-        orderBy: { amountRaised: 'desc' },
-        take: 1,
-        select: { characterName: true, amountRaised: true },
-      },
-    },
-  })
-
-  const raisedByTeam = new Map<string, number>()
-  if (teams.length > 0) {
-    const sums = await prisma.fundraiserSaleEvent.groupBy({
-      by: ['teamId'],
-      where: { teamId: { in: teams.map((t) => t.id) }, createdAt: { gte: monthStart, lt: monthEnd } },
-      _sum: { amount: true },
-    })
-    for (const row of sums) raisedByTeam.set(row.teamId, Number(row._sum.amount ?? 0))
-  }
-
-  const history = await prisma.fundraiserChampionship.findMany({
-    orderBy: [{ year: 'desc' }, { month: 'desc' }],
-    take: 12,
-  })
+  const [standings, history] = await Promise.all([
+    getBattleStandings(period),
+    prisma.fundraiserChampionship.findMany({
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      take: 12,
+    }),
+  ])
 
   return {
     period,
-    currentLeaderboard: teams.map((t) => ({
+    currentLeaderboard: standings.map((t) => ({
       id: t.id,
       slug: t.slug,
       name: t.name,
       organizationName: t.school,
       logoUrl: t.logoUrl,
-      salesCount: t.salesCount,
-      totalRevenue: raisedByTeam.get(t.id) ?? 0,
-      topParticipant: t.characters[0]
-        ? { name: t.characters[0].characterName, revenue: t.characters[0].amountRaised }
-        : null,
+      salesCount: t.battleSales,
+      totalRevenue: t.battleRaised,
+      topParticipant: t.topSeller ? { name: t.topSeller.name, revenue: t.topSeller.raised } : null,
     })),
     history,
   }

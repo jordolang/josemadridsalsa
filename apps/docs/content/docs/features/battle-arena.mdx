@@ -302,6 +302,22 @@ catalogue. Both that table and that route are gone. There is one catalogue
 goods, so it has no order to hang off and still settles through the Stripe metadata path in
 `app/api/webhooks/stripe`.
 
+## Which sales count, and who wins
+
+Only a sale **placed during the team's current battle** deals damage. `applyPurchaseDamage`
+takes the order's own `placedAt` and refuses anything placed before the team joined or outside
+the battle window (the season's `startsAt`–`endsAt`, else the period month). Past orders that
+arrive late — a history import, the BigCommerce mirror catching up, a late payment — record
+nothing and damage nobody.
+
+Each sale event stores the battle `period` it struck. Standings come from those events, not
+from `FundraiserTeam.salesCount` (a lifetime counter that survives across seasons):
+`getBattleStandings` in `lib/arena/standings.ts` ranks the season's own roster (or, with no
+season, the period's ACTIVE teams) by sales in that battle, earliest team first on a tie. The
+public `/battles` board and the season-end route (`POST /api/admin/arena/seasons/[id]/end`)
+both use it, so the leaderboard always shows the team the season will crown. A season that
+ends with no sales crowns nobody.
+
 ## Game Mechanics Reference
 
 | Event                        | Result                                               |
