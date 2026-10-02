@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import {
   BIGCOMMERCE_FUNDRAISER_CONTACT_EMAIL,
   countsTowardCampaign,
+  dealBigCommerceArenaDamage,
   ensureBigCommerceFundraiser,
   extractFundraisingAttribution,
   recomputeFundraiserTotals,
@@ -15,12 +16,16 @@ const rows = vi.hoisted(() => [] as Row[])
 const db = vi.hoisted(() => ({
   fundraiser: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   order: { aggregate: vi.fn() },
+  fundraiserTeam: { findUnique: vi.fn() },
 }))
 vi.mock('@/lib/prisma', () => ({ prisma: db, default: db }))
+const applyPurchaseDamage = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/arena/damage', () => ({ applyPurchaseDamage }))
 
 beforeEach(() => {
   rows.length = 0
-  for (const fn of [...Object.values(db.fundraiser), ...Object.values(db.order)]) fn.mockReset()
+  for (const fn of [...Object.values(db.fundraiser), ...Object.values(db.order), db.fundraiserTeam.findUnique]) fn.mockReset()
+  applyPurchaseDamage.mockReset()
   db.fundraiser.findUnique.mockImplementation(async ({ where }: { where: { bigCommerceGroup: string } }) =>
     rows.find((row) => row.bigCommerceGroup === where.bigCommerceGroup) ?? null,
   )
@@ -196,5 +201,58 @@ describe('recomputeFundraiserTotals', () => {
     await recomputeFundraiserTotals('f-1')
     const data = db.fundraiser.update.mock.calls[0][0].data
     expect([data.totalOrders, Number(data.totalRevenue), Number(data.totalCommission)]).toEqual([0, 0, 0])
+  })
+})
+
+describe('dealBigCommerceArenaDamage', () => {
+  const sale = {
+    orderId: 'o-1',
+    fundraiserId: 'f-1',
+    orderDate: new Date('2026-09-30T12:00:00Z'),
+    saleAmount: 20,
+    donorEmail: 'pat@example.com',
+  }
+  const team = { id: 't-1', status: 'ACTIVE', createdAt: new Date('2026-09-01T00:00:00Z') }
+
+  it("strikes for the group's arena team, keyed on the order id so a replay lands once", async () => {
+    db.fundraiserTeam.findUnique.mockResolvedValue(team)
+
+    await dealBigCommerceArenaDamage(sale)
+    await dealBigCommerceArenaDamage(sale)
+
+    expect(db.fundraiserTeam.findUnique.mock.calls[0][0].where).toEqual({ fundraiserId: 'f-1' })
+    expect(applyPurchaseDamage).toHaveBeenCalledWith({
+      sellingTeamId: 't-1',
+      saleAmount: 20,
+      orderId: 'o-1',
+      donor: { email: 'pat@example.com' },
+    })
+    // Both deliveries carry the same key; applyPurchaseDamage's unique saleEvent.orderId dedupes.
+    expect(new Set(applyPurchaseDamage.mock.calls.map(([input]) => input.orderId))).toEqual(new Set(['o-1']))
+  })
+
+  it.each([
+    ['the group is not in the arena', null],
+    ['the team is not active', { ...team, status: 'PENDING' }],
+    ['the order predates the team (a history backfill)', { ...team, createdAt: new Date('2026-10-01T00:00:00Z') }],
+  ])('deals nothing when %s', async (_, row) => {
+    db.fundraiserTeam.findUnique.mockResolvedValue(row)
+    await expect(dealBigCommerceArenaDamage(sale)).resolves.toBeUndefined()
+    expect(applyPurchaseDamage).not.toHaveBeenCalled()
+  })
+
+  it('deals nothing for a zero-value order', async () => {
+    await dealBigCommerceArenaDamage({ ...sale, saleAmount: 0 })
+    expect(db.fundraiserTeam.findUnique).not.toHaveBeenCalled()
+    expect(applyPurchaseDamage).not.toHaveBeenCalled()
+  })
+
+  it('logs instead of failing the mirror when damage cannot be applied', async () => {
+    db.fundraiserTeam.findUnique.mockResolvedValue(team)
+    applyPurchaseDamage.mockRejectedValue(new Error('db down'))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(dealBigCommerceArenaDamage(sale)).resolves.toBeUndefined()
+    expect(error).toHaveBeenCalled()
+    error.mockRestore()
   })
 })

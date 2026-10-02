@@ -2,7 +2,7 @@ import type { OrderStatus, PaymentStatus, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { allocateCents } from '@/lib/bundles'
 import { deriveFulfillmentStatus } from '@/lib/orders/fulfillment'
-import { calculateFundraiserCommission } from '@/lib/fundraising/commission'
+import { calculateFundraiserCommission, commissionBase } from '@/lib/fundraising/commission'
 import { bigCommerceFetch } from './client'
 import type { BigCommerceStoreKey } from './config'
 import {
@@ -13,9 +13,11 @@ import {
 } from './catalog'
 import {
   countsTowardCampaign,
+  dealBigCommerceArenaDamage,
   ensureBigCommerceFundraiser,
   extractFundraisingAttribution,
   recomputeFundraiserTotals,
+  type BigCommerceArenaSale,
   type BigCommerceFundraiserRef,
 } from './fundraising-orders'
 
@@ -352,22 +354,26 @@ export async function mirrorBigCommerceOrder(
   // recorded and the order marked credited here, so the native credit can never add it again.
   let fundraiser: BigCommerceFundraiserRef | null = null
   let attributionFields: Pick<Prisma.OrderCreateInput, 'sellerName' | 'fundraiserCommission' | 'commissionCreditedAt'> | null = null
+  let arenaSale: Omit<BigCommerceArenaSale, 'orderId'> | null = null
   if (fundraising) {
     const attribution = extractFundraisingAttribution(order.billing_address, shipping ? [shipping] : [])
     fundraiser = attribution.group ? await ensureBigCommerceFundraiser(attribution.group, orderDate) : null
     const counts = mapped !== null && countsTowardCampaign(mapped.status, mapped.paymentStatus)
+    const sale = {
+      subtotal: Number(order.subtotal_ex_tax),
+      discountAmount: fromCents(toCents(order.discount_amount) + toCents(order.coupon_discount)),
+    }
+    if (fundraiser && counts) {
+      arenaSale = {
+        fundraiserId: fundraiser.id,
+        orderDate,
+        saleAmount: commissionBase(sale),
+        donorEmail: order.billing_address.email?.trim().toLowerCase() || null,
+      }
+    }
     attributionFields = {
       sellerName: attribution.seller,
-      fundraiserCommission:
-        fundraiser && counts
-          ? calculateFundraiserCommission(
-              {
-                subtotal: Number(order.subtotal_ex_tax),
-                discountAmount: fromCents(toCents(order.discount_amount) + toCents(order.coupon_discount)),
-              },
-              fundraiser.commissionRate,
-            )
-          : null,
+      fundraiserCommission: fundraiser && counts ? calculateFundraiserCommission(sale, fundraiser.commissionRate) : null,
       commissionCreditedAt: fundraiser ? orderDate : null,
     }
   }
@@ -400,6 +406,7 @@ export async function mirrorBigCommerceOrder(
       if (context?.staleFundraisers) context.staleFundraisers.add(id)
       else await recomputeFundraiserTotals(id)
     }
+    if (arenaSale) await dealBigCommerceArenaDamage({ ...arenaSale, orderId })
     return {
       orderId,
       unmatched,
