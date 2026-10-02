@@ -35,7 +35,7 @@ export function ParticipantForm({
   const router = useRouter()
   const [formState, setFormState] = useState<FormState>({
     name: participant.name,
-    email: participant.email,
+    email: participant.email ?? '',
     phone: participant.phone || '',
     status: participant.status,
   })

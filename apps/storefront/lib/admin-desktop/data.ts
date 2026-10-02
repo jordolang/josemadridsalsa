@@ -1048,13 +1048,13 @@ async function loadFundraisers(list: ListQuery = DEFAULT_LIST): Promise<TablePay
         title: participant.name,
         values: {
           name: participant.name,
-          email: participant.email,
+          email: textValue(participant.email),
           phone: textValue(participant.phone),
           status: participant.status,
           referralCode: participant.referralCode,
         },
       }),
-      search: `${participant.name} ${participant.email} ${participant.fundraiser.name} ${participant.fundraiser.organizationName}`,
+      search: `${participant.name} ${participant.email ?? ''} ${participant.fundraiser.name} ${participant.fundraiser.organizationName}`,
       buckets: [0, ...(live ? [1] : []), ...(revenue > 0 ? [2] : [3])],
       cells: [
         text(participant.name, { strong: true }),
@@ -1088,7 +1088,7 @@ async function loadFundraisers(list: ListQuery = DEFAULT_LIST): Promise<TablePay
           {
             label: 'PARTICIPANT',
             fields: [
-              { label: 'Email', value: participant.email, mono: true },
+              { label: 'Email', value: participant.email ?? '—', mono: true },
               { label: 'Referral code', value: participant.referralCode, mono: true },
               { label: 'Orders', value: count(participant.totalOrders), mono: true },
               { label: 'Sales', value: money(revenue), mono: true },

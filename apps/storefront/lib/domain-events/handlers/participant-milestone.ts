@@ -46,7 +46,8 @@ export async function handleParticipantMilestone(event: DomainEventRecord): Prom
     },
   })
 
-  if (!participant) return
+  // Sellers who joined through the mobile app may have no email to congratulate.
+  if (!participant?.email) return
 
   const milestone = pendingMilestone(participant.totalOrders, participant.lastMilestoneNotified)
   if (milestone === null) return
