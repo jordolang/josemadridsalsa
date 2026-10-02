@@ -108,6 +108,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     redirect('/admin')
   }
 
+  const canWrite = await hasPermission(user, 'financials:write')
   const { invoices, total, page, totalPages, statusSummary } = await getInvoices(params)
   const statusCandidate = params.status?.toUpperCase()
   const activeStatus = STATUS_OPTIONS.some((option) => option.value === statusCandidate)
@@ -123,9 +124,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             Manage billing records, outstanding balances, and payment tracking.
           </p>
         </div>
-        <Button variant="outline" disabled>
-          Invoice creator coming soon
-        </Button>
+        {canWrite && (
+          <Button asChild>
+            <Link href="/admin/invoices/new">New invoice</Link>
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">

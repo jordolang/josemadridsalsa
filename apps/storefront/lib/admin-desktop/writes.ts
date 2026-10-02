@@ -39,6 +39,7 @@ import {
   priceManualOrder,
 } from '@/lib/admin/manual-order'
 import { generatePoNumber } from '@/lib/purchasing/receiving'
+import { createInvoice, INVOICE_STATUSES, invoiceLinesSchema, priceInvoiceLines } from '@/lib/invoices/create-invoice'
 import { insertRecipientsFromList } from '@/lib/email/recipients'
 import { canClearNotification, completeStep, reopenStep } from '@/lib/inbox/resolution'
 import { markAllNotificationsRead } from '@/lib/notifications/dispatch'
@@ -1667,19 +1668,6 @@ const purchaseHandlers: Record<string, WriteHandler> = {
 // invoices
 // ---------------------------------------------------------------------------
 
-const invoiceLines = z
-  .array(
-    z.object({
-      description: required('Description'),
-      quantity: z.coerce.number().int().positive('Quantity must be at least 1'),
-      unitPrice: z.coerce.number().min(0, 'Price cannot be negative'),
-    }),
-  )
-  .min(1, 'Add at least one line')
-
-const invoiceTotal = (lines: { quantity: number; unitPrice: number }[]) =>
-  lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)
-
 const invoiceHandlers: Record<string, WriteHandler> = {
   'invoice.create': handler({
     permission: 'financials:write',
@@ -1689,36 +1677,14 @@ const invoiceHandlers: Record<string, WriteHandler> = {
       number: optionalText,
       dueDate: requiredDate('Due date'),
       customerId: optionalText,
-      status: z.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED']),
+      status: z.enum(INVOICE_STATUSES),
       notes: optionalText,
-      lines: invoiceLines,
+      lines: invoiceLinesSchema,
     }),
     async run(values) {
-      const now = new Date()
-      const number =
-        values.number ?? `INV-${now.toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 9000 + 1000)}`
-
-      const invoice = await prisma.invoice
-        .create({
-          data: {
-            number,
-            customerId: values.customerId,
-            status: values.status,
-            dueDate: values.dueDate,
-            total: decimal(invoiceTotal(values.lines)),
-            lines: values.lines.map((line) => ({
-              description: line.description,
-              quantity: line.quantity,
-              unitPrice: line.unitPrice,
-              amount: Number((line.quantity * line.unitPrice).toFixed(2)),
-            })),
-            notes: values.notes,
-            sentAt: values.status === 'SENT' ? now : null,
-            paidAt: values.status === 'PAID' ? now : null,
-          },
-          select: { id: true, number: true },
-        })
-        .catch((error) => friendly(error, 'That invoice could not be created.'))
+      const invoice = await createInvoice(values).catch((error) =>
+        friendly(error, 'That invoice could not be created.'),
+      )
 
       return { message: `Invoice ${invoice.number} created`, recordId: invoice.id }
     },
@@ -1732,9 +1698,9 @@ const invoiceHandlers: Record<string, WriteHandler> = {
       number: required('Invoice number'),
       dueDate: requiredDate('Due date'),
       customerId: optionalText,
-      status: z.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED']),
+      status: z.enum(INVOICE_STATUSES),
       notes: optionalText,
-      lines: invoiceLines,
+      lines: invoiceLinesSchema,
     }),
     async run(values, context) {
       const id = requireRecord(context)
@@ -1746,13 +1712,7 @@ const invoiceHandlers: Record<string, WriteHandler> = {
             customerId: values.customerId,
             status: values.status,
             dueDate: values.dueDate,
-            total: decimal(invoiceTotal(values.lines)),
-            lines: values.lines.map((line) => ({
-              description: line.description,
-              quantity: line.quantity,
-              unitPrice: line.unitPrice,
-              amount: Number((line.quantity * line.unitPrice).toFixed(2)),
-            })),
+            ...priceInvoiceLines(values.lines),
             notes: values.notes,
           },
           select: { number: true },
