@@ -14,6 +14,12 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Square Reader card payments on the iPad kiosk.** The iPad app takes cards on a Bluetooth
+  Square Reader through Square's Mobile Payments SDK, as an alternative to the Square Terminal.
+  Admins connect Square once under Settings › Payments (OAuth; tokens encrypted and refreshed
+  automatically); paired kiosks fetch the token from `/api/kiosk/square/authorization`, and the
+  server confirms each payment with Square before marking the order paid. The iPad app now
+  needs iPadOS 17.1. New env vars: `SQUARE_APPLICATION_ID`, `SQUARE_APPLICATION_SECRET`.
 - **Salsa Kings self-order kiosk.** `/kiosk` is a touch-screen till for shows and the shop:
   an animated splash screen (the website hero's burning logo, jars over a fire bed, the price
   chart), a menu of real jar photos with heat filters, and a Square Terminal checkout with a

@@ -1,4 +1,5 @@
-// Jose Madrid Kiosk (iPad): full-screen /kiosk page, receipt printing, barcode scanner pass-through.
+// Jose Madrid Kiosk (iPad): full-screen /kiosk page, receipt printing, barcode scanner pass-through,
+// and card payments on a Bluetooth Square Reader (Kiosk/Payments/SquareCardReader.swift).
 //
 // Locking the iPad to this app: Settings > Accessibility > Guided Access > On, set a passcode,
 // then open the kiosk and triple-click the top (or Home) button > Start. Turn Auto-Lock off in
@@ -7,8 +8,17 @@
 
 import SwiftUI
 
+/// Square's Mobile Payments SDK has to start in didFinishLaunching, before anything else uses it.
+final class KioskAppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        SquareCardReader.start(launchOptions: launchOptions)
+        return true
+    }
+}
+
 @main
 struct KioskApp: App {
+    @UIApplicationDelegateAdaptor(KioskAppDelegate.self) private var appDelegate
     @StateObject private var settings = KioskSettings.shared
 
     var body: some Scene {
@@ -39,11 +49,18 @@ private struct RootView: View {
             .ignoresSafeArea()
             .statusBarHidden(true)
             .persistentSystemOverlays(.hidden)
-            .onAppear { if !settings.isConfigured { sheet = .setup } }
+            .onAppear {
+                if settings.isConfigured { Task { await SquareCardReader.shared.signIn() } } else { sheet = .setup }
+            }
             .sheet(item: $sheet) { which in
                 switch which {
                 case .setup:
-                    SetupView { sheet = nil; reloadToken += 1 }
+                    SetupView {
+                        sheet = nil
+                        reloadToken += 1
+                        // The device token may have changed, and with it the Square account.
+                        Task { await SquareCardReader.shared.signIn() }
+                    }
                         .interactiveDismissDisabled(!settings.isConfigured)
                 case .pin:
                     PinView(expected: settings.staffPIN) { ok in sheet = ok ? .menu : nil }

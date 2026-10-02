@@ -46,7 +46,13 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>The kiosk uses Bluetooth to print customer receipts.</string>
+	<string>The kiosk uses Bluetooth to connect to the Square card reader and to print customer receipts.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Square needs the kiosk's location to take card payments.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Square uses the microphone connection for some card readers.</string>
+	<key>SquareApplicationID</key>
+	<string>$(SQUARE_APPLICATION_ID)</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>The kiosk uses the local network to find and print to the receipt printer.</string>
 	<key>NSBonjourServices</key>

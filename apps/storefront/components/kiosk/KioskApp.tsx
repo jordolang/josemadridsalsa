@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { KIOSK_FLAVORS, flavorsForUpc, type KioskFlavor } from '@/lib/kiosk/catalog'
 import { dealLabel, formatCents, nextJarHint, quoteJars, type KioskQuote } from '@/lib/kiosk/pricing'
 import { createScanBuffer } from '@/lib/kiosk/scanner'
-import { kioskAuthHeaders, printKioskReceipt } from '@/lib/kiosk/bridge'
+import { cardReader, kioskAuthHeaders, printKioskReceipt, takeCardPayment } from '@/lib/kiosk/bridge'
 import { DONE_RESET_SECONDS, IDLE_RESET_MS, type KioskFilter } from './kiosk-data'
 import {
   CartScreen,
@@ -25,6 +25,8 @@ type Screen = 'splash' | 'menu' | 'cart' | 'pay' | 'done'
 
 interface Payment {
   phase: PayPhase
+  /** `terminal`: a Square Terminal checkout id. `reader`: the order id the iPad's reader pays. */
+  method: 'terminal' | 'reader'
   checkoutId: string | null
   orderNumber: string | null
   quote: KioskQuote
@@ -232,32 +234,74 @@ export function KioskApp() {
     setScreen('done')
   }, [])
 
+  /**
+   * The iPad's Square Reader takes the card with Square's own payment screen. Whatever it
+   * reports, the server asks Square before the order counts as paid, and a cancel is checked
+   * against Square too, so a card that did go through is never dropped.
+   */
+  const payOnReader = useCallback(
+    async (orderId: string, orderNumber: string, paidQuote: KioskQuote) => {
+      const card = await takeCardPayment({ amountCents: paidQuote.totalCents, referenceId: orderId, note: `Kiosk order ${orderNumber}` })
+      const fail = (message: string) => {
+        setPayment((p) => (p ? { ...p, phase: 'failed', error: message } : p))
+        void loadCatalog()
+      }
+      try {
+        if (card.status === 'paid') {
+          const { status } = await kioskFetch<{ status: string }>(`/api/kiosk/checkout/reader/${orderId}`, {
+            method: 'POST',
+            body: JSON.stringify({ paymentId: card.paymentId }),
+          })
+          if (status === 'COMPLETED') return finish(orderNumber, paidQuote, lines)
+          return fail('The payment could not be confirmed. Please ask a team member.')
+        }
+        const { status } = await kioskFetch<{ status: string }>(`/api/kiosk/checkout/reader/${orderId}/cancel`, { method: 'POST' })
+        if (status === 'COMPLETED') return finish(orderNumber, paidQuote, lines)
+        attemptRef.current = null
+        if (card.status === 'canceled') {
+          setPayment(null)
+          setScreen(stage?.portrait ? 'cart' : 'menu')
+          return
+        }
+        fail(card.error)
+      } catch (error) {
+        // The card may have been charged; keep the attempt so "Try again" finds this order.
+        fail(error instanceof Error ? `${error.message} Please ask a team member before paying again.` : 'Please ask a team member.')
+      }
+    },
+    [finish, lines, loadCatalog, stage?.portrait]
+  )
+
   const startPayment = useCallback(async () => {
     if (!jars) return
+    // A paired Square Reader takes the card on the iPad itself; otherwise the Square Terminal does.
+    const method: Payment['method'] = cardReader() ? 'reader' : 'terminal'
     setToast(null)
     setScreen('pay')
-    setPayment({ phase: 'starting', checkoutId: null, orderNumber: null, quote, error: null })
+    setPayment({ phase: 'starting', method, checkoutId: null, orderNumber: null, quote, error: null })
     attemptRef.current ??= crypto.randomUUID()
     try {
       const result = await kioskFetch<{ checkoutId: string; orderNumber: string; quote: KioskQuote; alreadyPaid: boolean }>('/api/kiosk/checkout', {
         method: 'POST',
-        body: JSON.stringify({ items: lines.map((l) => ({ key: l.flavor.key, quantity: l.qty })), attemptId: attemptRef.current }),
+        body: JSON.stringify({ items: lines.map((l) => ({ key: l.flavor.key, quantity: l.qty })), attemptId: attemptRef.current, method }),
       })
       // A retry that finds the customer already paid goes straight to the receipt.
       if (result.alreadyPaid) return finish(result.orderNumber, result.quote, lines)
-      setPayment({ phase: 'waiting', checkoutId: result.checkoutId, orderNumber: result.orderNumber, quote: result.quote, error: null })
+      setPayment({ phase: 'waiting', method, checkoutId: result.checkoutId, orderNumber: result.orderNumber, quote: result.quote, error: null })
+      if (method === 'reader') return payOnReader(result.checkoutId, result.orderNumber, result.quote)
     } catch (error) {
       // Only a definite refusal (bad cart, sold out, not paired) proves nothing reached the
       // Terminal, so only then is a retry a new attempt. No answer, "still starting" (409) or
       // a server error may mean the checkout exists, so "Try again" reuses the id to find it.
       if (error instanceof KioskHttpError && error.status < 500 && error.status !== 409) attemptRef.current = null
-      setPayment({ phase: 'failed', checkoutId: null, orderNumber: null, quote, error: error instanceof Error ? error.message : 'Payment failed' })
+      setPayment({ phase: 'failed', method, checkoutId: null, orderNumber: null, quote, error: error instanceof Error ? error.message : 'Payment failed' })
       void loadCatalog()
     }
-  }, [jars, lines, quote, loadCatalog, finish])
+  }, [jars, lines, quote, loadCatalog, finish, payOnReader])
 
   const cancelPayment = useCallback(async () => {
-    if (!payment?.checkoutId) return
+    // On the reader, Square's own payment screen has the cancel button.
+    if (!payment?.checkoutId || payment.method === 'reader') return
     setPayment({ ...payment, phase: 'canceling' })
     try {
       const { status } = await kioskFetch<{ status: string }>(`/api/kiosk/checkout/${payment.checkoutId}/cancel`, { method: 'POST' })
@@ -278,7 +322,7 @@ export function KioskApp() {
 
   const paymentRef = useRef(payment)
   paymentRef.current = payment
-  const checkoutId = payment?.phase === 'waiting' ? payment.checkoutId : null
+  const checkoutId = payment?.phase === 'waiting' && payment.method === 'terminal' ? payment.checkoutId : null
   useEffect(() => {
     if (!checkoutId) return
     let stopped = false
