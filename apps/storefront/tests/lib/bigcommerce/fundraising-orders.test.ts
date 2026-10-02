@@ -212,7 +212,7 @@ describe('dealBigCommerceArenaDamage', () => {
     saleAmount: 20,
     donorEmail: 'pat@example.com',
   }
-  const team = { id: 't-1', status: 'ACTIVE', createdAt: new Date('2026-09-01T00:00:00Z') }
+  const team = { id: 't-1', status: 'ACTIVE' }
 
   it("strikes for the group's arena team, keyed on the order id so a replay lands once", async () => {
     db.fundraiserTeam.findUnique.mockResolvedValue(team)
@@ -224,6 +224,9 @@ describe('dealBigCommerceArenaDamage', () => {
     expect(applyPurchaseDamage).toHaveBeenCalledWith({
       sellingTeamId: 't-1',
       saleAmount: 20,
+      // The order's own date decides it: applyPurchaseDamage refuses anything placed
+      // outside the team's current battle, so a backfilled past order never strikes.
+      placedAt: new Date('2026-09-30T12:00:00Z'),
       orderId: 'o-1',
       donor: { email: 'pat@example.com' },
     })
@@ -234,7 +237,6 @@ describe('dealBigCommerceArenaDamage', () => {
   it.each([
     ['the group is not in the arena', null],
     ['the team is not active', { ...team, status: 'PENDING' }],
-    ['the order predates the team (a history backfill)', { ...team, createdAt: new Date('2026-10-01T00:00:00Z') }],
   ])('deals nothing when %s', async (_, row) => {
     db.fundraiserTeam.findUnique.mockResolvedValue(row)
     await expect(dealBigCommerceArenaDamage(sale)).resolves.toBeUndefined()
