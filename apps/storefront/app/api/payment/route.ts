@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       order.stripePaymentId,
       {
         payment_method: paymentMethodId,
-        return_url: `${origin}/orders/${orderId}`,
+        return_url: `${origin}/order-confirmation/${orderId}`,
       }
     )
 

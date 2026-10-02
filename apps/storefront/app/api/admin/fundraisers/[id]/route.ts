@@ -202,3 +202,6 @@ export async function PUT(
     return NextResponse.json({ error: 'Failed to update fundraiser', details: msg }, { status: 500 })
   }
 }
+
+// Every field is optional, so PUT already behaves as a partial update; PATCH is the same handler.
+export const PATCH = PUT

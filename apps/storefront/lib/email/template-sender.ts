@@ -165,7 +165,7 @@ export async function sendWithTemplate({
     templateId: templateAlias,
     subject: effectiveSubject,
     status: 'SENT',
-    metadata: orderId ? { orderId } : undefined,
+    metadata: { ...(orderId ? { orderId } : {}), ...(data?.id ? { messageId: data.id } : {}) },
   }).catch(() => {})
 
   console.log(`Email sent via template: ${templateAlias} to ${emailHash}`)

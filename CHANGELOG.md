@@ -344,6 +344,30 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **POS cash sales are recorded.** Cash checkout used to invent an order number in the browser and
+  write nothing. `POST /api/pos/cash-sale` (`lib/pos/cash-sale.ts`) now creates the paid order, a
+  cash `Payment` and the stock deduction in one transaction. Lines are priced from the product
+  records; a short tender or a stale total is refused. Each payment carries an `attemptId`, so a
+  retried request returns the recorded sale instead of a second one.
+- **Fundraiser page contact form delivers messages.** The route was a TODO that reported success.
+  Messages are now stored as a `ContactSubmission` and emailed to the campaign; the recipient comes
+  from the saved page config (or the fundraiser's contact email), never from the request.
+- **Fundraiser manage page saves fulfillment and commission settings.** The page sent `PATCH` to a
+  route that only accepted `PUT`; the route now accepts both.
+- **Resend webhook records bounces and complaints.** Recipients arrive as plain strings, not
+  `{ email }` objects, so every event exited early; bounce type is now compared case-insensitively,
+  so Resend's `Permanent` files as a hard bounce. Sends now record Resend's message id, and delivery, open and click
+  events update only that message's log rather than every log for the address.
+- **"Shop by heat" links filter.** Header and homepage links sent `?heat=mild`; they now send
+  `?heatLevel=MILD`, which the products page reads.
+- **Dead links.** Stripe's `return_url` pointed to the missing `/orders/{id}` (now
+  `/order-confirmation/{id}`); `/admin/wholesale/[id]` now exists; the inbox's customer link opens
+  the customers list filtered to that email; `/admin/login` and `/auth/login` redirects go to
+  `/auth/signin`.
+- **Store photo placeholder exists.** `/images/store-placeholder.png`, the last fallback on
+  `/find-us`, was a 404.
+- **`apps/admin` and `apps/fundraising` no longer redirect to a 404.** Their only page now redirects
+  to the storefront's `/admin` and `/fundraising` on `NEXT_PUBLIC_SITE_URL`.
 - **Tests run on vitest 5 again.** The vitest 5 bump left `@vitest/coverage-v8` and `@vitest/ui` on
   4.x, which pulled in a second vitest that the test setup extended; every `rejects.toThrow()`
   then failed (70 tests in CI). Both are pinned to the same vitest, vitest is declared once at the
