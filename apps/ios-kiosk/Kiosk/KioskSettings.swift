@@ -44,6 +44,15 @@ final class KioskSettings: ObservableObject {
         printer = (defaults.data(forKey: "printer")).flatMap { try? JSONDecoder().decode(PrinterConfig.self, from: $0) } ?? .none
         deviceToken = Keychain.get("deviceToken") ?? ""
         staffPIN = Keychain.get("staffPIN") ?? ""
+        #if DEBUG
+        // Forgotten PIN: `xcrun devicectl device process launch … net.josemadrid.kiosk -resetStaffPIN 1234`
+        // from a Mac the iPad trusts. Debug builds only.
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-resetStaffPIN"), i + 1 < args.count, Self.isValidPIN(args[i + 1]) {
+            staffPIN = args[i + 1]
+            Keychain.set(staffPIN, for: "staffPIN")
+        }
+        #endif
     }
 
     var isConfigured: Bool { url != nil && !deviceToken.isEmpty && Self.isValidPIN(staffPIN) }
