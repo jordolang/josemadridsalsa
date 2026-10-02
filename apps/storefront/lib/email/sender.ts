@@ -5,7 +5,7 @@
 
 import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
-import nodemailer from 'nodemailer'
+import nodemailer, { type SentMessageInfo } from 'nodemailer'
 import { decrypt, isEncrypted } from '@/lib/encryption'
 import { getErrorMessage } from '@/lib/errors'
 import { substituteVariables } from './render'
@@ -143,7 +143,7 @@ export async function sendEmail(
       html: options.html,
       text: options.text,
       ...(options.headers ? { headers: options.headers } : {}),
-    })) as nodemailer.SentMessageInfo
+    })) as SentMessageInfo
 
     return { success: true, messageId: info.messageId }
   } catch (smtpError: unknown) {
