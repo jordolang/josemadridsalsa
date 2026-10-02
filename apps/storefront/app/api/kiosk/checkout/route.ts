@@ -11,8 +11,8 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid order' }, { status: 400 })
     }
-    const { checkoutId, orderNumber, quote } = await startKioskCheckout(parsed.data)
-    return NextResponse.json({ checkoutId, orderNumber, quote })
+    const { checkoutId, orderNumber, quote, alreadyPaid } = await startKioskCheckout(parsed.data)
+    return NextResponse.json({ checkoutId, orderNumber, quote, alreadyPaid })
   } catch (error) {
     return kioskErrorResponse(error, 'Checkout failed')
   }

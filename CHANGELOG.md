@@ -338,6 +338,19 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Tests run on vitest 5 again.** The vitest 5 bump left `@vitest/coverage-v8` and `@vitest/ui` on
+  4.x, which pulled in a second vitest that the test setup extended; every `rejects.toThrow()`
+  then failed (70 tests in CI). Both are pinned to the same vitest, vitest is declared once at the
+  root, with its coverage and UI add-ons, so all workspaces share one copy; `vite` (its peer) is
+  listed explicitly.
+- **A kiosk retry can't start a second charge.** The tablet sends a per-payment attempt id, reused
+  only when a request got no answer; it becomes the Square idempotency key and fixes the order
+  number (independent of the date), so a retry finds the checkout already on the Terminal, or
+  goes straight to the receipt if the customer already paid.
+- **Android kiosk reports receipts that didn't print.** Printing waits for the USB transfer and asks
+  the printer for its status (out of paper, cover open, error) before and after, so the
+  confirmation screen says "Ask a team member for your receipt" instead of a false success.
+  Printers without a status channel can't be checked.
 - **Staff POS could not take a card payment.** `POST /api/pos/create-terminal-checkout` required a
   permission named `orders:create`, which is never seeded (the real one is `orders:write`), so it
   answered 403 Forbidden to every staff member. It now checks `orders:write`.

@@ -44,6 +44,12 @@ export interface CreateTerminalCheckoutInput {
   /** A Square device id, or 'default' for SQUARE_TERMINAL_DEVICE_ID. */
   deviceId?: string
   orderPrefix?: 'POS' | 'KIOSK'
+  /**
+   * A caller-generated UUID reused on every retry of the same checkout. It becomes the
+   * Square idempotency key and fixes the order number, so a retry after a lost response
+   * returns the checkout already sent to the Terminal instead of charging twice.
+   */
+  attemptId?: string
   adminNotes?: string
 }
 
@@ -63,14 +69,35 @@ export function getSquareClient(): SquareClient {
 
 const centsToDecimal = (cents: number) => new Prisma.Decimal((cents / 100).toFixed(2))
 
-const generateOrderNumber = (prefix: string) => {
+const generateOrderNumber = (prefix: string, attemptId?: string) => {
+  // A retried attempt must land on the same order whenever it arrives, so its number
+  // comes from the attempt alone, never from the clock.
+  if (attemptId) return `${prefix}-${attemptId.replace(/-/g, '').slice(0, 12).toUpperCase()}`
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  const randomPart = Math.floor(Math.random() * 9000 + 1000)
-  return `${prefix}-${datePart}-${randomPart}`
+  return `${prefix}-${datePart}-${Math.floor(Math.random() * 9000 + 1000)}`
 }
 
 export async function createTerminalCheckout(input: CreateTerminalCheckoutInput) {
-  const { items, discountCents = 0, taxCents = 0, totalCents, deviceId = 'default', orderPrefix = 'POS' } = input
+  const { items, discountCents = 0, taxCents = 0, totalCents, deviceId = 'default', orderPrefix = 'POS', attemptId } = input
+  const orderNumber = generateOrderNumber(orderPrefix, attemptId)
+
+  if (attemptId) {
+    const existing = await prisma.order.findUnique({
+      where: { orderNumber },
+      select: { id: true, providerPaymentId: true, paymentStatus: true },
+    })
+    if (existing) {
+      // Paid before the retry arrived: the Square webhook has replaced providerPaymentId
+      // with the payment id, so there is no checkout to poll; the sale is simply done.
+      if (existing.paymentStatus === 'PAID' || existing.paymentStatus === 'SUCCEEDED') {
+        return { checkoutId: existing.providerPaymentId ?? '', orderId: existing.id, orderNumber, alreadyPaid: true }
+      }
+      if (!existing.providerPaymentId) {
+        throw new TerminalCheckoutError('That payment is still starting. Please try again in a moment.', 409)
+      }
+      return { checkoutId: existing.providerPaymentId, orderId: existing.id, orderNumber, alreadyPaid: false }
+    }
+  }
 
   const resolvedDeviceId = deviceId === 'default' ? process.env.SQUARE_TERMINAL_DEVICE_ID || '' : deviceId
   if (!resolvedDeviceId) {
@@ -119,8 +146,6 @@ export async function createTerminalCheckout(input: CreateTerminalCheckoutInput)
 
   // Create DB order, then Square Terminal checkout. Release inventory on failure.
   try {
-    const orderNumber = generateOrderNumber(orderPrefix)
-
     const order = await prisma.order.create({
       data: {
         orderNumber,
@@ -153,7 +178,7 @@ export async function createTerminalCheckout(input: CreateTerminalCheckoutInput)
     })
 
     const response = await getSquareClient().terminal.checkouts.create({
-      idempotencyKey: randomUUID(),
+      idempotencyKey: attemptId ?? randomUUID(),
       checkout: {
         amountMoney: {
           amount: BigInt(totalCents),
@@ -177,7 +202,7 @@ export async function createTerminalCheckout(input: CreateTerminalCheckoutInput)
       data: { providerPaymentId: terminalCheckout.id },
     })
 
-    return { checkoutId: terminalCheckout.id, orderId: order.id, orderNumber }
+    return { checkoutId: terminalCheckout.id, orderId: order.id, orderNumber, alreadyPaid: false }
   } catch (postReservationError) {
     console.error(`[${orderPrefix}] Terminal checkout creation failed, releasing inventory:`, postReservationError)
     for (const item of items) {
