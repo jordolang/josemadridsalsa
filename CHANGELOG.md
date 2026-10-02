@@ -351,6 +351,8 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **iPad kiosk card reader asks for location permission.** Square's Mobile Payments SDK refuses
+  payments without it, and the app never asked, so the reader could not take a card.
 - **Storefront type-checks on nodemailer 10.** nodemailer 10 ships its own ESM types with no
   `nodemailer` namespace, so `nodemailer.SentMessageInfo` in `lib/email/sender.ts` failed (TS2503);
   it is now a named type import.
