@@ -34,6 +34,14 @@ their card on the terminal, and the register waits for Square to report back.
 Payments are recorded with `provider: SQUARE` and `channel: POS`, which is what
 separates counter takings from online orders in reporting and in the ledger.
 
+### Cash
+
+`POST /api/pos/cash-sale` (`lib/pos/cash-sale.ts`) records a cash sale in one
+transaction: a `PAID` order, a `Payment` with `methodType: CASH` and no provider,
+and a `SALE` stock deduction. It refuses a total that does not equal the items plus
+tax, and a tender smaller than the total; the change is returned for the register
+to display.
+
 ## Configuration
 
 | Variable | Purpose |

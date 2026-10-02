@@ -352,121 +352,69 @@ describe('Loyalty System', () => {
   })
 
   describe('redeemReward', () => {
-    const mockAccount = {
-      id: 'account-1',
-      userId: 'user-1',
-      pointsBalance: 1000,
-      lifetimePoints: 2000,
-      tier: 'SILVER',
-      transactions: [],
-    }
-
+    // The rules (tier, balance, cap, code issuance) are covered against a fake transaction in
+    // tests/lib/loyalty.test.ts; here only the wrapper's success/refusal mapping is under test.
     const mockReward = {
       id: 'reward-1',
       name: '$10 Off',
-      description: 'Get $10 off your next order',
       pointsCost: 500,
       rewardType: 'DISCOUNT',
       rewardValue: 10,
       minimumTier: 'BRONZE',
       isActive: true,
-      usedCount: 0,
       maxRedemptions: null,
     }
 
-    beforeEach(() => {
-      vi.mocked(prisma.loyaltyAccount.findUnique).mockResolvedValue(mockAccount as any)
-      vi.mocked(prisma.loyaltyReward.findUnique).mockResolvedValue(mockReward as any)
-    })
+    function runWith(tx: Record<string, unknown>) {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => callback(tx))
+    }
 
-    it('should successfully redeem a valid reward', async () => {
-      const mockRedemption = {
-        id: 'redemption-1',
-        accountId: 'account-1',
-        rewardId: 'reward-1',
-        pointsSpent: 500,
-        status: 'ACTIVE',
-        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    function fakeTx(overrides: Record<string, unknown> = {}) {
+      return {
+        loyaltyReward: {
+          findUnique: vi.fn().mockResolvedValue(mockReward),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+        loyaltyAccount: {
+          upsert: vi.fn().mockResolvedValue({ id: 'account-1', tier: 'SILVER' }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+        pointTransaction: { create: vi.fn() },
+        discountCode: { create: vi.fn() },
+        rewardRedemption: {
+          create: vi.fn().mockImplementation(({ data }: any) => Promise.resolve({ id: 'redemption-1', ...data })),
+        },
+        ...overrides,
       }
+    }
 
-      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
-        return callback({
-          rewardRedemption: { create: vi.fn().mockResolvedValue(mockRedemption) },
-          loyaltyReward: { update: vi.fn() },
-        })
-      })
+    it('returns the redemption with its discount code', async () => {
+      runWith(fakeTx())
 
       const result = await redeemReward('user-1', 'reward-1')
 
       expect(result.success).toBe(true)
-      expect(result.redemption).toEqual(mockRedemption)
+      expect(result.redemption?.discountCode).toMatch(/^REWARD-/)
     })
 
-    it('should reject redemption if reward is not active', async () => {
-      vi.mocked(prisma.loyaltyReward.findUnique).mockResolvedValue({
-        ...mockReward,
-        isActive: false,
-      } as any)
+    it('reports a business-rule refusal as the error message', async () => {
+      runWith(
+        fakeTx({
+          loyaltyReward: { findUnique: vi.fn().mockResolvedValue(null), updateMany: vi.fn() },
+        }),
+      )
 
       const result = await redeemReward('user-1', 'reward-1')
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Reward not available')
+      expect(result).toEqual({ success: false, error: 'Reward not available' })
     })
 
-    it('should reject redemption if reward does not exist', async () => {
-      vi.mocked(prisma.loyaltyReward.findUnique).mockResolvedValue(null)
+    it('hides unexpected database errors behind a generic message', async () => {
+      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('connection reset'))
 
       const result = await redeemReward('user-1', 'reward-1')
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Reward not available')
-    })
-
-    it('should reject redemption if user tier is too low', async () => {
-      vi.mocked(prisma.loyaltyReward.findUnique).mockResolvedValue({
-        ...mockReward,
-        minimumTier: 'GOLD',
-      } as any)
-
-      const result = await redeemReward('user-1', 'reward-1')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Requires GOLD tier or higher')
-    })
-
-    it('should reject redemption if insufficient points', async () => {
-      vi.mocked(prisma.loyaltyAccount.findUnique).mockResolvedValue({
-        ...mockAccount,
-        pointsBalance: 100, // Less than reward cost
-      } as any)
-
-      const result = await redeemReward('user-1', 'reward-1')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Insufficient points')
-    })
-
-    it('should reject redemption if max redemptions reached', async () => {
-      vi.mocked(prisma.loyaltyReward.findUnique).mockResolvedValue({
-        ...mockReward,
-        maxRedemptions: 100,
-        usedCount: 100,
-      } as any)
-
-      const result = await redeemReward('user-1', 'reward-1')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Reward redemption limit reached')
-    })
-
-    it('should handle errors gracefully', async () => {
-      vi.mocked(prisma.$transaction).mockRejectedValue(new Error('Database error'))
-
-      const result = await redeemReward('user-1', 'reward-1')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to redeem reward')
+      expect(result).toEqual({ success: false, error: 'Failed to redeem reward' })
     })
   })
 

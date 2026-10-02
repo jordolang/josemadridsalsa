@@ -38,6 +38,8 @@ import type { CohortRow } from '@/lib/analytics/cohort-retention'
 import { getMarginReport } from '@/lib/analytics/margin-report.server'
 import { getAttributionReport } from '@/lib/analytics/utm-report.server'
 import { DIRECT_LABEL } from '@/lib/analytics/utm-report'
+import { POINTS_PER_DOLLAR } from '@/lib/loyalty'
+import { rewardReturnPercent } from '@/lib/loyalty-rewards-schema'
 import {
   bytes,
   centsToMoney,
@@ -7162,6 +7164,146 @@ async function loadFaqs(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
 }
 
 // ---------------------------------------------------------------------------
+// Customers · Loyalty rewards
+// ---------------------------------------------------------------------------
+
+const REWARD_FILTERS = ['All rewards', 'Active', 'Off', 'Never redeemed']
+
+async function loadLoyaltyRewards(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
+  const rewards = await safe(
+    () =>
+      prisma.loyaltyReward.findMany({
+        orderBy: [{ isActive: 'desc' }, { pointsCost: 'asc' }],
+        take: list.limit,
+        include: { _count: { select: { redemptions: true } } },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Reward', width: 'minmax(0,1.6fr)' },
+    { label: 'Points', width: '90px', right: true },
+    { label: 'Discount', width: '96px', right: true },
+    { label: 'Return', width: '82px', right: true },
+    { label: 'Tier', width: '96px' },
+    { label: 'Redeemed', width: '96px', right: true },
+    { label: 'Status', width: '96px' },
+  ]
+
+  let redeemed = 0
+
+  const rows: Row[] = rewards.map((reward) => {
+    const value = toNumber(reward.rewardValue ?? 0)
+    const back = rewardReturnPercent(reward.pointsCost, value, POINTS_PER_DOLLAR)
+    const redemptions = reward._count.redemptions
+    redeemed += reward.usedCount
+    const redeemable = reward.rewardType === 'DISCOUNT'
+
+    const values: FormValues = {
+      name: reward.name,
+      description: reward.description,
+      pointsCost: numberValue(reward.pointsCost),
+      rewardValue: moneyValue(reward.rewardValue),
+      minimumTier: reward.minimumTier,
+      maxRedemptions: numberValue(reward.maxRedemptions),
+      isActive: reward.isActive,
+    }
+    const edit = form('reward.edit', { recordId: reward.id, title: reward.name, values })
+
+    const buckets = [0, reward.isActive ? 1 : 2]
+    if (reward.usedCount === 0) buckets.push(3)
+
+    return {
+      id: reward.id,
+      open: edit,
+      search: `${reward.name} ${reward.description} ${reward.minimumTier}`,
+      buckets,
+      cells: [
+        text(reward.name, { strong: true }),
+        text(count(reward.pointsCost), { mono: true, right: true }),
+        text(money(value), { mono: true, right: true }),
+        text(`${back.toFixed(1)}%`, { mono: true, right: true }),
+        text(humanise(reward.minimumTier)),
+        text(reward.maxRedemptions ? `${count(reward.usedCount)} / ${count(reward.maxRedemptions)}` : count(reward.usedCount), {
+          mono: true,
+          right: true,
+        }),
+        !redeemable
+          ? statusCell('Not redeemable', 'bad')
+          : statusCell(reward.isActive ? 'Active' : 'Off', reward.isActive ? 'good' : 'muted'),
+      ],
+      inspector: {
+        title: reward.name,
+        tag: `${humanise(reward.minimumTier)} and up`,
+        tagTone: reward.isActive ? 'good' : 'muted',
+        groups: [
+          {
+            label: 'REWARD',
+            fields: [
+              { label: 'Description', value: reward.description, wrap: true },
+              { label: 'Costs', value: `${count(reward.pointsCost)} points`, mono: true, strong: true },
+              { label: 'Gives', value: `${money(value)} off, single-use code`, mono: true },
+              {
+                label: 'Return',
+                value: `${back.toFixed(1)}% of what the customer spent to earn it`,
+                wrap: true,
+              },
+              ...(redeemable
+                ? []
+                : [{ label: 'Problem', value: 'Not a discount reward — checkout cannot honour it. Edit and save it.', wrap: true }]),
+            ],
+          },
+          {
+            label: 'USE',
+            fields: [
+              { label: 'Redeemed', value: count(reward.usedCount), mono: true },
+              { label: 'Limit', value: reward.maxRedemptions ? count(reward.maxRedemptions) : 'Unlimited', mono: true },
+              { label: 'Active', value: reward.isActive ? 'Yes' : 'No' },
+              { label: 'Created', value: shortDate(reward.createdAt), mono: true },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Edit reward…', shortcut: '⌘⏎', command: edit },
+          {
+            label: reward.isActive ? 'Turn off' : 'Turn on',
+            shortcut: '⌘T',
+            command: write('reward.toggle', reward.id),
+          },
+          ...(redemptions === 0
+            ? [
+                {
+                  label: 'Delete reward',
+                  danger: true,
+                  command: write('reward.delete', reward.id, {
+                    confirm: `Delete the ${reward.name} reward? Nobody has redeemed it, so nothing else changes.`,
+                    danger: true,
+                  }),
+                },
+              ]
+            : []),
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} rewards`),
+      text(''),
+      text(''),
+      text(''),
+      text(''),
+      text(count(redeemed), { right: true, strong: true }),
+      text(''),
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Content · Redirects
 // ---------------------------------------------------------------------------
 
@@ -9927,6 +10069,15 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
           { label: 'Pages', icon: 'i-file', command: page('content.pages') },
         ],
       }
+    case 'customers.rewards':
+      return {
+        eyebrow: 'WHAT POINTS BUY',
+        filters: REWARD_FILTERS,
+        actions: [
+          { label: 'New reward', icon: 'i-plus', command: form('reward.create'), primary: true },
+          { label: 'Customers', icon: 'i-users', command: jump('customers') },
+        ],
+      }
     case 'content.redirects':
       return {
         eyebrow,
@@ -10147,6 +10298,8 @@ async function loadPageBody(pageId: string, list: ListQuery): Promise<SectionPay
       return loadFaqs(list)
     case 'content.redirects':
       return loadRedirects(list)
+    case 'customers.rewards':
+      return loadLoyaltyRewards(list)
     case 'content.seo':
       return loadSeo()
     case 'leads.campaigns':

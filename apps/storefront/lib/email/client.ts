@@ -140,7 +140,7 @@ export async function sendEmail({
       templateId: type,
       subject,
       status: 'SENT',
-      metadata: orderId ? { orderId } : undefined,
+      metadata: { ...(orderId ? { orderId } : {}), ...(data?.id ? { messageId: data.id } : {}) },
     }).catch((err) => {
       console.error('Failed to log email send:', err)
     })

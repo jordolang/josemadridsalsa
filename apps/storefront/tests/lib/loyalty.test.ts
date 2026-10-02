@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import * as loyaltyModule from '@/lib/loyalty'
 import { creditPurchaseLoyaltyPoints, POINTS_PER_DOLLAR } from '@/lib/loyalty'
 
 /**
@@ -164,5 +165,89 @@ describe('creditPurchaseLoyaltyPoints', () => {
     const updateData = accountUpdate.mock.calls[0][0].data
     expect(updateData.tier).toBe('BRONZE')
     expect(updateData.tierUpdatedAt).toBeUndefined()
+  })
+})
+
+describe('redeemRewardInTx', () => {
+  const { redeemRewardInTx } = loyaltyModule
+
+  function redeemTx({
+    reward = {
+      id: 'reward-1',
+      name: '$5 Off',
+      isActive: true,
+      rewardType: 'DISCOUNT',
+      rewardValue: 5,
+      pointsCost: 500,
+      minimumTier: 'BRONZE',
+      maxRedemptions: null as number | null,
+    } as Record<string, unknown> | null,
+    account = { id: 'account-1', tier: 'BRONZE' },
+    capacityCount = 1,
+    debitCount = 1,
+  } = {}) {
+    const discountCreate = vi.fn().mockResolvedValue({})
+    const redemptionCreate = vi.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'r-1', ...data }))
+    const debit = vi.fn().mockResolvedValue({ count: debitCount })
+    const capacity = vi.fn().mockResolvedValue({ count: capacityCount })
+    const pointCreate = vi.fn().mockResolvedValue({})
+    const tx = {
+      loyaltyReward: { findUnique: vi.fn().mockResolvedValue(reward), updateMany: capacity },
+      loyaltyAccount: { upsert: vi.fn().mockResolvedValue(account), updateMany: debit },
+      pointTransaction: { create: pointCreate },
+      discountCode: { create: discountCreate },
+      rewardRedemption: { create: redemptionCreate },
+    } as unknown as Parameters<typeof redeemRewardInTx>[0]
+    return { tx, discountCreate, redemptionCreate, debit, capacity, pointCreate }
+  }
+
+  it('debits points conditionally and issues a single-use fixed-amount code', async () => {
+    const { tx, discountCreate, redemptionCreate, debit, pointCreate } = redeemTx()
+
+    const redemption = await redeemRewardInTx(tx, 'user-1', 'reward-1')
+
+    expect(debit.mock.calls[0][0]).toEqual({
+      where: { id: 'account-1', pointsBalance: { gte: 500 } },
+      data: { pointsBalance: { decrement: 500 } },
+    })
+    expect(pointCreate.mock.calls[0][0].data).toMatchObject({ type: 'REDEEMED_REWARD', points: -500 })
+    const code = discountCreate.mock.calls[0][0].data
+    expect(code).toMatchObject({ type: 'FIXED_AMOUNT', value: 5, maxUses: 1, maxUsesPerUser: 1 })
+    expect(code.code).toMatch(/^REWARD-[0-9A-F]{10}$/)
+    expect(redemptionCreate.mock.calls[0][0].data.discountCode).toBe(code.code)
+    expect(redemption.discountCode).toBe(code.code)
+  })
+
+  it('refuses when the balance is short, before any code is issued', async () => {
+    const { tx, discountCreate } = redeemTx({ debitCount: 0 })
+    await expect(redeemRewardInTx(tx, 'user-1', 'reward-1')).rejects.toThrow('Insufficient points')
+    expect(discountCreate).not.toHaveBeenCalled()
+  })
+
+  it('refuses a reward whose cap is used up', async () => {
+    const { tx, debit } = redeemTx({ capacityCount: 0 })
+    await expect(redeemRewardInTx(tx, 'user-1', 'reward-1')).rejects.toThrow('limit reached')
+    expect(debit).not.toHaveBeenCalled()
+  })
+
+  it('enforces the minimum tier', async () => {
+    const { tx, capacity } = redeemTx({
+      reward: {
+        id: 'reward-2', name: '$10 Off', isActive: true, rewardType: 'DISCOUNT',
+        rewardValue: 10, pointsCost: 1000, minimumTier: 'SILVER', maxRedemptions: null,
+      },
+    })
+    await expect(redeemRewardInTx(tx, 'user-1', 'reward-2')).rejects.toThrow('Requires SILVER')
+    expect(capacity).not.toHaveBeenCalled()
+  })
+
+  it('rejects reward types checkout cannot honour', async () => {
+    const { tx } = redeemTx({
+      reward: {
+        id: 'reward-3', name: 'Free jar', isActive: true, rewardType: 'FREE_PRODUCT',
+        rewardValue: null, pointsCost: 100, minimumTier: 'BRONZE', maxRedemptions: null,
+      },
+    })
+    await expect(redeemRewardInTx(tx, 'user-1', 'reward-3')).rejects.toThrow('Reward not available')
   })
 })

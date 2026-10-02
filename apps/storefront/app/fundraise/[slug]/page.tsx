@@ -21,7 +21,7 @@ import {
 import { BattleWidget } from '@/components/arena/battle-widget'
 import type { AttackFeedItem } from '@/components/arena/attack-feed'
 import { ShareStatusToast } from '@/components/arena/share-status-toast'
-import { ShareForShieldButton } from '@/components/arena/share-for-shield-button'
+import { ShareButton } from '@/components/arena/share-button'
 import { sanitizeStoryHtml } from '@/lib/sanitize-story'
 import { StoryBody } from '@/components/fundraiser/story-body'
 import { SITE_URL } from '@/lib/site-url'
@@ -362,7 +362,7 @@ export default async function FundraiserProfilePage({ params }: Props) {
             {team.activePeriod && (
               <TabsContent value="battle" className="mt-6 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <ShareForShieldButton teamId={team.id} teamName={team.name} />
+                  <ShareButton teamId={team.id} teamSlug={team.slug} teamName={team.name} />
                   <Link
                     href={`/arena/${team.activePeriod}`}
                     className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
@@ -409,6 +409,9 @@ export default async function FundraiserProfilePage({ params }: Props) {
                 items={feedItems}
                 initialLovedIds={lovedIds}
                 currentUserName={session?.user?.name ?? null}
+                canReply={['ADMIN', 'DEVELOPER', 'STAFF'].includes(
+                  (session?.user as { role?: string } | undefined)?.role ?? '',
+                )}
               />
             </div>
           </div>

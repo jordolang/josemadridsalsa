@@ -115,7 +115,23 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
       },
       { id: 'products', label: 'Products', icon: 'i-package', path: '/admin/products', kind: 'table', digit: '3' },
       { id: 'inventory', label: 'Inventory', icon: 'i-boxes', path: '/admin/inventory', kind: 'table', digit: '4' },
-      { id: 'customers', label: 'Customers', icon: 'i-users', path: '/admin/customers', kind: 'table', digit: '5' },
+      {
+        id: 'customers',
+        label: 'Customers',
+        icon: 'i-users',
+        path: '/admin/customers',
+        kind: 'table',
+        digit: '5',
+        pages: [
+          { id: 'customers', label: 'Customers', path: '/admin/customers' },
+          {
+            id: 'customers.rewards',
+            label: 'Loyalty rewards',
+            path: '/admin/settings/loyalty-rewards',
+            permission: 'settings:read',
+          },
+        ],
+      },
       {
         id: 'purchase',
         label: 'Purchase Orders',

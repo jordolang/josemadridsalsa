@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { addSuppression } from '@/lib/email/suppression'
 
@@ -31,16 +32,23 @@ export async function POST(request: NextRequest) {
     }
 
     const { type, data } = event
-    const email =
-      (data?.to as { email: string }[])?.[0]?.email ??
-      (data?.email as string | undefined)
+    // Resend sends recipients as plain address strings (`to: string[]`).
+    const email = (data?.to as string[] | undefined)?.[0]
 
     if (!email) return NextResponse.json({ ok: true })
 
+    // Delivery and engagement belong to one message, not to everything ever sent to the
+    // address. Sends record Resend's id as `metadata.messageId`; match on it when present.
+    const emailId = data?.email_id as string | undefined
+    const thisMessage: Prisma.EmailLogWhereInput = emailId
+      ? { metadata: { path: ['messageId'], equals: emailId } }
+      : { recipientEmail: email }
+
     switch (type) {
       case 'email.bounced': {
+        // Resend reports `Permanent` / `Transient` / `Undetermined`; compare case-insensitively.
         const bounceType =
-          data.bounce?.type === 'permanent' ? 'HARD' : 'SOFT'
+          String(data.bounce?.type ?? '').toLowerCase() === 'permanent' ? 'HARD' : 'SOFT'
         const reason =
           (data.bounce?.message as string) ?? 'Unknown bounce reason'
 
@@ -50,7 +58,7 @@ export async function POST(request: NextRequest) {
 
         await prisma.emailLog.updateMany({
           where: {
-            recipientEmail: email,
+            ...thisMessage,
             status: { in: ['SENT', 'PENDING', 'SENDING'] },
           },
           data: { status: 'BOUNCED', bouncedAt: new Date() },
@@ -80,7 +88,7 @@ export async function POST(request: NextRequest) {
       case 'email.delivered': {
         await prisma.emailLog.updateMany({
           where: {
-            recipientEmail: email,
+            ...thisMessage,
             status: { in: ['PENDING', 'SENDING'] },
           },
           data: { status: 'SENT', sentAt: new Date() },
@@ -91,7 +99,7 @@ export async function POST(request: NextRequest) {
       case 'email.opened': {
         await prisma.emailLog.updateMany({
           where: {
-            recipientEmail: email,
+            ...thisMessage,
             status: 'SENT',
             openedAt: null,
           },
@@ -103,7 +111,7 @@ export async function POST(request: NextRequest) {
       case 'email.clicked': {
         await prisma.emailLog.updateMany({
           where: {
-            recipientEmail: email,
+            ...thisMessage,
             status: { in: ['SENT', 'OPENED'] },
           },
           data: { status: 'CLICKED', clickedAt: new Date() },

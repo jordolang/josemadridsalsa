@@ -334,9 +334,12 @@ export default async function ProductDetailPage({ params }: Props) {
                     <span>({reviewStats._count.rating} reviews)</span>
                   </div>
                 </div>
-                <p className="text-muted-foreground text-base leading-relaxed">
-                  Reviews are coming soon! Check back later to see what customers are saying.
-                </p>
+                <a
+                  href="#reviews-heading"
+                  className="text-base font-medium text-primary hover:underline"
+                >
+                  Read what customers are saying
+                </a>
               </div>
             )}
           </div>
