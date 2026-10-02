@@ -18,6 +18,17 @@ the root `package.json` is canonical.
   `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
   customer, status, notes and free-text lines. Totals are computed on the server. The web form and
   the desktop app's `invoice.create` now share one create function (`lib/invoices/create-invoice.ts`).
+- **Mail in the desktop admin app.** Messages → Mail is a full client for the connected Gmail
+  mailbox (normally mike@josemadridsalsa.com). It covers every folder and label with unread counts,
+  Gmail search, threaded reading (HTML in a script-less sandbox, attachment downloads), compose, reply,
+  reply all and forward with attachments, drafts, and archive, trash, spam, star, read/unread and move
+  to a folder. It uses the existing triage grant (`gmail.modify` + `gmail.send`), so nothing can be
+  permanently deleted. It needs `api_keys:manage`. Sends, trash and spam are audited.
+- **Inbox organizer at 8am, noon and 5pm Eastern.** `/api/cron/mail-organizer`, or **Organize now**
+  on the Mail page, files inbox conversations into colour-coded Gmail folders and archives them:
+  Orders, Contact, Fundraisers, Wholesale, Shipping, Finance, Website, Events & Shows,
+  Marketing & Social and Newsletters. Starred mail, customer email still awaiting a person, and mail
+  the triage has not read yet stay in the inbox.
 - **Loyalty reward catalog management.** Admin → Settings → Loyalty Rewards
   (`/admin/settings/loyalty-rewards`) and, in the desktop app, Customers → Loyalty rewards let
   staff create, edit, switch off and delete the rewards customers spend points on: points cost,

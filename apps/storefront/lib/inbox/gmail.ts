@@ -175,7 +175,7 @@ export async function getGmailAccessToken(connection: GmailConnection): Promise<
   return data.access_token
 }
 
-async function gmailFetch(
+export async function gmailFetch(
   accessToken: string,
   path: string,
   init: RequestInit = {},
@@ -191,7 +191,7 @@ async function gmailFetch(
   })
 }
 
-async function readGmailError(response: Response): Promise<string> {
+export async function readGmailError(response: Response): Promise<string> {
   const data = await response.json().catch(() => null)
   return data?.error?.message || `Gmail API error ${response.status}`
 }

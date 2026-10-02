@@ -1,0 +1,62 @@
+---
+title: Desktop Mail and Inbox Organizer
+description: Manage the connected Gmail mailbox from the desktop admin app, and how the inbox is filed into folders at 8am, noon and 5pm.
+---
+
+# Desktop Mail and Inbox Organizer
+
+The desktop admin app (macOS and Windows, both on `/admin-desktop`) has a **Mail** page under
+**Messages**. It works on the same Gmail mailbox the [customer email triage](/docs/features/customer-email-triage)
+is connected to — normally `mike@josemadridsalsa.com`. Connect or reconnect it at
+`/admin/inbox/settings`.
+
+## What Mail can do
+
+- Browse every folder: Inbox, Starred, Important, Sent, Drafts, Spam, Trash and every label, with unread counts.
+- Search all mail with Gmail search syntax (`from:`, `has:attachment`, `older_than:30d`, …).
+- Read conversations, including HTML mail (shown in a sandbox that cannot run scripts) and attachments (always downloaded, never opened in the app).
+- Reply, reply all, forward, and write new mail with attachments (about 3 MB total), or save a draft.
+- Archive, move back to Inbox, mark read/unread, star, mark important, report spam, and move to Trash.
+- Move a conversation to a folder, apply labels, and create folders.
+
+**Nothing can be permanently deleted.** The Gmail grant deliberately excludes the scope that
+allows it; Trash empties itself after 30 days, as in Gmail.
+
+**Access:** the Mail page and its API (`/api/admin/mailbox/*`) need the `api_keys:manage`
+permission — the same one needed to connect the mailbox. Sends, Trash and Spam are written to the audit log.
+
+## Inbox organizer
+
+At **8am, 12pm and 5pm Eastern**, `/api/cron/mail-organizer` files the inbox. **Organize now** on the
+Mail page runs it on demand.
+
+Each conversation goes into one folder (a Gmail label, created with a colour on first run) and is
+archived out of the inbox:
+
+| Folder | What goes there |
+|---|---|
+| Orders | Store order notifications, payments received, and customer email the triage classed as order, shipping, return or billing |
+| Contact | Website contact-form submissions and customer product or general questions |
+| Fundraisers | Fundraiser sign-ups, final orders, campaign summaries, fundraiser enquiries |
+| Wholesale | Wholesale and retail-partner enquiries, purchase orders |
+| Shipping | Carrier and label-service mail (UPS, USPS, FedEx, EasyPost, …) |
+| Finance | QuickBooks/Intuit, banks, payroll, invoices, statements, tax |
+| Website | Vercel, GitHub, Sentry, Supabase, domain/DNS, BigCommerce, low-stock and other site alerts |
+| Events & Shows | Festival and vendor-application mail |
+| Marketing & Social | Facebook, Instagram, TikTok, Google Business Profile and similar |
+| Newsletters | Any other bulk mail (anything with a `List-Unsubscribe` or `List-Id` header) |
+
+What stays in the inbox:
+
+- Personal mail and anything no rule recognises.
+- **Starred** conversations, and customer email the triage says a person still needs to handle
+  (needs action, reply drafted, in progress). These are labelled but not archived.
+- Customer email from the last 7 days that the triage has not read yet, because the triage only
+  reads the inbox. It is filed on a later run.
+
+Filing only changes labels. To undo, move the conversation back to the inbox. The rules live in
+`apps/storefront/lib/inbox/organizer.ts` (`RULES`). The first matching rule wins.
+
+Scheduling: Vercel cron runs in UTC, so the job is scheduled at both the daylight-saving and the
+standard-time hour of each slot, and skips whichever one is not 8, 12 or 17 o'clock in
+`America/New_York`. If a run fails, operators get a notification.
