@@ -89,17 +89,15 @@ export function isLocked(lockedUntil: Date | null | undefined, now = new Date())
 }
 
 /**
- * What a wrong PIN does to the failure counter: count it, and once the limit is reached start a
- * lock and begin counting again from zero.
+ * The lock a wrong PIN starts, given the failure count after counting it (counted atomically, so
+ * concurrent guesses all add up), or null while under the limit.
  */
-export function nextLockout(
+export function lockAfterFailures(
   failures: number,
   limit: { maxFailures: number; lockMinutes: number },
   now = new Date()
-): { failures: number; lockedUntil: Date | null } {
-  const next = failures + 1
-  if (next < limit.maxFailures) return { failures: next, lockedUntil: null }
-  return { failures: 0, lockedUntil: new Date(now.getTime() + limit.lockMinutes * 60_000) }
+): Date | null {
+  return failures >= limit.maxFailures ? new Date(now.getTime() + limit.lockMinutes * 60_000) : null
 }
 
 /** How long a correct PIN keeps the app unlocked for taking orders. */

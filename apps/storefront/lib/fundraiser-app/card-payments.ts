@@ -68,7 +68,14 @@ async function loadCardOrder(session: AppSession, orderId: string) {
   return order
 }
 
+type CardOrder = NonNullable<Awaited<ReturnType<typeof loadCardOrder>>>
+
 const isPaid = (status: string) => status === 'PAID' || status === 'SUCCEEDED'
+
+/** Fundraiser-app card orders are numbered `APP-…`; the Square webhook routes them here by this. */
+export function isFundraiserAppCardOrder(order: { orderNumber: string; paymentProvider: string | null }) {
+  return order.orderNumber.startsWith('APP-') && order.paymentProvider === 'SQUARE'
+}
 
 /** Checking a payment needs the storefront's own Square credentials (the same ones the kiosk uses). */
 function requireSquareApi() {
@@ -77,39 +84,33 @@ function requireSquareApi() {
   }
 }
 
+/** A Square payment as both the Payments API and the webhook describe it. */
+export type SquareCardPayment = Parameters<typeof readerPaymentProblem>[0] & { id?: string }
+
 /**
- * Settle a card order from Square's own record. `paymentId` is what the phone reported; without
- * it, Square is searched for a completed payment carrying this order (the phone lost the answer).
+ * Mark a card order paid from a Square payment, after checking that payment really pays it. The
+ * one place a fundraiser-app card order becomes paid: the phone's confirmation, a cancel that finds
+ * the card went through after all, and the Square webhook all come here.
+ *
+ * An order the app canceled (`FAILED`) can still be settled: if Square shows a completed payment
+ * for it, the customer was charged and the sale is recorded rather than stranded.
  */
-export async function confirmCardPayment(session: AppSession, orderId: string, paymentId?: string) {
-  const order = await loadCardOrder(session, orderId)
-  if (isPaid(order.paymentStatus)) return { status: 'COMPLETED' as CardStatus, orderNumber: order.orderNumber }
-  if (order.paymentStatus !== 'PENDING') {
-    throw new FundraiserAppError('This order was canceled before the card was confirmed. Take the order again.', 409)
-  }
-
-  requireSquareApi()
-  const locationId = process.env.SQUARE_LOCATION_ID
-  const payment = paymentId
-    ? (await getSquareClient().payments.get({ paymentId }).catch(() => undefined))?.payment
-    : await findOrderPayment(order)
-  if (!payment && !paymentId) return { status: 'PENDING' as CardStatus, orderNumber: order.orderNumber }
-
-  const problem = readerPaymentProblem(payment, order, locationId)
+async function settleCardOrder(order: CardOrder, payment: SquareCardPayment): Promise<CardStatus> {
+  const problem = readerPaymentProblem(payment, order, process.env.SQUARE_LOCATION_ID)
   if (problem) throw new FundraiserAppError(problem, 409)
 
-  const squarePaymentId = payment!.id!
+  const squarePaymentId = payment.id!
   const used = await prisma.payment.findUnique({ where: { squarePaymentId }, select: { orderId: true } })
   if (used && used.orderId !== order.id) throw new FundraiserAppError('That payment was already used for another order', 409)
 
   const amount = totalCents(order.total)
-  await prisma.$transaction(async (tx) => {
-    // The claim: two confirmations racing (a retry, a lost response) settle the order once.
+  const settled = await prisma.$transaction(async (tx) => {
+    // The claim: confirmations racing each other (a retry, the webhook) settle the order once.
     const claimed = await tx.order.updateMany({
-      where: { id: order.id, paymentStatus: 'PENDING' },
+      where: { id: order.id, paymentStatus: { in: ['PENDING', 'FAILED'] } },
       data: { paymentStatus: 'PAID', status: 'CONFIRMED' },
     })
-    if (claimed.count === 0) return
+    if (claimed.count === 0) return false
 
     await tx.payment.create({
       data: {
@@ -135,9 +136,40 @@ export async function confirmCardPayment(session: AppSession, orderId: string, p
       },
       tx
     )
+    return true
   })
+  if (settled) return 'COMPLETED'
 
-  return { status: 'COMPLETED' as CardStatus, orderNumber: order.orderNumber }
+  // Lost the claim: whoever won decides the answer.
+  const now = await prisma.order.findUnique({ where: { id: order.id }, select: { paymentStatus: true } })
+  if (now && isPaid(now.paymentStatus)) return 'COMPLETED'
+  throw new FundraiserAppError('This order can no longer take a card payment. Check it in the Square dashboard.', 409)
+}
+
+/**
+ * Settle a card order from Square's own record. `paymentId` is what the phone reported; without
+ * it, Square is searched for a completed payment carrying this order (the phone lost the answer).
+ */
+export async function confirmCardPayment(session: AppSession, orderId: string, paymentId?: string) {
+  const order = await loadCardOrder(session, orderId)
+  if (isPaid(order.paymentStatus)) return { status: 'COMPLETED' as CardStatus, orderNumber: order.orderNumber }
+  if (order.paymentStatus !== 'PENDING' && order.paymentStatus !== 'FAILED') {
+    throw new FundraiserAppError('This order can no longer take a card payment. Check it in the Square dashboard.', 409)
+  }
+
+  requireSquareApi()
+  const payment = paymentId
+    ? (await getSquareClient().payments.get({ paymentId }).catch(() => undefined))?.payment
+    : await findOrderPayment(order)
+  if (!payment && !paymentId) {
+    if (order.paymentStatus === 'FAILED') {
+      throw new FundraiserAppError('This card order was canceled. Take the order again.', 409)
+    }
+    return { status: 'PENDING' as CardStatus, orderNumber: order.orderNumber }
+  }
+  if (!payment) throw new FundraiserAppError('Square has no record of that payment', 409)
+
+  return { status: await settleCardOrder(order, payment), orderNumber: order.orderNumber }
 }
 
 /**
@@ -152,10 +184,32 @@ export async function cancelCardOrder(session: AppSession, orderId: string) {
     requireSquareApi()
     const paid = await findOrderPayment(order)
     if (paid?.id) return confirmCardPayment(session, order.id, paid.id)
-    await prisma.order.updateMany({
+    const canceled = await prisma.order.updateMany({
       where: { id: order.id, paymentStatus: 'PENDING' },
       data: { paymentStatus: 'FAILED', status: 'CANCELLED' },
     })
+    if (canceled.count === 0) {
+      // A confirmation got there first.
+      const now = await prisma.order.findUnique({ where: { id: order.id }, select: { paymentStatus: true } })
+      if (now && isPaid(now.paymentStatus)) return { status: 'COMPLETED' as CardStatus, orderNumber: order.orderNumber }
+    }
   }
   return { status: 'CANCELED' as CardStatus, orderNumber: order.orderNumber }
+}
+
+/**
+ * The Square webhook's path for fundraiser-app card orders: the same checks and the same settle
+ * step as the phone's confirmation, so a payment that does not pay the order (wrong amount, wrong
+ * location) never marks it paid, whichever arrives first.
+ */
+export async function settleFundraiserAppPaymentFromWebhook(orderId: string, payment: SquareCardPayment) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: orderSelect })
+  if (!order || !isFundraiserAppCardOrder(order)) return { handled: false as const }
+  if (isPaid(order.paymentStatus)) return { handled: true as const, status: 'COMPLETED' as CardStatus }
+  try {
+    return { handled: true as const, status: await settleCardOrder(order, payment) }
+  } catch (error) {
+    if (error instanceof FundraiserAppError) return { handled: true as const, problem: error.message }
+    throw error
+  }
 }

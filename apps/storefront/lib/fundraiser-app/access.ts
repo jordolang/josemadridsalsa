@@ -27,8 +27,8 @@ import {
   hashSessionToken,
   isLocked,
   isUnlocked,
+  lockAfterFailures,
   newSessionToken,
-  nextLockout,
   verifyPin,
 } from './credentials'
 import { FundraiserAppError } from './errors'
@@ -88,8 +88,13 @@ function publicGroup(fundraiser: AppGroup): AppGroup {
 }
 
 /** Ended and cancelled campaigns take no more orders, so the app stops working with them. */
-function isOpenForApp(fundraiser: { appEnabled: boolean; status: string }): boolean {
-  return fundraiser.appEnabled && fundraiser.status !== 'ENDED' && fundraiser.status !== 'CANCELLED'
+function isOpenForApp(fundraiser: { appEnabled: boolean; isActive: boolean; status: string }): boolean {
+  return (
+    fundraiser.appEnabled &&
+    fundraiser.isActive &&
+    fundraiser.status !== 'ENDED' &&
+    fundraiser.status !== 'CANCELLED'
+  )
 }
 
 /**
@@ -131,14 +136,21 @@ export async function verifyGroupCredentials(input: { groupCode: string; groupPi
   }
 
   if (!(await verifyPin(input.groupPin, fundraiser.appGroupPinHash))) {
-    const next = nextLockout(fundraiser.appGroupPinFailures, {
+    const counted = await prisma.fundraiser.update({
+      where: { id: fundraiser.id },
+      data: { appGroupPinFailures: { increment: 1 } },
+      select: { appGroupPinFailures: true },
+    })
+    const lockedUntil = lockAfterFailures(counted.appGroupPinFailures, {
       maxFailures: GROUP_PIN_MAX_FAILURES,
       lockMinutes: GROUP_PIN_LOCK_MINUTES,
     })
-    await prisma.fundraiser.update({
-      where: { id: fundraiser.id },
-      data: { appGroupPinFailures: next.failures, appGroupLockedUntil: next.lockedUntil },
-    })
+    if (lockedUntil) {
+      await prisma.fundraiser.updateMany({
+        where: { id: fundraiser.id, appGroupPinFailures: { gte: GROUP_PIN_MAX_FAILURES } },
+        data: { appGroupPinFailures: 0, appGroupLockedUntil: lockedUntil },
+      })
+    }
     throw new FundraiserAppError(WRONG_GROUP, 401)
   }
 
@@ -259,16 +271,23 @@ export async function registerSeller(input: z.infer<typeof RegisterSchema>) {
 }
 
 /** Count a wrong personal PIN against the seller, locking them out after too many. */
-async function recordWrongSellerPin(participant: { id: string; appPinFailures: number }) {
-  const next = nextLockout(participant.appPinFailures, {
+async function recordWrongSellerPin(participant: { id: string }) {
+  const counted = await prisma.fundraiserParticipant.update({
+    where: { id: participant.id },
+    data: { appPinFailures: { increment: 1 } },
+    select: { appPinFailures: true },
+  })
+  const lockedUntil = lockAfterFailures(counted.appPinFailures, {
     maxFailures: SELLER_PIN_MAX_FAILURES,
     lockMinutes: SELLER_PIN_LOCK_MINUTES,
   })
-  await prisma.fundraiserParticipant.update({
-    where: { id: participant.id },
-    data: { appPinFailures: next.failures, appPinLockedUntil: next.lockedUntil },
-  })
-  return next.lockedUntil
+  if (lockedUntil) {
+    await prisma.fundraiserParticipant.updateMany({
+      where: { id: participant.id, appPinFailures: { gte: SELLER_PIN_MAX_FAILURES } },
+      data: { appPinFailures: 0, appPinLockedUntil: lockedUntil },
+    })
+  }
+  return lockedUntil
     ? new FundraiserAppError(
         `Too many wrong PINs. Try again in ${SELLER_PIN_LOCK_MINUTES} minutes, or ask your organizer to reset your PIN.`,
         429

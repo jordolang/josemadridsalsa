@@ -16,6 +16,7 @@
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 import { creditFundraiserCommission } from '@/lib/fundraising/credit-commission'
 import {
   FundraiserStoreUnavailableError,
@@ -110,16 +111,8 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
   const orderNumber = inPersonOrderNumber('APP', input.clientOrderId)
 
   // A retry of an order that already went through gets the same order back.
-  const previous = await prisma.order.findUnique({
-    where: { orderNumber },
-    select: orderSummarySelect,
-  })
-  if (previous) {
-    if (previous.participantId !== seller.id) {
-      throw new FundraiserAppError('That order could not be saved. Please try again.', 409)
-    }
-    return { ...summarize(previous), duplicate: true }
-  }
+  const previous = await findRetriedOrder(orderNumber, seller.id)
+  if (previous) return previous
 
   if (input.payment === 'CARD') requireCardPayments(session)
   const store = await storeFor(session)
@@ -166,7 +159,9 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
   const customerName = `${input.customer.firstName} ${input.customer.lastName}`
   const salesChannel = deriveSalesChannel({ fundraiserId: store.fundraiserId, participantId: seller.id })
 
-  const order = await prisma.$transaction(async (tx) => {
+  let order
+  try {
+    order = await prisma.$transaction(async (tx) => {
     const address = input.address
       ? await tx.address.create({
           data: {
@@ -206,9 +201,35 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
       select: orderSummarySelect,
     })
 
-    if (paid) await creditFundraiserCommission(tx, created.id)
+    if (paid) {
+      await creditFundraiserCommission(tx, created.id)
+      // A collected sale is a completed payment like the POS cash path's: the confirmation email,
+      // ledger, notifications and milestone emails all hang off this event.
+      await emitDomainEvent(
+        {
+          type: 'payment.completed',
+          entityType: 'order',
+          entityId: created.id,
+          payload: {
+            provider: input.payment,
+            channel: 'FUNDRAISER_APP',
+            amount: Math.round(subtotal * 100),
+            currency: 'usd',
+          },
+        },
+        tx
+      )
+    }
     return created
   })
+  } catch (error) {
+    // Two overlapping retries of one order: the unique order number let only one in.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const winner = await findRetriedOrder(orderNumber, seller.id)
+      if (winner) return winner
+    }
+    throw error
+  }
 
   await emitOrderCreated({
     id: order.id,
@@ -219,6 +240,16 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
   })
 
   return { ...summarize(order), duplicate: false }
+}
+
+/** The order a retry carrying this order number already created, if this seller made it. */
+async function findRetriedOrder(orderNumber: string, sellerId: string) {
+  const previous = await prisma.order.findUnique({ where: { orderNumber }, select: orderSummarySelect })
+  if (!previous) return null
+  if (previous.participantId !== sellerId) {
+    throw new FundraiserAppError('That order could not be saved. Please try again.', 409)
+  }
+  return { ...summarize(previous), duplicate: true }
 }
 
 const orderSummarySelect = {
@@ -260,6 +291,7 @@ export async function listSellerOrders(session: AppSession) {
       createdAt: true,
       status: true,
       paymentStatus: true,
+      paymentProvider: true,
       paymentMethod: true,
       total: true,
       guestPhone: true,
@@ -275,6 +307,10 @@ export async function listSellerOrders(session: AppSession) {
     createdAt: order.createdAt,
     status: order.status,
     paid: order.paymentStatus === 'PAID',
+    // A card order whose payment the app never confirmed (closed mid-sale, lost connection). The
+    // order list offers to finish or cancel it, so it can be recovered after a restart.
+    awaitingCard: order.paymentProvider === 'SQUARE' && order.paymentStatus === 'PENDING',
+    amountCents: Math.round(Number(order.total) * 100),
     paymentMethod: order.paymentMethod,
     total: Number(order.total),
     customerName: order.shippingAddress

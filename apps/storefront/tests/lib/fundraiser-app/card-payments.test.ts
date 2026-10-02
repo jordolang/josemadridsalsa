@@ -28,7 +28,8 @@ vi.mock('@/lib/square/oauth', async (importOriginal) => ({
   getSquareReaderToken,
 }))
 
-const { cancelCardOrder, confirmCardPayment, squareAuthorizationFor } = await import('@/lib/fundraiser-app/card-payments')
+const { cancelCardOrder, confirmCardPayment, settleFundraiserAppPaymentFromWebhook, squareAuthorizationFor } =
+  await import('@/lib/fundraiser-app/card-payments')
 const { FundraiserAppError } = await import('@/lib/fundraiser-app/errors')
 const { SquareOAuthError } = await import('@/lib/square/oauth')
 
@@ -69,6 +70,7 @@ beforeEach(() => {
   process.env.SQUARE_LOCATION_ID = 'LOC_1'
   process.env.SQUARE_ACCESS_TOKEN = 'server-token'
   db.order.findUnique.mockResolvedValue(cardOrder())
+  db.order.updateMany.mockResolvedValue({ count: 1 })
   db.payment.findUnique.mockResolvedValue(null)
   db.$transaction.mockImplementation((fn: (client: typeof tx) => unknown) => fn(tx))
   tx.order.updateMany.mockResolvedValue({ count: 1 })
@@ -100,7 +102,7 @@ describe('confirmCardPayment', () => {
 
     expect(square.get).toHaveBeenCalledWith({ paymentId: 'sq_pay_1' })
     expect(tx.order.updateMany).toHaveBeenCalledWith({
-      where: { id: 'o_1', paymentStatus: 'PENDING' },
+      where: { id: 'o_1', paymentStatus: { in: ['PENDING', 'FAILED'] } },
       data: { paymentStatus: 'PAID', status: 'CONFIRMED' },
     })
     expect(tx.payment.create.mock.calls[0][0].data).toMatchObject({
@@ -147,9 +149,23 @@ describe('confirmCardPayment', () => {
 
   it('settles an order once when two confirmations race', async () => {
     tx.order.updateMany.mockResolvedValue({ count: 0 })
-    await confirmCardPayment(session, 'o_1', 'sq_pay_1')
+    db.order.findUnique.mockResolvedValueOnce(cardOrder()).mockResolvedValueOnce({ paymentStatus: 'PAID' })
+    await expect(confirmCardPayment(session, 'o_1', 'sq_pay_1')).resolves.toMatchObject({ status: 'COMPLETED' })
     expect(tx.payment.create).not.toHaveBeenCalled()
     expect(creditFundraiserCommission).not.toHaveBeenCalled()
+  })
+
+  it('still records a payment that completed after the app canceled the order', async () => {
+    db.order.findUnique.mockResolvedValue(cardOrder({ paymentStatus: 'FAILED' }))
+    await expect(confirmCardPayment(session, 'o_1', 'sq_pay_1')).resolves.toMatchObject({ status: 'COMPLETED' })
+    expect(tx.payment.create).toHaveBeenCalledOnce()
+  })
+
+  it('says a canceled order with no Square payment is canceled', async () => {
+    db.order.findUnique.mockResolvedValue(cardOrder({ paymentStatus: 'FAILED' }))
+    findOrderPayment.mockResolvedValueOnce(undefined)
+    const error = await expectAppError(confirmCardPayment(session, 'o_1'), 409)
+    expect(error.message).toMatch(/canceled/)
   })
 
   it('finds the payment in Square when the phone lost the payment id', async () => {
@@ -171,10 +187,43 @@ describe('cancelCardOrder', () => {
     })
   })
 
+  it('reports paid, not canceled, when a confirmation won the race', async () => {
+    findOrderPayment.mockResolvedValue(undefined)
+    db.order.updateMany.mockResolvedValue({ count: 0 })
+    db.order.findUnique.mockResolvedValueOnce(cardOrder()).mockResolvedValueOnce({ paymentStatus: 'PAID' })
+    await expect(cancelCardOrder(session, 'o_1')).resolves.toMatchObject({ status: 'COMPLETED' })
+  })
+
   it('settles instead when the card went through after all', async () => {
     findOrderPayment.mockResolvedValue(squarePayment())
     await expect(cancelCardOrder(session, 'o_1')).resolves.toMatchObject({ status: 'COMPLETED' })
     expect(db.order.updateMany).not.toHaveBeenCalled()
     expect(tx.payment.create).toHaveBeenCalledOnce()
+  })
+})
+
+describe('settleFundraiserAppPaymentFromWebhook', () => {
+  it('settles an app card order only when the payment really pays it', async () => {
+    await expect(settleFundraiserAppPaymentFromWebhook('o_1', squarePayment())).resolves.toMatchObject({
+      handled: true,
+      status: 'COMPLETED',
+    })
+    expect(tx.payment.create).toHaveBeenCalledOnce()
+  })
+
+  it('refuses an underpayment or a payment from another location', async () => {
+    const under = await settleFundraiserAppPaymentFromWebhook(
+      'o_1',
+      squarePayment({ amountMoney: { amount: BigInt(100), currency: 'USD' } })
+    )
+    expect(under).toMatchObject({ handled: true, problem: expect.stringMatching(/amount/) })
+    const elsewhere = await settleFundraiserAppPaymentFromWebhook('o_1', squarePayment({ locationId: 'LOC_X' }))
+    expect(elsewhere).toMatchObject({ handled: true, problem: expect.stringMatching(/location/) })
+    expect(db.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('leaves orders that are not fundraiser-app card orders to the webhook', async () => {
+    db.order.findUnique.mockResolvedValue(cardOrder({ orderNumber: 'KIOSK-123' }))
+    await expect(settleFundraiserAppPaymentFromWebhook('o_1', squarePayment())).resolves.toEqual({ handled: false })
   })
 })

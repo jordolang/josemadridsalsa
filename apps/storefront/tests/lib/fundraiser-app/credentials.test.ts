@@ -10,8 +10,8 @@ import {
   hashSessionToken,
   isLocked,
   isUnlocked,
+  lockAfterFailures,
   newSessionToken,
-  nextLockout,
   verifyPin,
 } from '@/lib/fundraiser-app/credentials'
 
@@ -70,13 +70,12 @@ describe('lockouts', () => {
   const now = new Date('2026-10-03T12:00:00Z')
   const limit = { maxFailures: 3, lockMinutes: 15 }
 
-  it('counts wrong PINs until the limit, then locks and starts over', () => {
-    expect(nextLockout(0, limit, now)).toEqual({ failures: 1, lockedUntil: null })
-    expect(nextLockout(1, limit, now)).toEqual({ failures: 2, lockedUntil: null })
-    expect(nextLockout(2, limit, now)).toEqual({
-      failures: 0,
-      lockedUntil: new Date('2026-10-03T12:15:00Z'),
-    })
+  it('starts a lock once the counted failures reach the limit', () => {
+    expect(lockAfterFailures(1, limit, now)).toBeNull()
+    expect(lockAfterFailures(2, limit, now)).toBeNull()
+    expect(lockAfterFailures(3, limit, now)).toEqual(new Date('2026-10-03T12:15:00Z'))
+    // Concurrent guesses can push the count past the limit; that still locks.
+    expect(lockAfterFailures(7, limit, now)).toEqual(new Date('2026-10-03T12:15:00Z'))
   })
 
   it('knows when a lock has run out', () => {

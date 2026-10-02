@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { hashPin, hashSessionToken } from '@/lib/fundraiser-app/credentials'
 
 const db = vi.hoisted(() => ({
-  fundraiser: { findUnique: vi.fn(), update: vi.fn() },
-  fundraiserParticipant: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+  fundraiser: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+  fundraiserParticipant: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   fundraiserAppSession: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
   order: { aggregate: vi.fn() },
 }))
@@ -64,6 +64,8 @@ beforeEach(async () => {
   groupPinHash ??= await hashPin(GROUP_PIN)
   sellerPinHash ??= await hashPin(SELLER_PIN)
   db.fundraiser.findUnique.mockResolvedValue(group())
+  db.fundraiser.update.mockResolvedValue({ appGroupPinFailures: 1 })
+  db.fundraiserParticipant.update.mockResolvedValue({ appPinFailures: 1 })
   db.fundraiserAppSession.create.mockResolvedValue({})
 })
 
@@ -82,17 +84,20 @@ describe('verifyGroupCredentials', () => {
     expect(unknown.message).toBe(wrong.message)
   })
 
-  it('counts a wrong PIN and locks sign-ups once there are too many', async () => {
+  it('counts a wrong PIN atomically and locks sign-ups once there are too many', async () => {
+    db.fundraiser.update.mockResolvedValueOnce({ appGroupPinFailures: 1 })
     await expectAppError(verifyGroupCredentials({ ...credentials, groupPin: '0000' }), 401)
     expect(db.fundraiser.update).toHaveBeenCalledWith({
       where: { id: 'f_1' },
-      data: { appGroupPinFailures: 1, appGroupLockedUntil: null },
+      data: { appGroupPinFailures: { increment: 1 } },
+      select: { appGroupPinFailures: true },
     })
+    expect(db.fundraiser.updateMany).not.toHaveBeenCalled()
 
-    db.fundraiser.findUnique.mockResolvedValueOnce(group({ appGroupPinFailures: 24 }))
+    db.fundraiser.update.mockResolvedValueOnce({ appGroupPinFailures: 25 })
     await expectAppError(verifyGroupCredentials({ ...credentials, groupPin: '0000' }), 401)
-    expect(db.fundraiser.update).toHaveBeenLastCalledWith({
-      where: { id: 'f_1' },
+    expect(db.fundraiser.updateMany).toHaveBeenCalledWith({
+      where: { id: 'f_1', appGroupPinFailures: { gte: 25 } },
       data: { appGroupPinFailures: 0, appGroupLockedUntil: expect.any(Date) },
     })
   })
@@ -102,8 +107,10 @@ describe('verifyGroupCredentials', () => {
     await expectAppError(verifyGroupCredentials(credentials), 429)
   })
 
-  it('refuses a group the admin has not turned on, or whose campaign ended', async () => {
+  it('refuses a group the admin has not turned on, deactivated, or whose campaign ended', async () => {
     db.fundraiser.findUnique.mockResolvedValueOnce(group({ appEnabled: false }))
+    await expectAppError(verifyGroupCredentials(credentials), 403)
+    db.fundraiser.findUnique.mockResolvedValueOnce(group({ isActive: false }))
     await expectAppError(verifyGroupCredentials(credentials), 403)
     db.fundraiser.findUnique.mockResolvedValueOnce(group({ status: 'ENDED' }))
     await expectAppError(verifyGroupCredentials(credentials), 403)
@@ -196,16 +203,22 @@ describe('reclaimSeller', () => {
     expect(db.fundraiserParticipant.findFirst.mock.calls[0][0].where).toEqual({ id: 'p_1', fundraiserId: 'f_1' })
   })
 
-  it('counts a wrong PIN and locks the seller out after five', async () => {
+  it('counts a wrong PIN atomically and locks the seller out after five', async () => {
     db.fundraiserParticipant.findFirst.mockResolvedValue(seller())
+    db.fundraiserParticipant.update.mockResolvedValueOnce({ appPinFailures: 1 })
     await expectAppError(reclaimSeller({ ...input, pin: '0000' }), 401)
     expect(db.fundraiserParticipant.update).toHaveBeenCalledWith({
       where: { id: 'p_1' },
-      data: { appPinFailures: 1, appPinLockedUntil: null },
+      data: { appPinFailures: { increment: 1 } },
+      select: { appPinFailures: true },
     })
 
-    db.fundraiserParticipant.findFirst.mockResolvedValue(seller({ appPinFailures: 4 }))
+    db.fundraiserParticipant.update.mockResolvedValueOnce({ appPinFailures: 5 })
     await expectAppError(reclaimSeller({ ...input, pin: '0000' }), 429)
+    expect(db.fundraiserParticipant.updateMany).toHaveBeenCalledWith({
+      where: { id: 'p_1', appPinFailures: { gte: 5 } },
+      data: { appPinFailures: 0, appPinLockedUntil: expect.any(Date) },
+    })
     expect(db.fundraiserAppSession.create).not.toHaveBeenCalled()
   })
 
@@ -292,6 +305,7 @@ describe('unlockSession', () => {
   })
 
   it('does not unlock with the wrong PIN', async () => {
+    db.fundraiserParticipant.update.mockResolvedValueOnce({ appPinFailures: 3 })
     await expectAppError(unlockSession(appSession(), '1111'), 401)
     expect(db.fundraiserAppSession.update).not.toHaveBeenCalled()
   })

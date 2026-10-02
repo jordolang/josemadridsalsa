@@ -15,6 +15,7 @@ const store = vi.hoisted(() => ({
 }))
 const creditFundraiserCommission = vi.hoisted(() => vi.fn())
 const emitOrderCreated = vi.hoisted(() => vi.fn())
+const emitDomainEvent = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/prisma', () => ({ prisma: db, default: db }))
 vi.mock('@/lib/fundraising/store.server', async (importOriginal) => {
@@ -23,6 +24,7 @@ vi.mock('@/lib/fundraising/store.server', async (importOriginal) => {
 })
 vi.mock('@/lib/fundraising/credit-commission', () => ({ creditFundraiserCommission }))
 vi.mock('@/lib/orders/events', () => ({ emitOrderCreated }))
+vi.mock('@/lib/domain-events/emit', () => ({ emitDomainEvent }))
 
 const { createPhoneOrder, listSellerOrders } = await import('@/lib/fundraiser-app/orders')
 const { FundraiserAppError } = await import('@/lib/fundraiser-app/errors')
@@ -122,6 +124,27 @@ describe('createPhoneOrder', () => {
     const data = tx.order.create.mock.calls[0][0].data
     expect(data).toMatchObject({ paymentStatus: 'PAID', status: 'CONFIRMED' })
     expect(creditFundraiserCommission).toHaveBeenCalledWith(tx, 'o_1')
+    // The paid-sale handlers (confirmation email, ledger, milestones) run off this event.
+    expect(emitDomainEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'payment.completed', entityId: 'o_1', payload: expect.objectContaining({ amount: 4600 }) }),
+      tx
+    )
+  })
+
+  it('returns the winning order when two retries of it race', async () => {
+    const { Prisma } = await import('@prisma/client')
+    db.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', { code: 'P2002', clientVersion: 'test' })
+    )
+    db.order.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: 'o_1',
+      orderNumber: 'APP-0B6F3C3E2A59',
+      total: 46,
+      participantId: 'p_1',
+      paymentStatus: 'PAID',
+      paymentProvider: null,
+    })
+    await expect(createPhoneOrder(session, order())).resolves.toMatchObject({ id: 'o_1', duplicate: true })
   })
 
   it('leaves a pay-later order pending and uncredited', async () => {
@@ -129,6 +152,7 @@ describe('createPhoneOrder', () => {
     const data = tx.order.create.mock.calls[0][0].data
     expect(data).toMatchObject({ paymentStatus: 'PENDING', status: 'PENDING', paymentMethod: 'Pay on delivery' })
     expect(creditFundraiserCommission).not.toHaveBeenCalled()
+    expect(emitDomainEvent).not.toHaveBeenCalled()
     expect(result.paid).toBe(false)
   })
 
@@ -214,6 +238,6 @@ describe('listSellerOrders', () => {
     ])
     const orders = await listSellerOrders(session)
     expect(db.order.findMany.mock.calls[0][0].where).toEqual({ participantId: 'p_1' })
-    expect(orders[0]).toMatchObject({ customerName: 'Pat Lee', paid: true, total: 46 })
+    expect(orders[0]).toMatchObject({ customerName: 'Pat Lee', paid: true, total: 46, awaitingCard: false })
   })
 })
