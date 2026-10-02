@@ -344,6 +344,8 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **iPad kiosk card reader asks for location permission.** Square's Mobile Payments SDK refuses
+  payments without it, and the app never asked, so the reader could not take a card.
 - **Tests run on vitest 5 again.** The vitest 5 bump left `@vitest/coverage-v8` and `@vitest/ui` on
   4.x, which pulled in a second vitest that the test setup extended; every `rejects.toThrow()`
   then failed (70 tests in CI). Both are pinned to the same vitest, vitest is declared once at the

@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import SquareMobilePaymentsSDK
 import UIKit
@@ -58,6 +59,8 @@ final class SquareCardReader: NSObject, ObservableObject {
     private static var started = false
     private var paymentHandle: PaymentHandle?
     private var finishPayment: ((PaymentResult) -> Void)?
+    /// Square refuses payments until the app holds location permission, so we ask for it here.
+    private let locationManager = CLLocationManager()
     #if canImport(MockReaderUI)
     private var mockReader: MockReaderUI?
     #endif
@@ -86,6 +89,15 @@ final class SquareCardReader: NSObject, ObservableObject {
     @MainActor
     func signIn() async {
         guard Self.started else { return }
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .denied, .restricted:
+            state = .failed("Allow Location: Settings › Jose Madrid Kiosk › Location › While Using")
+            return
+        default:
+            break
+        }
         let settings = KioskSettings.shared
         guard let origin = settings.origin, let url = URL(string: "\(origin)/api/kiosk/square/authorization"),
               !settings.deviceToken.isEmpty
