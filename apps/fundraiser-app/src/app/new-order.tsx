@@ -6,21 +6,36 @@ import { Button, Card, ErrorText, Field, Muted, Screen, Title, styles as ui } fr
 import { money, type Product } from '@/lib/api'
 import { colors } from '@/lib/config'
 import { useSession } from '@/lib/session'
+import { cancelCardOrder, cardPaymentsAvailable, chargeOrder } from '@/lib/square'
 
-type Payment = 'CASH' | 'CHECK' | 'PAY_LATER'
+type Payment = 'CASH' | 'CHECK' | 'PAY_LATER' | 'CARD'
 
 const PAYMENTS: { value: Payment; label: string }[] = [
+  { value: 'CARD', label: 'Card' },
   { value: 'CASH', label: 'Cash' },
   { value: 'CHECK', label: 'Check' },
   { value: 'PAY_LATER', label: 'Pay later' },
 ]
+
+interface SavedOrder {
+  id: string
+  orderNumber: string
+  total: number
+  amountCents: number
+  paid: boolean
+  awaitingCard: boolean
+}
 
 /**
  * Take an order over the phone. The app sends what was ordered and who it is for; the server
  * prices it from the group's store and records it on the fundraising platform.
  */
 export default function NewOrder() {
-  const { call } = useSession()
+  const { call, me } = useSession()
+  const takesCards = !!me?.group.cardPayments && cardPaymentsAvailable
+  const payments = PAYMENTS.filter((option) => option.value !== 'CARD' || takesCards)
+  // An order recorded and waiting on its card (declined, canceled, or interrupted).
+  const [cardOrder, setCardOrder] = useState<SavedOrder | null>(null)
   const [products, setProducts] = useState<Product[] | null>(null)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [firstName, setFirstName] = useState('')
@@ -54,11 +69,52 @@ export default function NewOrder() {
   const change = (id: string, delta: number) =>
     setQuantities((q) => ({ ...q, [id]: Math.max(0, Math.min(500, (q[id] ?? 0) + delta)) }))
 
+  function finished(order: { orderNumber: string; total: number; paid: boolean }, how: string) {
+    Alert.alert('Order saved', `${order.orderNumber}\n${money(order.total)} · ${how}`, [
+      { text: 'Done', onPress: () => router.back() },
+    ])
+  }
+
+  async function charge(order: SavedOrder, retry = false) {
+    setBusy(true)
+    setError('')
+    const result = await chargeOrder(call, order, { retry })
+    setBusy(false)
+    if (result.status === 'paid') {
+      setCardOrder(null)
+      finished({ ...order, paid: true }, 'paid by card')
+    } else {
+      setCardOrder(order)
+      setError(result.message)
+    }
+  }
+
+  async function giveUpOnCard() {
+    if (!cardOrder) return
+    setBusy(true)
+    try {
+      const result = await cancelCardOrder(call, cardOrder.id)
+      if (result.status === 'COMPLETED') {
+        setCardOrder(null)
+        return finished({ ...cardOrder, paid: true }, 'paid by card')
+      }
+      // The cart stays filled: pick another way to pay and save again as a new order.
+      setCardOrder(null)
+      setPayment(null)
+      clientOrderId.current = randomUUID()
+      setError('Card order canceled. Choose another way to pay and save again.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function save() {
     setBusy(true)
     setError('')
     try {
-      const { order } = await call<{ order: { orderNumber: string; total: number; paid: boolean } }>('/orders', {
+      const { order } = await call<{ order: SavedOrder }>('/orders', {
         method: 'POST',
         body: {
           clientOrderId: clientOrderId.current,
@@ -69,11 +125,11 @@ export default function NewOrder() {
           notes: notes.trim() || undefined,
         },
       })
-      Alert.alert(
-        'Order saved',
-        `${order.orderNumber}\n${money(order.total)} · ${order.paid ? 'paid' : 'to collect on delivery'}`,
-        [{ text: 'Done', onPress: () => router.back() }]
-      )
+      if (order.awaitingCard) {
+        await charge(order)
+        return
+      }
+      finished(order, order.paid ? 'paid' : 'to collect on delivery')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -140,12 +196,12 @@ export default function NewOrder() {
 
       <Title>Payment</Title>
       <View style={ui.row}>
-        {PAYMENTS.map((option) => (
+        {payments.map((option) => (
           <Pressable
             key={option.value}
             accessibilityRole="radio"
             accessibilityState={{ selected: payment === option.value }}
-            onPress={() => setPayment(option.value)}
+            onPress={() => !cardOrder && setPayment(option.value)}
             style={[styles.choice, payment === option.value && styles.choiceOn]}
           >
             <Text style={[styles.choiceText, payment === option.value && styles.choiceTextOn]}>{option.label}</Text>
@@ -153,9 +209,11 @@ export default function NewOrder() {
         ))}
       </View>
       <Muted>
-        {payment === 'PAY_LATER'
-          ? 'Collect the money when you deliver. Your group is credited once Jose Madrid marks it paid.'
-          : 'Pick Cash or Check only if you have the money in hand.'}
+        {payment === 'CARD'
+          ? 'Tap the card or phone on your phone, or type the card number in for a phone order. It goes to Jose Madrid Salsa through Square.'
+          : payment === 'PAY_LATER'
+            ? 'Collect the money when you deliver. Your group is credited once Jose Madrid marks it paid.'
+            : 'Pick Cash or Check only if you have the money in hand.'}
       </Muted>
       <Field label="Notes (optional)" value={notes} onChangeText={setNotes} multiline />
 
@@ -168,7 +226,14 @@ export default function NewOrder() {
         </View>
       </Card>
       <ErrorText>{error}</ErrorText>
-      <Button label="Save order" busy={busy} disabled={!ready} onPress={save} />
+      {cardOrder ? (
+        <>
+          <Button label={`Try card again (${money(cardOrder.total)})`} busy={busy} onPress={() => charge(cardOrder, true)} />
+          <Button label="Cancel card order" variant="secondary" disabled={busy} onPress={giveUpOnCard} />
+        </>
+      ) : (
+        <Button label={payment === 'CARD' ? 'Save and take card' : 'Save order'} busy={busy} disabled={!ready} onPress={save} />
+      )}
     </Screen>
   )
 }

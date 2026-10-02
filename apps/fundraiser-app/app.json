@@ -33,6 +33,22 @@
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 28,
+            "compileSdkVersion": 36
+          }
+        }
+      ],
+      [
+        "./plugins/with-square-mobile-payments",
+        {
+          "applicationId": "sq0idp-yOtCWDhACLrw1cjKHPNFNA",
+          "tapToPayOnIPhone": true
+        }
       ]
     ],
     "experiments": {

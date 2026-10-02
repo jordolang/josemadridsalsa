@@ -1,13 +1,14 @@
 import { useCallback, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { Button, Card, styles as ui } from '@/components/ui'
 import { money } from '@/lib/api'
 import { colors } from '@/lib/config'
 import { useSession } from '@/lib/session'
+import { cardPaymentsAvailable, openCardReaderSettings } from '@/lib/square'
 
 export default function Home() {
-  const { me, refresh, signOut } = useSession()
+  const { me, refresh, signOut, call } = useSession()
   const [refreshing, setRefreshing] = useState(false)
 
   const reload = useCallback(() => {
@@ -54,6 +55,17 @@ export default function Home() {
 
       <Button label="Take a new order" onPress={() => router.push('/new-order')} />
       <Button label="My orders" variant="secondary" onPress={() => router.push('/orders')} />
+      {me.group.cardPayments && cardPaymentsAvailable ? (
+        <Button
+          label="Card reader & Tap to Pay"
+          variant="secondary"
+          onPress={() =>
+            openCardReaderSettings(call).catch((e) =>
+              Alert.alert('Card payments', e instanceof Error ? e.message : String(e))
+            )
+          }
+        />
+      ) : null}
       {me.seller.isOrganizer ? (
         <Button label="Organizer tools" variant="secondary" onPress={() => router.push('/organizer')} />
       ) : null}

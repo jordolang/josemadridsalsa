@@ -65,7 +65,7 @@ export interface Me {
     referralCode: string
     isOrganizer: boolean
   }
-  group: Group
+  group: Group & { cardPayments: boolean }
   stats: { orders: number; sales: number }
 }
 

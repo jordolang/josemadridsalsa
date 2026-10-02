@@ -12,6 +12,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from 'react-native'
 import { ApiError, api, tokenStore, type Me } from './api'
 import { RELOCK_AFTER_MS } from './config'
+import { deauthorizeSquare } from './square'
 
 type Status = 'loading' | 'signed-out' | 'locked' | 'ready'
 
@@ -63,6 +64,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const forget = useCallback(async () => {
     await tokenStore.clear().catch(() => undefined)
+    await deauthorizeSquare()
     setToken(null)
     setMe(null)
     setStatus('signed-out')
