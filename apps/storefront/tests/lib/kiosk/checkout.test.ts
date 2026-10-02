@@ -13,8 +13,8 @@ import { KioskCartSchema, startKioskCheckout } from '@/lib/kiosk/checkout'
 import { TerminalCheckoutError } from '@/lib/pos/terminal-checkout'
 
 const products = [
-  { id: 'p-mango', name: 'Mango Habanero Salsa', sku: 'MH', barcode: '093662452973', inventory: 9, isActive: true },
-  { id: 'p-mild', name: 'Mild', sku: 'MI', barcode: null, inventory: 9, isActive: true },
+  { id: 'p-mango', name: 'Mango Habanero Salsa', sku: 'MH', barcode: '093662452973', inventory: 9, stockReserved: 0, isActive: true },
+  { id: 'p-mild', name: 'Mild', sku: 'MI', barcode: null, inventory: 9, stockReserved: 0, isActive: true },
 ]
 
 beforeEach(() => {

@@ -79,6 +79,8 @@ class SetupActivity : Activity() {
         return when {
             !url.startsWith("https://") && !local -> "The kiosk URL must start with https://"
             token.isEmpty() -> "Enter the kiosk device token."
+            // The server ignores shorter tokens, so a short one would leave the kiosk unpaired.
+            token.length < 24 -> "The device token must be at least 24 characters."
             !Regex("\\d{4,8}").matches(pin) -> "The staff PIN must be 4 to 8 digits."
             else -> null
         }

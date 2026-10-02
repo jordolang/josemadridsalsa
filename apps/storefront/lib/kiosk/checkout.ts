@@ -28,7 +28,7 @@ export type KioskCart = z.infer<typeof KioskCartSchema>
 export async function loadKioskCatalog() {
   const products = await prisma.product.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, sku: true, barcode: true, inventory: true, isActive: true },
+    select: { id: true, name: true, sku: true, barcode: true, inventory: true, stockReserved: true, isActive: true },
   })
   return matchKioskProducts(products)
 }

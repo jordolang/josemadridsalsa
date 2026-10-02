@@ -69,6 +69,7 @@ export interface CatalogProduct {
   sku: string
   barcode: string | null
   inventory: number
+  stockReserved: number
   isActive: boolean
 }
 
@@ -124,7 +125,8 @@ export function matchKioskProducts(
       ...f,
       productId: product?.id ?? null,
       sku: product?.sku ?? null,
-      inStock: !!product && product.inventory > 0,
+      // Reserved jars belong to orders waiting on payment; only the rest can be sold.
+      inStock: !!product && product.inventory - product.stockReserved > 0,
     }
   })
 

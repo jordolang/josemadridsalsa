@@ -209,9 +209,10 @@ export function mapSquareTerminalStatus(status: string | undefined): TerminalSta
   switch (status) {
     case 'COMPLETED':
       return 'COMPLETED'
+    // Cancellation is only requested, not done: the customer can still finish paying.
     case 'IN_PROGRESS':
-      return 'IN_PROGRESS'
     case 'CANCEL_REQUESTED':
+      return 'IN_PROGRESS'
     case 'CANCELED':
       return 'CANCELED'
     case 'PENDING':
@@ -235,8 +236,15 @@ export async function syncTerminalCheckout(checkoutId: string) {
 
   const status = mapSquareTerminalStatus(terminalCheckout.status)
 
+  // The Square payment webhook can replace providerPaymentId with the payment id before
+  // the first poll; the checkout's referenceId is always our order id.
   const order = await prisma.order.findFirst({
-    where: { providerPaymentId: checkoutId },
+    where: {
+      OR: [
+        { providerPaymentId: checkoutId },
+        ...(terminalCheckout.referenceId ? [{ id: terminalCheckout.referenceId }] : []),
+      ],
+    },
     select: {
       id: true,
       orderNumber: true,
@@ -367,9 +375,12 @@ export async function cancelTerminalCheckout(checkoutId: string) {
   try {
     await getSquareClient().terminal.checkouts.cancel({ checkoutId })
   } catch (error) {
-    // Square refuses to cancel a checkout the customer already paid; the sync below
-    // then records the sale instead of losing it.
-    console.warn(`[POS] Terminal cancel refused for ${checkoutId}:`, error)
+    // Square refuses to cancel a checkout the customer already paid. Sync to find out:
+    // a completed or canceled checkout is settled; anything else is still live on the
+    // Terminal, so the failure must reach the caller.
+    const synced = await syncTerminalCheckout(checkoutId)
+    if (synced.status === 'COMPLETED' || synced.status === 'CANCELED') return synced
+    throw error
   }
   return syncTerminalCheckout(checkoutId)
 }

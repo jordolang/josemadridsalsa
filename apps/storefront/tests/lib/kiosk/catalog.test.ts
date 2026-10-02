@@ -11,6 +11,7 @@ const product = (over: Partial<CatalogProduct> & { id: string; name: string }): 
   sku: over.id.toUpperCase(),
   barcode: null,
   inventory: 10,
+  stockReserved: 0,
   isActive: true,
   ...over,
 })
@@ -58,10 +59,12 @@ describe('matchKioskProducts', () => {
     const { items, unmatched } = matchKioskProducts([
       product({ id: 'hab', name: 'Mango Habanero', inventory: 0 }),
       product({ id: 'old', name: 'Peach Mild', isActive: false }),
+      product({ id: 'held', name: 'Mango Mild', inventory: 3, stockReserved: 3 }),
     ])
+    expect(items.find((i) => i.key === 'mango-mild')).toMatchObject({ productId: 'held', inStock: false })
     expect(items.find((i) => i.key === 'mango-habanero')).toMatchObject({ productId: 'hab', inStock: false })
     expect(unmatched).toContain('Peach Mild')
-    expect(unmatched).toHaveLength(KIOSK_FLAVORS.length - 1)
+    expect(unmatched).toHaveLength(KIOSK_FLAVORS.length - 2)
   })
 })
 

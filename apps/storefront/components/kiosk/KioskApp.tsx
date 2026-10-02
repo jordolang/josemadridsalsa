@@ -170,6 +170,8 @@ export function KioskApp() {
     const onKey = (event: KeyboardEvent) => {
       const code = feed(event.key, event.timeStamp)
       if (!code) return
+      // The scan's closing Enter must not also press whatever button was last tapped.
+      event.preventDefault()
       const { screen: current, flavors: sellable, soldOut: out } = scanState.current
       if (current === 'pay' || current === 'done') return
       const matches = flavorsForUpc(code)
@@ -242,8 +244,13 @@ export function KioskApp() {
       const { status } = await kioskFetch<{ status: string }>(`/api/kiosk/checkout/${payment.checkoutId}/cancel`, { method: 'POST' })
       // The card may have gone through just before the cancel landed.
       if (status === 'COMPLETED' && payment.orderNumber) return finish(payment.orderNumber, payment.quote, lines)
-      setPayment(null)
-      setScreen(stage?.portrait ? 'cart' : 'menu')
+      if (status === 'CANCELED' || status === 'FAILED') {
+        setPayment(null)
+        setScreen(stage?.portrait ? 'cart' : 'menu')
+        return
+      }
+      // Cancel requested but not yet done on the Terminal: keep watching it.
+      setPayment({ ...payment, phase: 'waiting' })
     } catch (error) {
       setPayment({ ...payment, phase: 'waiting', error: error instanceof Error ? error.message : null })
     }

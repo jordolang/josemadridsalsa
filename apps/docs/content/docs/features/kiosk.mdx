@@ -6,12 +6,13 @@ description: The Salsa Kings self-order kiosk — an Android tablet that takes o
 # Self-Order Kiosk
 
 Customers build their own order on a touch screen, pay on a Square Terminal, and
-take a printed receipt. It has two parts:
+take a printed receipt. It has three parts:
 
 | Part | Where | Job |
 |---|---|---|
 | Kiosk screens | `/kiosk` in the storefront (`app/kiosk`, `components/kiosk`) | Splash screen, menu, order, payment, confirmation |
 | Android app | `apps/android-kiosk` | Locks the tablet to `/kiosk`, drives the USB receipt printer, passes the barcode scanner through |
+| iPad app | `apps/ios-kiosk` | Same job on an iPad: network, Bluetooth LE, AirPrint and Star receipt printers |
 
 Because the screens are a web page, a design change ships with a normal deploy; the
 tablet picks it up on its next reload without reinstalling the app.
@@ -136,6 +137,24 @@ Only a debug build exists, and nothing has been tried on a physical tablet, prin
 scanner or Square Terminal yet. Run a full test sale (`SQUARE_SANDBOX` unset, against a
 sandbox Terminal) before the first show.
 </Callout>
+
+## The iPad app
+
+`apps/ios-kiosk` is a Swift app (`net.josemadrid.kiosk`, iPadOS 16+) with the same
+`window.JMKiosk` bridge. The project is generated from `project.yml` with XcodeGen;
+the header of `project.yml` holds the full build, sign and install steps.
+
+- **Printers:** network ESC/POS (TCP 9100), Bluetooth LE ESC/POS, AirPrint (chosen
+  once, then silent), and Star Micronics over USB, Bluetooth or LAN via the StarXpand
+  SDK. iPadOS gives apps no access to other USB printers.
+- **Signing:** put the team ID in `Config/Signing.xcconfig` (gitignored; copy
+  `Signing.example.xcconfig`). With a free personal team the install lasts 7 days,
+  then has to be re-signed and reinstalled from Xcode. The settings survive.
+- **First launch on a device:** trust the developer under *Settings → General →
+  VPN & Device Management*.
+- **Lock-down:** turn on *Settings → Accessibility → Guided Access*, open the app,
+  and triple-click the top button. The staff menu is the same 3-second press in the
+  top-right corner, then the PIN.
 
 ## Configuration
 

@@ -75,6 +75,29 @@ describe('syncTerminalCheckout', () => {
   })
 })
 
+describe('Terminal edge cases', () => {
+  it('finds the order after the payment webhook rewrote its provider id', async () => {
+    square.get.mockResolvedValue({ checkout: { status: 'COMPLETED', referenceId: 'o1', paymentIds: ['pay_3'], amountMoney: { amount: 1000n } } })
+    db.findFirst.mockResolvedValue(order('PAID'))
+    await syncTerminalCheckout('chk_3')
+    expect(db.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { OR: [{ providerPaymentId: 'chk_3' }, { id: 'o1' }] } }))
+  })
+
+  it('keeps a cancel-requested checkout open and its stock reserved', async () => {
+    square.get.mockResolvedValue({ checkout: { status: 'CANCEL_REQUESTED', amountMoney: { amount: 1000n } } })
+    db.findFirst.mockResolvedValue(order('PENDING'))
+    await expect(syncTerminalCheckout('chk_4')).resolves.toMatchObject({ status: 'IN_PROGRESS' })
+    expect(inventory.release).not.toHaveBeenCalled()
+  })
+
+  it('reports a failed cancel while the checkout is still payable', async () => {
+    square.cancel.mockRejectedValue(new Error('network down'))
+    square.get.mockResolvedValue({ checkout: { status: 'IN_PROGRESS', amountMoney: { amount: 1000n } } })
+    db.findFirst.mockResolvedValue(order('PENDING'))
+    await expect(cancelTerminalCheckout('chk_5')).rejects.toThrow('network down')
+  })
+})
+
 describe('cancelTerminalCheckout', () => {
   it('keeps a sale the customer paid for just before cancel landed', async () => {
     square.cancel.mockRejectedValue(new Error('Checkout already completed'))
