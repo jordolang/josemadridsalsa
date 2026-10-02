@@ -153,7 +153,8 @@ the header of `project.yml` holds the full build, sign and install steps.
 - **First launch on a device:** trust the developer under *Settings → General →
   VPN & Device Management*.
 - **Lock-down:** turn on *Settings → Accessibility → Guided Access*, open the app,
-  and triple-click the top button. The staff menu is the same 3-second press in the
+  and triple-click the top button. The staff menu opens with a triple-tap on the faint
+  dot in the bottom-left corner (or the 3-second press in the
   top-right corner, then the PIN.
 
 ### Card payments on a Square Reader
@@ -169,8 +170,22 @@ kiosk, so a staff member must be present for every sale.
    (`lib/square/oauth.ts`). The redirect URL
    `https://www.josemadrid.net/api/admin/square/oauth/callback` must be registered on
    the Square app's OAuth page.
-2. **Pair the reader.** Staff menu → **Card reader**, then follow Square's screens. The
-   staff menu shows *Card reader: ready* once it is paired and signed in.
+2. **Register the app's signature with Square.** Developer Console → the app →
+   **Mobile Payments SDK → Add Signature**: bundle ID `net.josemadrid.kiosk` and the
+   Apple Team ID that signs the build.
+3. **Sign with a paid Apple Developer team.** Since SDK 2.5 Square checks the device
+   with App Attest, and a build installed from Xcode attests against Apple's sandbox
+   unless it carries `com.apple.developer.devicecheck.appattest-environment =
+   production`. Free (personal) teams can't hold that entitlement. Without it the
+   reader pairs and then shows *"Unable to establish a secure connection to Square"*.
+4. **Pair the reader.** Staff menu → **Card reader**, then follow Square's screens. The
+   app asks for Location and Bluetooth first; Square refuses to pair or charge without
+   them (an undecided Bluetooth prompt shows as *"An unknown Bluetooth error"*). The
+   staff menu shows *Card reader: Ready for cards* once it is paired and signed in.
+
+**Forgotten staff PIN (debug builds):** with the iPad plugged into a trusted Mac, run
+`xcrun devicectl device process launch --device <udid> --terminate-existing
+net.josemadrid.kiosk -- -resetStaffPIN <new PIN>`.
 
 During a sale the kiosk creates the order (`method: "reader"`), the iPad takes the card
 with Square's own payment screen, and the server confirms the payment with Square
