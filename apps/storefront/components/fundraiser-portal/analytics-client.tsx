@@ -135,7 +135,7 @@ export function AnalyticsClient({ fundraiserId }: { fundraiserId: string }) {
                 rows={3}
                 placeholder="fundraising, salsa, charity, local community..."
               />
-              <p className="text-xs text-gray-500">Comma-separated list of keywords to improve your page's visibility in search results.</p>
+              <p className="text-xs text-gray-500">Comma-separated, up to 20. Added to your fundraiser page&apos;s keywords tag, which some search engines read (Google ignores it; your page title and mission statement matter more).</p>
             </div>
           </div>
         </div>

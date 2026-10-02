@@ -71,3 +71,13 @@ describe('arena messages', () => {
     expect((await res.json()).messages).toEqual([{ id: 'm1', teamId: null, author: 'Fan', body: 'hi', createdAt: 0 }])
   })
 })
+
+describe('arena messages — stale session', () => {
+  it('answers 401 when the signed-in account no longer exists', async () => {
+    const { Prisma } = await import('@prisma/client')
+    getServerSession.mockResolvedValue({ user: { id: 'deleted-user' } })
+    messageCreate.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('fk', { code: 'P2003', clientVersion: 'test' }))
+    const res = await POST(post({ body: 'hi' }), params())
+    expect(res.status).toBe(401)
+  })
+})

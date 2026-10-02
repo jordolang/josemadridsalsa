@@ -1,4 +1,5 @@
 import type { ProgressBarBlock as ProgressBarBlockType } from '@/lib/fundraiser-page-config'
+import { FundraisingThermometer } from '@/components/fundraiser/fundraising-thermometer'
 
 type Props = {
   block: ProgressBarBlockType
@@ -16,6 +17,17 @@ export function ProgressBarBlock({ block, fundraiser }: Props) {
 
   const percentage = Math.min((raised / goal) * 100, 100)
   const label = block.label || 'Fundraising Progress'
+
+  if (block.style === 'thermometer') {
+    return (
+      <section className="mx-auto flex max-w-2xl flex-col items-center px-4 py-8">
+        <h3 className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-500">
+          {label}
+        </h3>
+        <FundraisingThermometer raised={raised} goal={goal} showAmount={block.showAmount} showPercentage={block.showPercentage} />
+      </section>
+    )
+  }
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-8">
