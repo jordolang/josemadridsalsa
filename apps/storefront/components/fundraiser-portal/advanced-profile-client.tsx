@@ -58,7 +58,9 @@ export function AdvancedProfileClient({ fundraiserId }: { fundraiserId: string }
       if (res.ok) {
         setMessage('Advanced profile settings saved successfully.')
       } else {
-        setMessage('Failed to save advanced profile settings.')
+        const data = await res.json().catch(() => null)
+        const detail = data?.details?.[0]?.message
+        setMessage(detail ? `Failed to save: ${detail}` : 'Failed to save advanced profile settings.')
       }
     } catch {
       setMessage('An error occurred while saving. Please try again.')

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentFundraiserAccount } from '@/lib/rbac'
 import prisma from '@/lib/prisma'
 import { SITE_DOMAIN } from '@/lib/site-url'
+import { recordGamificationAction } from '@/lib/fundraising/gamification'
 
 export default async function FundraiserDashboardPage() {
   const account = await getCurrentFundraiserAccount()
@@ -25,6 +26,9 @@ export default async function FundraiserDashboardPage() {
     redirect('/fundraiser-portal/pending')
   }
 
+  // Opening the dashboard is the daily check-in that drives the streak.
+  const { gamification } = await recordGamificationAction(fundraiser.id, 'DAILY_LOGIN')
+
   const revenue = Number(fundraiser.totalRevenue)
   const commission = Number(fundraiser.totalCommission)
   const goal = fundraiser.goal ? Number(fundraiser.goal) : null
@@ -43,6 +47,17 @@ export default async function FundraiserDashboardPage() {
         <StatCard label="Total Orders" value={fundraiser.totalOrders.toString()} />
         <StatCard label="Participants" value={fundraiser._count.participants.toString()} />
       </div>
+
+      {gamification && (
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Points" value={gamification.pointsBalance.toLocaleString('en-US')} />
+          <StatCard
+            label="Daily Check-in Streak"
+            value={`${gamification.currentStreak} day${gamification.currentStreak === 1 ? '' : 's'}`}
+          />
+          <StatCard label="Longest Streak" value={`${gamification.longestStreak} day${gamification.longestStreak === 1 ? '' : 's'}`} />
+        </div>
+      )}
 
       {/* Progress */}
       {goal && goal > 0 && (
