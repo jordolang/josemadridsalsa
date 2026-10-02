@@ -11,7 +11,10 @@ import android.hardware.usb.UsbManager
 import android.os.Build
 import android.util.Log
 import org.json.JSONObject
+import java.util.concurrent.Callable
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /** First USB ESC/POS printer on the bus, written to with bulk transfers. */
 class UsbPrinter(private val context: Context) {
@@ -55,37 +58,43 @@ class UsbPrinter(private val context: Context) {
             .toString()
     }
 
-    /** Queues [bytes] for the printer. Returns null once queued, or why it can't print. */
+    /**
+     * Sends [bytes] to the printer and waits for the transfer, so the kiosk can tell the
+     * customer when a receipt didn't print. Returns null when printed, or why it failed.
+     * Called from the WebView's bridge thread, never the UI thread.
+     */
     fun print(bytes: ByteArray): String? {
         val t = find() ?: return "no printer connected"
         if (!hasPermission(t)) {
             requestPermission(t)
             return "printer permission needed"
         }
-        queue.execute {
-            val conn = usb.openDevice(t.device)
-            if (conn == null) {
-                Log.e(TAG, "could not open printer")
-                return@execute
-            }
-            try {
-                conn.claimInterface(t.iface, true)
-                var offset = 0
-                while (offset < bytes.size) {
-                    val len = minOf(CHUNK, bytes.size - offset)
-                    val sent = conn.bulkTransfer(t.out, bytes, offset, len, TIMEOUT_MS)
-                    if (sent < 0) {
-                        Log.e(TAG, "bulk transfer failed at byte $offset")
-                        break
-                    }
-                    offset += sent
-                }
-            } finally {
-                conn.releaseInterface(t.iface)
-                conn.close()
-            }
+        val job = queue.submit(Callable { send(t, bytes) })
+        return try {
+            job.get(PRINT_WAIT_SECONDS, TimeUnit.SECONDS)
+        } catch (e: TimeoutException) {
+            "printer did not respond"
+        } catch (e: Exception) {
+            "print failed (${e.message})"
         }
-        return null
+    }
+
+    private fun send(t: Target, bytes: ByteArray): String? {
+        val conn = usb.openDevice(t.device) ?: return "could not open printer".also { Log.e(TAG, it) }
+        try {
+            if (!conn.claimInterface(t.iface, true)) return "printer is busy".also { Log.e(TAG, it) }
+            var offset = 0
+            while (offset < bytes.size) {
+                val len = minOf(CHUNK, bytes.size - offset)
+                val sent = conn.bulkTransfer(t.out, bytes, offset, len, TIMEOUT_MS)
+                if (sent < 0) return "printer stopped at byte $offset".also { Log.e(TAG, it) }
+                offset += sent
+            }
+            return null
+        } finally {
+            conn.releaseInterface(t.iface)
+            conn.close()
+        }
     }
 
     companion object {
@@ -93,5 +102,6 @@ class UsbPrinter(private val context: Context) {
         private const val ACTION_PERMISSION = "net.josemadrid.kiosk.USB_PERMISSION"
         private const val CHUNK = 4096
         private const val TIMEOUT_MS = 5000
+        private const val PRINT_WAIT_SECONDS = 20L
     }
 }

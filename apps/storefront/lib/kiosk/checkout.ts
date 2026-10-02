@@ -21,6 +21,8 @@ export const KioskCartSchema = z.object({
     )
     .min(1, 'Cart is empty')
     .max(KIOSK_FLAVORS.length),
+  /** Reused across retries of one payment so a lost response can't start a second charge. */
+  attemptId: z.string().uuid().optional(),
 })
 
 export type KioskCart = z.infer<typeof KioskCartSchema>
@@ -65,6 +67,7 @@ export async function startKioskCheckout(cart: KioskCart) {
     discountCents: quote.savingsCents,
     totalCents: quote.totalCents,
     orderPrefix: 'KIOSK',
+    attemptId: cart.attemptId,
     adminNotes: notes.filter(Boolean).join(' · '),
   })
 

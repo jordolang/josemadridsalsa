@@ -1,6 +1,6 @@
 'use client'
 
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { KioskFlavor } from '@/lib/kiosk/catalog'
 import { dealLabel, formatCents, type KioskQuote } from '@/lib/kiosk/pricing'
 import { DONE_RESET_SECONDS, FILTERS, FIRE_JARS, HEAT, PRICE_ROWS, matchesFilter, rnd, type KioskFilter } from './kiosk-data'
@@ -115,8 +115,8 @@ export function SplashScreen({ portrait, flavorCount, jars, onStart, notice }: {
             </svg>
           )
         })}
-        <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(11,6,5,0)_0%,#0B0605_85%)]" style={{ height: portrait ? 120 : 90 }} />
-        <div className="absolute inset-x-0 flex items-end justify-center" style={{ bottom: portrait ? 70 : 40, gap: portrait ? 18 : 26 }}>
+        <div className={`absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(11,6,5,0)_0%,#0B0605_85%)] ${portrait ? 'h-[120px]' : 'h-[90px]'}`} />
+        <div className={`absolute inset-x-0 flex items-end justify-center ${portrait ? 'bottom-[70px] gap-[18px]' : 'bottom-10 gap-[26px]'}`}>
           {fireJars.map((j, i) => (
             <img key={j.key} src={j.image} alt={`${j.name} jar`} className="k-shimmer block w-auto [filter:drop-shadow(0_-4px_22px_rgba(255,120,20,.55))_drop-shadow(0_18px_14px_rgba(0,0,0,.6))]"
               style={{ height: Math.round((portrait ? 300 : 250) - Math.abs(i - mid) * (portrait ? 26 : 16)), animationDelay: `${(i * 0.35) % 2.8}s` }} />
@@ -124,7 +124,7 @@ export function SplashScreen({ portrait, flavorCount, jars, onStart, notice }: {
         </div>
       </div>
 
-      <img src={LOGO} alt="Jose Madrid Salsa logo" className="k-in-up absolute left-9 top-[26px] w-auto [filter:drop-shadow(0_0_30px_rgba(255,120,20,.35))]" style={{ height: portrait ? 170 : 190 }} />
+      <img src={LOGO} alt="Jose Madrid Salsa logo" className={`k-in-up absolute left-9 top-[26px] w-auto [filter:drop-shadow(0_0_30px_rgba(255,120,20,.35))] ${portrait ? 'h-[170px]' : 'h-[190px]'}`} />
 
       <div className={`absolute flex flex-col gap-[22px] ${portrait ? 'inset-x-10 top-[230px] items-center text-center' : 'left-24 top-[250px] w-[600px] items-start'}`}>
         <div className="k-in-up flex items-center gap-[18px] rounded-[18px] border-[3px] border-[#F4A81D] bg-[rgba(11,6,5,.55)] py-[10px] pl-5 pr-7">
@@ -135,10 +135,10 @@ export function SplashScreen({ portrait, flavorCount, jars, onStart, notice }: {
             <circle cx="16" cy="31" r="3.5" fill="#3F8F2F" />
             <circle cx="48" cy="31" r="3.5" fill="#3F8F2F" />
           </svg>
-          <span className="k-slab k-hot leading-none tracking-[.03em] text-[#F4A81D]" style={{ fontSize: portrait ? 64 : 60 }}>Salsa Kings</span>
+          <span className={`k-slab k-hot leading-none tracking-[.03em] text-[#F4A81D] ${portrait ? 'text-[64px]' : 'text-[60px]'}`}>Salsa Kings</span>
         </div>
         <div className="k-in-up text-[22px] font-extrabold tracking-[.26em] text-[#F4A81D] [animation-delay:.1s]">SINCE 1987 · ZANESVILLE, OHIO</div>
-        <div className="k-slab k-in-up leading-[.95] text-[#FFF3E0] [text-shadow:0_0_40px_rgba(255,110,20,.45)] [animation-delay:.15s]" style={{ fontSize: portrait ? 104 : 112 }}>
+        <div className={`k-slab k-in-up leading-[.95] text-[#FFF3E0] [text-shadow:0_0_40px_rgba(255,110,20,.45)] [animation-delay:.15s] ${portrait ? 'text-[104px]' : 'text-[112px]'}`}>
           Feel the{portrait ? ' ' : <br />}<span className="k-hot text-[#FF8A1F]">heat.</span>
         </div>
         <div className="k-in-up max-w-[520px] text-[28px] font-semibold leading-[1.35] text-[#F3DCC0] [animation-delay:.3s]">Small-batch salsa, made by hand in Ohio.</div>
@@ -182,7 +182,7 @@ export function SplashScreen({ portrait, flavorCount, jars, onStart, notice }: {
         </div>
       )}
 
-      <div className="absolute inset-x-0 z-[3] flex justify-center" style={{ top: portrait ? 1440 : 640 }}>
+      <div className={`absolute inset-x-0 z-[3] flex justify-center ${portrait ? 'top-[1440px]' : 'top-[640px]'}`}>
         <CtaPill className="k-breathe">Touch to start</CtaPill>
       </div>
 
@@ -218,7 +218,7 @@ export function MenuScreen({ portrait, flavors, soldOut, cart, filter, onFilter,
           Start over
         </button>
       } />
-      <div className="flex min-h-0 grow" style={{ flexDirection: portrait ? 'column' : 'row' }}>
+      <div className={`flex min-h-0 grow ${portrait ? 'flex-col' : 'flex-row'}`}>
         <div className="relative flex min-h-0 grow flex-col overflow-hidden bg-[#24130A]">
           <video src="/videos/kiosk/menu-broll.mp4" autoPlay muted loop playsInline aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(36,19,10,.82)_0%,rgba(36,19,10,.62)_45%,rgba(36,19,10,.86)_100%)]" />
@@ -250,14 +250,13 @@ export function MenuScreen({ portrait, flavors, soldOut, cart, filter, onFilter,
             {shown.length === 0 ? (
               <p className="mt-16 text-center text-[30px] font-bold text-[#FFF3E0]">No salsas here right now.</p>
             ) : (
-              <div className="grid gap-[26px]" style={{ gridTemplateColumns: `repeat(${portrait ? 3 : 4}, minmax(0, 1fr))` }}>
+              <div className={`grid gap-[26px] ${portrait ? 'grid-cols-3' : 'grid-cols-4'}`}>
                 {shown.map((f) => {
                   const qty = cart[f.key] ?? 0
                   const out = soldOut.has(f.key)
                   return (
                     <button key={f.key} type="button" disabled={out} onClick={() => onPick(f.key)} aria-label={`${f.name}, ${HEAT[f.heat].label}${out ? ', sold out' : ''}`}
-                      className="k-tile relative flex flex-col overflow-hidden rounded-[30px] border-0 bg-[#FFFDF8] p-0 text-left text-[#24130A] disabled:cursor-not-allowed"
-                      style={{ boxShadow: qty ? '0 0 0 6px #F4A81D, 0 14px 30px rgba(0, 0, 0, .5)' : '0 14px 30px rgba(0, 0, 0, .45)' }}>
+                      className={`k-tile relative flex flex-col overflow-hidden rounded-[30px] border-0 bg-[#FFFDF8] p-0 text-left text-[#24130A] disabled:cursor-not-allowed ${qty ? 'shadow-[0_0_0_6px_#F4A81D,0_14px_30px_rgba(0,0,0,.5)]' : 'shadow-[0_14px_30px_rgba(0,0,0,.45)]'}`}>
                       <div className="relative flex h-[290px] items-end justify-center overflow-hidden" style={{ background: f.tint }}>
                         <div className="absolute left-1/2 top-[34px] ml-[-115px] h-[230px] w-[230px] rounded-full bg-[rgba(255,255,255,.18)]" />
                         <img src={f.image} alt={`${f.name} jar`} className="relative mb-[-6px] block h-[262px] w-auto [filter:drop-shadow(0_14px_14px_rgba(0,0,0,.35))]" style={out ? { filter: 'grayscale(1) opacity(.55)' } : undefined} />
@@ -316,7 +315,7 @@ export function Totals({ quote, hint, dark, big }: { quote: KioskQuote; hint: st
   return (
     <>
       {hint && (
-        <div className="k-pop mb-2 flex items-center gap-[14px] rounded-[18px] bg-[#F4A81D] px-[18px] py-[14px] font-extrabold leading-[1.25] text-[#24130A]" style={{ fontSize: big ? 24 : 20 }}>
+        <div className={`k-pop mb-2 flex items-center gap-[14px] rounded-[18px] bg-[#F4A81D] px-[18px] py-[14px] font-extrabold leading-[1.25] text-[#24130A] ${big ? 'text-[24px]' : 'text-[20px]'}`}>
           <svg width="34" height="34" viewBox="0 0 24 24" fill="#D62828" aria-hidden="true" className="shrink-0"><path d={CHILI_PATH} /></svg>
           <span>{hint}</span>
         </div>
@@ -329,9 +328,9 @@ export function Totals({ quote, hint, dark, big }: { quote: KioskQuote; hint: st
         <div className="flex justify-between text-[#F4A81D]"><span>{chipsText(quote.freeChips)}</span><span>FREE</span></div>
       )}
       <div className="flex justify-between"><span>Tax</span><span>$0.00</span></div>
-      <div className={`flex items-baseline justify-between ${dark ? 'text-[#FFF3E0]' : ''}`} style={{ padding: big ? '6px 0 18px' : '8px 0 18px' }}>
-        <span className="font-extrabold" style={{ fontSize: big ? 30 : 26 }}>Total</span>
-        <span className="k-slab" style={{ fontSize: big ? 60 : 46 }}>{formatCents(quote.totalCents)}</span>
+      <div className={`flex items-baseline justify-between pb-[18px] ${big ? 'pt-[6px]' : 'pt-2'} ${dark ? 'text-[#FFF3E0]' : ''}`}>
+        <span className={`font-extrabold ${big ? 'text-[30px]' : 'text-[26px]'}`}>Total</span>
+        <span className={`k-slab ${big ? 'text-[60px]' : 'text-[46px]'}`}>{formatCents(quote.totalCents)}</span>
       </div>
     </>
   )
@@ -497,7 +496,7 @@ export function PayScreen({ phase, quote, error, onCancel, onRetry, onBack }: { 
 
 export function DoneScreen({ portrait, orderNumber, lines, quote, secondsLeft, printNote, onNewOrder }: { portrait: boolean; orderNumber: string; lines: CartLine[]; quote: KioskQuote; secondsLeft: number; printNote: string | null; onNewOrder: () => void }) {
   return (
-    <div className="relative flex h-full items-center justify-center gap-[90px] overflow-hidden bg-[#0E4D3A] p-16 text-center text-[#FFF3E0]" style={{ flexDirection: portrait ? 'column' : 'row' }}>
+    <div className={`relative flex h-full items-center justify-center gap-[90px] overflow-hidden bg-[#0E4D3A] p-16 text-center text-[#FFF3E0] ${portrait ? 'flex-col' : 'flex-row'}`}>
       <div className="k-serape absolute inset-x-0 top-0 h-[26px]" />
       <div className="k-spin absolute left-1/2 top-1/2 ml-[-1300px] mt-[-1300px] h-[2600px] w-[2600px] rounded-full bg-[repeating-conic-gradient(#0E4D3A_0_7.5deg,#11563F_7.5deg_15deg)]" />
       <div className="relative flex flex-col items-center gap-[30px]">
@@ -557,16 +556,14 @@ export function DoneScreen({ portrait, orderNumber, lines, quote, secondsLeft, p
 /* ---------- detail modal ---------- */
 
 export function DetailModal({ portrait, flavor, qty, onDec, onInc, onClose, onAdd }: { portrait: boolean; flavor: KioskFlavor; qty: number; onDec: () => void; onInc: () => void; onClose: () => void; onAdd: () => void }) {
-  const art: CSSProperties = portrait ? { width: '100%', height: 560 } : { width: 500, height: 720 }
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(36,19,10,.72)] p-10" onClick={onClose}>
       <div role="dialog" aria-label={flavor.name} onClick={(e) => e.stopPropagation()}
-        className="relative flex overflow-hidden rounded-[40px] bg-[#FFF3E0] shadow-[0_30px_60px_rgba(0,0,0,.4)]"
-        style={{ width: portrait ? 960 : 1240, flexDirection: portrait ? 'column' : 'row' }}>
-        <div className="relative flex shrink-0 items-center justify-center overflow-hidden" style={{ ...art, background: flavor.tint }}>
+        className={`relative flex overflow-hidden rounded-[40px] bg-[#FFF3E0] shadow-[0_30px_60px_rgba(0,0,0,.4)] ${portrait ? 'w-[960px] flex-col' : 'w-[1240px] flex-row'}`}>
+        <div className={`relative flex shrink-0 items-center justify-center overflow-hidden ${portrait ? 'h-[560px] w-full' : 'h-[720px] w-[500px]'}`} style={{ background: flavor.tint }}>
           <div className="absolute h-[420px] w-[420px] rounded-full bg-[rgba(255,255,255,.18)]" />
           <div className="absolute h-[600px] w-[600px] rounded-full border-[3px] border-dashed border-[rgba(255,255,255,.35)]" />
-          <img className="k-bob relative w-auto [filter:drop-shadow(0_24px_22px_rgba(0,0,0,.4))]" src={flavor.image} alt={`${flavor.name} jar`} style={{ height: portrait ? 460 : 560 }} />
+          <img className={`k-bob relative w-auto [filter:drop-shadow(0_24px_22px_rgba(0,0,0,.4))] ${portrait ? 'h-[460px]' : 'h-[560px]'}`} src={flavor.image} alt={`${flavor.name} jar`} />
         </div>
         <div className="flex grow flex-col gap-6 px-[52px] pb-12 pt-[52px] text-[#24130A]">
           <button type="button" onClick={onClose} aria-label="Close" className="absolute right-[22px] top-[22px] flex h-[76px] w-[76px] items-center justify-center rounded-full border-0 bg-[#24130A] text-[#FFF3E0]">

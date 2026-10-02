@@ -46,6 +46,12 @@ describe('startKioskCheckout', () => {
     expect(result).toMatchObject({ checkoutId: 'chk_1', quote: { totalCents: 3200, savingsCents: 800 } })
   })
 
+  it('passes the attempt id through for retry-safe checkouts', async () => {
+    const attemptId = '3f9a1c2b-0000-4000-8000-000000000000'
+    await startKioskCheckout({ items: [{ key: 'original-mild', quantity: 1 }], attemptId })
+    expect(createTerminalCheckout).toHaveBeenCalledWith(expect.objectContaining({ attemptId }))
+  })
+
   it('merges repeated lines and notes free chips', async () => {
     await startKioskCheckout({
       items: [

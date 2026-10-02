@@ -40,7 +40,8 @@
   },
   "devDependencies": {
     "husky": "^8.0.3",
-    "turbo": "^2.5.4"
+    "turbo": "^2.5.4",
+    "vitest": "5.0.1"
   },
   "overrides": {
     "@tootallnate/once@<2.0.1": "2.0.1",

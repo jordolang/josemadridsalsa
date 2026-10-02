@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { square, db, inventory } = vi.hoisted(() => ({
   square: { get: vi.fn(), cancel: vi.fn() },
-  db: { findFirst: vi.fn(), update: vi.fn(), payment: vi.fn(), transaction: vi.fn() },
+  db: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn(), payment: vi.fn(), transaction: vi.fn() },
   inventory: { deduct: vi.fn(), release: vi.fn() },
 }))
 
@@ -14,7 +14,7 @@ vi.mock('square', () => ({
 }))
 vi.mock('@/lib/prisma', () => ({
   default: {
-    order: { findFirst: db.findFirst, update: db.update },
+    order: { findFirst: db.findFirst, findUnique: db.findUnique, update: db.update },
     $transaction: (fn: (tx: unknown) => Promise<unknown>) => {
       db.transaction()
       return fn({ order: { update: db.update }, payment: { create: db.payment } })
@@ -31,7 +31,7 @@ vi.mock('@/lib/inventory-manager', () => ({
 vi.mock('@/lib/orders/events', () => ({ emitOrderCreated: vi.fn() }))
 vi.mock('@/lib/domain-events/emit', () => ({ emitDomainEvent: vi.fn() }))
 
-import { cancelTerminalCheckout, syncTerminalCheckout } from '@/lib/pos/terminal-checkout'
+import { cancelTerminalCheckout, createTerminalCheckout, syncTerminalCheckout } from '@/lib/pos/terminal-checkout'
 
 const order = (paymentStatus: string) => ({
   id: 'o1',
@@ -95,6 +95,35 @@ describe('Terminal edge cases', () => {
     square.get.mockResolvedValue({ checkout: { status: 'IN_PROGRESS', amountMoney: { amount: 1000n } } })
     db.findFirst.mockResolvedValue(order('PENDING'))
     await expect(cancelTerminalCheckout('chk_5')).rejects.toThrow('network down')
+  })
+})
+
+describe('createTerminalCheckout retries', () => {
+  const attemptId = '3f9a1c2b-0000-4000-8000-000000000000'
+  const input = {
+    items: [{ productId: 'p1', name: 'Mild', unitPriceCents: 1000, quantity: 1 }],
+    totalCents: 1000,
+    deviceId: 'dev_1',
+    orderPrefix: 'KIOSK' as const,
+    attemptId,
+  }
+
+  it('returns the checkout already sent instead of creating a second one', async () => {
+    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: 'chk_9', payments: [] })
+    const result = await createTerminalCheckout(input)
+    expect(result).toMatchObject({ checkoutId: 'chk_9', orderId: 'o1' })
+    expect(result.orderNumber).toMatch(/^KIOSK-\d{8}-3F9A1C2B$/)
+    expect(db.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { orderNumber: result.orderNumber } }))
+  })
+
+  it('finds the checkout of an already-paid retry through its payment', async () => {
+    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: 'pay_1', payments: [{ squareTerminalCheckoutId: 'chk_9' }] })
+    await expect(createTerminalCheckout(input)).resolves.toMatchObject({ checkoutId: 'chk_9' })
+  })
+
+  it('asks for a moment when the first attempt has not reached Square yet', async () => {
+    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: null, payments: [] })
+    await expect(createTerminalCheckout(input)).rejects.toMatchObject({ status: 409 })
   })
 })
 

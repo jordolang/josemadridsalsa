@@ -41,6 +41,9 @@ interface Done {
 
 const POLL_MS = 2000
 
+/** The server answered with an error, as opposed to the request never arriving. */
+class KioskHttpError extends Error {}
+
 async function kioskFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -48,7 +51,7 @@ async function kioskFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...kioskAuthHeaders(), ...init?.headers },
   })
   const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(body.error ?? `Request failed (${response.status})`)
+  if (!response.ok) throw new KioskHttpError(body.error ?? `Request failed (${response.status})`)
   return body as T
 }
 
@@ -81,6 +84,8 @@ export function KioskApp() {
   const [now, setNow] = useState(() => Date.now())
   const [toast, setToast] = useState<string | null>(null)
   const lastTouch = useRef(Date.now())
+  // One id per payment attempt, reused only when a request got no answer (see startPayment).
+  const attemptRef = useRef<string | null>(null)
 
   /* ---- catalog: which flavors this kiosk can sell ---- */
   const loadCatalog = useCallback(async () => {
@@ -116,6 +121,7 @@ export function KioskApp() {
   const hint = nextJarHint(jars)
 
   const bump = useCallback((key: string, n: number) => {
+    attemptRef.current = null
     setCart((c) => {
       const next = { ...c, [key]: Math.max(0, (c[key] ?? 0) + n) }
       if (!next[key]) delete next[key]
@@ -124,6 +130,7 @@ export function KioskApp() {
   }, [])
 
   const reset = useCallback(() => {
+    attemptRef.current = null
     setScreen('splash')
     setCart({})
     setFilter('all')
@@ -216,6 +223,7 @@ export function KioskApp() {
       startedAt: Date.now(),
     })
     if (printError) console.warn('[kiosk] Receipt not printed:', printError)
+    attemptRef.current = null
     setPayment(null)
     setScreen('done')
   }, [])
@@ -225,13 +233,17 @@ export function KioskApp() {
     setToast(null)
     setScreen('pay')
     setPayment({ phase: 'starting', checkoutId: null, orderNumber: null, quote, error: null })
+    attemptRef.current ??= crypto.randomUUID()
     try {
       const result = await kioskFetch<{ checkoutId: string; orderNumber: string; quote: KioskQuote }>('/api/kiosk/checkout', {
         method: 'POST',
-        body: JSON.stringify({ items: lines.map((l) => ({ key: l.flavor.key, quantity: l.qty })) }),
+        body: JSON.stringify({ items: lines.map((l) => ({ key: l.flavor.key, quantity: l.qty })), attemptId: attemptRef.current }),
       })
       setPayment({ phase: 'waiting', checkoutId: result.checkoutId, orderNumber: result.orderNumber, quote: result.quote, error: null })
     } catch (error) {
+      // The server answered, so nothing is pending on the Terminal; a retry is a new attempt.
+      // With no answer the checkout may exist, so "Try again" reuses the id to find it.
+      if (error instanceof KioskHttpError) attemptRef.current = null
       setPayment({ phase: 'failed', checkoutId: null, orderNumber: null, quote, error: error instanceof Error ? error.message : 'Payment failed' })
       void loadCatalog()
     }
@@ -245,6 +257,7 @@ export function KioskApp() {
       // The card may have gone through just before the cancel landed.
       if (status === 'COMPLETED' && payment.orderNumber) return finish(payment.orderNumber, payment.quote, lines)
       if (status === 'CANCELED' || status === 'FAILED') {
+        attemptRef.current = null
         setPayment(null)
         setScreen(stage?.portrait ? 'cart' : 'menu')
         return
@@ -272,6 +285,7 @@ export function KioskApp() {
           if (paid?.orderNumber) finish(paid.orderNumber, paid.quote, lines)
         } else if (status === 'CANCELED' || status === 'FAILED') {
           stopped = true
+          attemptRef.current = null
           setPayment((p) => (p ? { ...p, phase: 'failed', error: 'The card reader canceled the payment.' } : p))
           void loadCatalog()
         }

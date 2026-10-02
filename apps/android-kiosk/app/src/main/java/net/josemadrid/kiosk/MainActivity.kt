@@ -207,10 +207,11 @@ class MainActivity : Activity() {
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> load(force = true)
-                    1 -> {
+                    1 -> Thread {
+                        // print() waits for the printer, so keep it off the UI thread.
                         val problem = printer.print(EscPosReceipt.testPage())
-                        Toast.makeText(this, problem ?: "Test page sent", Toast.LENGTH_LONG).show()
-                    }
+                        runOnUiThread { Toast.makeText(this, problem ?: "Test page printed", Toast.LENGTH_LONG).show() }
+                    }.start()
                     2 -> {
                         loadedUrl = null // reload with the new settings when setup closes
                         startActivity(Intent(this, SetupActivity::class.java))
