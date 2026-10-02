@@ -37,6 +37,9 @@ function fakeTx(): FakeTx {
 
 let currentTx: FakeTx = fakeTx()
 
+/** Inside the fixtures' 2026-04 battle. */
+const APRIL_SALE = new Date('2026-04-15T12:00:00Z')
+
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     $transaction: vi.fn((callback: (tx: FakeTx) => unknown) =>
@@ -59,7 +62,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue(null)
     const apply = await getApply()
     await expect(
-      apply({ sellingTeamId: 'team_missing', saleAmount: 25 }),
+      apply({ sellingTeamId: 'team_missing', saleAmount: 25, placedAt: APRIL_SALE }),
     ).rejects.toThrow(/selling team not found or not ACTIVE/)
   })
 
@@ -67,6 +70,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_a',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue({
@@ -77,6 +82,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     const result = await apply({
       sellingTeamId: 'team_a',
       saleAmount: 50,
+      placedAt: APRIL_SALE,
       orderId: 'ord_123',
     })
 
@@ -97,6 +103,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_seller',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
@@ -112,6 +120,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     const result = await apply({
       sellingTeamId: 'team_seller',
       saleAmount: 100,
+      placedAt: APRIL_SALE,
     })
 
     expect(result.saleEventId).toBe('sale_new')
@@ -143,6 +152,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_seller',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
@@ -161,6 +172,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     const result = await apply({
       sellingTeamId: 'team_seller',
       saleAmount: 50,
+      placedAt: APRIL_SALE,
     })
 
     const hit = result.damagedTeams[0]!
@@ -180,6 +192,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_seller',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
@@ -193,7 +207,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     ])
 
     const apply = await getApply()
-    const result = await apply({ sellingTeamId: 'team_seller', saleAmount: 10 })
+    const result = await apply({ sellingTeamId: 'team_seller', saleAmount: 10, placedAt: APRIL_SALE })
 
     const hit = result.damagedTeams[0]!
     expect(hit.damageToHP).toBe(0)
@@ -206,6 +220,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_seller',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
@@ -216,6 +232,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     await apply({
       sellingTeamId: 'team_seller',
       saleAmount: 40,
+      placedAt: APRIL_SALE,
       donor: {
         userId: 'u_1',
         name: 'Alice',
@@ -244,6 +261,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_seller',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
@@ -254,6 +273,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     await apply({
       sellingTeamId: 'team_seller',
       saleAmount: 25,
+      placedAt: APRIL_SALE,
       donor: {
         name: 'Bob',
         avatarUrl: 'https://example.com/b.png',
@@ -273,6 +293,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_seller',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     // First findUnique (pre-create check) misses — another caller hasn't
@@ -289,6 +311,7 @@ describe('arena/damage — applyPurchaseDamage', () => {
     const result = await apply({
       sellingTeamId: 'team_seller',
       saleAmount: 50,
+      placedAt: APRIL_SALE,
       orderId: 'ord_race',
     })
 
@@ -302,6 +325,8 @@ describe('arena/damage — applyPurchaseDamage', () => {
     currentTx.fundraiserTeam.findUnique.mockResolvedValue({
       id: 'team_seller',
       activePeriod: '2026-04',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      season: null,
       status: 'ACTIVE',
     })
     currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
@@ -314,8 +339,67 @@ describe('arena/damage — applyPurchaseDamage', () => {
       apply({
         sellingTeamId: 'team_seller',
         saleAmount: 10,
+        placedAt: APRIL_SALE,
         orderId: 'ord_boom',
       }),
     ).rejects.toThrow(/connection reset/)
+  })
+})
+
+describe('arena/damage — only sales placed during the battle strike', () => {
+  const seller = {
+    id: 'team_seller',
+    activePeriod: '2026-04',
+    status: 'ACTIVE',
+    createdAt: new Date('2026-04-03T00:00:00Z'),
+    season: null as null | { rulesJson: null; startsAt: Date; endsAt: Date },
+  }
+
+  beforeEach(() => {
+    currentTx = fakeTx()
+    currentTx.fundraiserSaleEvent.findUnique.mockResolvedValue(null)
+    currentTx.fundraiserSaleEvent.create.mockResolvedValue({ id: 'evt_1' })
+    currentTx.fundraiserTeam.findMany.mockResolvedValue([])
+  })
+
+  it.each([
+    ['a past order from an earlier month (history import, late catch-up)', new Date('2026-03-20T12:00:00Z')],
+    ['an order placed before the team joined the battle', new Date('2026-04-02T12:00:00Z')],
+    ['an order after the battle month ended', new Date('2026-05-01T00:00:00Z')],
+    ['an order with no usable date', new Date('not a date')],
+  ])('skips %s without writing anything', async (_, placedAt) => {
+    currentTx.fundraiserTeam.findUnique.mockResolvedValue(seller)
+    const apply = await getApply()
+
+    const result = await apply({ sellingTeamId: 'team_seller', saleAmount: 50, placedAt, orderId: 'ord_old' })
+
+    expect(result).toMatchObject({ skipped: 'placed-outside-battle', totalDamageDealt: 0, damagedTeams: [] })
+    expect(currentTx.fundraiserSaleEvent.create).not.toHaveBeenCalled()
+    expect(currentTx.fundraiserTeam.update).not.toHaveBeenCalled()
+  })
+
+  it('strikes for a sale placed during the battle month', async () => {
+    currentTx.fundraiserTeam.findUnique.mockResolvedValue(seller)
+    const apply = await getApply()
+
+    const result = await apply({ sellingTeamId: 'team_seller', saleAmount: 50, placedAt: APRIL_SALE, orderId: 'ord_live' })
+
+    expect(result.skipped).toBeUndefined()
+    expect(currentTx.fundraiserSaleEvent.create).toHaveBeenCalled()
+  })
+
+  it("uses the season's own start and end when the team is in a season", async () => {
+    currentTx.fundraiserTeam.findUnique.mockResolvedValue({
+      ...seller,
+      createdAt: new Date('2026-03-01T00:00:00Z'),
+      season: { rulesJson: null, startsAt: new Date('2026-04-10T00:00:00Z'), endsAt: new Date('2026-04-20T23:59:59Z') },
+    })
+    const apply = await getApply()
+
+    const early = await apply({ sellingTeamId: 'team_seller', saleAmount: 50, placedAt: new Date('2026-04-05T12:00:00Z') })
+    expect(early.skipped).toBe('placed-outside-battle')
+
+    const during = await apply({ sellingTeamId: 'team_seller', saleAmount: 50, placedAt: APRIL_SALE })
+    expect(during.skipped).toBeUndefined()
   })
 })

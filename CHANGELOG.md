@@ -37,6 +37,17 @@ the root `package.json` is canonical.
   `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
   customer, status, notes and free-text lines. Totals are computed on the server. The web form and
   the desktop app's `invoice.create` now share one create function (`lib/invoices/create-invoice.ts`).
+- **Mail in the desktop admin app.** Messages → Mail is a full client for the connected Gmail
+  mailbox (normally mike@josemadridsalsa.com). It covers every folder and label with unread counts,
+  Gmail search, threaded reading (HTML in a script-less sandbox, attachment downloads), compose, reply,
+  reply all and forward with attachments, drafts, and archive, trash, spam, star, read/unread and move
+  to a folder. It uses the existing triage grant (`gmail.modify` + `gmail.send`), so nothing can be
+  permanently deleted. It needs `api_keys:manage`. Sends, trash and spam are audited.
+- **Inbox organizer at 8am, noon and 5pm Eastern.** `/api/cron/mail-organizer`, or **Organize now**
+  on the Mail page, files inbox conversations into colour-coded Gmail folders and archives them:
+  Orders, Contact, Fundraisers, Wholesale, Shipping, Finance, Website, Events & Shows,
+  Marketing & Social and Newsletters. Starred mail, customer email still awaiting a person, and mail
+  the triage has not read yet stay in the inbox.
 - **Loyalty reward catalog management.** Admin → Settings → Loyalty Rewards
   (`/admin/settings/loyalty-rewards`) and, in the desktop app, Customers → Loyalty rewards let
   staff create, edit, switch off and delete the rewards customers spend points on: points cost,
@@ -374,6 +385,13 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Only sales made during a battle deal arena damage.** `applyPurchaseDamage` now takes the
+  sale's `placedAt` (the order's own creation time) and refuses any sale placed before the team
+  joined or outside its current battle (the season's start/end, else the period month). Past
+  orders reaching the arena late — the BigCommerce mirror catching up, a history backfill, a
+  payment confirmed late for a stale order, an order that only now reads "shipped" — record
+  nothing and damage nobody. Applies to every caller: checkout and POS payments, the Stripe
+  donation webhooks, the partner sale API and the BigCommerce mirror.
 - **Follow-ups from #541's review.** Stripe and PayPal webhook payments now record `paidAt`, which
   the automation purchase stop reads, so a Stripe-paid abandoned checkout stops its series. The
   re-engagement scan is bounded again (oldest orders first, at most 500 address checks a tick). Forged

@@ -40,6 +40,7 @@ export async function handleArenaDamage(event: DomainEventRecord): Promise<void>
       discountAmount: true,
       guestEmail: true,
       userId: true,
+      createdAt: true,
       fundraiserId: true,
       user: { select: { name: true } },
     },
@@ -69,6 +70,7 @@ export async function handleArenaDamage(event: DomainEventRecord): Promise<void>
   await applyPurchaseDamage({
     sellingTeamId: team.id,
     saleAmount,
+    placedAt: order.createdAt,
     // The order id is the idempotency key, so a replayed event lands on the sale event the
     // first delivery already wrote instead of striking every rival a second time.
     orderId: order.id,
