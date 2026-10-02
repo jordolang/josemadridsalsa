@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Loyalty reward catalog management.** Admin → Settings → Loyalty Rewards
+  (`/admin/settings/loyalty-rewards`) and, in the desktop app, Customers → Loyalty rewards let
+  staff create, edit, switch off and delete the rewards customers spend points on: points cost,
+  dollar discount, minimum tier and an optional redemption limit. Each reward shows its return
+  (the discount as a share of the spend that earned it). Redeemed rewards can only be switched off,
+  and a limit cannot be set below what has already been redeemed. Customers reach their rewards
+  page from a new Rewards link in the account sidebar.
 - **Square Reader card payments on the iPad kiosk.** The iPad app takes cards on a Bluetooth
   Square Reader through Square's Mobile Payments SDK, as an alternative to the Square Terminal.
   Admins connect Square once under Settings › Payments (OAuth; tokens encrypted and refreshed

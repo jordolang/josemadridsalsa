@@ -86,6 +86,7 @@ const prismaMock = {
   lead: { findMany: vi.fn() },
   leadCampaign: { findMany: vi.fn() },
   ledgerEntry: { count: vi.fn(), findMany: vi.fn() },
+  loyaltyReward: { findMany: vi.fn() },
   mailingList: { findMany: vi.fn() },
   mailingListSubscriber: { findMany: vi.fn() },
   media: { findMany: vi.fn() },
@@ -199,6 +200,22 @@ const customerFixture = {
   totalOrders: 3,
   totalSpent: 128.4,
   lastOrderAt: new Date('2026-09-01T12:00:00Z'),
+}
+
+const rewardFixture = {
+  id: 'reward-1',
+  name: '$5 Off',
+  description: 'Get $5 off your next order',
+  pointsCost: 500,
+  rewardType: 'DISCOUNT',
+  rewardValue: new Prisma.Decimal(5),
+  isActive: true,
+  minimumTier: 'BRONZE',
+  maxRedemptions: null,
+  usedCount: 0,
+  createdAt: new Date('2026-09-01T12:00:00Z'),
+  updatedAt: new Date('2026-09-01T12:00:00Z'),
+  _count: { redemptions: 0 },
 }
 
 const eventFixture = {
@@ -695,6 +712,11 @@ describe('every command the desktop shell can run', () => {
     prismaMock.product.findMany.mockResolvedValue([productFixture])
     prismaMock.customer.findMany.mockResolvedValue([customerFixture])
     prismaMock.featuredEvent.findMany.mockResolvedValue([eventFixture])
+    // One reward nobody has redeemed (so Delete is offered) and one that has.
+    prismaMock.loyaltyReward.findMany.mockResolvedValue([
+      rewardFixture,
+      { ...rewardFixture, id: 'reward-2', usedCount: 3, _count: { redemptions: 3 } },
+    ])
 
     const broken: string[] = []
 
@@ -1332,5 +1354,32 @@ describe('the credential vault page', () => {
     for (const secret of ['encValue', 'encIv', 'encTag']) {
       expect(selected, `the vault page selected ${secret}`).not.toContain(secret)
     }
+  })
+})
+
+describe('customers · loyalty rewards', () => {
+  it('shows what each reward gives back and only offers Delete when nobody redeemed it', async () => {
+    prismaMock.loyaltyReward.findMany.mockResolvedValue([
+      rewardFixture,
+      { ...rewardFixture, id: 'reward-2', usedCount: 3, _count: { redemptions: 3 } },
+    ])
+
+    const payload = await loadSection('customers.rewards')
+    expect(payload.heading).toBe('Loyalty rewards')
+    if (payload.body.view !== 'table') throw new Error('expected a table')
+
+    const [fresh, redeemed] = payload.body.rows
+    // 500 points = $50 spent at 10 points/$1; $5 back is 10%.
+    expect(fresh.cells[3].text).toBe('10.0%')
+    expect(fresh.inspector.actions?.some((a) => a.label === 'Delete reward')).toBe(true)
+    expect(redeemed.inspector.actions?.some((a) => a.label === 'Delete reward')).toBe(false)
+    expect(fresh.open).toMatchObject({ kind: 'form', form: 'reward.edit', recordId: 'reward-1' })
+  })
+
+  it('flags a legacy reward checkout cannot honour', async () => {
+    prismaMock.loyaltyReward.findMany.mockResolvedValue([{ ...rewardFixture, rewardType: 'FREE_SHIPPING' }])
+    const payload = await loadSection('customers.rewards')
+    if (payload.body.view !== 'table') throw new Error('expected a table')
+    expect(payload.body.rows[0].cells.at(-1)?.text).toBe('Not redeemable')
   })
 })

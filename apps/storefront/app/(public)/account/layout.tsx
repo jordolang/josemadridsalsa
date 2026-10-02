@@ -37,6 +37,7 @@ export default async function AccountLayout({ children }: Props) {
           <nav className="grid gap-2">
             <Link href="/account" className="text-sm hover:underline">Dashboard</Link>
             <Link href="/account/orders" className="text-sm hover:underline">Orders</Link>
+            <Link href="/account/rewards" className="text-sm hover:underline">Rewards</Link>
             <Link href="/account/settings" className="text-sm hover:underline">Settings</Link>
             {isStaff && (
               <>

@@ -77,6 +77,7 @@ has a URL of its own (see [Opening a page directly](#opening-a-page-directly)).
 |---|---|
 | Orders | Orders · Returns & RMAs · Shipping labels |
 | Purchase Orders | Purchase orders · Suppliers |
+| Customers | Customers · Loyalty rewards |
 | Fundraisers | Fundraisers · Battle arena |
 | Events & Shows | Calendar · Packing manifests |
 | Wholesale | Accounts · Store locator |
@@ -92,8 +93,9 @@ has a URL of its own (see [Opening a page directly](#opening-a-page-directly)).
 | Users & Roles | Staff accounts · Credential vault |
 | Settings | Store · Payments · Shipping · Integrations |
 
-Dashboard, Products, Inventory, Customers, Invoices, Audit Logs and Database Console are one page
-each, and draw no strip.
+Dashboard, Products, Inventory, Invoices, Audit Logs and Database Console are one page each, and
+draw no strip. Loyalty rewards additionally needs `settings:read`, the permission the web screen
+checks.
 
 Retention, Margin and Attribution read the trailing year. The web reports take a range from the
 query string; the window has no place to put one, so it uses the widest and says so in the totals

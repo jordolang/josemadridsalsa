@@ -221,3 +221,13 @@ describe('the sections a form belongs to', () => {
     }
   })
 })
+
+describe('the loyalty reward sheets', () => {
+  it('offers exactly the tiers the write handler accepts', async () => {
+    const { LOYALTY_TIERS } = await import('@/lib/loyalty-rewards-schema')
+    for (const id of ['reward.create', 'reward.edit'] as const) {
+      const tier = formFields(DESKTOP_FORMS[id]).find((field) => field.name === 'minimumTier')
+      expect(tier?.options?.map((option) => option.value), id).toEqual([...LOYALTY_TIERS])
+    }
+  })
+})

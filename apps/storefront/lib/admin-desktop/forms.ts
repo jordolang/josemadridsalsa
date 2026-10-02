@@ -230,6 +230,8 @@ const RETURN_REASON = [
 ] as const
 const RETURN_RESOLUTION = ['REFUND', 'EXCHANGE', 'STORE_CREDIT'] as const
 const CONTENT_STATUS = ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'] as const
+// Mirrors `LOYALTY_TIERS` in lib/loyalty-rewards-schema.ts; the write handler validates against that one.
+const LOYALTY_TIER = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM'] as const
 const PAGE_KIND = ['LANDING', 'SYSTEM'] as const
 const BANNER_PLACEMENT = ['SITE_WIDE_TOP', 'HOMEPAGE_HERO', 'CATEGORY', 'CHECKOUT', 'FUNDRAISING'] as const
 const SUBSCRIBER_STATUS = ['SUBSCRIBED', 'UNSUBSCRIBED', 'BOUNCED', 'COMPLAINED'] as const
@@ -2073,6 +2075,97 @@ export const DESKTOP_FORMS = {
     ],
   },
 
+  // ---------------------------------------------------------------- loyalty
+  'reward.create': {
+    title: 'New loyalty reward',
+    subtitle: 'Something customers can spend points on. Redeeming it issues a single-use discount code.',
+    submitLabel: 'Create reward',
+    sections: [
+      {
+        fields: [
+          { name: 'name', label: 'Name', type: 'text', required: true, span: 2, placeholder: '$5 Off', max: 100 },
+          {
+            name: 'description',
+            label: 'Description',
+            type: 'textarea',
+            required: true,
+            span: 2,
+            rows: 2,
+            help: 'Customers see this on their rewards page.',
+          },
+          { name: 'pointsCost', label: 'Points cost', type: 'integer', required: true, min: 1, placeholder: '500' },
+          {
+            name: 'rewardValue',
+            label: 'Discount',
+            type: 'money',
+            required: true,
+            min: 0.01,
+            help: 'Issued as a single-use dollar-off code.',
+          },
+          {
+            name: 'minimumTier',
+            label: 'Minimum tier',
+            type: 'select',
+            required: true,
+            defaultValue: 'BRONZE',
+            options: enumOptions(LOYALTY_TIER, {
+              BRONZE: 'Bronze (everyone)',
+              SILVER: 'Silver+',
+              GOLD: 'Gold+',
+              PLATINUM: 'Platinum',
+            }),
+          },
+          { name: 'maxRedemptions', label: 'Total redemption limit', type: 'integer', min: 1, placeholder: 'Unlimited' },
+          { name: 'isActive', label: 'Active (customers can redeem it)', type: 'checkbox', defaultValue: true },
+        ],
+      },
+    ],
+  },
+
+  'reward.edit': {
+    title: 'Edit loyalty reward',
+    submitLabel: 'Save reward',
+    sections: [
+      {
+        fields: [
+          { name: 'name', label: 'Name', type: 'text', required: true, span: 2, placeholder: '$5 Off', max: 100 },
+          {
+            name: 'description',
+            label: 'Description',
+            type: 'textarea',
+            required: true,
+            span: 2,
+            rows: 2,
+            help: 'Customers see this on their rewards page.',
+          },
+          { name: 'pointsCost', label: 'Points cost', type: 'integer', required: true, min: 1, placeholder: '500' },
+          {
+            name: 'rewardValue',
+            label: 'Discount',
+            type: 'money',
+            required: true,
+            min: 0.01,
+            help: 'Issued as a single-use dollar-off code.',
+          },
+          {
+            name: 'minimumTier',
+            label: 'Minimum tier',
+            type: 'select',
+            required: true,
+            options: enumOptions(LOYALTY_TIER, {
+              BRONZE: 'Bronze (everyone)',
+              SILVER: 'Silver+',
+              GOLD: 'Gold+',
+              PLATINUM: 'Platinum',
+            }),
+          },
+          { name: 'maxRedemptions', label: 'Total redemption limit', type: 'integer', min: 1, placeholder: 'Unlimited' },
+          { name: 'isActive', label: 'Active (customers can redeem it)', type: 'checkbox', defaultValue: true },
+        ],
+      },
+    ],
+  },
+
   // ---------------------------------------------------------------- settings
   'settings.shipping': {
     title: 'Shipping settings',
@@ -2226,6 +2319,8 @@ export const DIRECT_OPS = [
   'faq.delete',
   'redirect.delete',
   'redirect.toggle',
+  'reward.toggle',
+  'reward.delete',
   'notification.markRead',
   'notification.markAllRead',
   'inboundEmail.completeStep',
