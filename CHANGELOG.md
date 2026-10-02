@@ -333,6 +333,13 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **Amplitude runs on `@amplitude/unified`, and the Claude calls report to Agent Analytics.** The
+  browser init is now `initAll` with autocapture and session replay on every session (replacing
+  `@amplitude/analytics-browser` plus the replay plugin), still keyed by
+  `NEXT_PUBLIC_AMPLITUDE_API_KEY` and now warning when that key is missing from a build. The home
+  page sends `Viewed Home Page`. `@amplitude/ai` instruments the storefront chat (full text, PII
+  redacted, one session per widget conversation), inbox triage and form capture (both metadata
+  only, as their prompts carry customer data).
 - **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions
   budget ran out, which stops every check from starting. Each run took about 30 minutes, and ten of
   those were a Playwright step that hit its time limit on every run without producing a result;

@@ -66,21 +66,25 @@ Data is available in the Vercel dashboard under the **Analytics** tab.
 Amplitude tracks product-level user behavior with session replay:
 
 ```ts title="lib/analytics/amplitude.ts"
-amplitude.init(apiKey, {
-  defaultTracking: {
-    sessions: true,
-    pageViews: true,
-    formInteractions: true,
-    fileDownloads: true,
-  },
-})
+import * as amplitude from '@amplitude/unified'
 
-// Session replay plugin for visual debugging
-amplitude.add(sessionReplayPlugin())
+export const initAmplitude = () => {
+  if (isInitialized) return true
+  const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY
+  if (!apiKey) {
+    console.warn('Amplitude API key missing — analytics disabled')
+    return false
+  }
+
+  // Analytics with autocapture, plus session replay on every session.
+  amplitude.initAll(apiKey, { analytics: { autocapture: true }, sessionReplay: { sampleRate: 1 } })
+  isInitialized = true
+  return true
+}
 ```
 
 Key capabilities:
-- **Auto-tracked events** -- Page views, sessions, form interactions, file downloads
+- **Autocapture** -- Page views, sessions, clicks, form interactions and file downloads, with no per-event code
 - **Session replay** -- Visual playback of user sessions
 - **Custom events** -- Via `trackEvent(name, properties)` utility
 - **User identification** -- Via `identifyUser(userId, properties)` utility

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { formCaptureAgent, trackedAnthropic } from '@/lib/analytics/agent-analytics'
 import { z } from 'zod'
 import type { CaptureFormType } from '@prisma/client'
 import { FORM_SPECS, classifyLabel, isTotalLabel } from './form-specs'
@@ -201,18 +202,27 @@ export async function extractForm(input: {
   formType: CaptureFormType
   client?: Anthropic
   now?: Date
+  /** The capture's id; one Agent Analytics session per form. */
+  sessionId?: string
 }): Promise<ExtractionResult & { classified: ClassifiedLine[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey && !input.client) {
     throw new ExtractionError('ANTHROPIC_API_KEY is not configured; form extraction is unavailable.')
   }
 
-  const client = input.client ?? new Anthropic({ apiKey })
+  // An injected client (tests) is used as-is; otherwise the call reports to Agent Analytics,
+  // metadata only, since the image is a customer's filled-in order form.
+  const create = (params: Anthropic.MessageCreateParamsNonStreaming) =>
+    input.client
+      ? input.client.messages.create(params)
+      : formCaptureAgent
+          .session({ sessionId: input.sessionId })
+          .run(() => trackedAnthropic(apiKey, { metadataOnly: true }).createMessage(params))
   const image = await fetchImageAsBase64(input.fileUrl)
 
   let message
   try {
-    message = await client.messages.create({
+    message = await create({
       model: EXTRACTION_MODEL,
       max_tokens: 4096,
       tools: [

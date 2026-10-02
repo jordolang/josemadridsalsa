@@ -103,7 +103,7 @@ export async function runExtraction(captureId: string): Promise<FormCapture> {
 
   let result
   try {
-    result = await extractForm({ fileUrl: capture.fileUrl, formType: capture.formType })
+    result = await extractForm({ fileUrl: capture.fileUrl, formType: capture.formType, sessionId: captureId })
   } catch (error) {
     const message =
       error instanceof ExtractionError ? error.message : 'Extraction failed for an unknown reason.'

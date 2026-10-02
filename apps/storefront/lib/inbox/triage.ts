@@ -143,6 +143,7 @@ async function triageMessage(
     subject: message.subject,
     body: message.body,
     context,
+    sessionId: message.id,
   })
 
   const decision = decideReply({

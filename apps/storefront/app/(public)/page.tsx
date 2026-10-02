@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { createMetadata } from '@/lib/metadata'
 import { getCachedSeoConfiguration } from '@/lib/seo/configuration'
 import { OrganizationJsonLd } from '@/components/seo/organization-jsonld'
+import { HomePageView } from '@/components/analytics/home-page-view'
 import { LocationMapClient } from '@/components/store/location-map-client'
 import { getReviewsData, getCalendarEvents } from '@/lib/server/google-data'
 import { ActiveCampaignsGrid } from '@/components/fundraiser/active-campaigns-grid'
@@ -112,6 +113,7 @@ export default async function Home() {
       <main className="min-h-screen">
         {/* Organization JSON-LD for rich results */}
         <OrganizationJsonLd />
+        <HomePageView />
 
         {/* Hero — video scrubs frame-by-frame as the page scrolls; copy sits in
             a left column over a left-edge legibility gradient */}

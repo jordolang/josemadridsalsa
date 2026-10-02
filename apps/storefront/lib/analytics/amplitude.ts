@@ -1,5 +1,4 @@
-import * as amplitude from '@amplitude/analytics-browser';
-import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
+import * as amplitude from '@amplitude/unified';
 
 let isInitialized = false;
 
@@ -12,31 +11,23 @@ type AmplitudeProperty =
   | Array<{ [key: string]: AmplitudeProperty }>;
 
 /**
- * Initialize Amplitude analytics
- * Call this once when the app starts
+ * Initialize Amplitude analytics and session replay (browser only).
+ * Call this once when the app starts; later calls are no-ops.
  */
 export const initAmplitude = () => {
   if (isInitialized) {
-    return;
+    return true;
   }
 
   const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
 
+  // Inlined at build time, so a key missing from the deploy silently disables analytics.
   if (!apiKey) {
+    console.warn('Amplitude API key missing — analytics disabled');
     return false;
   }
 
-  amplitude.init(apiKey, {
-    defaultTracking: {
-      sessions: true,
-      pageViews: true,
-      formInteractions: true,
-      fileDownloads: true,
-    },
-  });
-
-  // Add session replay plugin
-  amplitude.add(sessionReplayPlugin());
+  amplitude.initAll(apiKey, { analytics: { autocapture: true }, sessionReplay: { sampleRate: 1 } });
 
   isInitialized = true;
   return true;

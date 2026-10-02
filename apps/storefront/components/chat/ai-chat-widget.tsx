@@ -29,6 +29,9 @@ export function AiChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE])
+  // One per conversation (this widget's lifetime), never persisted, so Agent Analytics groups
+  // its turns without folding a new visit into an old session.
+  const [chatSessionId] = useState(() => crypto.randomUUID())
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
@@ -168,6 +171,7 @@ export function AiChatWidget() {
           messages: newMessages
             .filter((m) => m.role !== 'system')
             .map((m) => ({ role: m.role, content: m.content })),
+          sessionId: chatSessionId,
         }),
       })
       if (!response.ok) {
