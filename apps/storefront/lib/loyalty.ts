@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import type { LoyaltyTier, Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 /**
  * Points earned per dollar spent.
@@ -284,6 +285,30 @@ export async function creditPurchaseLoyaltyPoints(
       ...(tierChanged && { tierUpdatedAt: new Date() }),
     },
   })
+
+  // Recorded here, behind the claim, so a payment completed on two racing paths earns — and
+  // announces — its points exactly once. Keyed on the order: it is the fact that earned them.
+  await emitDomainEvent(
+    {
+      type: 'loyalty.points_earned',
+      entityType: 'order',
+      entityId: orderId,
+      payload: { points, pointsBalance: account.pointsBalance + points, tier: newTier },
+    },
+    tx
+  )
+  // Tiers only climb on an earn (lifetime points never fall), so a change here is an upgrade.
+  if (tierChanged) {
+    await emitDomainEvent(
+      {
+        type: 'loyalty.tier_upgraded',
+        entityType: 'order',
+        entityId: orderId,
+        payload: { tier: newTier, previousTier: account.tier },
+      },
+      tx
+    )
+  }
 
   return { awarded: true, points }
 }

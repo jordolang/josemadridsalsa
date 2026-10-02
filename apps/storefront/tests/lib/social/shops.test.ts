@@ -17,14 +17,14 @@ describe('validateShopExportConfiguration', () => {
   it('rejects mismatched account platforms', () => {
     expect(
       validateShopExportConfiguration({
-        shopPlatform: 'TIKTOK_SHOP',
+        shopPlatform: 'FACEBOOK_SHOP',
         socialAccountId: 'acct_1',
-        socialAccountPlatform: 'FACEBOOK',
-        catalogId: 'shop_123',
+        socialAccountPlatform: 'TIKTOK',
+        catalogId: 'cat_123',
       }),
     ).toEqual({
       valid: false,
-      error: 'Selected account must be a TikTok account.',
+      error: 'Selected account must be a Facebook Page.',
     })
   })
 
@@ -42,12 +42,20 @@ describe('validateShopExportConfiguration', () => {
     })
   })
 
-  it('accepts marketplace exports without a catalog id', () => {
+  it('requires a catalog id for marketplace exports, which sync through the catalog', () => {
+    const result = validateShopExportConfiguration({
+      shopPlatform: 'FACEBOOK_MARKETPLACE',
+      socialAccountId: 'acct_1',
+      socialAccountPlatform: 'FACEBOOK',
+    })
+    expect(result.valid).toBe(false)
+  })
+
+  it('accepts tiktok shop exports without a connected account, since they use Partner API credentials', () => {
     expect(
       validateShopExportConfiguration({
-        shopPlatform: 'FACEBOOK_MARKETPLACE',
-        socialAccountId: 'acct_1',
-        socialAccountPlatform: 'FACEBOOK',
+        shopPlatform: 'TIKTOK_SHOP',
+        socialAccountId: null,
       }),
     ).toEqual({ valid: true })
   })

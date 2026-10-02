@@ -171,24 +171,39 @@ async function publishToTwitter(
   mediaUrls: string[],
 ): Promise<PublishResult> {
   try {
-    // Upload media first if any
+    // Upload media first. The v1.1 endpoint refuses OAuth 2.0 user tokens, so this uses
+    // v2's one-shot upload (needs the `media.write` scope). A failed upload stops the post:
+    // going out text-only would publish something other than what was approved.
     const mediaIds: string[] = []
     for (const mediaUrl of mediaUrls) {
-      // Download media then upload to Twitter
       const mediaRes = await fetch(mediaUrl)
-      const mediaBlob = await mediaRes.blob()
+      if (!mediaRes.ok) {
+        return { success: false, error: `Could not download image for X (HTTP ${mediaRes.status}): ${mediaUrl}` }
+      }
       const formData = new FormData()
-      formData.append('media', mediaBlob)
+      formData.append('media', await mediaRes.blob())
+      formData.append('media_category', 'tweet_image')
 
-      const uploadRes = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
+      const uploadRes = await fetch('https://api.x.com/2/media/upload', {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       })
-      const uploadData = await uploadRes.json()
-      if (uploadData.media_id_string) {
-        mediaIds.push(uploadData.media_id_string)
+      const upload = z.object({
+        data: z.object({ id: z.string().min(1) }).optional(),
+        detail: z.string().optional(),
+        title: z.string().optional(),
+        errors: z.array(z.object({ message: z.string().optional() })).optional(),
+      }).safeParse(await uploadRes.json().catch(() => null))
+      const uploadData = upload.success ? upload.data : undefined
+      if (!uploadRes.ok || !uploadData?.data?.id) {
+        const detail = uploadData?.detail || uploadData?.errors?.[0]?.message || uploadData?.title
+        return {
+          success: false,
+          error: `X/Twitter image upload failed (HTTP ${uploadRes.status}): ${detail || 'no media id returned'}. Reconnect X if the account predates the media.write permission.`,
+        }
       }
+      mediaIds.push(uploadData.data.id)
     }
 
     const tweetBody: Record<string, unknown> = { text: content }
@@ -230,48 +245,86 @@ async function publishToTwitter(
   }
 }
 
+type MediaItem = { url: string; mimeType: string }
+
 /**
- * Publish content to TikTok via Content Posting API
+ * Publish content to TikTok via the Content Posting API.
+ *
+ * Photos and videos use different endpoints: photos go to `content/init` as a
+ * PHOTO post (up to 35 images), a video goes to `video/init`. Both pull media by
+ * URL, so the media host's domain must be verified in the TikTok developer app.
+ *
+ * TikTok wraps every response in an `error` object; success is `error.code === "ok"`,
+ * so the mere presence of `error.code` is not a failure.
  */
 async function publishToTikTok(
   accessToken: string,
   content: string,
-  mediaUrls: string[],
+  media: MediaItem[],
 ): Promise<PublishResult> {
   try {
-    // TikTok requires video upload via their Content Posting API
-    if (mediaUrls.length === 0) {
+    if (media.length === 0) {
       return { success: false, error: 'TikTok requires at least one video or image' }
     }
 
-    // Initialize video upload
-    const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+    const video = media.find((m) => m.mimeType.startsWith('video/'))
+    const images = media.filter((m) => m.mimeType.startsWith('image/'))
+    if (!video && images.length === 0) {
+      return { success: false, error: 'TikTok needs a video or image attachment' }
+    }
+
+    const [endpoint, body] = video
+      ? [
+          'https://open.tiktokapis.com/v2/post/publish/video/init/',
+          {
+            post_info: { title: content.slice(0, 2200), privacy_level: 'PUBLIC_TO_EVERYONE' },
+            source_info: { source: 'PULL_FROM_URL', video_url: video.url },
+          },
+        ]
+      : [
+          'https://open.tiktokapis.com/v2/post/publish/content/init/',
+          {
+            media_type: 'PHOTO',
+            post_mode: 'DIRECT_POST',
+            post_info: {
+              title: content.slice(0, 90),
+              description: content.slice(0, 4000),
+              privacy_level: 'PUBLIC_TO_EVERYONE',
+            },
+            source_info: {
+              source: 'PULL_FROM_URL',
+              photo_cover_index: 0,
+              photo_images: images.slice(0, 35).map((m) => m.url),
+            },
+          },
+        ]
+
+    const initRes = await fetch(endpoint, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: JSON.stringify({
-        post_info: {
-          title: content.slice(0, 150),
-          privacy_level: 'PUBLIC_TO_EVERYONE',
-        },
-        source_info: {
-          source: 'PULL_FROM_URL',
-          video_url: mediaUrls[0],
-        },
-      }),
+      body: JSON.stringify(body),
     })
 
-    const initData = await initRes.json()
+    const parsed = z.object({
+      data: z.object({ publish_id: z.string().optional() }).optional(),
+      error: z.object({ code: z.string().optional(), message: z.string().optional() }).optional(),
+    }).safeParse(await initRes.json().catch(() => null))
+    const initData = parsed.success ? parsed.data : undefined
+    const publishId = initData?.data?.publish_id
 
-    if (initData.error?.code) {
-      return { success: false, error: initData.error.message || 'TikTok API error' }
+    if (!initRes.ok || initData?.error?.code !== 'ok' || !publishId) {
+      return {
+        success: false,
+        error: `TikTok publish failed (HTTP ${initRes.status}): ${initData?.error?.message || initData?.error?.code || 'Empty or invalid API response'}`,
+      }
     }
 
     return {
       success: true,
-      externalPostId: initData.data?.publish_id,
+      externalPostId: publishId,
       externalUrl: undefined, // TikTok doesn't return URL immediately
     }
   } catch (error) {
@@ -591,7 +644,11 @@ export async function publishToAccount(
       result = await publishToInstagram(accessToken, account.accountId, content, mediaUrls)
       break
     case 'TIKTOK':
-      result = await publishToTikTok(accessToken, content, mediaUrls)
+      result = await publishToTikTok(
+        accessToken,
+        content,
+        post.media.map((m) => ({ url: m.media.url, mimeType: m.media.mimeType })),
+      )
       break
     case 'GOOGLE_MY_BUSINESS':
       result = await publishToGoogleMyBusiness(accessToken, account.accountId, content, mediaUrls, post.linkUrl)

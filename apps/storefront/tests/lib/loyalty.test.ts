@@ -21,6 +21,7 @@ function fakeTx({
   const accountUpsert = vi.fn().mockResolvedValue(account)
   const accountUpdate = vi.fn().mockResolvedValue({})
   const transactionCreate = vi.fn().mockResolvedValue({})
+  const eventCreate = vi.fn().mockResolvedValue({})
 
   return {
     tx: {
@@ -33,7 +34,9 @@ function fakeTx({
         update: accountUpdate,
       },
       pointTransaction: { create: transactionCreate },
+      domainEvent: { create: eventCreate },
     } as unknown as Parameters<typeof creditPurchaseLoyaltyPoints>[0],
+    eventCreate,
     orderUpdateMany,
     accountUpsert,
     accountUpdate,
@@ -165,6 +168,50 @@ describe('creditPurchaseLoyaltyPoints', () => {
     const updateData = accountUpdate.mock.calls[0][0].data
     expect(updateData.tier).toBe('BRONZE')
     expect(updateData.tierUpdatedAt).toBeUndefined()
+  })
+
+  it('records the points-earned fact on the transaction client, keyed on the order', async () => {
+    // $5 → 50 points, which stays BRONZE, so this is the earn fact alone.
+    const { tx, eventCreate } = fakeTx({
+      order: { userId: 'user-1', subtotal: 5, discountAmount: 0, loyaltyPointsAwardedAt: null },
+    })
+
+    await creditPurchaseLoyaltyPoints(tx, 'order-1')
+
+    // On `tx`, so a rolled-back payment takes its LOYALTY_POINTS_EARNED enrollment with it.
+    expect(eventCreate).toHaveBeenCalledOnce()
+    expect(eventCreate.mock.calls[0][0].data).toMatchObject({
+      type: 'loyalty.points_earned',
+      entityType: 'order',
+      entityId: 'order-1',
+      payload: { points: 50, tier: 'BRONZE' },
+    })
+  })
+
+  it('records a tier upgrade when the award crosses a threshold', async () => {
+    const { tx, eventCreate } = fakeTx({
+      order: { userId: 'user-1', subtotal: 60, discountAmount: 0, loyaltyPointsAwardedAt: null },
+      account: { id: 'account-1', lifetimePoints: 490, tier: 'BRONZE' },
+    })
+
+    await creditPurchaseLoyaltyPoints(tx, 'order-1')
+
+    expect(eventCreate.mock.calls.map((c) => c[0].data.type)).toEqual([
+      'loyalty.points_earned',
+      'loyalty.tier_upgraded',
+    ])
+    expect(eventCreate.mock.calls[1][0].data.payload).toEqual({
+      tier: 'GOLD',
+      previousTier: 'BRONZE',
+    })
+  })
+
+  it('records nothing when the order was already credited by the racing path', async () => {
+    const { tx, eventCreate } = fakeTx({ order: paidOrder, claimCount: 0 })
+
+    await creditPurchaseLoyaltyPoints(tx, 'order-1')
+
+    expect(eventCreate).not.toHaveBeenCalled()
   })
 })
 

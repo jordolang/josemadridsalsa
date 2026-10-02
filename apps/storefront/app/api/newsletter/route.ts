@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { sendNewsletterWelcomeEmail } from '@/lib/email/automation'
 import { logEngagementRequest } from '@/lib/engagements'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 const NewsletterSchema = z.object({
   email: z.string().email(),
@@ -30,6 +31,14 @@ export async function POST(request: Request) {
       name: name ?? null,
       source: source ?? 'footer:newsletter',
       metadata: { consentAt: new Date().toISOString() },
+    })
+
+    // Starts any "Subscription Created" automation. Never throws, so it cannot fail the signup.
+    await emitDomainEvent({
+      type: 'newsletter.subscribed',
+      entityType: 'subscriber',
+      entityId: normalizedEmail,
+      payload: { email: normalizedEmail, firstName: name ?? null, source: source ?? 'footer:newsletter' },
     })
 
     await sendNewsletterWelcomeEmail({

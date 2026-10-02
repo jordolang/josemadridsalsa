@@ -41,7 +41,10 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const TRIGGER_OPTIONS = [
+// `unavailable` triggers have no event source in this system — there is no product subscription
+// model, and "custom" has nothing to fire it — so they stay listed (an existing automation must
+// still display its trigger) but cannot be chosen.
+const TRIGGER_OPTIONS: { value: string; label: string; unavailable?: boolean }[] = [
   { value: 'USER_REGISTERED', label: 'User Registered' },
   { value: 'ORDER_PLACED', label: 'Order Placed' },
   { value: 'ORDER_SHIPPED', label: 'Order Shipped' },
@@ -50,15 +53,15 @@ const TRIGGER_OPTIONS = [
   { value: 'ABANDONED_CART', label: 'Abandoned Cart' },
   { value: 'LOYALTY_POINTS_EARNED', label: 'Loyalty Points Earned' },
   { value: 'LOYALTY_TIER_UPGRADE', label: 'Loyalty Tier Upgrade' },
-  { value: 'SUBSCRIPTION_CREATED', label: 'Subscription Created' },
-  { value: 'SUBSCRIPTION_RENEWED', label: 'Subscription Renewed' },
-  { value: 'SUBSCRIPTION_EXPIRING', label: 'Subscription Expiring' },
-  { value: 'SUBSCRIPTION_CANCELLED', label: 'Subscription Cancelled' },
-  { value: 'BIRTHDAY', label: 'Birthday' },
-  { value: 'ANNIVERSARY', label: 'Anniversary' },
-  { value: 'REENGAGEMENT', label: 'Re-engagement (90 days inactive)' },
-  { value: 'LOW_STOCK', label: 'Low Stock Alert' },
-  { value: 'CUSTOM', label: 'Custom' },
+  { value: 'SUBSCRIPTION_CREATED', label: 'Newsletter Subscribed' },
+  { value: 'SUBSCRIPTION_RENEWED', label: 'Subscription Renewed', unavailable: true },
+  { value: 'SUBSCRIPTION_EXPIRING', label: 'Subscription Expiring', unavailable: true },
+  { value: 'SUBSCRIPTION_CANCELLED', label: 'Subscription Cancelled', unavailable: true },
+  { value: 'BIRTHDAY', label: 'Birthday (from account settings)' },
+  { value: 'ANNIVERSARY', label: 'First-Order Anniversary' },
+  { value: 'REENGAGEMENT', label: 'Re-engagement (90 days since last order)' },
+  { value: 'LOW_STOCK', label: 'Low Stock Alert (to INVENTORY_ALERT_EMAILS)' },
+  { value: 'CUSTOM', label: 'Custom', unavailable: true },
 ]
 
 interface Step {
@@ -88,9 +91,6 @@ export function AutomationBuilder({ templates, initialData }: AutomationBuilderP
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [trigger, setTrigger] = useState(initialData?.trigger ?? '')
   const [isActive, setIsActive] = useState(initialData?.isActive ?? false)
-  const [stopOnUnsubscribe, setStopOnUnsubscribe] = useState(
-    initialData?.stopConditions?.onUnsubscribe ?? true
-  )
   const [stopOnPurchase, setStopOnPurchase] = useState(
     initialData?.stopConditions?.onPurchase ?? false
   )
@@ -129,7 +129,7 @@ export function AutomationBuilder({ templates, initialData }: AutomationBuilderP
         description: description || null,
         trigger,
         isActive,
-        stopConditions: { onUnsubscribe: stopOnUnsubscribe, onPurchase: stopOnPurchase },
+        stopConditions: { onUnsubscribe: true, onPurchase: stopOnPurchase },
         steps: steps.map((s) => ({
           templateId: s.templateId,
           delayHours: s.delayHours,
@@ -192,8 +192,8 @@ export function AutomationBuilder({ templates, initialData }: AutomationBuilderP
               </SelectTrigger>
               <SelectContent>
                 {TRIGGER_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                  <SelectItem key={opt.value} value={opt.value} disabled={opt.unavailable}>
+                    {opt.unavailable ? `${opt.label} (unavailable)` : opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -217,8 +217,9 @@ export function AutomationBuilder({ templates, initialData }: AutomationBuilderP
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label>Stop when subscriber unsubscribes</Label>
-            <Switch checked={stopOnUnsubscribe} onCheckedChange={setStopOnUnsubscribe} />
+            {/* Always enforced by the engine: suppressed and unsubscribed addresses are never mailed. */}
+            <Label>Stop when subscriber unsubscribes (always on)</Label>
+            <Switch checked disabled />
           </div>
           <div className="flex items-center justify-between">
             <Label>Stop when subscriber makes a purchase</Label>

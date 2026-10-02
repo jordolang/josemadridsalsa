@@ -106,50 +106,51 @@ describe('buildAmazonListingPayload', () => {
 })
 
 describe('buildGoogleShoppingProduct', () => {
-  it('maps the product onto a Content API resource', () => {
-    const resource = buildGoogleShoppingProduct(makeGoogleProduct(), {})
+  it('maps the product onto a Merchant API product input', () => {
+    const input = buildGoogleShoppingProduct(makeGoogleProduct(), {})
+    const attrs = input.productAttributes
 
-    expect(resource.offerId).toBe('SALSA-001')
-    expect(resource.channel).toBe('online')
-    expect(resource.contentLanguage).toBe('en')
-    expect(resource.targetCountry).toBe('US')
-    expect(resource.price).toEqual({ value: '9.99', currency: 'USD' })
-    expect(resource.salePrice).toBeUndefined()
-    expect(resource.gtin).toBe('012345678905')
-    expect(resource.identifierExists).toBeUndefined()
-    expect(resource.availability).toBe('in stock')
-    expect(resource.imageLink).toBe('https://example.com/a.jpg')
-    expect(resource.additionalImageLinks).toEqual(['https://example.com/b.jpg'])
-    expect(resource.shippingWeight).toEqual({ value: 16, unit: 'oz' })
+    expect(input.offerId).toBe('SALSA-001')
+    expect(input.contentLanguage).toBe('en')
+    expect(input.feedLabel).toBe('US')
+    expect(attrs.price).toEqual({ amountMicros: '9990000', currencyCode: 'USD' })
+    expect(attrs.salePrice).toBeUndefined()
+    expect(attrs.gtins).toEqual(['012345678905'])
+    expect(attrs.identifierExists).toBeUndefined()
+    expect(attrs.availability).toBe('IN_STOCK')
+    expect(attrs.condition).toBe('NEW')
+    expect(attrs.imageLink).toBe('https://example.com/a.jpg')
+    expect(attrs.additionalImageLinks).toEqual(['https://example.com/b.jpg'])
+    expect(attrs.shippingWeight).toEqual({ value: 16, unit: 'oz' })
   })
 
   it('splits regular and sale price when discounted', () => {
-    const resource = buildGoogleShoppingProduct(
+    const { productAttributes: attrs } = buildGoogleShoppingProduct(
       makeGoogleProduct({ price: 9.99, compareAtPrice: 12.99 }),
       {},
     )
-    expect(resource.price).toEqual({ value: '12.99', currency: 'USD' })
-    expect(resource.salePrice).toEqual({ value: '9.99', currency: 'USD' })
+    expect(attrs.price).toEqual({ amountMicros: '12990000', currencyCode: 'USD' })
+    expect(attrs.salePrice).toEqual({ amountMicros: '9990000', currencyCode: 'USD' })
   })
 
   it('declares identifierExists=false without a GTIN and out of stock at zero inventory', () => {
-    const resource = buildGoogleShoppingProduct(
+    const { productAttributes: attrs } = buildGoogleShoppingProduct(
       makeGoogleProduct({ gtin: null, inventory: 0 }),
       {},
     )
-    expect(resource.gtin).toBeUndefined()
-    expect(resource.identifierExists).toBe(false)
-    expect(resource.availability).toBe('out of stock')
+    expect(attrs.gtins).toBeUndefined()
+    expect(attrs.identifierExists).toBe(false)
+    expect(attrs.availability).toBe('OUT_OF_STOCK')
   })
 
   it('applies overrides for title, price, and availability', () => {
-    const resource = buildGoogleShoppingProduct(makeGoogleProduct(), {
+    const { productAttributes: attrs } = buildGoogleShoppingProduct(makeGoogleProduct(), {
       title: 'Custom Title',
       price: 11,
       availability: 'preorder',
     })
-    expect(resource.title).toBe('Custom Title')
-    expect(resource.price).toEqual({ value: '11.00', currency: 'USD' })
-    expect(resource.availability).toBe('preorder')
+    expect(attrs.title).toBe('Custom Title')
+    expect(attrs.price).toEqual({ amountMicros: '11000000', currencyCode: 'USD' })
+    expect(attrs.availability).toBe('PREORDER')
   })
 })

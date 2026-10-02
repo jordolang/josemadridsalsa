@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type Props = {
-  defaultValues: { name: string; email: string; phone?: string | null };
+  defaultValues: { name: string; email: string; phone?: string | null; dateOfBirth?: string };
 };
 
 export function ProfileForm({ defaultValues }: Props) {
@@ -60,6 +60,11 @@ export function ProfileForm({ defaultValues }: Props) {
           <Label htmlFor="phone">Phone</Label>
           <Input id="phone" name="phone" defaultValue={defaultValues.phone ?? ""} disabled={pending} />
           {errors.phone?.length ? <p className="text-xs text-red-600">{errors.phone[0]}</p> : null}
+        </div>
+        <div>
+          <Label htmlFor="dateOfBirth">Birthday (optional)</Label>
+          <Input id="dateOfBirth" name="dateOfBirth" type="date" defaultValue={defaultValues.dateOfBirth ?? ""} disabled={pending} />
+          {errors.dateOfBirth?.length ? <p className="text-xs text-red-600">{errors.dateOfBirth[0]}</p> : null}
         </div>
         <div>
           <Button type="submit" disabled={pending}>Save Profile</Button>

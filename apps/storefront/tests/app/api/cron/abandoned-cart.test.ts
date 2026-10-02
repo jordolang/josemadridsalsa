@@ -21,6 +21,7 @@ const substituteVariables = vi.fn()
 const checkUnsubscribed = vi.fn()
 const logEmailSend = vi.fn()
 const isAuthorizedCronRequest = vi.fn()
+const enrollInAutomation = vi.fn()
 
 vi.mock('@/lib/prisma', () => {
   const client = {
@@ -42,6 +43,8 @@ vi.mock('@/lib/email/logger', () => ({
   checkUnsubscribed,
   logEmailSend,
 }))
+
+vi.mock('@/lib/email/automation-engine', () => ({ enrollInAutomation }))
 
 vi.mock('@/lib/cron/auth', () => ({
   isAuthorizedCronRequest,
@@ -95,6 +98,7 @@ beforeEach(() => {
   substituteVariables.mockImplementation((template: string) => template)
   checkUnsubscribed.mockResolvedValue(false)
   logEmailSend.mockResolvedValue({ id: 'log_1' })
+  enrollInAutomation.mockResolvedValue(undefined)
 })
 
 describe('GET /api/cron/abandoned-cart', () => {
@@ -129,6 +133,73 @@ describe('GET /api/cron/abandoned-cart', () => {
     } finally {
       vi.unstubAllEnvs()
     }
+  })
+
+  it('enrolls a newly abandoned cart in ABANDONED_CART automations, keyed on the cart', async () => {
+    abandonedCartFindMany.mockResolvedValue([
+      {
+        id: 'cart_1',
+        recoveryToken: 'token_abc123',
+        emailStage: 0,
+        guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
+        cartData: { total: 42.5 },
+      },
+    ])
+
+    await GET(cronRequest())
+
+    expect(enrollInAutomation).toHaveBeenCalledWith(
+      'ABANDONED_CART',
+      'user@example.com',
+      expect.objectContaining({
+        cartId: 'cart_1',
+        cartTotal: '$42.50',
+        cartUrl: expect.stringMatching(/\/checkout\?recover=token_abc123$/),
+      }),
+      'abandoned_cart:cart_1'
+    )
+  })
+
+  it('does not re-enroll a cart already past its first reminder', async () => {
+    abandonedCartFindMany.mockResolvedValue([
+      {
+        id: 'cart_1',
+        recoveryToken: 'token_abc123',
+        emailStage: 1,
+        guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
+        emailSentAt: CART_ABANDONED_AT,
+        cartData: {},
+      },
+    ])
+
+    await GET(cronRequest())
+
+    expect(enrollInAutomation).not.toHaveBeenCalled()
+  })
+
+  it('still sends the built-in reminder when automation enrollment fails', async () => {
+    enrollInAutomation.mockRejectedValue(new Error('db down'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    abandonedCartFindMany.mockResolvedValue([
+      {
+        id: 'cart_1',
+        recoveryToken: 'token_abc123',
+        emailStage: 0,
+        guestEmail: 'user@example.com',
+        createdAt: CART_CREATED_AT,
+        updatedAt: CART_ABANDONED_AT,
+        cartData: {},
+      },
+    ])
+
+    const response = await GET(cronRequest())
+
+    expect(response.status).toBe(200)
+    expect(sendEmail).toHaveBeenCalledOnce()
   })
 
   it('selects the correct template for stage 1', async () => {

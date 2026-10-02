@@ -10,7 +10,7 @@ import type { SocialAccountInfo } from '@/types/social'
 
 type Props = {
   accounts: SocialAccountInfo[]
-  syncProviderStatus: { AMAZON: boolean; GOOGLE_SHOPPING: boolean }
+  syncProviderStatus: { AMAZON: boolean; GOOGLE_SHOPPING: boolean; TIKTOK_SHOP: boolean }
   initialTab?: FeedsTab
 }
 

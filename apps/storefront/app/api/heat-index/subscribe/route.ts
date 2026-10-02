@@ -3,6 +3,7 @@ import { ok, fail, serverError } from '@/lib/api'
 import { blogSubscribeSchema } from '@/lib/blog/schemas'
 import { getOrCreateMailingList } from '@/lib/blog/publish'
 import prisma from '@/lib/prisma'
+import { emitDomainEvent } from '@/lib/domain-events/emit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -56,6 +57,14 @@ export async function POST(req: NextRequest) {
         })
       )
     )
+
+    // Starts any "Subscription Created" automation. Never throws, so it cannot fail the signup.
+    await emitDomainEvent({
+      type: 'newsletter.subscribed',
+      entityType: 'subscriber',
+      entityId: normalizedEmail,
+      payload: { email: normalizedEmail, firstName: firstName ?? null, source: source ?? 'heat-index' },
+    })
 
     return ok({ subscribed: true })
   } catch (error: unknown) {

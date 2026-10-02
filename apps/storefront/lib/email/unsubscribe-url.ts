@@ -38,3 +38,14 @@ export function buildUnsubscribeUrl(email: string): string {
   const token = generateUnsubscribeToken(email)
   return `${getEmailBaseUrl()}/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`
 }
+
+/**
+ * The `List-Unsubscribe` target for RFC 8058 one-click unsubscribe.
+ *
+ * Gmail and Yahoo POST `List-Unsubscribe=One-Click` straight to this URL with no page in between,
+ * so it has to be the API route (which accepts that POST) rather than the `/unsubscribe` page.
+ */
+export function buildOneClickUnsubscribeUrl(email: string): string {
+  const token = generateUnsubscribeToken(email)
+  return `${getEmailBaseUrl()}/api/unsubscribe?email=${encodeURIComponent(email)}&token=${token}`
+}

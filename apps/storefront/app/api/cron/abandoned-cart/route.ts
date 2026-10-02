@@ -6,6 +6,7 @@ import { abandonedCartStage1Template } from '@/lib/email/templates/abandoned-car
 import { abandonedCartStage2Template } from '@/lib/email/templates/abandoned-cart-stage-2'
 import { abandonedCartStage3Template } from '@/lib/email/templates/abandoned-cart-stage-3'
 import { checkUnsubscribed, logEmailSend } from '@/lib/email/logger'
+import { enrollInAutomation } from '@/lib/email/automation-engine'
 import {
   ABANDONED_CART_EMAIL_TYPE,
   abandonedCartWhere,
@@ -27,6 +28,7 @@ const abandonedCartStageTemplates: Record<number, typeof abandonedCartStage1Temp
 
 interface DueCart {
   id: string
+  recoveryToken: string
   createdAt: Date
   updatedAt: Date
   cartData: unknown
@@ -135,6 +137,28 @@ export async function GET(request: Request) {
 
       const name = customerName(cart.user?.name, cart.guestEmail)
       const nextStage = cart.emailStage + 1
+
+      // The moment a cart first counts as abandoned is the ABANDONED_CART trigger. Keyed on the
+      // cart, so the hourly re-scan of a cart still at stage 0 (an unsubscribed shopper, a failed
+      // send) never enrolls it twice. Runs alongside the built-in sequence below, not instead of
+      // it — an admin who builds a cart series should switch one of the two off.
+      if (cart.emailStage === 0) {
+        try {
+          await enrollInAutomation(
+            'ABANDONED_CART',
+            email,
+            {
+              firstName: name,
+              cartUrl: `${BASE_URL}/checkout?recover=${cart.recoveryToken}`,
+              cartTotal: formatCartTotal(cart.cartData),
+              cartId: cart.id,
+            },
+            `abandoned_cart:${cart.id}`
+          )
+        } catch (error) {
+          console.error('Abandoned cart automation enrollment failed:', error)
+        }
+      }
 
       const success = await sendAbandonedCartEmail(cart, email, name, nextStage, now)
 

@@ -131,6 +131,18 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass â
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | For calendar | Service account email |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | For calendar | Service account private key (include `\n` for newlines) |
 | `GOOGLE_CALENDAR_ID` | For schedule | Calendar ID for "Where is Jose" |
+| `GOOGLE_MERCHANT_CENTER_ID` | For Shopping sync | Merchant Center account ID that products are pushed to |
+| `GOOGLE_MERCHANT_DATA_SOURCE_ID` | For Shopping sync | Numeric ID of the Merchant Center "API" data source that the Merchant API writes products into |
+| `GOOGLE_SHOPPING_SERVICE_ACCOUNT_EMAIL` | For Shopping sync | Service account added as a Merchant Center user; its Cloud project must be registered with the account (Merchant API developer registration) |
+| `GOOGLE_SHOPPING_SERVICE_ACCOUNT_PRIVATE_KEY` | For Shopping sync | That service account's private key (include `\n` for newlines) |
+
+## TikTok Shop
+
+| Variable | Required | Description |
+|---|---|---|
+| `TIKTOK_SHOP_APP_KEY` | For TikTok Shop sync | App key of the TikTok Shop Partner Center app (separate from the TikTok posting app) |
+| `TIKTOK_SHOP_APP_SECRET` | For TikTok Shop sync | That app's secret; signs every Partner API request |
+| `TIKTOK_SHOP_REFRESH_TOKEN` | For TikTok Shop sync | Refresh token from the shop authorizing the app; re-authorize when it expires |
 
 ## File Uploads
 

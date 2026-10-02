@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const orderFindUnique = vi.fn()
 const userFindUnique = vi.fn()
@@ -55,7 +55,8 @@ describe('automation enrollment handler', () => {
     expect(enrollInAutomation).toHaveBeenCalledWith(
       'ORDER_PLACED',
       'buyer@example.com',
-      expect.objectContaining({ eventType: 'payment.completed' })
+      expect.objectContaining({ eventType: 'payment.completed' }),
+      'payment.completed:order_1'
     )
   })
 
@@ -93,7 +94,8 @@ describe('automation enrollment handler', () => {
     expect(enrollInAutomation).toHaveBeenCalledWith(
       'USER_REGISTERED',
       'new@example.com',
-      expect.objectContaining({ name: 'Ada' })
+      expect.objectContaining({ name: 'Ada' }),
+      'customer.created:user_1'
     )
   })
 
@@ -157,11 +159,98 @@ describe('automation enrollment handler', () => {
     // consumers also register into — an unrelated new handler should not fail this test.
     expect(Object.keys(AUTOMATION_TRIGGER_BY_EVENT).sort()).toEqual([
       'customer.created',
+      'inventory.low',
+      'inventory.out_of_stock',
+      'loyalty.points_earned',
+      'loyalty.tier_upgraded',
+      'newsletter.subscribed',
       'order.delivered',
       'order.fulfilled',
       'payment.completed',
       'payment.refunded',
     ])
+  })
+
+  it('gives both racing records of one payment the same dedupe key', async () => {
+    // /api/checkout/complete and the Stripe webhook each emit payment.completed for the order.
+    orderFindUnique.mockResolvedValue({ guestEmail: 'g@example.com', user: null })
+
+    await handleAutomationEnrollment(event({ id: 'evt_route' }))
+    await handleAutomationEnrollment(event({ id: 'evt_webhook' }))
+
+    expect(enrollInAutomation.mock.calls[0][3]).toBe('payment.completed:order_1')
+    expect(enrollInAutomation.mock.calls[1][3]).toBe('payment.completed:order_1')
+  })
+
+  it.each([
+    ['loyalty.points_earned', 'LOYALTY_POINTS_EARNED'],
+    ['loyalty.tier_upgraded', 'LOYALTY_TIER_UPGRADE'],
+  ])('enrolls the order owner when %s', async (type, trigger) => {
+    orderFindUnique.mockResolvedValue({ guestEmail: null, user: { email: 'member@example.com' } })
+
+    await handleAutomationEnrollment(event({ type, payload: { points: 500, tier: 'SILVER' } }))
+
+    expect(enrollInAutomation).toHaveBeenCalledWith(
+      trigger,
+      'member@example.com',
+      expect.objectContaining({ points: 500, tier: 'SILVER' }),
+      `${type}:order_1`
+    )
+  })
+
+  it('enrolls a newsletter signup as SUBSCRIPTION_CREATED, once per address', async () => {
+    await handleAutomationEnrollment(
+      event({
+        type: 'newsletter.subscribed',
+        entityType: 'subscriber',
+        entityId: 'fan@example.com',
+        payload: { email: 'fan@example.com' },
+      })
+    )
+
+    expect(enrollInAutomation).toHaveBeenCalledWith(
+      'SUBSCRIPTION_CREATED',
+      'fan@example.com',
+      expect.any(Object),
+      'newsletter.subscribed:fan@example.com'
+    )
+  })
+
+  describe('LOW_STOCK', () => {
+    const previous = process.env.INVENTORY_ALERT_EMAILS
+    afterEach(() => {
+      process.env.INVENTORY_ALERT_EMAILS = previous
+    })
+
+    it('enrolls every address on INVENTORY_ALERT_EMAILS, keyed on the alert event', async () => {
+      process.env.INVENTORY_ALERT_EMAILS = 'buyer@jms.test, owner@jms.test'
+
+      await handleAutomationEnrollment(
+        event({
+          id: 'evt_low',
+          type: 'inventory.low',
+          entityType: 'product',
+          entityId: 'prod_1',
+          payload: { productName: 'Hot', sku: 'H-1', stockLevel: 2, threshold: 5 },
+        })
+      )
+
+      expect(enrollInAutomation.mock.calls.map((c) => [c[0], c[1], c[3]])).toEqual([
+        ['LOW_STOCK', 'buyer@jms.test', 'inventory.low:evt_low'],
+        ['LOW_STOCK', 'owner@jms.test', 'inventory.low:evt_low'],
+      ])
+      expect(enrollInAutomation.mock.calls[0][2]).toMatchObject({ productName: 'Hot', stockLevel: 2 })
+    })
+
+    it('enrolls nobody when no alert addresses are configured', async () => {
+      process.env.INVENTORY_ALERT_EMAILS = ''
+
+      await handleAutomationEnrollment(
+        event({ type: 'inventory.out_of_stock', entityType: 'product', entityId: 'prod_1' })
+      )
+
+      expect(enrollInAutomation).not.toHaveBeenCalled()
+    })
   })
 
   it('registers its handlers into the shared bus', () => {
