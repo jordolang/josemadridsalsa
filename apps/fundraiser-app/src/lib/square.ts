@@ -62,6 +62,16 @@ async function prepareTapToPay() {
   }
 }
 
+/**
+ * Sign the SDK in and link Tap to Pay before the first sale, so tapping Charge goes straight to
+ * Square's "hold the card near the phone" screen. Safe to call repeatedly.
+ */
+export async function warmUpCardReader(call: Call) {
+  if (!cardPaymentsAvailable) return
+  await authorize(call)
+  await prepareTapToPay()
+}
+
 /** Square's reader screen: pair a Square Reader, check Tap to Pay, see the signed-in location. */
 export async function openCardReaderSettings(call: Call) {
   await authorize(call)

@@ -53,7 +53,8 @@ export default function Home() {
         </View>
       </Card>
 
-      <Button label="Take a new order" onPress={() => router.push('/new-order')} />
+      <Button label="Sell" onPress={() => router.push('/sell')} />
+      <Button label="Phone order (deliver later)" variant="secondary" onPress={() => router.push('/new-order')} />
       <Button label="My orders" variant="secondary" onPress={() => router.push('/orders')} />
       {me.group.cardPayments && cardPaymentsAvailable ? (
         <Button

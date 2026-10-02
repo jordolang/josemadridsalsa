@@ -36,7 +36,8 @@ function RootStack() {
 
       <Stack.Protected guard={status === 'ready'}>
         <Stack.Screen name="index" options={{ title: 'Jose Madrid Fundraiser' }} />
-        <Stack.Screen name="new-order" options={{ title: 'New order' }} />
+        <Stack.Screen name="sell" options={{ title: 'Sell' }} />
+        <Stack.Screen name="new-order" options={{ title: 'Phone order' }} />
         <Stack.Screen name="orders" options={{ title: 'My orders' }} />
         <Stack.Screen name="organizer" options={{ title: 'Organizer' }} />
       </Stack.Protected>

@@ -82,7 +82,7 @@ export default function Orders() {
       renderItem={({ item }) => (
         <View style={ui.card}>
           <View style={ui.row}>
-            <Text style={[styles.customer, ui.fill]}>{item.customerName ?? 'Customer'}</Text>
+            <Text style={[styles.customer, ui.fill]}>{item.customerName ?? 'Walk-up sale'}</Text>
             <Text style={styles.total}>{money(item.total)}</Text>
           </View>
           <Text style={styles.items}>{item.items.map((i) => `${i.quantity} × ${i.productName}`).join('\n')}</Text>
