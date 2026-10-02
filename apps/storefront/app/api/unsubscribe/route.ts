@@ -10,6 +10,12 @@ const UnsubscribeSchema = z.object({
   unsubscribeAll: z.boolean().optional(),
 })
 
+const OneClickSchema = z.object({
+  email: z.string().email(),
+  token: z.string().min(1),
+  action: z.literal('One-Click'),
+})
+
 export async function POST(request: Request) {
   try {
     // CSRF: verify request origin
@@ -24,6 +30,27 @@ export async function POST(request: Request) {
     const { allowed } = checkRateLimit(`unsub:${ip}`, { maxRequests: 10, windowMs: 60_000 })
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
+    }
+
+    // RFC 8058 one-click: the mailbox provider POSTs a form body to the List-Unsubscribe URL,
+    // which carries the address and its signed token. No page, no JSON, so handle it first.
+    if (request.headers.get('content-type')?.includes('application/x-www-form-urlencoded')) {
+      const { searchParams } = new URL(request.url)
+      const oneClick = OneClickSchema.safeParse({
+        email: searchParams.get('email'),
+        token: searchParams.get('token'),
+        action: new URLSearchParams(await request.text()).get('List-Unsubscribe'),
+      })
+      if (!oneClick.success || !verifyUnsubscribeToken(oneClick.data.email, oneClick.data.token)) {
+        return NextResponse.json({ error: 'Invalid unsubscribe link.' }, { status: 400 })
+      }
+      const oneClickEmail = oneClick.data.email.trim().toLowerCase()
+      await prisma.unsubscribePreference.upsert({
+        where: { email: oneClickEmail },
+        create: { email: oneClickEmail, unsubscribeAll: true, unsubscribedFrom: [] },
+        update: { unsubscribeAll: true, updatedAt: new Date() },
+      })
+      return NextResponse.json({ success: true })
     }
 
     const payload = await request.json()

@@ -20,6 +20,8 @@ const logCreate = vi.fn()
 const templateFindUnique = vi.fn()
 const sendEmail = vi.fn()
 const checkSuppression = vi.fn()
+const checkUnsubscribed = vi.fn()
+const orderFindFirst = vi.fn()
 
 vi.mock('@/lib/prisma', () => {
   const client = {
@@ -32,6 +34,7 @@ vi.mock('@/lib/prisma', () => {
     },
     automationLog: { create: logCreate },
     emailTemplate: { findUnique: templateFindUnique },
+    order: { findFirst: orderFindFirst },
   }
   return { prisma: client, default: client }
 })
@@ -42,8 +45,9 @@ vi.mock('@/lib/email/sender', async (importOriginal) => {
 })
 
 vi.mock('@/lib/email/suppression', () => ({ checkSuppression }))
+vi.mock('@/lib/email/logger', () => ({ checkUnsubscribed }))
 
-const { enrollInAutomation, processDueAutomationSteps } = await import(
+const { enrollInAutomation, processDueAutomationSteps, withUnsubscribeFooter } = await import(
   '@/lib/email/automation-engine'
 )
 
@@ -52,6 +56,7 @@ const NOW = new Date('2026-08-10T12:00:00Z')
 function automation(overrides: Record<string, unknown> = {}) {
   return {
     id: 'auto_1',
+    trigger: 'ORDER_PLACED',
     stopConditions: null,
     steps: [
       { order: 0, delayHours: 0, templateId: 'tmpl_1', subject: null },
@@ -67,6 +72,7 @@ function enrollment(overrides: Record<string, unknown> = {}) {
     email: 'buyer@example.com',
     currentStep: 0,
     triggerData: null,
+    enrolledAt: new Date('2026-08-09T12:00:00Z'),
     automation: automation(),
     ...overrides,
   }
@@ -81,6 +87,8 @@ beforeEach(() => {
   logCreate.mockResolvedValue({})
   sendEmail.mockResolvedValue({ success: true })
   checkSuppression.mockResolvedValue(false)
+  checkUnsubscribed.mockResolvedValue(false)
+  orderFindFirst.mockResolvedValue(null)
   templateFindUnique.mockResolvedValue({
     id: 'tmpl_1',
     subject: 'Thanks for your order, {{firstName}}',
@@ -131,6 +139,43 @@ describe('enrollInAutomation', () => {
         update: expect.objectContaining({ status: 'ACTIVE', currentStep: 0, completedAt: null }),
       })
     )
+  })
+
+  it('skips a fact it has already enrolled, whatever that enrollment became', async () => {
+    // The checkout route and the Stripe webhook both record the same payment; the second must
+    // not restart a series the first already finished.
+    automationFindMany.mockResolvedValue([automation()])
+    enrollmentFindUnique.mockResolvedValue({
+      status: 'COMPLETED',
+      triggerData: { dedupeKey: 'payment.completed:order_1' },
+    })
+
+    await enrollInAutomation('ORDER_PLACED', 'buyer@example.com', {}, 'payment.completed:order_1')
+
+    expect(enrollmentUpsert).not.toHaveBeenCalled()
+  })
+
+  it('re-enrolls for a new fact and records its key', async () => {
+    automationFindMany.mockResolvedValue([automation()])
+    enrollmentFindUnique.mockResolvedValue({
+      status: 'COMPLETED',
+      triggerData: { dedupeKey: 'payment.completed:order_1' },
+    })
+
+    await enrollInAutomation('ORDER_PLACED', 'buyer@example.com', {}, 'payment.completed:order_2')
+
+    const { update } = enrollmentUpsert.mock.calls[0][0]
+    expect(update.triggerData).toEqual({ dedupeKey: 'payment.completed:order_2' })
+    expect(update.enrolledAt).toEqual(NOW)
+  })
+
+  it('normalises the address so case variants share one enrollment', async () => {
+    automationFindMany.mockResolvedValue([automation()])
+    enrollmentFindUnique.mockResolvedValue(null)
+
+    await enrollInAutomation('ORDER_PLACED', ' Buyer@Example.COM ')
+
+    expect(enrollmentUpsert.mock.calls[0][0].create.email).toBe('buyer@example.com')
   })
 
   it("schedules the first step by that step's own delay", async () => {
@@ -194,7 +239,7 @@ describe('processDueAutomationSteps', () => {
 
     const sent = sendEmail.mock.calls[0][0]
     expect(sent.subject).toBe('Thanks for your order, Sam')
-    expect(sent.html).toBe('<p>Hello Sam</p>')
+    expect(sent.html).toMatch(/^<p>Hello Sam<\/p>/)
     expect(sent.html).not.toMatch(/\{\{/)
   })
 
@@ -264,13 +309,120 @@ describe('processDueAutomationSteps', () => {
     expect(result.processed).toBe(0)
   })
 
-  it('does not check suppression when the automation has no stop condition', async () => {
+  it('skips a suppressed address even when the automation has no stop condition', async () => {
+    // Hard bounces and complaints are never an admin's choice to mail.
+    enrollmentFindMany.mockResolvedValue([enrollment()])
+    checkSuppression.mockResolvedValue(true)
+
+    await processDueAutomationSteps()
+
+    expect(sendEmail).not.toHaveBeenCalled()
+    expect(enrollmentUpdate).toHaveBeenCalledWith({
+      where: { id: 'enr_1' },
+      data: { status: 'UNSUBSCRIBED' },
+    })
+  })
+
+  it('skips someone who opted out of marketing email on the unsubscribe page', async () => {
+    enrollmentFindMany.mockResolvedValue([enrollment({ email: 'Buyer@Example.com' })])
+    checkUnsubscribed.mockResolvedValue(true)
+
+    await processDueAutomationSteps()
+
+    expect(checkUnsubscribed).toHaveBeenCalledWith({
+      email: 'buyer@example.com',
+      category: ['marketing'],
+    })
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
+  it("honours the form's own re-engagement category for the re-engagement series", async () => {
+    enrollmentFindMany.mockResolvedValue([
+      enrollment({ automation: automation({ trigger: 'REENGAGEMENT' }) }),
+    ])
+
+    await processDueAutomationSteps()
+
+    expect(checkUnsubscribed).toHaveBeenCalledWith({
+      email: 'buyer@example.com',
+      category: ['marketing', 'reengagement'],
+    })
+  })
+
+  it('stops the series once the recipient buys, when the automation says to', async () => {
+    enrollmentFindMany.mockResolvedValue([
+      enrollment({ automation: automation({ stopConditions: { onPurchase: true } }) }),
+    ])
+    orderFindFirst.mockResolvedValue({ id: 'order_9' })
+
+    await processDueAutomationSteps()
+
+    expect(orderFindFirst.mock.calls[0][0].where.createdAt).toEqual({
+      gt: new Date('2026-08-09T12:00:00Z'),
+    })
+    expect(sendEmail).not.toHaveBeenCalled()
+    expect(enrollmentUpdate).toHaveBeenCalledWith({
+      where: { id: 'enr_1' },
+      data: { status: 'CANCELLED', completedAt: NOW },
+    })
+  })
+
+  it('does not look for purchases when the automation does not stop on them', async () => {
     enrollmentFindMany.mockResolvedValue([enrollment()])
 
     await processDueAutomationSteps()
 
-    expect(checkSuppression).not.toHaveBeenCalled()
+    expect(orderFindFirst).not.toHaveBeenCalled()
     expect(sendEmail).toHaveBeenCalled()
+  })
+
+  it('fills {{UNSUBSCRIBE_URL}} with the signed unsubscribe link', async () => {
+    enrollmentFindMany.mockResolvedValue([enrollment()])
+    templateFindUnique.mockResolvedValue({
+      id: 'tmpl_1',
+      subject: 'Hi',
+      html: '<p>Hi</p><a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a>',
+    })
+
+    await processDueAutomationSteps()
+
+    const { html } = sendEmail.mock.calls[0][0]
+    expect(html).toMatch(/href="https?:\/\/[^"]+\/unsubscribe\?email=buyer%40example\.com&token=[0-9a-f]{32}"/)
+    // Filled in place, not appended a second time.
+    expect(html.match(/Unsubscribe/g)).toHaveLength(1)
+  })
+
+  it('appends an unsubscribe footer to a template that has none', async () => {
+    enrollmentFindMany.mockResolvedValue([enrollment()])
+
+    await processDueAutomationSteps()
+
+    const { html } = sendEmail.mock.calls[0][0]
+    expect(html).toContain('/unsubscribe?email=buyer%40example.com&token=')
+    expect(html).toContain('>Unsubscribe</a>')
+  })
+
+  it('does not let trigger data replace the unsubscribe link', async () => {
+    enrollmentFindMany.mockResolvedValue([
+      enrollment({ triggerData: { UNSUBSCRIBE_URL: 'https://evil.example' } }),
+    ])
+    templateFindUnique.mockResolvedValue({ id: 'tmpl_1', subject: 'Hi', html: '{{UNSUBSCRIBE_URL}}' })
+
+    await processDueAutomationSteps()
+
+    expect(sendEmail.mock.calls[0][0].html).not.toContain('evil.example')
+  })
+
+  it('sends RFC 8058 one-click unsubscribe headers pointing at the API route', async () => {
+    enrollmentFindMany.mockResolvedValue([enrollment()])
+
+    await processDueAutomationSteps()
+
+    const { headers } = sendEmail.mock.calls[0][0]
+    expect(headers['List-Unsubscribe']).toMatch(
+      /^<https?:\/\/[^>]+\/api\/unsubscribe\?email=buyer%40example\.com&token=[0-9a-f]{32}>$/
+    )
+    expect(headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click')
   })
 
   it('counts a failed send as an error and records why', async () => {
@@ -329,6 +481,20 @@ describe('processDueAutomationSteps', () => {
     // It still advances, so a deleted template does not wedge the enrollment forever.
     expect(enrollmentUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ currentStep: 1 }) })
+    )
+  })
+})
+
+describe('withUnsubscribeFooter', () => {
+  it('puts the footer inside the body when there is one', () => {
+    expect(withUnsubscribeFooter('<html><body><p>x</p></body></html>', 'https://u')).toMatch(
+      /<a href="https:\/\/u"[^>]*>Unsubscribe<\/a><\/p><\/body><\/html>$/
+    )
+  })
+
+  it('leaves html that already links the URL alone', () => {
+    expect(withUnsubscribeFooter('<a href="https://u">bye</a>', 'https://u')).toBe(
+      '<a href="https://u">bye</a>'
     )
   })
 })

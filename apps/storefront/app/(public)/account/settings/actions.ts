@@ -11,6 +11,16 @@ const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email(),
   phone: z.string().min(7).max(20).optional().or(z.literal("")),
+  // A calendar date from <input type="date">. Optional; used for the birthday email.
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date")
+    .refine((v) => {
+      const d = new Date(`${v}T00:00:00Z`);
+      return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v) && v >= "1900-01-01" && d < new Date();
+    }, "Enter a valid date of birth")
+    .optional()
+    .or(z.literal("")),
 });
 
 const passwordSchema = z.object({
@@ -42,16 +52,25 @@ export async function updateProfile(_: unknown, formData: FormData) {
     name: formData.get("name"),
     email: formData.get("email"),
     phone: formData.get("phone"),
+    dateOfBirth: formData.get("dateOfBirth") ?? undefined,
   });
   if (!parse.success) {
     return { ok: false, errors: parse.error.flatten().fieldErrors };
   }
 
-  const { name, email, phone } = parse.data;
+  const { name, email, phone, dateOfBirth } = parse.data;
 
   await prisma.user.update({
     where: { id: (session.user as any).id },
-    data: { name, email, phone: phone || null },
+    data: {
+      name,
+      email,
+      phone: phone || null,
+      // Stored at UTC midnight; the birthday scan reads it back in UTC.
+      ...(dateOfBirth !== undefined && {
+        dateOfBirth: dateOfBirth ? new Date(`${dateOfBirth}T00:00:00Z`) : null,
+      }),
+    },
   });
 
   revalidatePath("/account");

@@ -27,7 +27,7 @@ export default async function SettingsPage() {
   const [user, addresses] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, phone: true },
+      select: { id: true, name: true, email: true, phone: true, dateOfBirth: true },
     }),
     prisma.address.findMany({
       where: { userId },
@@ -57,7 +57,7 @@ export default async function SettingsPage() {
     <div className="grid gap-6">
       <Card className="p-4">
         <h1 className="text-xl font-semibold mb-4">Profile</h1>
-        <ProfileForm defaultValues={{ name: user.name ?? "", email: user.email ?? "", phone: user.phone ?? "" }} />
+        <ProfileForm defaultValues={{ name: user.name ?? "", email: user.email ?? "", phone: user.phone ?? "", dateOfBirth: user.dateOfBirth?.toISOString().slice(0, 10) ?? "" }} />
       </Card>
 
       <Card className="p-4">

@@ -25,6 +25,9 @@ export const DOMAIN_EVENT_TYPES = [
   'shipment.created',
   'customer.created',
   'refund.completed',
+  'loyalty.points_earned',
+  'loyalty.tier_upgraded',
+  'newsletter.subscribed',
 ] as const
 
 export type DomainEventType = (typeof DOMAIN_EVENT_TYPES)[number]
@@ -37,6 +40,8 @@ export type DomainEventEntityType =
   | 'customer'
   | 'fulfillment'
   | 'refund'
+  /** A mailing-list address that may have no account; the entity id is the address itself. */
+  | 'subscriber'
 
 export interface DomainEventInput {
   type: DomainEventType

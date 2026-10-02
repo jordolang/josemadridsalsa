@@ -356,6 +356,35 @@ the root `package.json` is canonical.
   and dompurify 3.4.16. Every patch release has the same dependencies as the version it replaces.
   deepmerge-ts stays open on purpose: `@prisma/config` pins it exactly, and its advisory needs a
   crafted recursive object, which Prisma's own config never is.
+- **Email automations enroll on every working trigger.** Only 5 of the 17 builder triggers ever
+  enrolled anyone. Now also: abandoned cart (abandoned-cart cron), birthday (`User.dateOfBirth`, now
+  editable on the account profile), first-order anniversary, re-engagement (last paid order 90–97 days
+  ago), loyalty points earned, loyalty tier upgrade, newsletter subscribed and low stock. Product
+  subscription renewed/expiring/cancelled and Custom have no event source, so the builder shows them as
+  unavailable. Each enrollment carries an idempotency key, so the checkout-complete route and the
+  Stripe webhook no longer enroll the same order twice. "Stop on purchase" now ends a series.
+- **Automation emails carry an unsubscribe link.** Every automation email gets the signed unsubscribe
+  link plus `List-Unsubscribe` / `List-Unsubscribe-Post` one-click headers, and sends skip suppressed
+  or unsubscribed recipients.
+- **TikTok posting succeeds.** TikTok returns `error.code: "ok"` on success; the publisher read any
+  `error.code` as failure, so every post was recorded as failed. Image posts now go to the photo
+  endpoint (`post/publish/content/init`, up to 35 images) instead of the video endpoint.
+- **TikTok Shop sync is signed and uses a shop token.** New `lib/social/tiktok-shop-api.ts` signs every
+  202309 Partner API call (HMAC-SHA256), uses the shop's own access token (refreshed from
+  `TIKTOK_SHOP_REFRESH_TOKEN`) instead of the TikTok posting login, sends `shop_cipher`, uploads images
+  to TikTok, and stocks the shop's sales warehouse. New env vars: `TIKTOK_SHOP_APP_KEY`,
+  `TIKTOK_SHOP_APP_SECRET`, `TIKTOK_SHOP_REFRESH_TOKEN`.
+- **Facebook Marketplace export no longer calls a non-public endpoint.** Meta has no public Marketplace
+  listing API (`commerce_listings` is partner-only). Marketplace exports now sync to the Page's Commerce
+  catalog like Facebook Shop exports, and need a catalog ID; Meta decides Marketplace visibility.
+- **X image posts carry their images.** Uploads used the v1.1 endpoint, which refuses OAuth 2.0 user
+  tokens, and a failed upload was dropped so the post went out text-only. Uploads now use v2
+  `POST /2/media/upload`, and a failed upload fails the post. X connections request `media.write`;
+  **reconnect X** for existing accounts to grant it.
+- **Google Shopping sync moved to the Merchant API.** Content API for Shopping v2.1 was sunset on
+  2026-08-18. Sync now uses Merchant API `products/v1` `productInputs:insert`. New env var:
+  `GOOGLE_MERCHANT_DATA_SOURCE_ID`. The Cloud project also has to be registered with the Merchant Center
+  account once.
 - **iPad kiosk card reader asks for location permission.** Square's Mobile Payments SDK refuses
   payments without it, and the app never asked, so the reader could not take a card.
 - **Storefront type-checks on nodemailer 10.** nodemailer 10 ships its own ESM types with no
