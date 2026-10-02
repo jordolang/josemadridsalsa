@@ -63,6 +63,30 @@ final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUI
         hold.minimumPressDuration = 3
         corner.addGestureRecognizer(hold)
 
+        // Staff button: a faint dot in the bottom-left corner; tap it 3 times quickly.
+        let dot = UIView()
+        dot.translatesAutoresizingMaskIntoConstraints = false
+        let mark = UIView()
+        mark.translatesAutoresizingMaskIntoConstraints = false
+        mark.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+        mark.layer.cornerRadius = 4
+        mark.isUserInteractionEnabled = false
+        dot.addSubview(mark)
+        view.addSubview(dot)
+        NSLayoutConstraint.activate([
+            dot.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            dot.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            dot.widthAnchor.constraint(equalToConstant: 60),
+            dot.heightAnchor.constraint(equalToConstant: 60),
+            mark.widthAnchor.constraint(equalToConstant: 8),
+            mark.heightAnchor.constraint(equalToConstant: 8),
+            mark.centerXAnchor.constraint(equalTo: dot.centerXAnchor),
+            mark.centerYAnchor.constraint(equalTo: dot.centerYAnchor),
+        ])
+        let taps = UITapGestureRecognizer(target: self, action: #selector(staffTaps))
+        taps.numberOfTapsRequired = 3
+        dot.addGestureRecognizer(taps)
+
         statusSub = PrinterHub.shared.$status.sink { [weak self] _ in
             DispatchQueue.main.async { self?.pushStatus() }
         }
@@ -80,6 +104,8 @@ final class KioskWebViewController: UIViewController, WKNavigationDelegate, WKUI
     @objc private func staffHold(_ g: UILongPressGestureRecognizer) {
         if g.state == .began { onStaffGesture?() }
     }
+
+    @objc private func staffTaps() { onStaffGesture?() }
 
     /// Reload with fresh settings (token, URL) baked into the bridge.
     func reload() {
