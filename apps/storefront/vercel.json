@@ -13,6 +13,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "path": "/api/cron/mail-organizer",
+      "schedule": "0 12,13,16,17,21,22 * * *"
+    },
+    {
       "path": "/api/cron/email-automation",
       "schedule": "*/5 * * * *"
     },
