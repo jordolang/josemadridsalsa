@@ -40,37 +40,52 @@ export const PAYMENT_METHODS = {
 
 const MAX_JARS = 500
 
-export const PhoneOrderSchema = z.object({
-  /** Made by the app once per order and reused on retries, so a lost response cannot double it. */
-  clientOrderId: z.string().uuid(),
-  customer: z.object({
-    firstName: z.string().trim().min(1, "Enter the customer's first name").max(50),
-    lastName: z.string().trim().min(1, "Enter the customer's last name").max(50),
-    phone: z.string().trim().min(7, "Enter the customer's phone number").max(40),
-    email: z.string().trim().toLowerCase().email('That email does not look right').optional().or(z.literal('')),
-  }),
-  /** Where the seller will drop the order off. Optional: many are handed over in person. */
-  address: z
-    .object({
-      street: z.string().trim().min(1).max(200),
-      city: z.string().trim().min(1).max(100),
-      state: z.string().trim().min(2).max(50),
-      zipCode: z.string().trim().min(3).max(20),
-    })
-    .optional(),
-  items: z
-    .array(
-      z.object({
-        productId: z.string().min(1).max(64),
-        quantity: z.number().int().min(1).max(MAX_JARS),
+export const PhoneOrderSchema = z
+  .object({
+    /** Made by the app once per order and reused on retries, so a lost response cannot double it. */
+    clientOrderId: z.string().uuid(),
+    /**
+     * Who bought it. Optional for a sale paid on the spot (the register's tap-to-pay or cash sale to
+     * whoever is standing there); required when the seller has to come back to them — pay later, or
+     * a delivery.
+     */
+    customer: z.object({
+      firstName: z.string().trim().min(1, "Enter the customer's first name").max(50),
+      lastName: z.string().trim().min(1, "Enter the customer's last name").max(50),
+      phone: z.string().trim().min(7, "Enter the customer's phone number").max(40),
+      email: z.string().trim().toLowerCase().email('That email does not look right').optional().or(z.literal('')),
+    }).optional(),
+    /** Where the seller will drop the order off. Optional: many are handed over in person. */
+    address: z
+      .object({
+        street: z.string().trim().min(1).max(200),
+        city: z.string().trim().min(1).max(100),
+        state: z.string().trim().min(2).max(50),
+        zipCode: z.string().trim().min(3).max(20),
       })
-    )
-    .min(1, 'Add at least one salsa')
-    .max(100),
-  /** CARD: the phone takes the card next, with Square (see `card-payments.ts`). */
-  payment: z.enum(['CASH', 'CHECK', 'PAY_LATER', 'CARD']),
-  notes: z.string().trim().max(1000).optional(),
-})
+      .optional(),
+    items: z
+      .array(
+        z.object({
+          productId: z.string().min(1).max(64),
+          quantity: z.number().int().min(1).max(MAX_JARS),
+        })
+      )
+      .min(1, 'Add at least one salsa')
+      .max(100),
+    /** CARD: the phone takes the card next, with Square (see `card-payments.ts`). */
+    payment: z.enum(['CASH', 'CHECK', 'PAY_LATER', 'CARD']),
+    notes: z.string().trim().max(1000).optional(),
+  })
+  .superRefine((order, ctx) => {
+    if (!order.customer && (order.payment === 'PAY_LATER' || order.address)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['customer'],
+        message: "Add the customer's name and phone so you can collect or deliver later",
+      })
+    }
+  })
 
 export type PhoneOrderInput = z.infer<typeof PhoneOrderSchema>
 
@@ -156,18 +171,19 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
 
   const card = input.payment === 'CARD'
   const paid = input.payment === 'CASH' || input.payment === 'CHECK'
-  const customerName = `${input.customer.firstName} ${input.customer.lastName}`
+  const customer = input.customer
+  const customerName = customer ? `${customer.firstName} ${customer.lastName}` : null
   const salesChannel = deriveSalesChannel({ fundraiserId: store.fundraiserId, participantId: seller.id })
 
   let order
   try {
     order = await prisma.$transaction(async (tx) => {
-    const address = input.address
+    const address = input.address && customer
       ? await tx.address.create({
           data: {
-            firstName: input.customer.firstName,
-            lastName: input.customer.lastName,
-            phone: input.customer.phone,
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            phone: customer.phone,
             ...input.address,
           },
           select: { id: true },
@@ -177,8 +193,8 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
     const created = await tx.order.create({
       data: {
         orderNumber,
-        guestEmail: input.customer.email || null,
-        guestPhone: input.customer.phone,
+        guestEmail: customer?.email || null,
+        guestPhone: customer?.phone ?? null,
         shippingAddressId: address?.id,
         subtotal: money(subtotal),
         total: money(subtotal),
@@ -195,7 +211,9 @@ export async function createPhoneOrder(session: AppSession, input: PhoneOrderInp
         participantId: seller.id,
         sellerName: seller.name,
         customerNotes: input.notes || null,
-        adminNotes: `Phone order taken in the fundraiser app by ${seller.name} for ${customerName}.`,
+        adminNotes: customerName
+          ? `Phone order taken in the fundraiser app by ${seller.name} for ${customerName}.`
+          : `Walk-up sale taken in the fundraiser app by ${seller.name}.`,
         items: { create: lines },
       },
       select: orderSummarySelect,

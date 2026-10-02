@@ -26,7 +26,7 @@ vi.mock('@/lib/fundraising/credit-commission', () => ({ creditFundraiserCommissi
 vi.mock('@/lib/orders/events', () => ({ emitOrderCreated }))
 vi.mock('@/lib/domain-events/emit', () => ({ emitDomainEvent }))
 
-const { createPhoneOrder, listSellerOrders } = await import('@/lib/fundraiser-app/orders')
+const { PhoneOrderSchema, createPhoneOrder, listSellerOrders } = await import('@/lib/fundraiser-app/orders')
 const { FundraiserAppError } = await import('@/lib/fundraiser-app/errors')
 
 type Session = Parameters<typeof createPhoneOrder>[0]
@@ -175,6 +175,31 @@ describe('createPhoneOrder', () => {
     expect(error).toBeInstanceOf(FundraiserAppError)
     expect(error.status).toBe(403)
     expect(tx.order.create).not.toHaveBeenCalled()
+  })
+
+  it('takes a walk-up sale with no customer details', async () => {
+    const { customer: _omitted, ...walkUp } = order({ payment: 'CARD' })
+    void _omitted
+    const parsed = PhoneOrderSchema.parse(walkUp)
+    const result = await createPhoneOrder(sessionWith(true), parsed)
+    const data = tx.order.create.mock.calls[0][0].data
+    expect(data).toMatchObject({ guestEmail: null, guestPhone: null, paymentProvider: 'SQUARE' })
+    expect(data.adminNotes).toContain('Walk-up sale')
+    expect(result).toMatchObject({ awaitingCard: true, amountCents: 4600 })
+  })
+
+  it('still needs the customer for pay-later and delivery orders', () => {
+    const { customer: _omitted, ...noCustomer } = order({ payment: 'PAY_LATER' })
+    void _omitted
+    expect(PhoneOrderSchema.safeParse(noCustomer).success).toBe(false)
+    expect(
+      PhoneOrderSchema.safeParse({
+        ...noCustomer,
+        payment: 'CASH',
+        address: { street: '1 Main St', city: 'Zanesville', state: 'OH', zipCode: '43701' },
+      }).success
+    ).toBe(false)
+    expect(PhoneOrderSchema.safeParse({ ...noCustomer, payment: 'CASH' }).success).toBe(true)
   })
 
   it('saves a delivery address with the customer name when one is given', async () => {
