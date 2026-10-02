@@ -60,7 +60,7 @@ describe('POST /api/webhooks/resend', () => {
       const response = await POST(
         webhook({
           type: 'email.bounced',
-          data: { email: 'gone@example.com', bounce: { type: 'permanent', message: 'No such user' } },
+          data: { to: ['gone@example.com'], bounce: { type: 'Permanent', message: 'No such user' } },
         })
       )
 
@@ -75,11 +75,22 @@ describe('POST /api/webhooks/resend', () => {
       })
     })
 
+    it('treats a lowercase permanent type as hard too', async () => {
+      await POST(
+        webhook({
+          type: 'email.bounced',
+          data: { to: ['gone@example.com'], bounce: { type: 'permanent', message: 'No such user' } },
+        })
+      )
+
+      expect(addSuppression).toHaveBeenCalledWith('gone@example.com', 'HARD_BOUNCE', 'resend_webhook')
+    })
+
     it('records a soft bounce without suppressing the address', async () => {
       await POST(
         webhook({
           type: 'email.bounced',
-          data: { email: 'full@example.com', bounce: { type: 'transient', message: 'Mailbox full' } },
+          data: { to: ['full@example.com'], bounce: { type: 'Transient', message: 'Mailbox full' } },
         })
       )
 
@@ -92,7 +103,7 @@ describe('POST /api/webhooks/resend', () => {
     })
 
     it('still records a bounce that arrives without a reason', async () => {
-      await POST(webhook({ type: 'email.bounced', data: { email: 'gone@example.com' } }))
+      await POST(webhook({ type: 'email.bounced', data: { to: ['gone@example.com'] } }))
 
       expect(bounceCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({ bounceType: 'SOFT', reason: 'Unknown bounce reason' }),
@@ -103,7 +114,7 @@ describe('POST /api/webhooks/resend', () => {
       await POST(
         webhook({
           type: 'email.bounced',
-          data: { email: 'gone@example.com', bounce: { type: 'permanent' } },
+          data: { to: ['gone@example.com'], bounce: { type: 'Permanent' } },
         })
       )
 
@@ -115,7 +126,7 @@ describe('POST /api/webhooks/resend', () => {
 
   describe('complaints', () => {
     it('suppresses and unsubscribes an address that reported spam', async () => {
-      await POST(webhook({ type: 'email.complained', data: { email: 'Angry@Example.com' } }))
+      await POST(webhook({ type: 'email.complained', data: { to: ['Angry@Example.com'] } }))
 
       expect(addSuppression).toHaveBeenCalledWith(
         'Angry@Example.com',
@@ -135,7 +146,7 @@ describe('POST /api/webhooks/resend', () => {
       ['email.opened', 'OPENED'],
       ['email.clicked', 'CLICKED'],
     ])('advances the log to %s → %s', async (type, status) => {
-      await POST(webhook({ type, data: { email: 'reader@example.com' } }))
+      await POST(webhook({ type, data: { to: ['reader@example.com'] } }))
 
       expect(emailLogUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ status }) })
@@ -144,12 +155,25 @@ describe('POST /api/webhooks/resend', () => {
     })
   })
 
+  describe('matching the message', () => {
+    it('updates only the log for the message the event is about', async () => {
+      await POST(webhook({ type: 'email.opened', data: { email_id: 're_123', to: ['reader@example.com'] } }))
+
+      expect(emailLogUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ metadata: { path: ['messageId'], equals: 're_123' } }),
+        })
+      )
+      expect(emailLogUpdateMany.mock.calls[0][0].where).not.toHaveProperty('recipientEmail')
+    })
+  })
+
   describe('malformed and hostile input', () => {
     it('reads the recipient from the `to` array Resend actually sends', async () => {
       await POST(
         webhook({
           type: 'email.complained',
-          data: { to: [{ email: 'first@example.com' }, { email: 'second@example.com' }] },
+          data: { to: ['first@example.com', 'second@example.com'] },
         })
       )
 
@@ -169,7 +193,7 @@ describe('POST /api/webhooks/resend', () => {
 
     it('ignores an event type it does not handle', async () => {
       const response = await POST(
-        webhook({ type: 'email.delivery_delayed', data: { email: 'slow@example.com' } })
+        webhook({ type: 'email.delivery_delayed', data: { to: ['slow@example.com'] } })
       )
 
       expect(response.status).toBe(200)
@@ -180,7 +204,7 @@ describe('POST /api/webhooks/resend', () => {
       process.env.RESEND_WEBHOOK_SECRET = 'whsec_test'
 
       const response = await POST(
-        webhook({ type: 'email.complained', data: { email: 'forged@example.com' } })
+        webhook({ type: 'email.complained', data: { to: ['forged@example.com'] } })
       )
 
       // Suppression and unsubscribes are destructive to a mailing list, so an unverified caller

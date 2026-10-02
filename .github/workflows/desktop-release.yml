@@ -177,30 +177,11 @@ jobs:
             -exec cp {} release/ \;
           ls -la release
 
-      # One rolling tag holds the current installers. The app's update feed points
-      # at this tag by name, so it cannot be shadowed by a platform release.
-      #
-      # The release is recreated rather than re-uploaded into. `--clobber` deletes
-      # the previous asset before writing the new one, and GitHub's immutable
-      # releases refuse that with "Cannot delete asset from an immutable release",
-      # which failed every rebuild after the first. Deleting the release and its
-      # tag, then creating both again, keeps the tag name — and so the download
-      # URL the update feed is built from — exactly as it was.
-      - name: Publish to the rolling desktop release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view desktop-latest >/dev/null 2>&1; then
-            gh release delete desktop-latest --yes --cleanup-tag
-          fi
-          gh release create desktop-latest release/* \
-            --title "Desktop Apps (latest)" \
-            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel. Rebuilt by the Desktop Apps workflow; always holds the current build."
-
-      # What the installed apps actually read. The GitHub release above is the
-      # archive; the repository is private, so an app with no GitHub session
-      # gets 404 from it and could never update. Fails loudly without its token,
-      # because a build the apps cannot see is not released.
+      # What the installed apps actually read, so it goes first: a build is
+      # released when this step finishes. GitHub releases cannot be the feed —
+      # the repository is private, so an app with no GitHub session gets 404
+      # from them. Fails loudly without its token, because a build the apps
+      # cannot see is not released.
       - name: Publish the update feed
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
@@ -212,12 +193,24 @@ jobs:
           npm install --prefix .github/scripts --no-save --no-package-lock @vercel/blob@2.4.0
           node .github/scripts/publish-desktop-updates.mjs release
 
-      # A tagged run additionally keeps a fixed copy of that build.
-      - name: Publish the tagged release
-        if: startsWith(github.ref, 'refs/tags/desktop-v')
+      # A copy of every build as a GitHub release, for the record. Each gets a
+      # tag of its own: this repository's releases are immutable, and an
+      # immutable release reserves its tag name forever — even after the release
+      # is deleted — so the old rolling `desktop-latest` tag could be used once
+      # and then failed every run after. Marked not-latest so a build never
+      # shadows the platform releases. A pushed desktop-v* tag is used as is.
+      - name: Archive the build as a GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" release/* \
-            --title "Desktop Apps ${GITHUB_REF_NAME}" \
-            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel."
+          if [[ "$GITHUB_REF" == refs/tags/desktop-v* ]]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="desktop-build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          fi
+          VERSION=$(sed -n 's/^version: //p' release/latest.yml)
+          gh release create "$TAG" release/* \
+            --target "$GITHUB_SHA" \
+            --latest=false \
+            --title "Desktop Apps ${VERSION} (${TAG})" \
+            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel, built from ${GITHUB_SHA}. Installed apps update from https://www.josemadrid.net/api/desktop/updates, not from this release."

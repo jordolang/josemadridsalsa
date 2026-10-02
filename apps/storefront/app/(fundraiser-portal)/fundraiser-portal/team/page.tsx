@@ -11,7 +11,7 @@ export default async function TeamPage() {
   const account = await getCurrentFundraiserAccount()
 
   if (!account || !account.fundraiserId) {
-    redirect('/auth/login')
+    redirect('/auth/signin')
   }
 
   return <TeamClient fundraiserId={account.fundraiserId} />

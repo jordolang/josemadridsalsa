@@ -29,6 +29,11 @@ import { findPage, isDesktopSectionId } from '@/lib/admin-desktop/sections'
 
 export const dynamic = 'force-dynamic'
 
+// A CSV export reads up to EXPORT_LIMIT rows through the same loaders the
+// window uses. Measured at about 1.5 s per thousand order rows, so the largest
+// list (some 23,000 customers) needs more than the default function timeout.
+export const maxDuration = 300
+
 const SectionParam = z.string().refine(isDesktopSectionId, 'Unknown section')
 
 export async function GET(request: Request, context: { params: Promise<{ section: string }> }) {
@@ -95,6 +100,15 @@ export async function GET(request: Request, context: { params: Promise<{ section
 }
 
 /**
+ * A cell a spreadsheet will not run. Names, notes and messages come from
+ * customers, and Excel or Sheets evaluate a cell starting with = + - or @ as a
+ * formula, so those get a leading apostrophe, which both show as plain text.
+ */
+function spreadsheetSafe(text: string): string {
+  return /^[=+\-@\t\r]/.test(text) ? `'${text}` : text
+}
+
+/**
  * The rows of a table page as a CSV download, streamed a row at a time because
  * a buffered Vercel response stops at 4.5 MB and the customer list alone is
  * close to that. Null for a page with no table.
@@ -105,7 +119,7 @@ function csvResponse(payload: SectionPayload, query: string, filter: number): Re
 
   const rows = filterRows(body.rows, { query, filter, serverQuery: payload.list?.q })
   const lines = [toCsvRow(body.columns.map((column) => column.label))]
-  for (const row of rows) lines.push(toCsvRow(row.cells.map((cell) => cell.text)))
+  for (const row of rows) lines.push(toCsvRow(row.cells.map((cell) => spreadsheetSafe(cell.text))))
 
   const encoder = new TextEncoder()
   let next = 0

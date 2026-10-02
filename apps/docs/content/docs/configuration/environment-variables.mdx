@@ -83,7 +83,10 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 | `SQUARE_SANDBOX` | No | `true` uses the Square sandbox |
 | `SQUARE_WEBHOOK_SIGNATURE_KEY` | For Square | Verifies inbound webhooks |
 | `SQUARE_WEBHOOK_URL` | For Square | The notification URL the signature is computed against |
-| `SQUARE_TERMINAL_DEVICE_ID` | For [POS](/docs/features/pos) | The Square Terminal to send an in-person charge to |
+| `SQUARE_TERMINAL_DEVICE_ID` | For [POS](/docs/features/pos) and the [kiosk](/docs/features/kiosk) | The Square Terminal to send an in-person charge to |
+| `SQUARE_APPLICATION_ID` | For the iPad [kiosk](/docs/features/kiosk) card reader | Square Developer app ID used for Connect Square (OAuth) |
+| `SQUARE_APPLICATION_SECRET` | For the iPad [kiosk](/docs/features/kiosk) card reader | That app's OAuth application secret |
+| `KIOSK_DEVICE_TOKENS` | For the [kiosk](/docs/features/kiosk) | Comma-separated device tokens (24+ characters each), one per paired kiosk tablet |
 
 ## Webhook Secrets
 

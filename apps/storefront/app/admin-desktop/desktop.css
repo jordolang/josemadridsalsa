@@ -721,6 +721,14 @@
   flex-wrap: wrap;
 }
 
+.jmsd-bulkbar-note {
+  color: var(--faint);
+}
+
+.jmsd-bulkbar-clear {
+  margin-left: auto;
+}
+
 .jmsd-bulkbar-count {
   font-weight: 600;
   margin-right: 4px;

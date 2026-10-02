@@ -1,0 +1,2 @@
+// Signing.xcconfig is optional so the project still opens before it exists.
+#include? "Signing.xcconfig"

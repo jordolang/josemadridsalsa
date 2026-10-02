@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { SquareClient, SquareEnvironment } from 'square'
-import { randomUUID } from 'crypto'
-import prisma from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
-import { reserveMultipleProducts, releaseInventory } from '@/lib/inventory-manager'
-import { emitOrderCreated } from '@/lib/orders/events'
+import { createTerminalCheckout, TerminalCheckoutError } from '@/lib/pos/terminal-checkout'
 
 const TerminalCheckoutSchema = z.object({
   items: z
@@ -25,34 +20,10 @@ const TerminalCheckoutSchema = z.object({
   deviceId: z.string().optional().default('default'),
 })
 
-const toDecimal = (value: number) =>
-  new Prisma.Decimal(value.toFixed(2))
-
-const generateOrderNumber = () => {
-  const now = new Date()
-  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '')
-  const randomPart = Math.floor(Math.random() * 9000 + 1000)
-  return `POS-${datePart}-${randomPart}`
-}
-
-function getSquareClient(): SquareClient {
-  const accessToken = process.env.SQUARE_ACCESS_TOKEN
-  if (!accessToken) {
-    throw new Error('Square credentials not configured. Set SQUARE_ACCESS_TOKEN.')
-  }
-
-  return new SquareClient({
-    token: accessToken,
-    environment: process.env.SQUARE_SANDBOX !== 'false'
-      ? SquareEnvironment.Sandbox
-      : SquareEnvironment.Production,
-  })
-}
-
 export async function POST(request: NextRequest) {
   try {
     // POS requires admin/staff access
-    await requirePermission('orders:create')
+    await requirePermission('orders:write')
 
     const json = await request.json()
     const parsed = TerminalCheckoutSchema.safeParse(json)
@@ -66,161 +37,24 @@ export async function POST(request: NextRequest) {
 
     const { items, total, taxAmount, deviceId } = parsed.data
 
-    // Resolve actual device ID from environment if 'default'
-    const resolvedDeviceId = deviceId === 'default'
-      ? process.env.SQUARE_TERMINAL_DEVICE_ID || ''
-      : deviceId
+    const { checkoutId, orderNumber } = await createTerminalCheckout({
+      items: items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        sku: item.sku,
+        unitPriceCents: Math.round(item.price * 100),
+        quantity: item.quantity,
+      })),
+      taxCents: taxAmount,
+      totalCents: total,
+      deviceId,
+    })
 
-    if (!resolvedDeviceId) {
-      return NextResponse.json(
-        { error: 'No Square Terminal device configured. Set SQUARE_TERMINAL_DEVICE_ID.' },
-        { status: 503 }
-      )
-    }
-
-    // Calculate subtotal from items
-    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    const taxDollars = taxAmount / 100
-    const totalDollars = total / 100
-
-    // Costs come from the database, not the till payload — the client has no business
-    // asserting what stock cost us, and a POS sale should be as margin-visible as a web one.
-    const costByProduct = new Map(
-      (
-        await prisma.product.findMany({
-          where: { id: { in: items.map((item) => item.productId) } },
-          select: { id: true, costPrice: true },
-        })
-      ).map((product) => [product.id, product.costPrice])
-    )
-
-    // Build order items for DB
-    const orderItems = items.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      unitPrice: toDecimal(item.price),
-      // Snapshotted at the moment of sale; null stays null rather than becoming zero.
-      unitCost: costByProduct.get(item.productId) ?? undefined,
-      totalPrice: toDecimal(item.price * item.quantity),
-      productName: item.name,
-      productSku: item.sku ?? '',
-    }))
-
-    // Reserve inventory
-    try {
-      await reserveMultipleProducts(
-        items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          notes: 'POS terminal checkout reservation',
-        }))
-      )
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unable to reserve inventory'
-      return NextResponse.json({ error: message }, { status: 400 })
-    }
-
-    // Tracked so the catch below can mark the order as already-released, keeping the
-    // expire-pending-orders sweep from releasing the same reservation twice.
-    let createdOrderId: string | null = null
-
-    // Create DB order, then Square Terminal checkout. Release inventory on failure.
-    try {
-      const orderNumber = generateOrderNumber()
-
-      const order = await prisma.order.create({
-        data: {
-          orderNumber,
-          subtotal: toDecimal(subtotal),
-          shippingCost: toDecimal(0),
-          tax: toDecimal(taxDollars),
-          discountAmount: toDecimal(0),
-          total: toDecimal(totalDollars),
-          paymentStatus: 'PENDING',
-          status: 'PENDING',
-          paymentProvider: 'SQUARE',
-          paymentChannel: 'POS',
-          salesChannel: 'POS',
-          shippingMethod: 'IN_STORE_PICKUP',
-          items: {
-            create: orderItems,
-          },
-        },
-      })
-
-      createdOrderId = order.id
-
-      await emitOrderCreated({
-        id: order.id,
-        orderNumber: order.orderNumber,
-        total: order.total,
-        salesChannel: order.salesChannel,
-        itemCount: orderItems.length,
-      })
-
-      // Create Square Terminal Checkout
-      const client = getSquareClient()
-      const response = await client.terminal.checkouts.create({
-        idempotencyKey: randomUUID(),
-        checkout: {
-          amountMoney: {
-            amount: BigInt(total),
-            currency: 'USD',
-          },
-          referenceId: order.id,
-          note: `Order ${orderNumber}`,
-          deviceOptions: {
-            deviceId: resolvedDeviceId,
-          },
-        },
-      })
-
-      const terminalCheckout = response.checkout
-      if (!terminalCheckout?.id) {
-        throw new Error('Square Terminal did not return a checkout ID')
-      }
-
-      // Store the terminal checkout ID on the order
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          providerPaymentId: terminalCheckout.id,
-        },
-      })
-
-      return NextResponse.json({
-        checkoutId: terminalCheckout.id,
-        orderNumber,
-      })
-    } catch (postReservationError) {
-      // Release inventory on failure
-      console.error('[POS] Terminal checkout creation failed, releasing inventory:', postReservationError)
-      for (const item of items) {
-        try {
-          await releaseInventory({
-            productId: item.productId,
-            quantity: item.quantity,
-            notes: 'POS terminal checkout failed - releasing reservation',
-          })
-        } catch (releaseError) {
-          console.error('[POS] Failed to release reservation:', releaseError)
-        }
-      }
-      // The reservation is back, but the order row survives this failure as PENDING.
-      // Mark it so the expire-pending-orders sweep does not release it a second time.
-      if (createdOrderId) {
-        await prisma.order
-          .updateMany({
-            where: { id: createdOrderId, inventoryReleasedAt: null },
-            data: { inventoryReleasedAt: new Date() },
-          })
-          .catch((markError) =>
-            console.error('[POS] Failed to mark reservation released:', markError)
-          )
-      }
-      throw postReservationError
-    }
+    return NextResponse.json({ checkoutId, orderNumber })
   } catch (error) {
+    if (error instanceof TerminalCheckoutError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },

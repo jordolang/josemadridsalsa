@@ -511,13 +511,18 @@ is the supported way to get a `.dmg` without installing Xcode locally.
 ### Releasing both
 
 The **Desktop Apps** workflow (`.github/workflows/desktop-release.yml`) builds the Windows
-installer on `windows-latest` and the macOS app on `macos-15`, then publishes both to the
-rolling `desktop-latest` release and to the update feed. Run it from the Actions tab, or push a
-`desktop-v*` tag to also keep a fixed copy under that tag.
+installer on `windows-latest` and the macOS app on `macos-15`, then publishes both to the update
+feed and archives the build as a GitHub release. Run it from the Actions tab, or push a
+`desktop-v*` tag to archive under that tag instead.
+
+Each archive gets its own tag (`desktop-build-<run>-<attempt>`). This repository's releases are
+immutable, and an immutable release reserves its tag name forever, even after it is deleted, so a
+reused tag such as the old rolling `desktop-latest` fails every run after the first. Archives are
+marked not-latest so they never shadow the platform releases.
 
 **The update feed is not GitHub.** The repository is private, so its release assets answer 404
 to an app with no GitHub session — an app pointed there would never see an update. Instead the
-workflow's last step (`.github/scripts/publish-desktop-updates.mjs`) uploads the build to the
+workflow's publish step (`.github/scripts/publish-desktop-updates.mjs`) uploads the build to the
 public Vercel Blob store under `desktop/`, and both apps read it through the storefront at
 `https://www.josemadrid.net/api/desktop/updates/<file>`, which redirects there. That address is
 baked into every installed copy, so the files can move without breaking updates. The installers

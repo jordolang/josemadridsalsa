@@ -323,7 +323,7 @@ describe('Payment API', () => {
         'pi_existing123',
         {
           payment_method: 'pm_card_visa',
-          return_url: expect.stringContaining('/orders/claaa1234567890abc'),
+          return_url: expect.stringContaining('/order-confirmation/claaa1234567890abc'),
         }
       )
 

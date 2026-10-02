@@ -53,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const CATEGORY_TILES = [
   {
-    href: '/products?heat=mild',
+    href: '/products?heatLevel=MILD',
     eyebrow: 'Mild & Sweet',
     title: 'Mild',
     body: 'Perfect for those who enjoy flavor without the heat. Great for kids and mild palates.',
@@ -61,7 +61,7 @@ const CATEGORY_TILES = [
     tone: 'verde' as const,
   },
   {
-    href: '/products?heat=medium',
+    href: '/products?heatLevel=MEDIUM',
     eyebrow: 'Medium Heat',
     title: 'Medium',
     body: 'The perfect balance of flavor and heat. Our most popular choice for everyday enjoyment.',
@@ -69,7 +69,7 @@ const CATEGORY_TILES = [
     tone: 'chile' as const,
   },
   {
-    href: '/products?heat=hot',
+    href: '/products?heatLevel=HOT',
     eyebrow: 'Hot & Spicy',
     title: 'Hot',
     body: 'For those who love the heat — bold flavors with a serious kick that builds with each bite.',
