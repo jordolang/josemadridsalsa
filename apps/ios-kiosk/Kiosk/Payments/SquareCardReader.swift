@@ -1,3 +1,4 @@
+import CoreBluetooth
 import CoreLocation
 import Foundation
 import SquareMobilePaymentsSDK
@@ -61,6 +62,8 @@ final class SquareCardReader: NSObject, ObservableObject {
     private var finishPayment: ((PaymentResult) -> Void)?
     /// Square refuses payments until the app holds location permission, so we ask for it here.
     private let locationManager = CLLocationManager()
+    /// Pairing fails at once with "unknown Bluetooth error" if this is still undecided, so ask up front.
+    private var bluetoothPrompt: CBCentralManager?
     #if canImport(MockReaderUI)
     private var mockReader: MockReaderUI?
     #endif
@@ -94,6 +97,15 @@ final class SquareCardReader: NSObject, ObservableObject {
             locationManager.requestWhenInUseAuthorization()
         case .denied, .restricted:
             state = .failed("Allow Location: Settings › Jose Madrid Kiosk › Location › While Using")
+            return
+        default:
+            break
+        }
+        switch CBCentralManager.authorization {
+        case .notDetermined:
+            bluetoothPrompt = CBCentralManager(delegate: nil, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: false])
+        case .denied, .restricted:
+            state = .failed("Allow Bluetooth: Settings › Jose Madrid Kiosk › Bluetooth")
             return
         default:
             break
