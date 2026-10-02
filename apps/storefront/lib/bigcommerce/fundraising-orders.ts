@@ -189,26 +189,31 @@ export type BigCommerceArenaSale = {
  *
  * Replay-safe the same way `payment.completed` is: the order id lands in the unique
  * `FundraiserSaleEvent.orderId`, so the hourly sweep and re-delivered webhooks strike once.
- * Orders placed before the team existed (a history backfill) never strike. A failure is logged,
- * not thrown — the copy is already saved, and the next sweep of the order tries again.
+ * Only an order placed during the team's current battle strikes — `applyPurchaseDamage` refuses
+ * anything older, so a history backfill or a late catch-up never does. A failure is logged, not
+ * thrown — the copy is already saved, and the next sweep of the order tries again.
  */
 export async function dealBigCommerceArenaDamage(sale: BigCommerceArenaSale): Promise<void> {
   if (sale.saleAmount <= 0) return
   const team = await prisma.fundraiserTeam.findUnique({
     where: { fundraiserId: sale.fundraiserId },
-    select: { id: true, status: true, createdAt: true },
+    select: { id: true, status: true },
   })
-  if (!team || team.status !== 'ACTIVE' || sale.orderDate < team.createdAt) {
-    if (team) console.info('[bigcommerce] fundraising order not dealt arena damage', { orderId: sale.orderId, teamId: team.id })
-    return
-  }
+  if (!team || team.status !== 'ACTIVE') return
   try {
-    await applyPurchaseDamage({
+    const result = await applyPurchaseDamage({
       sellingTeamId: team.id,
       saleAmount: sale.saleAmount,
+      placedAt: sale.orderDate,
       orderId: sale.orderId,
       donor: { email: sale.donorEmail },
     })
+    if (result.skipped) {
+      console.info('[bigcommerce] fundraising order placed outside the battle, no damage', {
+        orderId: sale.orderId,
+        teamId: team.id,
+      })
+    }
   } catch (error) {
     console.error('[bigcommerce] arena damage failed for fundraising order', { orderId: sale.orderId, error })
   }

@@ -355,6 +355,13 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Only sales made during a battle deal arena damage.** `applyPurchaseDamage` now takes the
+  sale's `placedAt` (the order's own creation time) and refuses any sale placed before the team
+  joined or outside its current battle (the season's start/end, else the period month). Past
+  orders reaching the arena late — the BigCommerce mirror catching up, a history backfill, a
+  payment confirmed late for a stale order, an order that only now reads "shipped" — record
+  nothing and damage nobody. Applies to every caller: checkout and POS payments, the Stripe
+  donation webhooks, the partner sale API and the BigCommerce mirror.
 - **Follow-ups from #541's review.** Stripe and PayPal webhook payments now record `paidAt`, which
   the automation purchase stop reads, so a Stripe-paid abandoned checkout stops its series. The
   re-engagement scan is bounded again (oldest orders first, at most 500 address checks a tick). Forged

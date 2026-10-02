@@ -34,6 +34,7 @@ const paidOrder = {
   userId: null,
   fundraiserId: 'f_1',
   user: null,
+  createdAt: new Date('2026-04-15T12:00:00Z'),
 }
 
 beforeEach(() => {
@@ -50,6 +51,19 @@ describe('handleArenaDamage', () => {
 
     expect(applyPurchaseDamage).toHaveBeenCalledWith(
       expect.objectContaining({ sellingTeamId: 'team_1', saleAmount: 60, orderId: 'order_1' })
+    )
+  })
+
+  it("dates the sale by when the order was placed, not when payment settled", async () => {
+    // A payment confirmed late for a stale order must be judged by the order's own date, so
+    // applyPurchaseDamage can refuse anything placed outside the current battle.
+    orderFindUnique.mockResolvedValue(paidOrder)
+    teamFindUnique.mockResolvedValue({ id: 'team_1', status: 'ACTIVE' })
+
+    await handleArenaDamage(event)
+
+    expect(applyPurchaseDamage).toHaveBeenCalledWith(
+      expect.objectContaining({ placedAt: new Date('2026-04-15T12:00:00Z') })
     )
   })
 

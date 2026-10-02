@@ -12,6 +12,11 @@ import {
 export type PurchaseDamageInput = {
   sellingTeamId: string
   saleAmount: number
+  /**
+   * When the sale was made — the order's creation time, not when it reached us. Only a sale
+   * placed during the team's current battle deals damage; see `isPlacedDuringBattle`.
+   */
+  placedAt: Date
   orderId?: string | null
   /**
    * Period is required to scope "opponents" to the same cohort. If omitted,
@@ -48,6 +53,40 @@ export type PurchaseDamageResult = {
     emote: EmoteClass
   }>
   idempotentHit?: boolean
+  /**
+   * Set when the sale was placed outside the current battle (before the team joined, or
+   * outside the season / period window). Nothing was written and nobody was damaged.
+   */
+  skipped?: 'placed-outside-battle'
+}
+
+/** A month period `YYYY-MM` as a half-open UTC window, matching how the season form dates them. */
+function periodWindow(period: string): { start: Date; end: Date } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(period)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  return { start: new Date(Date.UTC(year, month - 1, 1)), end: new Date(Date.UTC(year, month, 1)) }
+}
+
+/**
+ * Whether a sale belongs to the battle it would strike.
+ *
+ * Damage is for live sales during a battle. Past orders — a history import, the BigCommerce
+ * mirror catching up, a late webhook for a stale order, a status that only now reads
+ * "shipped" — must never hit the current battle's teams, so the sale has to have been placed
+ * after the team joined and inside the battle: the season's own start/end when the team is in
+ * one, otherwise the period month.
+ */
+export function isPlacedDuringBattle(
+  placedAt: Date,
+  team: { createdAt: Date; activePeriod: string; season: { startsAt: Date; endsAt: Date } | null },
+  period: string,
+): boolean {
+  if (Number.isNaN(placedAt.getTime()) || placedAt < team.createdAt) return false
+  if (team.season) return placedAt >= team.season.startsAt && placedAt <= team.season.endsAt
+  const window = periodWindow(period)
+  return window !== null && placedAt >= window.start && placedAt < window.end
 }
 
 /**
@@ -73,7 +112,8 @@ export async function applyPurchaseDamage(
         id: true,
         activePeriod: true,
         status: true,
-        season: { select: { rulesJson: true } },
+        createdAt: true,
+        season: { select: { rulesJson: true, startsAt: true, endsAt: true } },
       },
     })
     if (!seller || seller.status !== 'ACTIVE') {
@@ -81,6 +121,16 @@ export async function applyPurchaseDamage(
     }
 
     const period = input.period ?? seller.activePeriod
+
+    if (!isPlacedDuringBattle(input.placedAt, seller, period)) {
+      return {
+        saleEventId: null,
+        sellingTeamId: seller.id,
+        totalDamageDealt: 0,
+        damagedTeams: [],
+        skipped: 'placed-outside-battle',
+      }
+    }
     // Per-season tunables. `resolveRules(null)` returns DEFAULT_RULES, so
     // teams without a season (back-compat rows) behave exactly as before.
     const rules: ResolvedRules = resolveRules(

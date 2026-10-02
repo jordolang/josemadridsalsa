@@ -525,6 +525,7 @@ export async function POST(request: Request) {
             const result = await applyPurchaseDamage({
               sellingTeamId: fundraiserTeamId,
               saleAmount: amountDollars,
+              placedAt: new Date(checkoutSession.created * 1000),
               orderId: checkoutSession.id,
               sellingCharacterId: extractFundraiserCharacterId(checkoutSession),
               donor,
@@ -659,6 +660,7 @@ export async function POST(request: Request) {
             const result = await applyPurchaseDamage({
               sellingTeamId: fundraiserTeamId,
               saleAmount: amountDollars,
+              placedAt: new Date(invoice.created * 1000),
               orderId: invoice.id ?? undefined,
               sellingCharacterId: extractFundraiserCharacterId(metaSource),
               donor,
