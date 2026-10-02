@@ -345,9 +345,12 @@ the root `package.json` is canonical.
   listed explicitly.
 - **A kiosk retry can't start a second charge.** The tablet sends a per-payment attempt id, reused
   only when a request got no answer; it becomes the Square idempotency key and fixes the order
-  number, so a retry finds the checkout already on the Terminal.
-- **Android kiosk reports receipts that didn't print.** Printing waits for the USB transfer, so a
-  jam or unplugged printer shows "Ask a team member for your receipt" instead of a false success.
+  number (independent of the date), so a retry finds the checkout already on the Terminal, or
+  goes straight to the receipt if the customer already paid.
+- **Android kiosk reports receipts that didn't print.** Printing waits for the USB transfer and asks
+  the printer for its status (out of paper, cover open, error) before and after, so the
+  confirmation screen says "Ask a team member for your receipt" instead of a false success.
+  Printers without a status channel can't be checked.
 - **Staff POS could not take a card payment.** `POST /api/pos/create-terminal-checkout` required a
   permission named `orders:create`, which is never seeded (the real one is `orders:write`), so it
   answered 403 Forbidden to every staff member. It now checks `orders:write`.

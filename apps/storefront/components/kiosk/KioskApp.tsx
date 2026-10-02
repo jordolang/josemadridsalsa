@@ -42,7 +42,11 @@ interface Done {
 const POLL_MS = 2000
 
 /** The server answered with an error, as opposed to the request never arriving. */
-class KioskHttpError extends Error {}
+class KioskHttpError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+  }
+}
 
 async function kioskFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -51,7 +55,7 @@ async function kioskFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...kioskAuthHeaders(), ...init?.headers },
   })
   const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new KioskHttpError(body.error ?? `Request failed (${response.status})`)
+  if (!response.ok) throw new KioskHttpError(body.error ?? `Request failed (${response.status})`, response.status)
   return body as T
 }
 
@@ -235,19 +239,22 @@ export function KioskApp() {
     setPayment({ phase: 'starting', checkoutId: null, orderNumber: null, quote, error: null })
     attemptRef.current ??= crypto.randomUUID()
     try {
-      const result = await kioskFetch<{ checkoutId: string; orderNumber: string; quote: KioskQuote }>('/api/kiosk/checkout', {
+      const result = await kioskFetch<{ checkoutId: string; orderNumber: string; quote: KioskQuote; alreadyPaid: boolean }>('/api/kiosk/checkout', {
         method: 'POST',
         body: JSON.stringify({ items: lines.map((l) => ({ key: l.flavor.key, quantity: l.qty })), attemptId: attemptRef.current }),
       })
+      // A retry that finds the customer already paid goes straight to the receipt.
+      if (result.alreadyPaid) return finish(result.orderNumber, result.quote, lines)
       setPayment({ phase: 'waiting', checkoutId: result.checkoutId, orderNumber: result.orderNumber, quote: result.quote, error: null })
     } catch (error) {
-      // The server answered, so nothing is pending on the Terminal; a retry is a new attempt.
-      // With no answer the checkout may exist, so "Try again" reuses the id to find it.
-      if (error instanceof KioskHttpError) attemptRef.current = null
+      // Only a definite refusal (bad cart, sold out, not paired) proves nothing reached the
+      // Terminal, so only then is a retry a new attempt. No answer, "still starting" (409) or
+      // a server error may mean the checkout exists, so "Try again" reuses the id to find it.
+      if (error instanceof KioskHttpError && error.status < 500 && error.status !== 409) attemptRef.current = null
       setPayment({ phase: 'failed', checkoutId: null, orderNumber: null, quote, error: error instanceof Error ? error.message : 'Payment failed' })
       void loadCatalog()
     }
-  }, [jars, lines, quote, loadCatalog])
+  }, [jars, lines, quote, loadCatalog, finish])
 
   const cancelPayment = useCallback(async () => {
     if (!payment?.checkoutId) return

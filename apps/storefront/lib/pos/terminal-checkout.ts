@@ -70,11 +70,11 @@ export function getSquareClient(): SquareClient {
 const centsToDecimal = (cents: number) => new Prisma.Decimal((cents / 100).toFixed(2))
 
 const generateOrderNumber = (prefix: string, attemptId?: string) => {
+  // A retried attempt must land on the same order whenever it arrives, so its number
+  // comes from the attempt alone, never from the clock.
+  if (attemptId) return `${prefix}-${attemptId.replace(/-/g, '').slice(0, 12).toUpperCase()}`
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  const uniquePart = attemptId
-    ? attemptId.replace(/-/g, '').slice(0, 8).toUpperCase()
-    : String(Math.floor(Math.random() * 9000 + 1000))
-  return `${prefix}-${datePart}-${uniquePart}`
+  return `${prefix}-${datePart}-${Math.floor(Math.random() * 9000 + 1000)}`
 }
 
 export async function createTerminalCheckout(input: CreateTerminalCheckoutInput) {
@@ -84,19 +84,18 @@ export async function createTerminalCheckout(input: CreateTerminalCheckoutInput)
   if (attemptId) {
     const existing = await prisma.order.findUnique({
       where: { orderNumber },
-      select: {
-        id: true,
-        providerPaymentId: true,
-        payments: { select: { squareTerminalCheckoutId: true } },
-      },
+      select: { id: true, providerPaymentId: true, paymentStatus: true },
     })
     if (existing) {
-      // A paid order's providerPaymentId may already be the Square payment id.
-      const checkoutId = existing.payments.find((p) => p.squareTerminalCheckoutId)?.squareTerminalCheckoutId ?? existing.providerPaymentId
-      if (!checkoutId) {
+      // Paid before the retry arrived: the Square webhook has replaced providerPaymentId
+      // with the payment id, so there is no checkout to poll; the sale is simply done.
+      if (existing.paymentStatus === 'PAID' || existing.paymentStatus === 'SUCCEEDED') {
+        return { checkoutId: existing.providerPaymentId ?? '', orderId: existing.id, orderNumber, alreadyPaid: true }
+      }
+      if (!existing.providerPaymentId) {
         throw new TerminalCheckoutError('That payment is still starting. Please try again in a moment.', 409)
       }
-      return { checkoutId, orderId: existing.id, orderNumber }
+      return { checkoutId: existing.providerPaymentId, orderId: existing.id, orderNumber, alreadyPaid: false }
     }
   }
 
@@ -203,7 +202,7 @@ export async function createTerminalCheckout(input: CreateTerminalCheckoutInput)
       data: { providerPaymentId: terminalCheckout.id },
     })
 
-    return { checkoutId: terminalCheckout.id, orderId: order.id, orderNumber }
+    return { checkoutId: terminalCheckout.id, orderId: order.id, orderNumber, alreadyPaid: false }
   } catch (postReservationError) {
     console.error(`[${orderPrefix}] Terminal checkout creation failed, releasing inventory:`, postReservationError)
     for (const item of items) {

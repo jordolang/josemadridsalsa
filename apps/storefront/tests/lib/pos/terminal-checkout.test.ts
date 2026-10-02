@@ -109,20 +109,31 @@ describe('createTerminalCheckout retries', () => {
   }
 
   it('returns the checkout already sent instead of creating a second one', async () => {
-    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: 'chk_9', payments: [] })
+    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: 'chk_9', paymentStatus: 'PENDING' })
     const result = await createTerminalCheckout(input)
-    expect(result).toMatchObject({ checkoutId: 'chk_9', orderId: 'o1' })
-    expect(result.orderNumber).toMatch(/^KIOSK-\d{8}-3F9A1C2B$/)
+    expect(result).toMatchObject({ checkoutId: 'chk_9', orderId: 'o1', alreadyPaid: false })
     expect(db.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { orderNumber: result.orderNumber } }))
   })
 
-  it('finds the checkout of an already-paid retry through its payment', async () => {
-    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: 'pay_1', payments: [{ squareTerminalCheckoutId: 'chk_9' }] })
-    await expect(createTerminalCheckout(input)).resolves.toMatchObject({ checkoutId: 'chk_9' })
+  it('gives the same order number for the same attempt on any day', async () => {
+    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: 'chk_9', paymentStatus: 'PENDING' })
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-02T23:59:59Z'))
+    const before = await createTerminalCheckout(input)
+    vi.setSystemTime(new Date('2026-10-03T00:00:01Z'))
+    const after = await createTerminalCheckout(input)
+    vi.useRealTimers()
+    expect(before.orderNumber).toBe('KIOSK-3F9A1C2B0000')
+    expect(after.orderNumber).toBe(before.orderNumber)
+  })
+
+  it('reports an attempt the customer already paid for instead of a checkout to poll', async () => {
+    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: 'pay_1', paymentStatus: 'PAID' })
+    await expect(createTerminalCheckout(input)).resolves.toMatchObject({ orderId: 'o1', alreadyPaid: true })
   })
 
   it('asks for a moment when the first attempt has not reached Square yet', async () => {
-    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: null, payments: [] })
+    db.findUnique.mockResolvedValue({ id: 'o1', providerPaymentId: null, paymentStatus: 'PENDING' })
     await expect(createTerminalCheckout(input)).rejects.toMatchObject({ status: 409 })
   })
 })
