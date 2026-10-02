@@ -131,6 +131,15 @@ It finds the payment in Square by the order's reference, so the customer is neve
 **Cancel card order** cancels the order unless Square shows it was paid after all; the cart stays
 filled so the seller can pick another way to pay.
 
+If the app is closed mid-sale, the order shows in **My orders** as *Card not finished*, with
+**Finish card payment** (checks Square first, then charges only if nothing went through) and
+**Cancel this order**. A card order the app canceled is still recorded as paid if Square later
+shows a completed payment for it, so a charged customer is never left without an order.
+
+The Square webhook settles fundraiser-app card orders (`APP-…`) through the same checks as the
+app, so a payment for the wrong amount or at another location never marks one paid, whichever
+arrives first.
+
 Signing out of the phone also signs the SDK out of Square. Turning card payments off for a group
 stops new card orders and new Square sign-ins straight away.
 
