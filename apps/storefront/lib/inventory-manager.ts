@@ -72,7 +72,7 @@ function computeStockStatus(available: number, lowStockThreshold: number): Stock
  * Retry a Prisma serializable transaction up to maxRetries times on P2034
  * (serialization conflict / write conflict).
  */
-async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+export async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {

@@ -364,6 +364,32 @@ describe('DesktopShell', () => {
     expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).not.toBeInTheDocument()
   })
 
+  it('lets Space press a focused button instead of marking a row', () => {
+    renderShell()
+    const button = screen.getByRole('button', { name: 'Export CSV' })
+    button.focus()
+    fireEvent.keyDown(button, { key: ' ' })
+    expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).not.toBeInTheDocument()
+  })
+
+  it('does not search again and again when the filter is longer than the server takes', async () => {
+    const long = 'x'.repeat(260)
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      // The server cuts the search to 200 characters.
+      json: () =>
+        Promise.resolve({ ...payload, list: { q: 'x'.repeat(200), limit: 250, more: true, searchable: true } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderAt({ ...payload, list: { q: '', limit: 250, more: true, searchable: true } })
+
+    fireEvent.change(screen.getByPlaceholderText(/Filter this table/), { target: { value: long } })
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('marks a run of rows with Shift and clears them with Escape', () => {
     renderShell()
     fireEvent.click(screen.getAllByRole('option')[1], { shiftKey: true })

@@ -13,7 +13,7 @@ export default async function EditTeamPage({ params }: Props) {
   try {
     await requireAdminSession()
   } catch {
-    redirect('/admin/login')
+    redirect('/auth/signin?callbackUrl=/admin')
   }
 
   const { teamId } = await params

@@ -1,0 +1,115 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const findMany = vi.fn()
+const createTerminalCheckout = vi.fn()
+const createReaderOrder = vi.fn()
+
+vi.mock('@/lib/prisma', () => ({ default: { product: { findMany: (...a: unknown[]) => findMany(...a) } } }))
+vi.mock('@/lib/pos/terminal-checkout', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/pos/terminal-checkout')>()
+  return { ...actual, createTerminalCheckout: (...a: unknown[]) => createTerminalCheckout(...a) }
+})
+
+vi.mock('@/lib/pos/reader-checkout', () => ({ createReaderOrder: (...a: unknown[]) => createReaderOrder(...a) }))
+
+import { KioskCartSchema, startKioskCheckout } from '@/lib/kiosk/checkout'
+import { TerminalCheckoutError } from '@/lib/pos/terminal-checkout'
+
+const products = [
+  { id: 'p-mango', name: 'Mango Habanero Salsa', sku: 'MH', barcode: '093662452973', inventory: 9, stockReserved: 0, isActive: true },
+  { id: 'p-mild', name: 'Mild', sku: 'MI', barcode: null, inventory: 9, stockReserved: 0, isActive: true },
+]
+
+beforeEach(() => {
+  findMany.mockResolvedValue(products)
+  createTerminalCheckout.mockReset().mockResolvedValue({ checkoutId: 'chk_1', orderId: 'o1', orderNumber: 'KIOSK-1' })
+  createReaderOrder.mockReset().mockResolvedValue({ orderId: 'o7', alreadyPaid: false })
+})
+
+describe('startKioskCheckout', () => {
+  it('prices the cart on the server from the booth sign', async () => {
+    const result = await startKioskCheckout({
+      items: [
+        { key: 'mango-habanero', quantity: 3 },
+        { key: 'original-mild', quantity: 1 },
+      ],
+    })
+
+    expect(createTerminalCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({ productId: 'p-mango', unitPriceCents: 1000, quantity: 3 }),
+          expect.objectContaining({ productId: 'p-mild', unitPriceCents: 1000, quantity: 1 }),
+        ],
+        discountCents: 800,
+        totalCents: 3200,
+        orderPrefix: 'KIOSK',
+        adminNotes: 'Self-order kiosk · 4-jar deal',
+      })
+    )
+    expect(result).toMatchObject({ checkoutId: 'chk_1', quote: { totalCents: 3200, savingsCents: 800 } })
+  })
+
+  it('passes the attempt id through for retry-safe checkouts', async () => {
+    const attemptId = '3f9a1c2b-0000-4000-8000-000000000000'
+    await startKioskCheckout({ items: [{ key: 'original-mild', quantity: 1 }], attemptId })
+    expect(createTerminalCheckout).toHaveBeenCalledWith(expect.objectContaining({ attemptId }))
+  })
+
+  it('merges repeated lines and notes free chips', async () => {
+    await startKioskCheckout({
+      items: [
+        { key: 'mango-habanero', quantity: 2 },
+        { key: 'mango-habanero', quantity: 3 },
+      ],
+    })
+    expect(createTerminalCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [expect.objectContaining({ productId: 'p-mango', quantity: 5 })],
+        totalCents: 4000,
+        adminNotes: 'Self-order kiosk · Show Special · 1 free bag(s) of chips',
+      })
+    )
+  })
+
+  it('refuses flavors it does not know or cannot sell', async () => {
+    await expect(startKioskCheckout({ items: [{ key: 'nope', quantity: 1 }] })).rejects.toMatchObject({ status: 400 })
+    await expect(startKioskCheckout({ items: [{ key: 'peach-mild', quantity: 1 }] })).rejects.toBeInstanceOf(
+      TerminalCheckoutError
+    )
+    expect(createTerminalCheckout).not.toHaveBeenCalled()
+  })
+})
+
+describe('startKioskCheckout on the iPad card reader', () => {
+  it('records the priced order for the reader and never touches the Terminal', async () => {
+    const attemptId = '11111111-2222-4333-8444-555555555555'
+    const result = await startKioskCheckout({ items: [{ key: 'mango-habanero', quantity: 4 }], attemptId, method: 'reader' })
+
+    expect(createTerminalCheckout).not.toHaveBeenCalled()
+    expect(createReaderOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalCents: 3200,
+        taxCents: 0,
+        orderPrefix: 'KIOSK',
+        // The same attempt always lands on the same order number, so a retry finds it.
+        orderNumber: 'KIOSK-111111112222',
+        items: [expect.objectContaining({ productId: 'p-mango', unitPriceCents: 1000, quantity: 4 })],
+      })
+    )
+    expect(result).toMatchObject({ checkoutId: 'o7', orderId: 'o7', alreadyPaid: false, quote: { totalCents: 3200 } })
+  })
+
+  it('defaults to the Terminal when the device sends no method', () => {
+    expect(KioskCartSchema.parse({ items: [{ key: 'mango-habanero', quantity: 1 }] }).method).toBe('terminal')
+  })
+})
+
+describe('KioskCartSchema', () => {
+  it('ignores any price the client tries to send and rejects bad quantities', () => {
+    const parsed = KioskCartSchema.parse({ items: [{ key: 'mango-habanero', quantity: 2, price: 0.01 }] })
+    expect(parsed.items[0]).toEqual({ key: 'mango-habanero', quantity: 2 })
+    expect(KioskCartSchema.safeParse({ items: [{ key: 'x', quantity: 0 }] }).success).toBe(false)
+    expect(KioskCartSchema.safeParse({ items: [] }).success).toBe(false)
+  })
+})

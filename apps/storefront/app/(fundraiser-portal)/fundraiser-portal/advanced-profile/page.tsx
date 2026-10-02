@@ -11,7 +11,7 @@ export default async function AdvancedProfilePage() {
   const account = await getCurrentFundraiserAccount()
 
   if (!account || !account.fundraiserId) {
-    redirect('/auth/login')
+    redirect('/auth/signin')
   }
 
   return <AdvancedProfileClient fundraiserId={account.fundraiserId} />

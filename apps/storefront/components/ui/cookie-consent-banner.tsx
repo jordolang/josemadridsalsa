@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 const COOKIE_CONSENT_KEY = 'cookie-consent'
 
@@ -18,6 +19,7 @@ interface CookieConsentBannerProps {
 export function CookieConsentBanner({ onConsentChange }: CookieConsentBannerProps) {
   const [isVisible, setIsVisible] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
+  const pathname = usePathname()
 
   React.useEffect(() => {
     setIsMounted(true)
@@ -71,7 +73,8 @@ export function CookieConsentBanner({ onConsentChange }: CookieConsentBannerProp
   }, [])
 
   // Don't render anything until mounted (prevents SSR mismatch)
-  if (!isMounted || !isVisible) {
+  // The self-order kiosk is a shop till, not a browsing session; a banner there just blocks customers.
+  if (!isMounted || !isVisible || pathname?.startsWith('/kiosk')) {
     return null
   }
 

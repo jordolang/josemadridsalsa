@@ -1,0 +1,24 @@
+{
+  "originHash" : "6b4b79be644f82be33eca5c3ebfe9befc37e0653e6c519e203eacba25397ad3a",
+  "pins" : [
+    {
+      "identity" : "mobile-payments-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/square/mobile-payments-sdk-ios",
+      "state" : {
+        "revision" : "134f9c16951958dcea190aea1d7b890fa9c5b8f1",
+        "version" : "2.6.0"
+      }
+    },
+    {
+      "identity" : "starxpand-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/star-micronics/StarXpand-SDK-iOS",
+      "state" : {
+        "revision" : "dd04c82f7a5aff860f0a5b712a55460c62f4f0cd",
+        "version" : "2.9.0"
+      }
+    }
+  ],
+  "version" : 3
+}

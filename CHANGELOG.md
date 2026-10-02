@@ -14,6 +14,20 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Square Reader card payments on the iPad kiosk.** The iPad app takes cards on a Bluetooth
+  Square Reader through Square's Mobile Payments SDK, as an alternative to the Square Terminal.
+  Admins connect Square once under Settings › Payments (OAuth; tokens encrypted and refreshed
+  automatically); paired kiosks fetch the token from `/api/kiosk/square/authorization`, and the
+  server confirms each payment with Square before marking the order paid. The iPad app now
+  needs iPadOS 17.1. New env vars: `SQUARE_APPLICATION_ID`, `SQUARE_APPLICATION_SECRET`.
+- **Salsa Kings self-order kiosk.** `/kiosk` is a touch-screen till for shows and the shop:
+  an animated splash screen (the website hero's burning logo, jars over a fire bed, the price
+  chart), a menu of real jar photos with heat filters, and a Square Terminal checkout with a
+  printed receipt that returns to the splash screen after 10 seconds. The server prices every
+  cart from the booth sign (1 for $10, 3 for $25, 4 for $32, 5 + chips for $40, 12 for $80;
+  cheapest combination wins), so the tablet never sends a price. Tablets pair with a device
+  token in `KIOSK_DEVICE_TOKENS`. `apps/android-kiosk` locks an Android tablet to the kiosk and
+  prints to a USB ESC/POS receipt printer; a USB barcode scanner adds jars by UPC.
 - **Pay by card online on fundraising `/submit`.** Choosing "Credit card online" asks for the group (the
   fundraising store's live checkout dropdown) and, once the order is submitted, builds a cart in the
   BigCommerce fundraising store with every jar at the group price (`DUE_PER_JAR`, $5), pre-filled with the
@@ -78,8 +92,8 @@ the root `package.json` is canonical.
 - **The fundraising site's sign-up page creates fundraiser accounts.** `/sign-up` on
   fundraising.josemadrid.net (and fundraising.josemadridsalsa.com) now opens with the same account
   form as `/auth/fundraiser-signup`, now a shared `FundraiserAccountForm`; the "what happens next"
-  list and group inquiry form sit below it. After signing up, people land on the main site's pending
-  page. `/start` serves the 2026 fundraiser kits (25, 16 and 9 flavors) and the new sample flier and
+  list and group inquiry form sit below it. After signing up, people go to the main site's sign-in
+  and on to the pending page. `/start` serves the 2026 fundraiser kits (25, 16 and 9 flavors) and the new sample flier and
   flier template; the old order-form zips are gone.
 - **The macOS desktop app is on the developer page.** `/developer`'s timeline gains a ninth entry
   with a screenshot of the app's dashboard and a full list of what it does, section by section. The
@@ -330,6 +344,57 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **POS cash sales are recorded.** Cash checkout used to invent an order number in the browser and
+  write nothing. `POST /api/pos/cash-sale` (`lib/pos/cash-sale.ts`) now creates the paid order, a
+  cash `Payment` and the stock deduction in one transaction. Lines are priced from the product
+  records; a short tender or a stale total is refused. Each payment carries an `attemptId`, so a
+  retried request returns the recorded sale instead of a second one.
+- **Fundraiser page contact form delivers messages.** The route was a TODO that reported success.
+  Messages are now stored as a `ContactSubmission` and emailed to the campaign; the recipient comes
+  from the saved page config (or the fundraiser's contact email), never from the request.
+- **Fundraiser manage page saves fulfillment and commission settings.** The page sent `PATCH` to a
+  route that only accepted `PUT`; the route now accepts both.
+- **Resend webhook records bounces and complaints.** Recipients arrive as plain strings, not
+  `{ email }` objects, so every event exited early; bounce type is now compared case-insensitively,
+  so Resend's `Permanent` files as a hard bounce. Sends now record Resend's message id, and delivery, open and click
+  events update only that message's log rather than every log for the address.
+- **"Shop by heat" links filter.** Header and homepage links sent `?heat=mild`; they now send
+  `?heatLevel=MILD`, which the products page reads.
+- **Dead links.** Stripe's `return_url` pointed to the missing `/orders/{id}` (now
+  `/order-confirmation/{id}`); `/admin/wholesale/[id]` now exists; the inbox's customer link opens
+  the customers list filtered to that email; `/admin/login` and `/auth/login` redirects go to
+  `/auth/signin`.
+- **Store photo placeholder exists.** `/images/store-placeholder.png`, the last fallback on
+  `/find-us`, was a 404.
+- **`apps/admin` and `apps/fundraising` no longer redirect to a 404.** Their only page now redirects
+  to the storefront's `/admin` and `/fundraising` on `NEXT_PUBLIC_SITE_URL`.
+- **Tests run on vitest 5 again.** The vitest 5 bump left `@vitest/coverage-v8` and `@vitest/ui` on
+  4.x, which pulled in a second vitest that the test setup extended; every `rejects.toThrow()`
+  then failed (70 tests in CI). Both are pinned to the same vitest, vitest is declared once at the
+  root, with its coverage and UI add-ons, so all workspaces share one copy; `vite` (its peer) is
+  listed explicitly.
+- **A kiosk retry can't start a second charge.** The tablet sends a per-payment attempt id, reused
+  only when a request got no answer; it becomes the Square idempotency key and fixes the order
+  number (independent of the date), so a retry finds the checkout already on the Terminal, or
+  goes straight to the receipt if the customer already paid.
+- **Android kiosk reports receipts that didn't print.** Printing waits for the USB transfer and asks
+  the printer for its status (out of paper, cover open, error) before and after, so the
+  confirmation screen says "Ask a team member for your receipt" instead of a false success.
+  Printers without a status channel can't be checked.
+- **Staff POS could not take a card payment.** `POST /api/pos/create-terminal-checkout` required a
+  permission named `orders:create`, which is never seeded (the real one is `orders:write`), so it
+  answered 403 Forbidden to every staff member. It now checks `orders:write`.
+- **The Desktop Apps workflow failed at its release step on every run after the first.** It
+  deleted and recreated a rolling `desktop-latest` release, but the repository's immutable releases
+  reserve a tag name for good, so the tag could never be created again — and the update-feed step
+  after it never ran. The feed is now published first, and each build is archived under a tag of
+  its own.
+- **The fundraising site's sign-up page reads as two steps.** It led with the organizer-account
+  form while its copy still described the inquiry form below, so an organizer could fill in only
+  the account and never be added to checkout. The page now labels the account as step 1 and the
+  fundraiser details, which put the group on checkout, as step 2.
+- **Large desktop CSV exports could outrun the default function timeout.** The section route now
+  allows 300 seconds; the largest list (about 23,000 customers) needs more than the default.
 - **Desktop app updates could never be found.** The Windows app's update feed pointed at a GitHub
   release in a private repository, which answers 404 to an app with no GitHub session. Builds are
   now published to the public Blob store and served through `/api/desktop/updates/<file>`; the
@@ -341,6 +406,10 @@ the root `package.json` is canonical.
   window opened the web admin rather than the desktop shell until the app was restarted.
 - **The desktop apps' Help links pointed at the private repository.** They open the desktop-apps
   guide instead.
+- **A pending fundraiser account could never open the portal.** The portal layout read an
+  `x-invoke-path` header nothing sets, so it never recognised the pending page and redirected to it
+  forever. It reads `x-pathname`, which `proxy.ts` sets. The old 25/16/9-flavor order-form zip links
+  redirect to the 2026 kits.
 - **Copied BigCommerce orders marked Shipped were showing as unfulfilled.** Staff mark an order
   shipped by changing its status in BigCommerce, usually without recording a shipment per item, so
   BigCommerce's shipped quantities stay at zero and the copy read "Shipped" but "Unfulfilled" —

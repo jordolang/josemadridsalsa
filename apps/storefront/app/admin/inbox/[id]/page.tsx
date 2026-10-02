@@ -40,7 +40,7 @@ export default async function InboxEmailPage({ params }: { params: Promise<{ id:
       email.customerId
         ? prisma.customer.findUnique({
             where: { id: email.customerId },
-            select: { id: true, firstName: true, lastName: true, totalOrders: true },
+            select: { id: true, firstName: true, lastName: true, email: true, totalOrders: true },
           })
         : null,
     ])
@@ -138,7 +138,10 @@ export default async function InboxEmailPage({ params }: { params: Promise<{ id:
               {customer && (
                 <p>
                   Customer:{' '}
-                  <Link href={`/admin/customers/${customer.id}`} className="hover:underline">
+                  <Link
+                    href={`/admin/customers?search=${encodeURIComponent(customer.email)}`}
+                    className="hover:underline"
+                  >
                     {[customer.firstName, customer.lastName].filter(Boolean).join(' ') || email.fromEmail}
                   </Link>{' '}
                   <span className="text-muted-foreground">({customer.totalOrders} orders)</span>

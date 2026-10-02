@@ -78,6 +78,15 @@ describe('GET /api/admin/desktop/[section]?format=csv', () => {
     )
   })
 
+  it('keeps a customer-typed formula from running in a spreadsheet', async () => {
+    const formula = payload({ q: '', limit: 25000, more: false, searchable: false })
+    if (formula.body.view === 'table') formula.body.rows = [row('=HYPERLINK("http://evil","x")', '-5 jars', 1)]
+    data.loadSection.mockResolvedValue(formula)
+
+    const text = await (await call('format=csv')).text()
+    expect(text).toContain(`"'=HYPERLINK(""http://evil"",""x"")","'-5 jars"`)
+  })
+
   it('leaves the text match to the database when it searched', async () => {
     // The server matched "karen@" on an email the row text does not carry.
     data.loadSection.mockResolvedValue(payload({ q: 'karen@', limit: 25000, more: false, searchable: true }))

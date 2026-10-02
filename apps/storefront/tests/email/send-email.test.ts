@@ -139,7 +139,7 @@ describe('sendEmail', () => {
         templateId: 'order-confirmation',
         subject: 'Test Email',
         status: 'SENT',
-        metadata: { orderId: 'order-123' },
+        metadata: { orderId: 'order-123', messageId: 'email-123' },
       })
     })
 
@@ -400,12 +400,12 @@ describe('sendEmail', () => {
 
       expect(logEmailSend).toHaveBeenCalledWith(
         expect.objectContaining({
-          metadata: { orderId: 'order-789' },
+          metadata: { orderId: 'order-789', messageId: 'email-123' },
         })
       )
     })
 
-    it('should not include metadata when orderId is not provided', async () => {
+    it('should record only the Resend message id when orderId is not provided', async () => {
       await sendEmail({
         to: 'customer@example.com',
         subject: 'Test Email',
@@ -415,7 +415,7 @@ describe('sendEmail', () => {
 
       expect(logEmailSend).toHaveBeenCalledWith(
         expect.objectContaining({
-          metadata: undefined,
+          metadata: { messageId: 'email-123' },
         })
       )
     })

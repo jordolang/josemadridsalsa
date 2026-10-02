@@ -9,7 +9,10 @@ export default async function FundraiserPortalLayout({
   children: React.ReactNode
 }) {
   const headersList = await headers()
-  const pathname = headersList.get('x-invoke-path') || ''
+  // proxy.ts forwards the path as x-pathname. Nothing sets x-invoke-path, which
+  // this used to read: a PENDING account then never matched the pending page
+  // and was redirected to it forever.
+  const pathname = headersList.get('x-pathname') || ''
 
   const account = await getCurrentFundraiserAccount()
 
