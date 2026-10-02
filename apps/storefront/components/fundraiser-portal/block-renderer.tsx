@@ -50,10 +50,12 @@ type FundraiserData = {
 
 type BlockRendererProps = {
   block: PageBlock
+  /** Position in the saved page config; lets a form name which of its blocks was submitted. */
+  blockIndex: number
   fundraiser: FundraiserData
 }
 
-export function BlockRenderer({ block, fundraiser }: BlockRendererProps) {
+export function BlockRenderer({ block, blockIndex, fundraiser }: BlockRendererProps) {
   switch (block.type) {
     case 'hero':
       return <HeroBlock block={block} fundraiser={fundraiser} />
@@ -88,7 +90,7 @@ export function BlockRenderer({ block, fundraiser }: BlockRendererProps) {
     case 'testimonial':
       return <TestimonialBlock block={block} />
     case 'contact_form':
-      return <ContactFormBlock block={block} />
+      return <ContactFormBlock block={block} blockIndex={blockIndex} fundraiserSlug={fundraiser.slug} />
     case 'divider':
       return <DividerBlock block={block} />
     case 'image_text':

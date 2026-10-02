@@ -72,11 +72,16 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        // A gateway error page is HTML, not JSON; say something useful either way.
+        const errorData = (await response.json().catch(() => ({}))) as { error?: string }
         throw new Error(errorData.error || 'Unable to create account.')
       }
 
-      window.location.assign(`${siteUrl}/fundraiser-portal/pending`)
+      // Registering creates the account but no session, and the portal sends
+      // anyone signed out to sign-in. Go there directly, and on to the pending
+      // page once they have signed in with the password they just chose.
+      const callbackUrl = encodeURIComponent('/fundraiser-portal/pending')
+      window.location.assign(`${siteUrl}/auth/signin?callbackUrl=${callbackUrl}`)
     } catch (error) {
       console.error('Fundraiser registration error:', error)
       setError(

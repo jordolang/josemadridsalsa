@@ -22,15 +22,16 @@ const NEXT_STEPS = [
 export default function FundraiserSignUpPage() {
   return (
     <>
-      <PageHero eyebrow="Fundraiser sign-up" title="Tell us about your fundraiser">
+      <PageHero eyebrow="Fundraiser sign-up" title="Start your fundraiser in two steps">
         <p>
-          Give us your group&apos;s name, the contact person and the best way to reach you — and be sure to include the
-          dates of your fundraiser.
+          First create your organizer account, then tell us about your fundraiser — your group, the contact person and
+          the dates. The second step is what puts your group on this website&apos;s checkout, so please do both.
         </p>
       </PageHero>
 
       <section className="py-14">
-        <div className="container mx-auto flex justify-center px-4">
+        <div className="container mx-auto flex flex-col items-center gap-4 px-4">
+          <h2 className="font-serif text-2xl font-bold text-foreground">Step 1 · Your organizer account</h2>
           <FundraiserAccountForm siteUrl={SITE_URL} />
         </div>
       </section>
@@ -38,8 +39,11 @@ export default function FundraiserSignUpPage() {
       <section className="bg-card py-14">
         <div className="container mx-auto grid gap-10 px-4 lg:grid-cols-[1fr_2fr]">
           <aside>
-            <h2 className="font-serif text-2xl font-bold text-foreground">What happens next</h2>
-            <ol className="mt-5 space-y-4">
+            <h2 className="font-serif text-2xl font-bold text-foreground">Step 2 · Tell us about your fundraiser</h2>
+            <p className="mt-3 text-muted-foreground">
+              Fill in the form with your group and your fundraiser&apos;s dates. Here is what happens once it reaches us:
+            </p>
+            <ol className="mt-5 space-y-4" aria-label="What happens next">
               {NEXT_STEPS.map((step, index) => (
                 <li key={step} className="flex gap-3">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-salsa-600 text-sm font-bold text-white">
