@@ -26,6 +26,13 @@ the root `package.json` is canonical.
   PIN, assign the organizer, reset PINs and sign phones out. Wrong PINs lock out a seller after 5
   tries and pause group sign-ups after 25. Schema: new `FundraiserAppSession` model, app fields on
   `Fundraiser` and `FundraiserParticipant`, and `FundraiserParticipant.email` is now optional.
+- **Card payments in the fundraiser app with Square.** Sellers in groups with card payments turned
+  on (admin › Mobile App) can take cards on their phone with Square's Mobile Payments SDK: Tap to
+  Pay on iPhone and Android, keyed entry for phone orders, or a paired Square Reader. Payments go
+  to the shop's Square account; the storefront confirms each one with Square (status, location,
+  amount, order reference) before marking the order paid, recording the `Payment` and crediting
+  the group. The phone gets the Square token from the storefront at runtime, never from the build.
+  Tap to Pay on iPhone needs Apple's entitlement (see the docs). Schema: `Fundraiser.appCardPayments`.
 - **Create invoices on the web.** `/admin/invoices` has a working **New invoice** button (for
   `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
   customer, status, notes and free-text lines. Totals are computed on the server. The web form and

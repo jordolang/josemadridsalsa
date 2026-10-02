@@ -83,6 +83,7 @@ delivery address are optional), and how they were paid:
 
 | Choice | Order is recorded as | Group credited |
 |---|---|---|
+| Card | `PENDING` until Square confirms the card, then `PAID`, `CONFIRMED`, payment method "Card (Square)", with a `Payment` row (provider `SQUARE`, channel `POS`) | When Square confirms the payment |
 | Cash | `PAID`, `CONFIRMED`, payment method "Cash (collected by seller)" | Immediately |
 | Check | `PAID`, `CONFIRMED`, payment method "Check (collected by seller)" | Immediately |
 | Pay later | `PENDING`, payment method "Pay on delivery" | When an admin marks it paid |
@@ -94,10 +95,74 @@ delivery address are optional), and how they were paid:
   `creditFundraiserCommission`, like every other paid fundraiser order.
 - Order numbers are `APP-` plus 12 characters derived from an id the app makes once per order, so
   a retry after a dropped connection returns the same order instead of creating a second one.
-- No tax (Ohio does not tax salsa as grocery food), no shipping (the seller delivers), no
-  `Payment` row (no processor), and no stock reservation (fundraiser orders are packed in bulk).
+- No tax (Ohio does not tax salsa as grocery food), no shipping (the seller delivers), and no
+  stock reservation (fundraiser orders are packed in bulk). Only card orders have a `Payment`
+  row; cash, check and pay-later have no processor.
 - The customer's name is in the delivery address when one was given, and always in the order's
   admin notes.
+
+## Card payments (Square)
+
+With **Card payments with Square** turned on for the group (admin › Mobile App), sellers get a
+**Card** choice. The phone takes the card with Square's Mobile Payments SDK
+(`mobile-payments-sdk-react-native`), in whichever way suits the sale:
+
+- **Tap to Pay** on the seller's iPhone or Android phone: the customer taps their card, phone or
+  watch. No extra hardware.
+- **Keyed entry**: the seller types the card number in, for an order taken over the phone.
+- **A Square Reader** paired under **Card reader & Tap to Pay** on the home screen.
+
+The money goes into Jose Madrid's Square account at `SQUARE_LOCATION_ID`, and shows in the Square
+dashboard like any other in-person sale. How a card sale works:
+
+1. The app saves the order as `PENDING` with provider `SQUARE`.
+2. It asks `GET /api/fundraiser-app/square/authorization` for the shop's Square OAuth token (the
+   same connection the iPad kiosk uses, **Settings › Payments › Connect Square**) and signs the
+   SDK in. The token is never built into the app.
+3. Square's payment screen takes the card, with the order id as the payment's `referenceId`.
+4. The app reports the Square payment id. The storefront looks the payment up **in Square** and
+   marks the order paid only if Square says it is completed, at our location, for exactly the
+   order total, and not already used for another order (`readerPaymentProblem`, shared with the
+   kiosk). It then records the `Payment`, credits the group, and emits `payment.completed`, which
+   sends the customer's confirmation email if they gave one.
+
+If the connection drops after the card was charged, **Try card again** asks the storefront first.
+It finds the payment in Square by the order's reference, so the customer is never charged twice.
+**Cancel card order** cancels the order unless Square shows it was paid after all; the cart stays
+filled so the seller can pick another way to pay.
+
+Signing out of the phone also signs the SDK out of Square. Turning card payments off for a group
+stops new card orders and new Square sign-ins straight away.
+
+<Callout type="warn">
+While card payments are on, each seller's phone holds an access token for the shop's Square
+account (that is how Square's SDK works). Turn it on for groups you trust with card payments, and
+off when their campaign ends.
+</Callout>
+
+### What has to be in place
+
+| What | Where |
+|---|---|
+| Square connected | **Admin › Settings › Payments › Connect Square** (OAuth), plus `SQUARE_LOCATION_ID`, `SQUARE_ACCESS_TOKEN`, `SQUARE_APPLICATION_ID`, `SQUARE_APPLICATION_SECRET`, as for the kiosk |
+| Card payments on for the group | **Fundraisers › campaign › Mobile App** |
+| A store build of the app | Card payments use native code, so they are not in Expo Go |
+| **Tap to Pay on iPhone** | Apple must grant the *Tap to Pay on iPhone* entitlement to the Apple Developer team: request it at developer.apple.com (Account › Tap to Pay on iPhone). Until it is granted, iOS builds with it fail to sign; set `"tapToPayOnIPhone": false` on the Square plugin in `app.json` to ship without it (keyed entry and readers still work). An iPhone XS or newer. The first time, Apple asks someone at Jose Madrid to accept its Tap to Pay terms: do that on your own phone before handing the app out. |
+| **Tap to Pay on Android** | An NFC phone on a recent Android that passes Google's security checks. Nothing to request. |
+| Phone permissions | Square asks for location (Square only takes US payments), Bluetooth (readers) and, on Android, phone state. Declare them in the store listings' privacy answers. |
+
+### Native setup
+
+`apps/fundraiser-app/plugins/with-square-mobile-payments.js` (a config plugin, adapted from
+Square's Expo sample) does the native work at build time: it initializes the SDK in the iOS
+`AppDelegate` and Android `MainApplication`, adds Square's Maven repository and Android
+permissions, the iOS usage strings, reader accessory protocols, the Tap to Pay entitlement, and the
+SDK's iOS setup build phase. `expo-build-properties` sets Android `minSdkVersion` 28 and
+`compileSdkVersion` 36, which the SDK needs. Release minification stays off, as Square requires.
+
+The plugin uses the shop's production Square application id. To build against a Square sandbox,
+set `SQUARE_APPLICATION_ID` to the sandbox app id in the EAS build profile, and point the build at a
+storefront that is connected to the same sandbox.
 
 ## Lockouts
 
@@ -124,6 +189,9 @@ All under `/api/fundraiser-app`. Routes marked 🔑 need `Authorization: Bearer 
 | `GET /me` 🔓 | Seller, group, order count and sales |
 | `GET /catalog` 🔓 | The group's salsas at its prices |
 | `GET /orders` 🔓, `POST /orders` 🔓 | The seller's orders; record a new one |
+| `GET /square/authorization` 🔓 | Square token and location for the payment SDK (card payments on) |
+| `POST /orders/{id}/card` 🔓 | Confirm the card with Square (`{ paymentId }`); `GET` re-checks Square by reference |
+| `POST /orders/{id}/card/cancel` 🔓 | Give up on the card; cancels unless Square shows it paid |
 | `POST /sign-out` 🔑 | Sign this phone out |
 | `GET /organizer/sellers` 🔓 | Organizer only |
 | `POST /organizer/sellers/{id}/reset-pin` 🔓 | Organizer only |
