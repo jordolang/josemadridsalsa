@@ -33,6 +33,13 @@ the root `package.json` is canonical.
   amount, order reference) before marking the order paid, recording the `Payment` and crediting
   the group. The phone gets the Square token from the storefront at runtime, never from the build.
   Tap to Pay on iPhone needs Apple's entitlement (see the docs). Schema: `Fundraiser.appCardPayments`.
+- **Thermometer style for the fundraiser page's Progress block.** In the page editor, the
+  Progress block has a Style option (Progress bar / Thermometer); Thermometer draws the existing
+  `FundraisingThermometer` against the fundraiser's goal.
+- **Fundraiser SEO keywords reach the page.** The keywords saved under the portal's analytics
+  settings now become the `/f/[subdomain]` page's `<meta name="keywords">` (trimmed,
+  de-duplicated, at most 20 of 60 characters each); pages without their own keep the site
+  default. The help text notes that Google ignores this tag.
 - **Create invoices on the web.** `/admin/invoices` has a working **New invoice** button (for
   `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
   customer, status, notes and free-text lines. Totals are computed on the server. The web form and
@@ -385,6 +392,11 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **`/battles` shows the real monthly championship.** It ranked every active fundraiser by
+  all-time revenue. It now ranks the month's battle teams exactly as season end crowns the
+  champion (battle sales, earliest team on a tie), shows "raised this month" from that month's
+  sale events, and links to each team's page.
+- **Arena chat answers 401, not 500, for a session whose account no longer exists.**
 - **Only sales made during a battle deal arena damage.** `applyPurchaseDamage` now takes the
   sale's `placedAt` (the order's own creation time) and refuses any sale placed before the team
   joined or outside its current battle (the season's start/end, else the period month). Past

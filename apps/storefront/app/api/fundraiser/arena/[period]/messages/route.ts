@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -112,10 +113,19 @@ export async function POST(
     if (!team) teamId = null
   }
 
-  const row = await prisma.arenaMessage.create({
-    data: { period, teamId, authorUserId: userId, body },
-    select: messageSelect,
-  })
+  let row: MessageRow
+  try {
+    row = await prisma.arenaMessage.create({
+      data: { period, teamId, authorUserId: userId, body },
+      select: messageSelect,
+    })
+  } catch (error) {
+    // A session for an account that no longer exists: ask for a fresh sign-in, not a 500.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return NextResponse.json({ success: false, error: 'Sign in again to post a message' }, { status: 401 })
+    }
+    throw error
+  }
 
   return NextResponse.json({ success: true, message: toDto(row) }, { status: 201 })
 }

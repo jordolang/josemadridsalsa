@@ -16,6 +16,7 @@ import { headers } from 'next/headers'
 import Script from 'next/script'
 import { SITE_URL } from '@/lib/site-url'
 import { customCssScopeClass, sanitizeCustomCss } from '@/lib/fundraising/custom-css'
+import { normalizeSeoKeywords } from '@/lib/fundraising/seo-keywords'
 import {
   normalizeGaMeasurementId,
   toGooglePlaceUrl,
@@ -61,8 +62,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Fundraiser Not Found' }
   }
 
+  const keywords = normalizeSeoKeywords(fundraiser.analytics?.seoKeywords)
+
   return {
     title: `${fundraiser.name} | Jose Madrid Salsa Fundraiser`,
+    ...(keywords.length > 0 ? { keywords } : {}),
     description:
       fundraiser.missionStatement ||
       fundraiser.description ||

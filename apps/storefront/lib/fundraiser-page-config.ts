@@ -50,6 +50,8 @@ export interface ProgressBarBlock {
   showAmount: boolean
   showPercentage: boolean
   label?: string
+  /** A horizontal bar (default) or a vertical thermometer. */
+  style?: 'bar' | 'thermometer'
 }
 
 export interface ProductShowcaseBlock {
@@ -293,6 +295,7 @@ const progressBarBlockSchema = z.object({
   showAmount: z.boolean(),
   showPercentage: z.boolean(),
   label: z.string().max(100).optional(),
+  style: z.enum(['bar', 'thermometer']).optional(),
 })
 
 const productShowcaseBlockSchema = z.object({
