@@ -25,6 +25,19 @@ const STATUS_COLORS: Record<string, string> = {
   PROCESSING: 'bg-blue-100 text-blue-800',
 }
 
+const METHOD_LABELS: Record<string, string> = {
+  CASH: 'Cash',
+  SQUARE_TERMINAL: 'Card (Terminal)',
+  SQUARE_READER: 'Card (Reader)',
+}
+
+function paymentLabel(payments: unknown): string {
+  const latest = Array.isArray(payments) ? (payments[0] as { methodType?: string | null; provider?: string | null } | undefined) : undefined
+  if (!latest) return 'Unpaid'
+  const method = latest.methodType ?? latest.provider ?? ''
+  return METHOD_LABELS[method] ?? (method ? method.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : 'Unknown')
+}
+
 function formatTime(isoString: string): string {
   return new Date(isoString).toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -41,7 +54,7 @@ export default function POSOrdersPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/orders?channel=pos&limit=50')
+      const res = await fetch('/api/admin/orders?channel=POS&limit=50')
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: 'Failed to load orders' }))
         setError(body.error || 'Failed to load orders')
@@ -69,7 +82,7 @@ export default function POSOrdersPage() {
             total: Number(order.total ?? 0),
             itemCount,
             status: String(order.status ?? 'PENDING'),
-            paymentMethod: String(order.paymentMethod ?? order.payment_method ?? 'Unknown'),
+            paymentMethod: paymentLabel(order.payments),
             createdAt: String(order.createdAt ?? order.created_at ?? new Date().toISOString()),
           }
         })

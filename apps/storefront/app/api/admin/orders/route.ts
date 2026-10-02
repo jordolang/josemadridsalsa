@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { requirePermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma, SalesChannel } from '@prisma/client'
+import { z } from 'zod'
 import {
   ok,
   fail,
@@ -51,6 +52,13 @@ export async function GET(request: NextRequest) {
     where.status = query.status
   }
 
+  // Sales channel filter (e.g. ?channel=POS for the register's order list)
+  if (query.channel) {
+    const channel = z.nativeEnum(SalesChannel).safeParse(query.channel.toUpperCase())
+    if (!channel.success) return fail(`Unknown channel: ${query.channel}`, 400)
+    where.salesChannel = channel.data
+  }
+
   // Date range filter
   if (query.startDate || query.endDate) {
     where.createdAt = {}
@@ -81,6 +89,12 @@ export async function GET(request: NextRequest) {
             id: true,
             quantity: true,
           },
+        },
+        // The most recent payment's method, so a list can say "Cash" or "Card".
+        payments: {
+          select: { methodType: true, provider: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
         },
       },
     }),
