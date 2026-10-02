@@ -90,8 +90,21 @@ export async function chargeOrder(
   options: { retry?: boolean } = {}
 ): Promise<CardResult> {
   if (options.retry) {
-    const earlier = await call<{ status: string; orderNumber: string }>(`/orders/${order.id}/card`).catch(() => null)
-    if (earlier?.status === 'COMPLETED') return { status: 'paid', orderNumber: earlier.orderNumber }
+    // Charge again only once the storefront has checked Square and found no payment for this
+    // order. If that check itself fails, an earlier charge may have gone through: stop here.
+    let earlier: { status: string; orderNumber: string }
+    try {
+      earlier = await call<{ status: string; orderNumber: string }>(`/orders/${order.id}/card`)
+    } catch (error) {
+      return {
+        status: 'failed',
+        message: `Could not check whether the card was already charged (${
+          error instanceof Error ? error.message : String(error)
+        }). Try again in a moment; the customer will not be charged twice.`,
+      }
+    }
+    if (earlier.status === 'COMPLETED') return { status: 'paid', orderNumber: earlier.orderNumber }
+    if (earlier.status !== 'PENDING') return { status: 'failed', message: 'This card order can no longer be charged.' }
   }
 
   let payment: SquareSdk.Payment

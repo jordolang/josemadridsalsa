@@ -1,16 +1,18 @@
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect } from 'expo-router'
-import { ErrorText, Muted, styles as ui } from '@/components/ui'
+import { Button, ErrorText, Muted, styles as ui } from '@/components/ui'
 import { money, type OrderSummary } from '@/lib/api'
 import { colors } from '@/lib/config'
 import { useSession } from '@/lib/session'
+import { cancelCardOrder, cardPaymentsAvailable, chargeOrder } from '@/lib/square'
 
 export default function Orders() {
   const { call } = useSession()
   const [orders, setOrders] = useState<OrderSummary[] | null>(null)
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -20,6 +22,30 @@ export default function Orders() {
       setError(e instanceof Error ? e.message : String(e))
     }
   }, [call])
+
+  // Finish a card sale the app was closed in the middle of. Square is checked first, so a card
+  // that was already charged is recorded rather than charged again.
+  async function finishCard(order: OrderSummary) {
+    setBusyId(order.id)
+    const result = await chargeOrder(call, order, { retry: true })
+    setBusyId(null)
+    if (result.status === 'paid') Alert.alert('Card payment recorded', result.orderNumber)
+    else Alert.alert('Card not charged', result.message)
+    await load()
+  }
+
+  async function cancelCard(order: OrderSummary) {
+    setBusyId(order.id)
+    try {
+      const result = await cancelCardOrder(call, order.id)
+      Alert.alert(result.status === 'COMPLETED' ? 'The card was already charged' : 'Order canceled', result.orderNumber)
+    } catch (e) {
+      Alert.alert('Could not cancel', e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusyId(null)
+      await load()
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -65,9 +91,33 @@ export default function Orders() {
               {item.orderNumber} · {new Date(item.createdAt).toLocaleDateString()}
             </Text>
             <Text style={[styles.badge, item.paid ? styles.paid : styles.unpaid]}>
-              {item.status === 'CANCELLED' ? 'Cancelled' : item.paid ? 'Paid' : 'To collect'}
+              {item.status === 'CANCELLED'
+                ? 'Cancelled'
+                : item.paid
+                  ? 'Paid'
+                  : item.awaitingCard
+                    ? 'Card not finished'
+                    : 'To collect'}
             </Text>
           </View>
+          {item.awaitingCard ? (
+            <View style={styles.cardActions}>
+              {cardPaymentsAvailable ? (
+                <Button
+                  label={`Finish card payment (${money(item.total)})`}
+                  busy={busyId === item.id}
+                  disabled={busyId !== null}
+                  onPress={() => finishCard(item)}
+                />
+              ) : null}
+              <Button
+                label="Cancel this order"
+                variant="secondary"
+                disabled={busyId !== null}
+                onPress={() => cancelCard(item)}
+              />
+            </View>
+          ) : null}
         </View>
       )}
     />
@@ -82,4 +132,5 @@ const styles = StyleSheet.create({
   badge: { fontSize: 13, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' },
   paid: { backgroundColor: '#DCFCE7', color: colors.green },
   unpaid: { backgroundColor: '#FEF3C7', color: '#92400E' },
+  cardActions: { gap: 8, marginTop: 4 },
 })

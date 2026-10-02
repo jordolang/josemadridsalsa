@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store'
-import { API_URL } from './config'
+import { API_URL } from '@/lib/config'
 
 const TOKEN_KEY = 'jms.fundraiser.deviceToken'
 
@@ -96,6 +96,9 @@ export interface OrderSummary {
   createdAt: string
   status: string
   paid: boolean
+  /** A card order the app never finished; it can be finished or canceled from the order list. */
+  awaitingCard: boolean
+  amountCents: number
   paymentMethod: string | null
   total: number
   customerName: string | null

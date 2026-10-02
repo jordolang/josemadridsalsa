@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Platform, Pressable, Text } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text } from 'react-native'
 import Constants from 'expo-constants'
-import { Button, Card, ErrorText, Field, Muted, PinField, Screen, Title, isPin, styles } from '@/components/ui'
+import { Button, Card, ErrorText, Field, Muted, PinField, Screen, Title, isPin, styles as ui } from '@/components/ui'
 import { api, type RosterEntry, type SignIn } from '@/lib/api'
 import { colors } from '@/lib/config'
 import { useSession } from '@/lib/session'
@@ -88,9 +88,9 @@ export default function Reclaim() {
               setPinAgain('')
               setError('')
             }}
-            style={({ pressed }) => [styles.card, { opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [ui.card, pressed && local.pressed]}
           >
-            <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>{seller.name}</Text>
+            <Text style={local.name}>{seller.name}</Text>
           </Pressable>
         ))}
       </Screen>
@@ -113,3 +113,8 @@ export default function Reclaim() {
     </Screen>
   )
 }
+
+const local = StyleSheet.create({
+  pressed: { opacity: 0.7 },
+  name: { fontSize: 18, fontWeight: '600', color: colors.text },
+})

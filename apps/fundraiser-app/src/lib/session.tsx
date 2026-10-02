@@ -10,9 +10,9 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AppState } from 'react-native'
-import { ApiError, api, tokenStore, type Me } from './api'
-import { RELOCK_AFTER_MS } from './config'
-import { deauthorizeSquare } from './square'
+import { ApiError, api, tokenStore, type Me } from '@/lib/api'
+import { RELOCK_AFTER_MS } from '@/lib/config'
+import { deauthorizeSquare } from '@/lib/square'
 
 type Status = 'loading' | 'signed-out' | 'locked' | 'ready'
 
@@ -75,6 +75,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!(error instanceof ApiError)) return
       if (error.code === 'signed_out') void forget()
       if (error.code === 'locked') setStatus('locked')
+      // The admin turned the app off or the campaign ended: leave the order screens and sign the
+      // phone out of Square. The lock screen shows why; the seller's PIN works again if it reopens.
+      if (error.code === 'group_closed') {
+        void deauthorizeSquare()
+        setStatus('locked')
+      }
     },
     [forget]
   )

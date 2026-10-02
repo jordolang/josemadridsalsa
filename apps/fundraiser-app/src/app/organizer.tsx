@@ -85,7 +85,7 @@ export default function Organizer() {
               </Text>
             </View>
             {!seller.isOrganizer && (seller.hasPin || seller.lockedOut) ? (
-              <View style={{ width: 120 }}>
+              <View style={styles.resetButton}>
                 <Button label="Reset PIN" variant="secondary" onPress={() => confirmReset(seller)} />
               </View>
             ) : null}
@@ -106,4 +106,5 @@ export default function Organizer() {
 const styles = StyleSheet.create({
   name: { fontSize: 17, fontWeight: '600', color: colors.text },
   meta: { color: colors.muted, marginTop: 2 },
+  resetButton: { width: 120 },
 })

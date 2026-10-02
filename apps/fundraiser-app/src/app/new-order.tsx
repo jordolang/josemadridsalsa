@@ -246,7 +246,7 @@ function Stepper({ value, onChange, name }: { value: number; onChange: (delta: n
       </Pressable>
       <Text style={styles.qty}>{value}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={`One more ${name}`} onPress={() => onChange(1)} style={[styles.step, styles.stepPlus]} hitSlop={8}>
-        <Text style={[styles.stepText, { color: '#fff' }]}>+</Text>
+        <Text style={[styles.stepText, styles.stepTextPlus]}>+</Text>
       </Pressable>
     </View>
   )
@@ -266,6 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepPlus: { backgroundColor: colors.brand },
+  stepTextPlus: { color: '#fff' },
   stepText: { fontSize: 22, fontWeight: '700', color: colors.brand, lineHeight: 26 },
   qty: { minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: '700', color: colors.text },
   choice: {
