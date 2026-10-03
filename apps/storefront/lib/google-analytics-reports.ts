@@ -265,6 +265,19 @@ async function fetchCustomCharts(
   return results.filter((item): item is GoogleAnalyticsChartResult => Boolean(item))
 }
 
+/**
+ * Turn a GA Data API failure into a message an admin can act on. Google
+ * reports a dead credential (expired or revoked refresh token, including
+ * Workspace re-auth `invalid_rapt`) as `invalid_grant`.
+ */
+export function describeGoogleAnalyticsError(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error)
+  if (text.includes('invalid_grant')) {
+    return 'Google rejected the saved Google Analytics credential because it has expired or been revoked. Replace the google_analytics / service_account secret under Integrations with a service account JSON key that has Viewer access to the GA4 property.'
+  }
+  return 'Failed to load Google Analytics data. Check logs for details.'
+}
+
 export async function getGoogleAnalyticsDashboard(range: AnalyticsRangeKey): Promise<GoogleAnalyticsDashboardData> {
   const settings = await getGoogleAnalyticsSettings()
   const hasCredentials = await hasActiveServiceKey('google_analytics', 'service_account')
@@ -321,7 +334,7 @@ export async function getGoogleAnalyticsDashboard(range: AnalyticsRangeKey): Pro
     return {
       isConfigured: false,
       status: 'error',
-      message: 'Failed to load Google Analytics data. Check logs for details.',
+      message: describeGoogleAnalyticsError(error),
       summaryCards: [],
       charts: [],
       range,
