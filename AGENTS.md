@@ -42,9 +42,6 @@ josemadridsalsa/
 │   ├── fundraising/      # Fundraising campaign platform
 │   ├── admin/            # Role-based administration dashboard
 │   └── docs/             # Fumadocs documentation site (canonical docs home)
-├── packages/
-│   ├── shared-types/     # Shared TypeScript contracts across apps
-│   └── shared-utils/     # Shared utility functions across apps
 ├── package.json          # npm workspace commands
 └── turbo.json            # Turborepo task graph
 ```

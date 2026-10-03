@@ -151,6 +151,8 @@ the root `package.json` is canonical.
   expanded.
 
 ### Removed
+- **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
+
 - The "free shipping on 96+ jars" claim from the fundraising start and shipping pages.
 
 - **fundraising.josemadrid.net replaces josemadridsalsafundraising.com's pages.** The storefront app
@@ -394,6 +396,9 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Docs match the code before launch.** The API overview, checkout, PayPal and payment-integration pages named about ten endpoints that do not exist (`/api/users/me`, `/api/cart/items`, `/api/checkout/create-session`, `/api/paypal/*`, `/api/chat`, …); each now names the real route. The Battle Arena page's tutorial for a `battle-state` route and a `BattleArena.tsx` component that were never built is replaced by a map of the real files and `/api/fundraiser/arena/*` routes. The scheduled-jobs docs list all thirteen crons, adding `inbox-triage`, `mail-organizer` and `bigcommerce-orders`.
+- **Environment reference covers what the code reads.** About forty variables the storefront reads were in neither `.env.example` nor the docs, including `ORDER_NOTIFICATION_EMAILS`, `SMILEYFACE_API_KEY`, `ARENA_SHARE_SECRET` and the browser-side PayPal and Square ids. Three documented names were never read: `STRIPE_PUBLISHABLE_KEY` is `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `GOOGLE_ANALYTICS_ID` is `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, and the UploadThing v6 pair is now `UPLOADTHING_TOKEN`.
+
 - **`/battles` and season end crown the same, real champion.** `/battles` ranked every active
   fundraiser by all-time revenue, and season end ranked by the team's lifetime `salesCount`,
   which carries sales across seasons. Both now use `getBattleStandings`
