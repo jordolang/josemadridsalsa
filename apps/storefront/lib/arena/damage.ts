@@ -184,6 +184,7 @@ export async function applyPurchaseDamage(
           donorComment: input.donor?.comment ?? null,
           isAnonymous,
           sellingCharacterId: validSellingCharacterId,
+          period,
         },
       })
     } catch (err) {
