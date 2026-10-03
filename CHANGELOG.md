@@ -20,6 +20,10 @@ the root `package.json` is canonical.
   the register opens so the tap screen appears at once. Cash and check are one tap. Register sales
   need no customer details (recorded as walk-up sales); the full form stays as **Phone order
   (deliver later)**, where pay-later and delivery still require the customer's name and phone.
+- **Liquid Glass look for the fundraiser app.** The red theme is replaced by Apple's Liquid Glass
+  (`expo-glass-effect`): glass cards, buttons, register tiles and checkout bar over a soft ambient
+  backdrop, a translucent native header (glass on iOS 26), the system tint for actions and green
+  for taking money. Older iPhones get the system blur and Android a frosted panel in the same shapes.
 - **Mobile fundraiser app for iOS and Android** (`apps/fundraiser-app`, Expo). Sellers set it
   up with three things: the group ID, the group PIN, and their first and last name, then choose a
   personal PIN that unlocks the app every time it opens. Phones stay signed in for the campaign;

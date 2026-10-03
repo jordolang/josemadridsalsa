@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect } from 'expo-router'
-import { Button, ErrorText, Muted, styles as ui } from '@/components/ui'
+import { Backdrop, Button, Card, ErrorText, Muted, styles as ui } from '@/components/ui'
 import { money, type OrderSummary } from '@/lib/api'
 import { colors } from '@/lib/config'
 import { useSession } from '@/lib/session'
@@ -55,72 +55,77 @@ export default function Orders() {
 
   if (!orders) {
     return (
-      <View style={[ui.safe, ui.screen]}>
-        {error ? <ErrorText>{error}</ErrorText> : <ActivityIndicator color={colors.brand} size="large" />}
+      <View style={[ui.fill, ui.screen]}>
+        <Backdrop />
+        {error ? <ErrorText>{error}</ErrorText> : <ActivityIndicator color={colors.accent} size="large" />}
       </View>
     )
   }
 
   return (
-    <FlatList
-      style={ui.safe}
-      contentContainerStyle={ui.screen}
-      data={orders}
-      keyExtractor={(order) => order.id}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={async () => {
-            setRefreshing(true)
-            await load()
-            setRefreshing(false)
-          }}
-        />
-      }
-      ListEmptyComponent={<Muted>No orders yet. Your first one will show up here.</Muted>}
-      ListHeaderComponent={error ? <ErrorText>{error}</ErrorText> : null}
-      renderItem={({ item }) => (
-        <View style={ui.card}>
-          <View style={ui.row}>
-            <Text style={[styles.customer, ui.fill]}>{item.customerName ?? 'Walk-up sale'}</Text>
-            <Text style={styles.total}>{money(item.total)}</Text>
-          </View>
-          <Text style={styles.items}>{item.items.map((i) => `${i.quantity} × ${i.productName}`).join('\n')}</Text>
-          <View style={ui.row}>
-            <Text style={[styles.meta, ui.fill]}>
-              {item.orderNumber} · {new Date(item.createdAt).toLocaleDateString()}
-            </Text>
-            <Text style={[styles.badge, item.paid ? styles.paid : styles.unpaid]}>
-              {item.status === 'CANCELLED'
-                ? 'Cancelled'
-                : item.paid
-                  ? 'Paid'
-                  : item.awaitingCard
-                    ? 'Card not finished'
-                    : 'To collect'}
-            </Text>
-          </View>
-          {item.awaitingCard ? (
-            <View style={styles.cardActions}>
-              {cardPaymentsAvailable ? (
-                <Button
-                  label={`Finish card payment (${money(item.total)})`}
-                  busy={busyId === item.id}
-                  disabled={busyId !== null}
-                  onPress={() => finishCard(item)}
-                />
-              ) : null}
-              <Button
-                label="Cancel this order"
-                variant="secondary"
-                disabled={busyId !== null}
-                onPress={() => cancelCard(item)}
-              />
+    <View style={ui.fill}>
+      <Backdrop />
+      <FlatList
+        style={ui.fill}
+        contentContainerStyle={ui.screen}
+        contentInsetAdjustmentBehavior="automatic"
+        data={orders}
+        keyExtractor={(order) => order.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true)
+              await load()
+              setRefreshing(false)
+            }}
+          />
+        }
+        ListEmptyComponent={<Muted>No orders yet. Your first one will show up here.</Muted>}
+        ListHeaderComponent={error ? <ErrorText>{error}</ErrorText> : null}
+        renderItem={({ item }) => (
+          <Card style={styles.order}>
+            <View style={ui.row}>
+              <Text style={[styles.customer, ui.fill]}>{item.customerName ?? 'Walk-up sale'}</Text>
+              <Text style={styles.total}>{money(item.total)}</Text>
             </View>
-          ) : null}
-        </View>
-      )}
-    />
+            <Text style={styles.items}>{item.items.map((i) => `${i.quantity} × ${i.productName}`).join('\n')}</Text>
+            <View style={ui.row}>
+              <Text style={[styles.meta, ui.fill]}>
+                {item.orderNumber} · {new Date(item.createdAt).toLocaleDateString()}
+              </Text>
+              <Text style={[styles.badge, item.paid ? styles.paid : styles.unpaid]}>
+                {item.status === 'CANCELLED'
+                  ? 'Cancelled'
+                  : item.paid
+                    ? 'Paid'
+                    : item.awaitingCard
+                      ? 'Card not finished'
+                      : 'To collect'}
+              </Text>
+            </View>
+            {item.awaitingCard ? (
+              <View style={styles.cardActions}>
+                {cardPaymentsAvailable ? (
+                  <Button
+                    label={`Finish card payment (${money(item.total)})`}
+                    busy={busyId === item.id}
+                    disabled={busyId !== null}
+                    onPress={() => finishCard(item)}
+                  />
+                ) : null}
+                <Button
+                  label="Cancel this order"
+                  variant="secondary"
+                  disabled={busyId !== null}
+                  onPress={() => cancelCard(item)}
+                />
+              </View>
+            ) : null}
+          </Card>
+        )}
+      />
+    </View>
   )
 }
 
@@ -129,8 +134,16 @@ const styles = StyleSheet.create({
   total: { fontSize: 17, fontWeight: '700', color: colors.text },
   items: { color: colors.text },
   meta: { color: colors.muted, fontSize: 13 },
-  badge: { fontSize: 13, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' },
-  paid: { backgroundColor: '#DCFCE7', color: colors.green },
-  unpaid: { backgroundColor: '#FEF3C7', color: '#92400E' },
+  badge: {
+    fontSize: 13,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  paid: { backgroundColor: 'rgba(30, 158, 90, 0.14)', color: colors.green },
+  unpaid: { backgroundColor: 'rgba(255, 159, 10, 0.16)', color: '#A05A00' },
   cardActions: { gap: 8, marginTop: 4 },
+  order: { gap: 8 },
 })

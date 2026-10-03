@@ -3,7 +3,8 @@ import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text,
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { randomUUID } from 'expo-crypto'
-import { Button, ErrorText, Muted } from '@/components/ui'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Backdrop, Button, ErrorText, Glass, Muted } from '@/components/ui'
 import { money, type Product } from '@/lib/api'
 import { colors, imageUrl } from '@/lib/config'
 import { useSession } from '@/lib/session'
@@ -131,161 +132,175 @@ export default function Sell() {
 
   if (stage.kind === 'paid') {
     return (
-      <SafeAreaView style={[styles.fill, styles.paid]} edges={['bottom', 'left', 'right']}>
-        <View style={styles.paidBody}>
-          <Text style={styles.check}>✓</Text>
-          <Text style={styles.paidAmount}>{money(stage.total)}</Text>
-          <Text style={styles.paidHow}>{stage.how}</Text>
-          <Text style={styles.paidNumber}>{stage.orderNumber}</Text>
-        </View>
-        <View style={styles.footer}>
-          <Button label="New sale" onPress={newSale} />
-          <Button label="Done" variant="secondary" onPress={() => router.back()} />
-        </View>
-      </SafeAreaView>
+      <View style={styles.fill}>
+        <LinearGradient colors={['#46D08A', colors.green]} style={StyleSheet.absoluteFill} />
+        <SafeAreaView style={styles.fill} edges={['bottom', 'left', 'right']}>
+          <View style={styles.paidBody}>
+            <Glass style={styles.paidCard} tint="rgba(16, 110, 60, 0.45)">
+              <Text style={styles.check}>✓</Text>
+              <Text style={styles.paidAmount}>{money(stage.total)}</Text>
+              <Text style={styles.paidHow}>{stage.how}</Text>
+              <Text style={styles.paidNumber}>{stage.orderNumber}</Text>
+            </Glass>
+          </View>
+          <View style={styles.footer}>
+            <Button label="New sale" onPress={newSale} />
+            <Button label="Done" variant="secondary" onPress={() => router.back()} />
+          </View>
+        </SafeAreaView>
+      </View>
     )
   }
 
   if (stage.kind === 'working') {
     return (
       <View style={[styles.fill, styles.center]}>
-        <ActivityIndicator size="large" color={colors.brand} />
-        <Text style={styles.working}>{stage.label}</Text>
+        <Backdrop />
+        <Glass style={styles.workingCard}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={styles.working}>{stage.label}</Text>
+        </Glass>
       </View>
     )
   }
 
   if (stage.kind === 'card-failed') {
     return (
-      <SafeAreaView style={[styles.fill, styles.center, styles.pad]} edges={['bottom', 'left', 'right']}>
-        <Text style={styles.failTitle}>Card not charged</Text>
-        <Text style={styles.failMessage}>{stage.message}</Text>
-        <View style={styles.footer}>
-          <Button label={`Try again (${money(stage.sale.total)})`} onPress={() => chargeCard(stage.sale)} />
-          <Button label="Cancel this sale" variant="secondary" onPress={() => cancelCardSale(stage.sale)} />
-        </View>
-      </SafeAreaView>
+      <View style={styles.fill}>
+        <Backdrop />
+        <SafeAreaView style={[styles.fill, styles.center, styles.pad]} edges={['bottom', 'left', 'right']}>
+          <Glass style={styles.failCard}>
+            <Text style={styles.failTitle}>Card not charged</Text>
+            <Text style={styles.failMessage}>{stage.message}</Text>
+          </Glass>
+          <View style={styles.footer}>
+            <Button label={`Try again (${money(stage.sale.total)})`} onPress={() => chargeCard(stage.sale)} />
+            <Button label="Cancel this sale" variant="secondary" onPress={() => cancelCardSale(stage.sale)} />
+          </View>
+        </SafeAreaView>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.fill} edges={['bottom', 'left', 'right']}>
-      {!products ? (
-        <View style={[styles.fill, styles.center, styles.pad]}>
-          {error ? <ErrorText>{error}</ErrorText> : <ActivityIndicator size="large" color={colors.brand} />}
-        </View>
-      ) : (
-        <FlatList
-          data={products}
-          keyExtractor={(p) => p.id}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.grid}
-          ListEmptyComponent={<Muted>Your fundraiser has no salsas on sale yet.</Muted>}
-          renderItem={({ item }) => {
-            const qty = cart[item.id] ?? 0
-            const photo = imageUrl(item.imageUrl)
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Add ${item.name}, ${money(item.price)}${qty ? `, ${qty} in the sale` : ''}`}
-                onPress={() => add(item.id, 1)}
-                style={({ pressed }) => [styles.tile, qty > 0 && styles.tileOn, pressed && styles.pressed]}
-              >
-                {photo ? (
-                  <Image source={{ uri: photo }} style={styles.photo} resizeMode="contain" />
-                ) : (
-                  <View style={[styles.photo, styles.noPhoto]} />
-                )}
-                <Text style={styles.name} numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <Text style={styles.price}>{money(item.price)}</Text>
-                {qty > 0 ? (
-                  <>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{qty}</Text>
-                    </View>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove one ${item.name}`}
-                      onPress={() => add(item.id, -1)}
-                      hitSlop={10}
-                      style={styles.minus}
-                    >
-                      <Text style={styles.minusText}>−</Text>
-                    </Pressable>
-                  </>
-                ) : null}
-              </Pressable>
-            )
-          }}
-        />
-      )}
-
-      <View style={styles.bar}>
-        <ErrorText>{error}</ErrorText>
-        <View style={styles.summary}>
-          <Text style={styles.summaryText}>
-            {jars === 0 ? 'Tap a salsa to add it' : `${jars} jar${jars === 1 ? '' : 's'}`}
-          </Text>
-          {jars > 0 ? (
-            <Pressable accessibilityRole="button" onPress={newSale} hitSlop={10}>
-              <Text style={styles.clear}>Clear</Text>
-            </Pressable>
-          ) : null}
-        </View>
-        {takesCards ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Charge ${money(total)} by card`}
-            disabled={jars === 0}
-            onPress={() => chargeCard()}
-            style={({ pressed }) => [styles.charge, (jars === 0 || pressed) && styles.chargeDim]}
-          >
-            <Text style={styles.chargeText}>Charge {money(total)}</Text>
-            <Text style={styles.chargeHint}>Tap card, phone or watch</Text>
-          </Pressable>
+    <View style={styles.fill}>
+      <Backdrop />
+      <SafeAreaView style={styles.fill} edges={['bottom', 'left', 'right']}>
+        {!products ? (
+          <View style={[styles.fill, styles.center, styles.pad]}>
+            {error ? <ErrorText>{error}</ErrorText> : <ActivityIndicator size="large" color={colors.accent} />}
+          </View>
         ) : (
-          <Muted>
-            {me?.group.cardPayments
-              ? 'Card payments need the store version of the app.'
-              : 'Card payments are off for your group. Take cash or a check.'}
-          </Muted>
+          <FlatList
+            data={products}
+            keyExtractor={(p) => p.id}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            contentContainerStyle={styles.grid}
+            contentInsetAdjustmentBehavior="automatic"
+            ListEmptyComponent={<Muted>Your fundraiser has no salsas on sale yet.</Muted>}
+            renderItem={({ item }) => {
+              const qty = cart[item.id] ?? 0
+              const photo = imageUrl(item.imageUrl)
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add ${item.name}, ${money(item.price)}${qty ? `, ${qty} in the sale` : ''}`}
+                  onPress={() => add(item.id, 1)}
+                  style={styles.tileSlot}
+                >
+                  <Glass style={[styles.tile, qty > 0 && styles.tileOn]} interactive>
+                    {photo ? (
+                      <Image source={{ uri: photo }} style={styles.photo} resizeMode="contain" />
+                    ) : (
+                      <View style={[styles.photo, styles.noPhoto]} />
+                    )}
+                    <Text style={styles.name} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.price}>{money(item.price)}</Text>
+                  </Glass>
+                  {qty > 0 ? (
+                    <>
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{qty}</Text>
+                      </View>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove one ${item.name}`}
+                        onPress={() => add(item.id, -1)}
+                        hitSlop={10}
+                        style={styles.minusSlot}
+                      >
+                        <Glass style={styles.minus} interactive>
+                          <Text style={styles.minusText}>−</Text>
+                        </Glass>
+                      </Pressable>
+                    </>
+                  ) : null}
+                </Pressable>
+              )
+            }}
+          />
         )}
-        <View style={styles.otherWays}>
-          <View style={styles.fill}>
-            <Button label="Cash" variant="secondary" disabled={jars === 0} onPress={() => takeCashOrCheck('CASH')} />
+
+        <Glass style={styles.bar}>
+          <ErrorText>{error}</ErrorText>
+          <View style={styles.summary}>
+            <Text style={styles.summaryText}>
+              {jars === 0 ? 'Tap a salsa to add it' : `${jars} jar${jars === 1 ? '' : 's'}`}
+            </Text>
+            {jars > 0 ? (
+              <Pressable accessibilityRole="button" onPress={newSale} hitSlop={10}>
+                <Text style={styles.clear}>Clear</Text>
+              </Pressable>
+            ) : null}
           </View>
-          <View style={styles.fill}>
-            <Button label="Check" variant="secondary" disabled={jars === 0} onPress={() => takeCashOrCheck('CHECK')} />
+          {takesCards ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Charge ${money(total)} by card`}
+              disabled={jars === 0}
+              onPress={() => chargeCard()}
+            >
+              <Glass style={styles.charge} tint={jars === 0 ? undefined : colors.green} interactive={jars > 0}>
+                <Text style={[styles.chargeText, jars === 0 && styles.chargeTextOff]}>Charge {money(total)}</Text>
+                <Text style={[styles.chargeHint, jars === 0 && styles.chargeTextOff]}>Tap card, phone or watch</Text>
+              </Glass>
+            </Pressable>
+          ) : (
+            <Muted>
+              {me?.group.cardPayments
+                ? 'Card payments need the store version of the app.'
+                : 'Card payments are off for your group. Take cash or a check.'}
+            </Muted>
+          )}
+          <View style={styles.otherWays}>
+            <View style={styles.fill}>
+              <Button label="Cash" variant="secondary" disabled={jars === 0} onPress={() => takeCashOrCheck('CASH')} />
+            </View>
+            <View style={styles.fill}>
+              <Button label="Check" variant="secondary" disabled={jars === 0} onPress={() => takeCashOrCheck('CHECK')} />
+            </View>
           </View>
-        </View>
-      </View>
-    </SafeAreaView>
+        </Glass>
+      </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.background },
+  fill: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   pad: { padding: 24 },
-  grid: { padding: 12, gap: 12 },
-  row: { gap: 12 },
-  tile: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  tileOn: { borderColor: colors.brand },
-  pressed: { opacity: 0.7 },
+  grid: { padding: 14, gap: 14, paddingBottom: 24 },
+  row: { gap: 14 },
+  tileSlot: { flex: 1 },
+  tile: { padding: 12, alignItems: 'center', borderRadius: 24 },
+  tileOn: { borderWidth: 2, borderColor: colors.accent },
   photo: { width: '100%', height: 110, marginBottom: 8 },
-  noPhoto: { backgroundColor: colors.border, borderRadius: 8 },
-  name: { fontSize: 15, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  noPhoto: { backgroundColor: colors.border, borderRadius: 12 },
+  name: { fontSize: 15, fontWeight: '600', color: colors.text, textAlign: 'center' },
   price: { fontSize: 15, color: colors.muted, marginTop: 2 },
   badge: {
     position: 'absolute',
@@ -295,53 +310,33 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     paddingHorizontal: 6,
-    backgroundColor: colors.brand,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  minus: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1.5,
-    borderColor: colors.brand,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  minusText: { color: colors.brand, fontSize: 20, fontWeight: '800', lineHeight: 22 },
-  bar: {
-    padding: 16,
-    gap: 10,
-    backgroundColor: colors.card,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  summary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badgeText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  minusSlot: { position: 'absolute', top: 8, left: 8 },
+  minus: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  minusText: { color: colors.text, fontSize: 20, fontWeight: '700', lineHeight: 22 },
+  bar: { marginHorizontal: 12, marginBottom: 8, padding: 14, gap: 10, borderRadius: 30 },
+  summary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 },
   summaryText: { fontSize: 16, color: colors.text, fontWeight: '600' },
-  clear: { fontSize: 16, color: colors.brand, fontWeight: '600' },
-  charge: {
-    backgroundColor: colors.green,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  chargeDim: { opacity: 0.5 },
-  chargeText: { color: '#fff', fontSize: 26, fontWeight: '800' },
-  chargeHint: { color: '#DCFCE7', fontSize: 14, marginTop: 2 },
+  clear: { fontSize: 16, color: colors.accent, fontWeight: '600' },
+  charge: { borderRadius: 26, paddingVertical: 14, alignItems: 'center' },
+  chargeText: { color: '#fff', fontSize: 26, fontWeight: '700' },
+  chargeHint: { color: 'rgba(255, 255, 255, 0.85)', fontSize: 14, marginTop: 2 },
+  chargeTextOff: { color: colors.muted },
   otherWays: { flexDirection: 'row', gap: 10 },
-  working: { marginTop: 16, fontSize: 17, color: colors.text },
-  paid: { backgroundColor: colors.green },
-  paidBody: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  check: { fontSize: 96, color: '#fff', fontWeight: '800' },
-  paidAmount: { fontSize: 44, color: '#fff', fontWeight: '800' },
+  workingCard: { padding: 28, alignItems: 'center', gap: 14, marginHorizontal: 32 },
+  working: { fontSize: 17, color: colors.text },
+  paidBody: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  paidCard: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 40, gap: 4, borderRadius: 32 },
+  check: { fontSize: 84, color: '#fff', fontWeight: '700' },
+  paidAmount: { fontSize: 44, color: '#fff', fontWeight: '700' },
   paidHow: { fontSize: 20, color: '#fff' },
-  paidNumber: { fontSize: 14, color: '#DCFCE7', marginTop: 8 },
-  failTitle: { fontSize: 26, fontWeight: '800', color: colors.text, marginBottom: 8 },
-  failMessage: { fontSize: 16, color: colors.muted, textAlign: 'center', marginBottom: 24 },
+  paidNumber: { fontSize: 14, color: 'rgba(255, 255, 255, 0.85)', marginTop: 8 },
+  failCard: { padding: 24, alignItems: 'center', alignSelf: 'stretch' },
+  failTitle: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  failMessage: { fontSize: 16, color: colors.muted, textAlign: 'center' },
   footer: { gap: 12, padding: 24, alignSelf: 'stretch' },
 })

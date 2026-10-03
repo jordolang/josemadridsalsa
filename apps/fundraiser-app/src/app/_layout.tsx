@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { colors } from '@/lib/config'
 import { SessionProvider, useSession } from '@/lib/session'
@@ -11,7 +11,7 @@ function RootStack() {
   if (status === 'loading') {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={colors.brand} size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     )
   }
@@ -19,9 +19,12 @@ function RootStack() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.brand },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700' },
+        // iOS: a transparent native header, which iOS 26 renders as Liquid Glass over the content.
+        headerTransparent: Platform.OS === 'ios',
+        headerStyle: Platform.OS === 'ios' ? undefined : { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        headerTintColor: colors.accent,
+        headerTitleStyle: { color: colors.text, fontWeight: '600' },
       }}
     >
       <Stack.Protected guard={status === 'signed-out'}>
@@ -35,7 +38,7 @@ function RootStack() {
       </Stack.Protected>
 
       <Stack.Protected guard={status === 'ready'}>
-        <Stack.Screen name="index" options={{ title: 'Jose Madrid Fundraiser' }} />
+        <Stack.Screen name="index" options={{ title: 'Fundraiser', headerLargeTitleEnabled: true }} />
         <Stack.Screen name="sell" options={{ title: 'Sell' }} />
         <Stack.Screen name="new-order" options={{ title: 'Phone order' }} />
         <Stack.Screen name="orders" options={{ title: 'My orders' }} />
@@ -49,7 +52,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SessionProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <RootStack />
       </SessionProvider>
     </SafeAreaProvider>
@@ -57,5 +60,5 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
 })
