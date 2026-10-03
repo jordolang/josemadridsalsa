@@ -374,6 +374,8 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **Homepage hero names Zanesville the Salsa Capital of the World.** The first hero panel now
+  reads "Produced in Zanesville, Ohio — the Salsa Capital of the World."
 - **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions
   budget ran out, which stops every check from starting. Each run took about 30 minutes, and ten of
   those were a Playwright step that hit its time limit on every run without producing a result;
