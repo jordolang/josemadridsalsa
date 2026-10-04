@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Customer account page with one communications timeline** (`/admin/customers/[id]`). Click a
+  name on the customer list to see every order, fundraiser, email received (with its automatic
+  reply), email sent, contact-form submission, website message and live chat for that address,
+  newest first, alongside dated admin notes. Admins who can read the mailbox also see every Gmail
+  thread with the address, including replies typed in Gmail. Customer accounts are now created
+  automatically when someone pays for an order or starts a fundraiser, and single emails sent
+  through `sendEmail` and admin replies are logged so they show on the account. Schema: new
+  `CustomerNote` model.
 - **Mobile fundraiser app for iOS and Android** (`apps/fundraiser-app`, Expo). Sellers set it
   up with three things: the group ID, the group PIN, and their first and last name, then choose a
   personal PIN that unlocks the app every time it opens. Phones stay signed in for the campaign;
