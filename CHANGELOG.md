@@ -124,6 +124,10 @@ the root `package.json` is canonical.
   Timeline entries can now carry an optional `features` list, which shows up when the card is
   expanded.
 
+### Fixed
+- **Run report looked like it did nothing.** On `/admin/data/new` the result (or error) renders below
+  the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
+
 ### Removed
 - The "free shipping on 96+ jars" claim from the fundraising start and shipping pages.
 
