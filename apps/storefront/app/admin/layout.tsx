@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import { createMetadata } from '@/lib/metadata'
 import './mobile-live-chat.css'
+import './admin-shell.css'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -47,7 +48,8 @@ export default async function AdminLayout({
     )
 
     return (
-      <>
+      // `jma-admin` switches the document to the admin palette (admin-shell.css).
+      <div className="jma-admin contents">
         <div className="hidden md:contents">
           <AdminLayoutClient user={user} navigation={filteredNav}>
             {children}
@@ -63,7 +65,7 @@ export default async function AdminLayout({
         </MobileAdminShell>
         <LiveChatNotifier />
         <Toaster />
-      </>
+      </div>
     )
   } catch (error) {
     // Re-throw Next.js internal errors (redirect, notFound, etc.)
