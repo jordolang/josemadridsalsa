@@ -41,6 +41,21 @@ export async function sendAdminReplyEmail(
     ...(html ? { html } : { text: message }),
   })
 
+  // An admin's reply is exactly the correspondence the customer's account page lists.
+  try {
+    const { logEmailSend } = await import('@/lib/email/logger')
+    await logEmailSend({
+      recipientEmail: to.toLowerCase(),
+      subject: finalSubject,
+      templateId: 'admin_reply',
+      status: error ? 'FAILED' : 'SENT',
+      errorMessage: error?.message,
+      metadata: { messageId: data?.id ?? null, preview: message.slice(0, 2000) },
+    })
+  } catch {
+    // Logging never blocks the reply itself.
+  }
+
   if (error) {
     console.error('Failed to send admin reply email:', error.message)
     return { error: true, message: error.message }

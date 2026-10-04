@@ -33,6 +33,62 @@ commercial one wins: **wholesale > fundraising > standard**. Every designation
 the evidence supported is written into `notes` alongside the source files, so the
 choice can be audited or re-derived without re-running the import.
 
+## Account page and communications timeline
+
+Clicking a customer's name on the list opens `/admin/customers/[id]`, the one
+place to read everything about that account. The **Timeline** merges, newest
+first (`lib/customers/communications.ts`):
+
+| Entry | Source | Matched on |
+|---|---|---|
+| Orders | `Order` | `guestEmail`, the buyer's login email, or `userId` |
+| Fundraisers started | `Fundraiser` | `contactEmail` |
+| Emails received (and any automatic reply) | `InboundEmail` from the [Gmail triage](/docs/features/customer-email-triage) | `fromEmail` or `customerId` |
+| Emails sent | `EmailLog` | `recipientEmail` or `userId` |
+| Contact-form submissions | `ContactSubmission` | `email` |
+| Website message threads | `Conversation` | `email` or `userId` |
+| Live chats | `ChatThread` | `customerEmail` or `customerUserId` |
+| Notes | `CustomerNote` | `customerId` |
+
+Email matching ignores case. Each source is capped at 50 rows on the page.
+
+**Notes.** Admins with `users:write` add dated notes from the top of the
+timeline; each records who wrote it (`authorName` is kept on the row, so it
+survives the admin being removed). Notes are add-or-delete, never edited in
+place. The single free-text `Customer.notes` field still exists and shows above
+the timeline as the account summary.
+
+**Gmail threads.** For admins with the mailbox permission (`api_keys:manage`,
+the same one that connects Gmail), the page also reads the connected mailbox
+live for every thread `from:`, `to:` or `cc:` the address. This is what covers
+replies typed by hand in Gmail and mail older than the triage's sweep window,
+neither of which is stored in the database.
+
+**Outbound email logging.** `sendEmail` in `lib/email/sender.ts` and
+`sendAdminReplyEmail` in `lib/email.ts` now write an `EmailLog` row for every
+send, with a text preview in `metadata.preview`, so they appear on the
+timeline. Campaign blasts pass `skipLog: true`; they are tracked per recipient
+on the campaign instead. The React-email and Resend-template senders already
+logged.
+
+## When an account is created
+
+A customer row is created (or filled in) automatically at the moments a
+relationship starts, through `ensureCustomerAccount` in
+`lib/customers/ensure-account.ts`:
+
+- **A purchase** — the `customer-account` domain event handler runs on
+  `payment.completed`, and on `order.created` for channels that are final at
+  creation (manual, phone, wholesale, event). Abandoned website checkouts never
+  create an account.
+- **Starting a fundraiser** — the public fundraiser signup form, fundraiser
+  self-registration, and admin fundraiser creation all file the organizer as a
+  `FUNDRAISING` account.
+
+It only fills gaps: an existing name, phone or linked login is never
+overwritten, and the account type is raised from `STANDARD` but never lowered.
+The admin sync below still works and is still how rollups are recomputed.
+
 ## Order rollups
 
 `totalOrders`, `totalSpent`, and `lastOrderAt` are denormalized rollups.
