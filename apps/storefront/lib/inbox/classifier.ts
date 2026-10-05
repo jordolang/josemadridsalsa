@@ -248,12 +248,15 @@ function coerce(raw: any): Classification {
  * It escalates. A triage system whose AI is down must not go quiet — it must produce a
  * human-actionable alert for every message it could not read.
  */
+/** The summary every fallback carries, so an alert can say the model never read the email. */
+export const TRIAGE_FAILED_SUMMARY = 'Unread customer email — automatic triage failed'
+
 export function escalationFallback(reason: string): Classification {
   return {
     category: 'GENERAL_QUESTION',
     severity: 'WARNING',
     confidence: 0,
-    summary: 'Unread customer email — automatic triage failed',
+    summary: TRIAGE_FAILED_SUMMARY,
     canAnswerWithoutHuman: false,
     replyBody: null,
     actionSummary: `This email could not be classified automatically (${reason}). Read it in Gmail and respond.`,
