@@ -25,11 +25,13 @@ const GA_SUMMARY_ICON_MAP: Record<string, LucideIcon> = {
 interface GoogleAnalyticsSummaryProps {
   summaryCards: GoogleAnalyticsSummaryCard[]
   isReady: boolean
+  message?: string
 }
 
 export function GoogleAnalyticsSummary({
   summaryCards,
   isReady,
+  message,
 }: GoogleAnalyticsSummaryProps) {
   return (
     <section className="space-y-4">
@@ -52,7 +54,7 @@ export function GoogleAnalyticsSummary({
       </div>
       {summaryCards.length === 0 ? (
         <Card className="p-6 text-sm text-muted-foreground">
-          No Google Analytics metrics are available for this range yet.
+          {message ?? 'No Google Analytics metrics are available for this range yet.'}
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -9,6 +9,7 @@ import nodemailer, { type SentMessageInfo } from 'nodemailer'
 import { decrypt, isEncrypted } from '@/lib/encryption'
 import { getErrorMessage } from '@/lib/errors'
 import { substituteVariables } from './render'
+import { logEmailSend } from './logger'
 
 export { substituteVariables }
 
@@ -30,6 +31,11 @@ interface SendEmailOptions {
    * a send is equally compliant whichever path it takes.
    */
   headers?: Record<string, string>
+  /**
+   * Leave this send out of the per-customer email log. Campaign blasts set it: they are
+   * tracked per recipient on the campaign, and a newsletter is not correspondence.
+   */
+  skipLog?: boolean
 }
 
 interface EmailRecipientData {
@@ -90,10 +96,47 @@ async function getSMTPTransporter(configId?: string) {
   return { transporter, config }
 }
 
+/** Text kept on the log row, so the customer's account shows what was said. */
+const LOGGED_PREVIEW_LENGTH = 2000
+
+function previewOf(options: SendEmailOptions): string {
+  const text =
+    options.text ??
+    options.html
+      .replace(/<(style|script)[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+  return text.replace(/\s+/g, ' ').trim().slice(0, LOGGED_PREVIEW_LENGTH)
+}
+
 /**
- * Send a single email using Resend (primary) with SMTP fallback
+ * Send a single email using Resend (primary) with SMTP fallback, and record it in the email
+ * log so it appears on the recipient's customer account.
  */
 export async function sendEmail(
+  options: SendEmailOptions,
+  configId?: string
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const result = await deliverEmail(options, configId)
+
+  if (!options.skipLog) {
+    await logEmailSend({
+      recipientEmail: options.to.toLowerCase(),
+      subject: options.subject,
+      status: result.success ? 'SENT' : 'FAILED',
+      errorMessage: result.error,
+      metadata: {
+        from: options.from ?? null,
+        messageId: result.messageId ?? null,
+        preview: previewOf(options),
+      },
+    }).catch(() => undefined)
+  }
+
+  return result
+}
+
+async function deliverEmail(
   options: SendEmailOptions,
   configId?: string
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
@@ -236,6 +279,7 @@ export async function sendCampaign({
             subject,
             html,
             text,
+            skipLog: true,
           })
           
           if (result.success) {

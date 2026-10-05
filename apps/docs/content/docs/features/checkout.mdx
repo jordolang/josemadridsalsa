@@ -22,7 +22,6 @@ The checkout page is a single client component that handles address collection, 
   </Folder>
   <Folder name="app/api/checkout" defaultOpen>
     <File name="route.ts" />
-    <Folder name="create-session"><File name="route.ts" /></Folder>
     <Folder name="complete"><File name="route.ts" /></Folder>
     <Folder name="calculate-shipping"><File name="route.ts" /></Folder>
     <Folder name="calculate-tax"><File name="route.ts" /></Folder>
@@ -84,7 +83,7 @@ The user selects a payment method from the `PaymentMethodSelector` component. Pr
 
 ### Order Creation and Completion
 
-On submit, the page calls `POST /api/checkout/create-session` to create the order and payment intent, then `POST /api/checkout/complete` to finalize after payment confirmation.
+On submit, the page calls `POST /api/checkout` to create the order and payment intent, then `POST /api/checkout/complete` to finalize after payment confirmation.
 </Steps>
 
 ## Order Completion

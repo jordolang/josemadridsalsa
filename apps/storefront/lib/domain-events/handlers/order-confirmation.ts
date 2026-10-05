@@ -32,7 +32,7 @@ import type { DomainEventRecord } from '../subscribe'
  * struck, so there is no later payment fact to wait for. `IMPORT` is absent because the bulk importer
  * deliberately emits nothing; `MARKETPLACE` is absent because its settlement is not modelled yet.
  */
-const FINAL_AT_CREATION: SalesChannel[] = ['MANUAL', 'PHONE', 'WHOLESALE', 'EVENT']
+export const FINAL_AT_CREATION: SalesChannel[] = ['MANUAL', 'PHONE', 'WHOLESALE', 'EVENT']
 
 /**
  * Send the confirmation for one order, if it has not had one.

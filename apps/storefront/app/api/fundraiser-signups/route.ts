@@ -5,6 +5,7 @@ import { logEngagementRequest } from '@/lib/engagements'
 import { logAudit } from '@/lib/audit'
 import { sendFundraiserFollowupEmail } from '@/lib/email/automation'
 import { sendEmail } from '@/lib/email/sender'
+import { ensureCustomerAccount, splitName } from '@/lib/customers/ensure-account'
 
 const FundraiserSignupSchema = z.object({
   contactName: z.string().min(2, 'Contact name is required'),
@@ -42,6 +43,16 @@ export async function POST(request: NextRequest) {
         message: data.message,
       },
     })
+
+    // Starting a fundraiser opens the account every later email and note is filed on.
+    await ensureCustomerAccount({
+      email: normalizedEmail,
+      ...splitName(data.contactName),
+      phone: data.phone,
+      userId: user?.id,
+      source: 'MANUAL',
+      accountType: 'FUNDRAISING',
+    }).catch((error) => console.warn('[fundraiser-signups] Could not file account', error))
 
     await sendFundraiserFollowupEmail({
       email: normalizedEmail,

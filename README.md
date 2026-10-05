@@ -51,10 +51,6 @@ Admin (apps/admin and in-storefront /app/admin)
 - Campaign and fundraiser administration
 - Reporting and exports
 
-Shared packages (packages/*)
-- shared-types — central TypeScript contracts
-- shared-utils — utilities used across apps
-
 ---
 
 ## Screenshots
@@ -104,9 +100,6 @@ josemadridsalsa/
 │   ├── fundraising/    # Standalone fundraising campaign app (port 3001)
 │   ├── admin/          # Standalone role-based admin app (port 3003)
 │   └── docs/           # Fumadocs documentation site (port 3002) — canonical docs home
-├── packages/
-│   ├── shared-types/
-│   └── shared-utils/
 ├── package.json
 └── turbo.json
 ```
@@ -203,9 +196,6 @@ If you're unsure where to start, open an issue describing the goal and include s
 
 - Q: Which app is primary?
   - A: apps/storefront is the canonical app and includes most functionality.
-
-- Q: Where are shared types?
-  - A: packages/shared-types
 
 ---
 
