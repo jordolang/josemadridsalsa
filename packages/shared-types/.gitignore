@@ -1,6 +1,0 @@
-# Build output
-dist/
-*.tsbuildinfo
-
-# Dependencies
-node_modules/

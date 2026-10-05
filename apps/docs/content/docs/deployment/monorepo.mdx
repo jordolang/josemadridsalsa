@@ -19,8 +19,6 @@ and its own build. A commit that only touches one app rebuilds only that app.
 | `@jose-madrid/fundraising` | `apps/fundraising` | 3001 | Not yet linked |
 | `@jose-madrid/admin` | `apps/admin` | 3003 | Not yet linked |
 | `@jose-madrid/agent` | `apps/agent` | — | No (local tooling; excluded from `npm run build`) |
-| `@jose-madrid/shared-types` | `packages/shared-types` | — | No (library) |
-| `@jose-madrid/shared-utils` | `packages/shared-utils` | — | No (library) |
 
 `apps/macos-admin` is a Swift package, not an npm workspace, and is built with
 `build-app.sh` rather than deployed. See [macOS Admin App](/docs/features/macos-admin-app).
@@ -44,7 +42,7 @@ Configured by `apps/storefront/vercel.json`:
   seed, and finally `next build`.
 - **`git.deploymentEnabled`** allows `main` only — pushes to any other branch do not
   create a deployment.
-- **`crons`** declares the ten scheduled jobs below.
+- **`crons`** declares the thirteen scheduled jobs below.
 
 <Callout type="warn">
 Both the migrate step and the permission seed are wrapped in `|| echo 'WARN: ...'`.
@@ -61,10 +59,13 @@ allowed) and hit routes under `apps/storefront/app/api/cron`, each guarded by
 
 | Path | Schedule |
 |---|---|
+| `/api/cron/inbox-triage` | every 10 minutes |
+| `/api/cron/mail-organizer` | 8am, noon, 5pm Eastern |
 | `/api/cron/email-automation` | every 5 minutes |
 | `/api/cron/email-campaigns` | every 5 minutes |
 | `/api/cron/social-publish` | every 5 minutes |
 | `/api/cron/abandoned-cart` | hourly |
+| `/api/cron/bigcommerce-orders` | hourly at :05 |
 | `/api/cron/quickbooks-sync` | hourly at :15 |
 | `/api/cron/operations-sweep` | every 2 hours |
 | `/api/cron/expire-pending-orders` | every 2 hours at :20 |

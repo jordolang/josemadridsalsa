@@ -61,9 +61,6 @@ josemadridsalsa/
 │   ├── fundraising/    # Standalone fundraising campaign app (port 3001)
 │   ├── admin/          # Standalone role-based admin app (port 3003)
 │   └── docs/           # Fumadocs documentation site (port 3002) — canonical docs home
-├── packages/
-│   ├── shared-types/   # Shared TypeScript contracts across apps
-│   └── shared-utils/   # Shared utility functions across apps
 ├── package.json        # npm workspace + turbo scripts
 └── turbo.json          # Turborepo task graph
 ```

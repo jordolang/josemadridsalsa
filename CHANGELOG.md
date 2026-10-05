@@ -163,6 +163,8 @@ the root `package.json` is canonical.
   the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
 
 ### Removed
+- **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
+
 - The "free shipping on 96+ jars" claim from the fundraising start and shipping pages.
 
 - **fundraising.josemadrid.net replaces josemadridsalsafundraising.com's pages.** The storefront app

@@ -216,7 +216,7 @@ export async function handleStripeWebhook(event: Stripe.Event) {
 **File:** `components/checkout/PayPalProvider.tsx`
 
 ```typescript
-import { PayPalScriptProvider } from '@paypal/checkout-js-sdk'
+import { PayPalScriptProvider } from '@paypal/react-paypal-js'
 
 export function PayPalCheckoutProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -240,13 +240,13 @@ export function PayPalCheckoutProvider({ children }: { children: React.ReactNode
 **File:** `components/checkout/PayPalButton.tsx`
 
 ```typescript
-import { PayPalButtons } from '@paypal/checkout-js-sdk'
+import { PayPalButtons } from '@paypal/react-paypal-js'
 
 export function PayPalButton({ orderId, amount, onSuccess, onError }: PayPalButtonProps) {
   return (
     <PayPalButtons
       createOrder={async () => {
-        const response = await fetch('/api/paypal/create-order', {
+        const response = await fetch('/api/checkout/paypal/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ orderId, amount })
@@ -254,10 +254,10 @@ export function PayPalButton({ orderId, amount, onSuccess, onError }: PayPalButt
         return response.json().then(d => d.orderId)
       }}
       onApprove={async (data) => {
-        const response = await fetch('/api/paypal/capture-order', {
+        const response = await fetch('/api/checkout/paypal/capture-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: data.orderID })
+          body: JSON.stringify({ paypalOrderId: data.orderID })
         })
         onSuccess(await response.json())
       }}
@@ -274,7 +274,7 @@ export function PayPalButton({ orderId, amount, onSuccess, onError }: PayPalButt
 PayPal SDK automatically includes Venmo when available (US users on mobile).
 
 ```typescript
-import { PayPalButtons, FUNDING } from '@paypal/checkout-js-sdk'
+import { PayPalButtons, FUNDING } from '@paypal/react-paypal-js'
 
 export function VenmoButton({ orderId, amount, onSuccess, onError }: VenmoButtonProps) {
   return (

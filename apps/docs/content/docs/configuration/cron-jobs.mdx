@@ -1,6 +1,6 @@
 ---
 title: Scheduled Jobs
-description: The ten cron routes, what each does, and the single guard that protects them all.
+description: The thirteen cron routes, what each does, and the single guard that protects them all.
 ---
 
 # Scheduled Jobs
@@ -19,10 +19,13 @@ workaround existed because the Hobby plan capped crons at daily.
 
 | Path | Cron | What it does |
 |---|---|---|
+| `/api/cron/inbox-triage` | `*/10 * * * *` | Classifies new mail in the connected inbox, auto-answers what it safely can, alerts on the rest ([Customer Email Triage](/docs/features/customer-email-triage)) |
+| `/api/cron/mail-organizer` | `0 12,13,16,17,21,22 * * *` | Files the inbox into folders at 8am, noon and 5pm Eastern (both DST and standard UTC hours are scheduled; the off-season one no-ops) |
 | `/api/cron/email-automation` | `*/5 * * * *` | Advances automation enrolments to their next step |
 | `/api/cron/email-campaigns` | `*/5 * * * *` | Sends queued campaign batches |
 | `/api/cron/social-publish` | `*/5 * * * *` | Publishes scheduled social posts |
 | `/api/cron/abandoned-cart` | `0 * * * *` | Staged abandoned-cart recovery email |
+| `/api/cron/bigcommerce-orders` | `5 * * * *` | Re-mirrors BigCommerce orders changed in the last three days, catching missed webhooks (fundraising store too, when configured) |
 | `/api/cron/quickbooks-sync` | `15 * * * *` | Drains the QuickBooks push queue |
 | `/api/cron/operations-sweep` | `0 */2 * * *` | General operations housekeeping |
 | `/api/cron/expire-pending-orders` | `20 */2 * * *` | Cancels unpaid pending orders and returns their held inventory |

@@ -18,30 +18,30 @@ All API requests require proper authentication. See [API Authentication](/docs/a
 ### Products API
 - `GET /api/products` - List all products
 - `GET /api/products/:id` - Get product details
-- `POST /api/products` - Create product (admin)
-- `PUT /api/products/:id` - Update product (admin)
-- `DELETE /api/products/:id` - Delete product (admin)
+- `POST /api/admin/products` - Create product (admin)
+- `PATCH /api/admin/products/:id` - Update product (admin)
+- `DELETE /api/admin/products/:id` - Delete product (admin)
 
 ### Orders API
 - `GET /api/orders` - List user orders
-- `GET /api/orders/:id` - Get order details
+- `GET /api/orders/:orderId` - Get order details
 - `POST /api/orders` - Create new order
-- `PUT /api/orders/:id/status` - Update order status (admin)
+- `POST /api/admin/orders/:id/update-status` - Update order status (admin)
 
-### Users API
-- `GET /api/users/me` - Get current user profile
-- `PUT /api/users/me` - Update user profile
-- `POST /api/users/password` - Change password
+### Account API
+- `GET /api/account` - Get current user profile
+- `GET /api/account/addresses` / `POST /api/account/addresses` - List or add saved addresses
+- `POST /api/auth/forgot-password` / `POST /api/auth/reset-password` - Password reset
 
 ### Locations API
-- `GET /api/locations` - List all store locations
-- `GET /api/locations/nearby` - Find nearby locations
+- `GET /api/locations` - List store locations (pass `lat`, `lng` and `sort=distance` for nearest first)
 
 ### Shopping Cart API
 - `GET /api/cart` - Get current cart
-- `POST /api/cart/items` - Add item to cart
-- `DELETE /api/cart/items/:itemId` - Remove item from cart
-- `POST /api/cart/checkout` - Initiate checkout
+- `POST /api/cart` - Add item to cart
+- `PUT /api/cart/:id` - Update cart item quantity
+- `DELETE /api/cart/:id` - Remove item from cart
+- `POST /api/checkout` - Initiate checkout
 
 ## Response Format
 

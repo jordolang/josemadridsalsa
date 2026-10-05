@@ -25,8 +25,6 @@ COPY apps/admin/package.json ./apps/admin/
 COPY apps/docs/package.json ./apps/docs/
 COPY apps/fundraising/package.json ./apps/fundraising/
 COPY apps/storefront/package.json ./apps/storefront/
-COPY packages/shared-types/package.json ./packages/shared-types/
-COPY packages/shared-utils/package.json ./packages/shared-utils/
 COPY apps/storefront/prisma ./apps/storefront/prisma
 RUN npm ci --legacy-peer-deps
 

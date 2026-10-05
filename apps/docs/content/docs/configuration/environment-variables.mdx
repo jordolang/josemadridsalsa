@@ -19,6 +19,7 @@ Never commit `.env` files to version control. Use `.env.example` as a reference 
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | Primary PostgreSQL connection string (pooled). Falls back to `PRISMA_DATABASE_URL` then `POSTGRES_URL` if unset. |
+| `POSTGRES_PRISMA_URL` | No | Set by the Vercel Postgres integration. `lib/prisma.ts` sanitizes it alongside `POSTGRES_URL`. |
 | `DATABASE_URL_UNPOOLED` | Recommended | Direct (non-pooled) connection for migrations. Used by Prisma `directUrl`. |
 | `PRISMA_DATABASE_URL` | No | Alias fallback for `DATABASE_URL`. |
 | `POSTGRES_URL` | No | Second fallback for `DATABASE_URL`. Vercel Postgres integration sets this automatically. |
@@ -60,7 +61,7 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 | Variable | Required | Description |
 |---|---|---|
 | `STRIPE_SECRET_KEY` | Yes | Stripe secret key (`sk_test_...` or `sk_live_...`) |
-| `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side (`pk_test_...`) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side (`pk_test_...`). Build-time: redeploy after changing it. |
 | `STRIPE_WEBHOOK_SECRET` | Yes | Webhook signing secret (`whsec_...`) |
 
 ## PayPal
@@ -73,6 +74,7 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 | `PAYPAL_WEBHOOK_ID` | For PayPal | Webhook id used to verify inbound events. **Missing means every webhook is rejected** — the route logs `CRITICAL` rather than trusting the payload. |
 | `PAYPAL_RETURN_URL` | No | Where PayPal returns the buyer after approval |
 | `PAYPAL_CANCEL_URL` | No | Where PayPal returns the buyer on cancel |
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | For PayPal | Browser copy of the client id that loads the PayPal and Venmo buttons. Unset hides both options at checkout. |
 
 ## Square
 
@@ -86,6 +88,8 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 | `SQUARE_TERMINAL_DEVICE_ID` | For [POS](/docs/features/pos) and the [kiosk](/docs/features/kiosk) | The Square Terminal to send an in-person charge to |
 | `SQUARE_APPLICATION_ID` | For the iPad [kiosk](/docs/features/kiosk) card reader | Square Developer app ID used for Connect Square (OAuth) |
 | `SQUARE_APPLICATION_SECRET` | For the iPad [kiosk](/docs/features/kiosk) card reader | That app's OAuth application secret |
+| `NEXT_PUBLIC_SQUARE_APP_ID` | For Cash App Pay | Square application id loaded by the checkout's Cash App button |
+| `NEXT_PUBLIC_SQUARE_LOCATION_ID` | For Cash App Pay | Square location id for the same button. Both must be set or the option is hidden. |
 | `KIOSK_DEVICE_TOKENS` | For the [kiosk](/docs/features/kiosk) | Comma-separated device tokens (24+ characters each), one per paired kiosk tablet |
 
 ## Webhook Secrets
@@ -116,6 +120,9 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass �
 | `FROM_EMAIL` | No | Default sender address. Defaults to `orders@josemadridsalsa.com`. |
 | `BUSINESS_POSTAL_ADDRESS` | No | Physical mailing address printed in marketing-email footers, as CAN-SPAM requires. Defaults to the Zanesville address. |
 | `FUNDRAISING_REPLY_TO` | No | Reply-to address on fundraiser re-signup invitations. Defaults to the owner's address. |
+| `NEXT_PUBLIC_FROM_EMAIL` | No | Sender for queued bulk email. Falls back to `FROM_EMAIL`. |
+| `EMAIL_CHUNK_BUDGET_MS` | No | Time budget per email-queue run, in ms. Defaults to `45000`. |
+| `EMAIL_SEND_DELAY_MS` | No | Delay between queued sends, in ms (keeps under Resend's rate limit). Defaults to `550`. |
 | `EMAIL_IMAGE_BASE_URL` | No | Absolute base URL for email header and footer images. Email clients cannot resolve relative paths, so every image needs a full URL. Defaults to `https://www.josemadrid.net/email-templates`; point it at the Vercel Blob store to serve the assets from there instead. No trailing slash. |
 
 ## Google Services
@@ -123,6 +130,7 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass �
 | Variable | Required | Description |
 |---|---|---|
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Yes | Google Maps JavaScript API key (client-side) |
+| `GOOGLE_MAPS_API_KEY` | For locations | Server-side key used to geocode store locations (`lib/geocoding.ts`). Geocoding throws without it. |
 | `GOOGLE_PLACES_API_KEY` | For reviews | Google Places API key (server-side) |
 | `NEXT_PUBLIC_GOOGLE_PLACE_ID` | No | Google Place ID for map accuracy |
 | `GOOGLE_PLACE_ID` | No | Server-side Google Place ID |
@@ -131,6 +139,7 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass �
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | For calendar | Service account email |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | For calendar | Service account private key (include `\n` for newlines) |
 | `GOOGLE_CALENDAR_ID` | For schedule | Calendar ID for "Where is Jose" |
+| `GOOGLE_CALENDAR_API_KEY` | For schedule | API key used with `GOOGLE_CALENDAR_ID` to read the public schedule. Both must be set; the calendar must be public. |
 | `GOOGLE_MERCHANT_CENTER_ID` | For Shopping sync | Merchant Center account ID that products are pushed to |
 | `GOOGLE_MERCHANT_DATA_SOURCE_ID` | For Shopping sync | Numeric ID of the Merchant Center "API" data source that the Merchant API writes products into |
 | `GOOGLE_SHOPPING_SERVICE_ACCOUNT_EMAIL` | For Shopping sync | Service account added as a Merchant Center user; its Cloud project must be registered with the account (Merchant API developer registration) |
@@ -148,8 +157,7 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass �
 
 | Variable | Required | Description |
 |---|---|---|
-| `UPLOADTHING_SECRET` | For uploads | UploadThing secret key |
-| `UPLOADTHING_APP_ID` | For uploads | UploadThing application ID |
+| `UPLOADTHING_TOKEN` | For uploads | UploadThing v7 token (dashboard → API Keys → V7). The v6 `UPLOADTHING_SECRET` / `UPLOADTHING_APP_ID` pair is no longer read. |
 | `BLOB_READ_WRITE_TOKEN` | For image hosting | Read/write token for the `josemadridsalsa-blob` Vercel Blob store. Powers the Developer Console file explorer (`/admin/developer/files`), the product image uploader, and the `images:sync` / `images:migrate` scripts. Get it from **Vercel → Storage → josemadridsalsa-blob**. Without it, every blob upload path is disabled and returns 503. |
 
 ## QuickBooks Online
@@ -212,7 +220,8 @@ or store hash is wrong.
 
 | Variable | Required | Description |
 |---|---|---|
-| `GOOGLE_ANALYTICS_ID` | No | Google Analytics measurement ID (`G-XXXXXXXXXX`) |
+| `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` | No | Google Analytics measurement ID (`G-XXXXXXXXXX`) |
+| `NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED` | No | `true` loads Vercel Analytics on public pages |
 | `NEXT_PUBLIC_AMPLITUDE_API_KEY` | No | Amplitude analytics API key |
 
 ## Shipping
@@ -260,6 +269,8 @@ with nothing in the response to indicate it.
 | `NEXT_PUBLIC_AI_CHAT_PROVIDER` | No | Browser-visible copy of the same choice, used only for the "Powered by" label in the chat widget. |
 | `OPENAI_API_KEY` | For `AI_CHAT_PROVIDER=openai` | OpenAI API key. Only read when the provider is set to `openai`. |
 | `OPENAI_MODEL` | No | Model used when the provider is `openai`. Defaults to `gpt-4o-mini`. |
+| `SMILEYFACE_API_KEY` | For `AI_CHAT_PROVIDER=smileyface` | SmileyFace API key. The chat returns 400 without it when that provider is selected. |
+| `SMILEYFACE_API_BASE` | No | SmileyFace API base URL. Defaults to `https://api.smileyface.ai/v1`. |
 
 ## Customer Email Triage
 
@@ -280,6 +291,13 @@ environment — connect it at `/admin/inbox/settings`.
 | Variable | Required | Description |
 |---|---|---|
 | `SERVICE_API_KEY` | No | Shared secret for internal service-to-service API calls |
+| `ADMIN_SECRET_TOKEN` | No | An `admin_token` cookie equal to this value is treated as an admin session (`lib/admin-auth.ts`). Leave unset in production. |
+| `IMPORT_SECRET` | No | Required by `/api/import-locations-secret`; unset disables that route |
+| `APP_URL` | No | Base URL for fundraiser approval, share-shield and donation links. Falls back to the request origin. |
+| `SALSADOCS_GITHUB_TOKEN` | For docs publishing | GitHub token the Developer Console uses to publish to the salsadocs repo |
+| `SALSADOCS_GITHUB_REPO` | No | Defaults to `jordolang/salsadocs` |
+| `SALSADOCS_GITHUB_BRANCH` | No | Defaults to `main` |
+| `SALSADOCS_CONTENT_DIR` | No | Defaults to `content/docs` |
 | `NEXT_PUBLIC_SITE_URL` | Production | The site's public origin, e.g. `https://www.josemadrid.net` (the default). Canonical links, the sitemap, structured data, feeds, email links and the domain printed on invoices and packing slips are all built from it (`lib/site-url.ts`). Build-time: redeploy after changing it. |
 | `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL used by some email links and product feeds. Falls back to `NEXT_PUBLIC_SITE_URL`. |
 | `NEXT_PUBLIC_APP_URL` | No | Base URL for share links and order-rule emails. Falls back to `NEXTAUTH_URL`, then `NEXT_PUBLIC_SITE_URL`. |
@@ -287,6 +305,35 @@ environment — connect it at `/admin/inbox/settings`.
 **Moving the site to another domain:** set `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_BASE_URL`,
 `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to the new origin in Vercel (production), update
 **Admin → SEO → Site URL** (`SeoConfiguration.siteUrl`), and redeploy. No code change is needed.
+
+## Notifications & Contact
+
+Staff inboxes are comma-separated lists. Public contact values all have built-in defaults.
+
+| Variable | Required | Description |
+|---|---|---|
+| `ORDER_NOTIFICATION_EMAILS` | Recommended | Staff inboxes alerted on new orders. Falls back to `INVENTORY_ALERT_EMAILS`; with neither set, no one is told about orders. |
+| `INVENTORY_ALERT_EMAILS` | Recommended | Staff inboxes for low-stock alerts |
+| `SUPPORT_EMAIL` | No | Where new customer message threads are forwarded |
+| `FUNDRAISING_EMAIL` | No | Inbox for fundraiser sign-ups and fundraising-site order submissions |
+| `SYSTEM_OWNER_EMAIL` | No | User that owns system-created forms (`lib/forms/ownership.ts`) |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | No | Support email shown in the footer and on the contact page |
+| `NEXT_PUBLIC_SUPPORT_PHONE` | No | Support phone shown in the footer and on the contact page |
+| `NEXT_PUBLIC_HQ_LOCATION` | No | Headquarters address shown in the footer and on the contact page |
+| `NEXT_PUBLIC_FACEBOOK_URL` | No | Facebook link in the testimonials section |
+| `NEXT_PUBLIC_GOOGLE_BUSINESS_URL` | No | Google Business review link |
+| `GOOGLE_REVIEW_URL` | No | Review link on the order-confirmation page (takes precedence over `NEXT_PUBLIC_GOOGLE_BUSINESS_URL`) |
+| `NEXT_PUBLIC_FULFILLMENT_EMAIL` | No | Merchandise fulfillment partner contact |
+| `NEXT_PUBLIC_FULFILLMENT_PARTNER` | No | Merchandise fulfillment partner name |
+| `NEXT_PUBLIC_FULFILLMENT_PORTAL_URL` | No | Merchandise fulfillment partner portal |
+
+## Fundraising & Arena
+
+| Variable | Required | Description |
+|---|---|---|
+| `FUNDRAISER_API_SECRET` | For sale ingest | HMAC secret for `POST /api/fundraiser/sale` (`lib/fundraiser-auth.ts`) |
+| `ARENA_SHARE_SECRET` | For share shields | Signs arena share nonces. At least 32 characters; share links fail without it. |
+| `FUNDRAISING_APP_ORIGIN` | No | Origin of a standalone fundraising app. When set, `proxy.ts` redirects fundraising routes there. |
 
 ## Platform Agent (`apps/agent`)
 
