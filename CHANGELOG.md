@@ -386,6 +386,12 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **Web admin restyled to match the desktop app.** `/admin` now uses the desktop shell's warm
+  charcoal and gold palette (light and dark), a denser sidebar grouped into Operations, Programs,
+  Money, Marketing, Insights and System with a gold rule on the current section, and a header that
+  shows the area in small caps over a serif page title. The sidebar collapses to an icon rail
+  (⌘B / Ctrl+B) and remembers the choice. Pages, dialogs and menus pick up the palette through the
+  theme tokens; no page content changed.
 - **Homepage hero names Zanesville the Salsa Capital of the World.** The first hero panel now
   reads "Produced in Zanesville, Ohio — the Salsa Capital of the World."
 - **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions
