@@ -1,4 +1,5 @@
 import Constants from 'expo-constants'
+import { joinImageUrl } from '@/lib/image-url'
 
 /**
  * The Jose Madrid site the app talks to. Production by default; set EXPO_PUBLIC_API_URL to point
@@ -10,10 +11,7 @@ export const API_URL: string =
   'https://www.josemadrid.net'
 
 /** Product photos are stored as site paths (`/images/...`); the phone needs the full address. */
-export function imageUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  return /^https?:\/\//.test(path) ? path : `${API_URL}${path.startsWith('/') ? '' : '/'}${path}`
-}
+export const imageUrl = (path: string | null | undefined) => joinImageUrl(API_URL, path)
 
 /** How long the app may sit in the background (say, while the seller dials a customer) before it asks for the PIN again. */
 export const RELOCK_AFTER_MS = 2 * 60 * 1000

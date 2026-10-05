@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { Backdrop, Button, ErrorText, Glass, Muted } from '@/components/ui'
 import { money, type Product } from '@/lib/api'
 import { colors, imageUrl } from '@/lib/config'
+import { mayHaveSaved } from '@/lib/save-outcome'
 import { useSession } from '@/lib/session'
 import { cancelCardOrder, cardPaymentsAvailable, chargeOrder, warmUpCardReader } from '@/lib/square'
 
@@ -25,6 +26,14 @@ type Stage =
   | { kind: 'paid'; orderNumber: string; total: number; how: string }
   | { kind: 'card-failed'; sale: Sale; message: string }
 
+type Payment = 'CARD' | 'CASH' | 'CHECK'
+
+/** What was sent under the current sale id when the answer never came back. */
+interface Unconfirmed {
+  items: { productId: string; quantity: number }[]
+  payment: Payment
+}
+
 /**
  * The register: tap salsas, tap Charge, hold the phone out. Products and prices are the group's
  * own store, from the storefront. The buyer pays by tapping their card, phone or watch on the
@@ -39,6 +48,9 @@ export default function Sell() {
   const [error, setError] = useState('')
   // One id per sale, reused if the seller has to try again after a dropped connection.
   const saleId = useRef(randomUUID())
+  // Set when a save may have gone through without an answer. The cart is locked and only that exact
+  // sale can be resent, because the server answers a repeated sale id with the order it already has.
+  const [unconfirmed, setUnconfirmed] = useState<Unconfirmed | null>(null)
 
   useEffect(() => {
     call<{ products: Product[] }>('/catalog')
@@ -53,26 +65,29 @@ export default function Sell() {
   const total = lines.reduce((sum, p) => sum + p.price * cart[p.id], 0)
 
   const add = (id: string, delta: number) =>
-    setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(500, (c[id] ?? 0) + delta)) }))
+    !unconfirmed && setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(500, (c[id] ?? 0) + delta)) }))
 
   const newSale = useCallback(() => {
     saleId.current = randomUUID()
     setCart({})
+    setUnconfirmed(null)
     setError('')
     setStage({ kind: 'cart' })
   }, [])
 
-  async function record(payment: 'CARD' | 'CASH' | 'CHECK') {
-    return (
-      await call<{ order: Sale }>('/orders', {
+  async function record(payment: Payment) {
+    const sent = unconfirmed ?? { items: lines.map((p) => ({ productId: p.id, quantity: cart[p.id] })), payment }
+    try {
+      const { order } = await call<{ order: Sale }>('/orders', {
         method: 'POST',
-        body: {
-          clientOrderId: saleId.current,
-          items: lines.map((p) => ({ productId: p.id, quantity: cart[p.id] })),
-          payment,
-        },
+        body: { clientOrderId: saleId.current, ...sent },
       })
-    ).order
+      setUnconfirmed(null)
+      return order
+    } catch (e) {
+      if (mayHaveSaved(e)) setUnconfirmed(sent)
+      throw e
+    }
   }
 
   async function chargeCard(existing?: Sale) {
@@ -93,24 +108,29 @@ export default function Sell() {
     }
   }
 
+  /** Resend the sale whose answer was lost, exactly as it was first sent. */
+  function retryUnconfirmed(pending: Unconfirmed) {
+    if (pending.payment === 'CARD') return chargeCard()
+    return recordCashOrCheck(pending.payment)
+  }
+
+  async function recordCashOrCheck(payment: 'CASH' | 'CHECK') {
+    setError('')
+    setStage({ kind: 'working', label: 'Recording the sale…' })
+    try {
+      const sale = await record(payment)
+      setStage({ kind: 'paid', orderNumber: sale.orderNumber, total: sale.total, how: payment === 'CASH' ? 'Paid in cash' : 'Paid by check' })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setStage({ kind: 'cart' })
+    }
+  }
+
   function takeCashOrCheck(payment: 'CASH' | 'CHECK') {
     const what = payment === 'CASH' ? 'cash' : 'a check'
     Alert.alert(`Collected ${money(total)} in ${what}?`, 'Only record it once the money is in your hand.', [
       { text: 'Not yet', style: 'cancel' },
-      {
-        text: 'Yes, record it',
-        onPress: async () => {
-          setError('')
-          setStage({ kind: 'working', label: 'Recording the sale…' })
-          try {
-            const sale = await record(payment)
-            setStage({ kind: 'paid', orderNumber: sale.orderNumber, total: sale.total, how: payment === 'CASH' ? 'Paid in cash' : 'Paid by check' })
-          } catch (e) {
-            setError(e instanceof Error ? e.message : String(e))
-            setStage({ kind: 'cart' })
-          }
-        },
-      },
+      { text: 'Yes, record it', onPress: () => recordCashOrCheck(payment) },
     ])
   }
 
@@ -123,6 +143,7 @@ export default function Sell() {
       }
       // Keep the cart so the seller can take cash instead; a fresh sale id makes it a new order.
       saleId.current = randomUUID()
+      setUnconfirmed(null)
       setStage({ kind: 'cart' })
       setError('Card sale canceled. The cart is still here if they want to pay another way.')
     } catch (e) {
@@ -250,13 +271,18 @@ export default function Sell() {
             <Text style={styles.summaryText}>
               {jars === 0 ? 'Tap a salsa to add it' : `${jars} jar${jars === 1 ? '' : 's'}`}
             </Text>
-            {jars > 0 ? (
+            {jars > 0 && !unconfirmed ? (
               <Pressable accessibilityRole="button" onPress={newSale} hitSlop={10}>
                 <Text style={styles.clear}>Clear</Text>
               </Pressable>
             ) : null}
           </View>
-          {takesCards ? (
+          {unconfirmed ? (
+            <>
+              <Muted>The sale may already be saved. Try again to finish it; the cart is locked until then.</Muted>
+              <Button label={`Try again (${money(total)})`} onPress={() => retryUnconfirmed(unconfirmed)} />
+            </>
+          ) : takesCards ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Charge ${money(total)} by card`}
@@ -275,14 +301,26 @@ export default function Sell() {
                 : 'Card payments are off for your group. Take cash or a check.'}
             </Muted>
           )}
-          <View style={styles.otherWays}>
-            <View style={styles.fill}>
-              <Button label="Cash" variant="secondary" disabled={jars === 0} onPress={() => takeCashOrCheck('CASH')} />
+          {unconfirmed ? null : (
+            <View style={styles.otherWays}>
+              <View style={styles.fill}>
+                <Button
+                  label="Cash"
+                  variant="secondary"
+                  disabled={jars === 0}
+                  onPress={() => takeCashOrCheck('CASH')}
+                />
+              </View>
+              <View style={styles.fill}>
+                <Button
+                  label="Check"
+                  variant="secondary"
+                  disabled={jars === 0}
+                  onPress={() => takeCashOrCheck('CHECK')}
+                />
+              </View>
             </View>
-            <View style={styles.fill}>
-              <Button label="Check" variant="secondary" disabled={jars === 0} onPress={() => takeCashOrCheck('CHECK')} />
-            </View>
-          </View>
+          )}
         </Glass>
       </SafeAreaView>
     </View>

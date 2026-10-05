@@ -16,12 +16,15 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { BlurView } from 'expo-blur'
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect'
+import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { LinearGradient } from 'expo-linear-gradient'
 import { colors } from '@/lib/config'
 
-/** Native Liquid Glass (iOS 26+) when the build and device support it. */
-const liquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable()
+/**
+ * Native Liquid Glass (iOS 26+) when the build and device support it. Some iOS 26 betas report the
+ * components as available but lack the runtime API and crash, so check both.
+ */
+const liquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable() && isGlassEffectAPIAvailable()
 
 /** The soft ambient gradient every screen sits on; it is what the glass refracts. */
 export function Backdrop() {
