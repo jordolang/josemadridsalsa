@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Customer account page with one communications timeline** (`/admin/customers/[id]`). Click a
+  name on the customer list to see every order, fundraiser, email received (with its automatic
+  reply), email sent, contact-form submission, website message and live chat for that address,
+  newest first, alongside dated admin notes. Admins who can read the mailbox also see every Gmail
+  thread with the address, including replies typed in Gmail. Customer accounts are now created
+  automatically when someone pays for an order or starts a fundraiser, and single emails sent
+  through `sendEmail` and admin replies are logged so they show on the account. Schema: new
+  `CustomerNote` model.
 - **Mobile fundraiser app for iOS and Android** (`apps/fundraiser-app`, Expo). Sellers set it
   up with three things: the group ID, the group PIN, and their first and last name, then choose a
   personal PIN that unlocks the app every time it opens. Phones stay signed in for the campaign;
@@ -149,6 +157,10 @@ the root `package.json` is canonical.
   shows, wholesale, financials, marketing, content, analytics, messages, users and settings.
   Timeline entries can now carry an optional `features` list, which shows up when the card is
   expanded.
+
+### Fixed
+- **Run report looked like it did nothing.** On `/admin/data/new` the result (or error) renders below
+  the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
 
 ### Removed
 - The "free shipping on 96+ jars" claim from the fundraising start and shipping pages.
@@ -374,6 +386,12 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **Web admin restyled to match the desktop app.** `/admin` now uses the desktop shell's warm
+  charcoal and gold palette (light and dark), a denser sidebar grouped into Operations, Programs,
+  Money, Marketing, Insights and System with a gold rule on the current section, and a header that
+  shows the area in small caps over a serif page title. The sidebar collapses to an icon rail
+  (⌘B / Ctrl+B) and remembers the choice. Pages, dialogs and menus pick up the palette through the
+  theme tokens; no page content changed.
 - **Homepage hero names Zanesville the Salsa Capital of the World.** The first hero panel now
   reads "Produced in Zanesville, Ohio — the Salsa Capital of the World."
 - **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions

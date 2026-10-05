@@ -116,10 +116,30 @@ model Customer {
   importedAt            DateTime?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
+  accountNotes          CustomerNote[]
 
   @@index([source])
   @@index([accountType])
   @@map("customers")
+}
+
+/// One dated note on a customer's account, written by an admin.
+///
+/// `Customer.notes` is a single free-text field that each edit overwrites. These are the
+/// running log beside it: who wrote what and when, shown in the account timeline next to
+/// the customer's emails, orders and chats so everything about them reads in one place.
+model CustomerNote {
+  id         String   @id @default(cuid())
+  customerId String
+  body       String
+  authorId   String?
+  /// Kept on the row so the note still says who wrote it after that admin is removed.
+  authorName String?
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@map("customer_notes")
 }
 
 model Address {

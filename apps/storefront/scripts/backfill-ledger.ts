@@ -8,6 +8,7 @@
  * Rollups that merely re-summarise those sales are intentionally skipped — see the LedgerEntry
  * model comment for why.
  */
+import 'dotenv/config'
 import { prisma } from '@/lib/prisma'
 import {
   SETTLED_PAYMENT,
