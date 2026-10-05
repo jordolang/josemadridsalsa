@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { randomUUID } from 'expo-crypto'
-import { Button, Card, ErrorText, Field, Muted, Screen, Title, styles as ui } from '@/components/ui'
+import { Button, Card, ErrorText, Field, Glass, Muted, Screen, Title, styles as ui } from '@/components/ui'
 import { money, type Product } from '@/lib/api'
 import { colors } from '@/lib/config'
 import { useSession } from '@/lib/session'
@@ -140,7 +140,7 @@ export default function NewOrder() {
   if (!products) {
     return (
       <Screen>
-        {error ? <ErrorText>{error}</ErrorText> : <ActivityIndicator color={colors.brand} size="large" />}
+        {error ? <ErrorText>{error}</ErrorText> : <ActivityIndicator color={colors.accent} size="large" />}
       </Screen>
     )
   }
@@ -202,9 +202,15 @@ export default function NewOrder() {
             accessibilityRole="radio"
             accessibilityState={{ selected: payment === option.value }}
             onPress={() => !cardOrder && setPayment(option.value)}
-            style={[styles.choice, payment === option.value && styles.choiceOn]}
+            style={ui.fill}
           >
-            <Text style={[styles.choiceText, payment === option.value && styles.choiceTextOn]}>{option.label}</Text>
+            <Glass
+              style={styles.choice}
+              tint={payment === option.value ? colors.accent : undefined}
+              interactive
+            >
+              <Text style={[styles.choiceText, payment === option.value && styles.choiceTextOn]}>{option.label}</Text>
+            </Glass>
           </Pressable>
         ))}
       </View>
@@ -241,12 +247,16 @@ export default function NewOrder() {
 function Stepper({ value, onChange, name }: { value: number; onChange: (delta: number) => void; name: string }) {
   return (
     <View style={ui.row}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`One less ${name}`} onPress={() => onChange(-1)} style={styles.step} hitSlop={8}>
-        <Text style={styles.stepText}>−</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`One less ${name}`} onPress={() => onChange(-1)} hitSlop={8}>
+        <Glass style={styles.step} interactive>
+          <Text style={styles.stepText}>−</Text>
+        </Glass>
       </Pressable>
       <Text style={styles.qty}>{value}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={`One more ${name}`} onPress={() => onChange(1)} style={[styles.step, styles.stepPlus]} hitSlop={8}>
-        <Text style={[styles.stepText, styles.stepTextPlus]}>+</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`One more ${name}`} onPress={() => onChange(1)} hitSlop={8}>
+        <Glass style={styles.step} tint={colors.accent} interactive>
+          <Text style={[styles.stepText, styles.stepTextPlus]}>+</Text>
+        </Glass>
       </Pressable>
     </View>
   )
@@ -256,31 +266,13 @@ const styles = StyleSheet.create({
   product: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
   productName: { fontSize: 17, fontWeight: '600', color: colors.text },
   productPrice: { color: colors.muted },
-  step: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepPlus: { backgroundColor: colors.brand },
+  step: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   stepTextPlus: { color: '#fff' },
-  stepText: { fontSize: 22, fontWeight: '700', color: colors.brand, lineHeight: 26 },
+  stepText: { fontSize: 22, fontWeight: '600', color: colors.text, lineHeight: 26 },
   qty: { minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: '700', color: colors.text },
-  choice: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-  },
-  choiceOn: { borderColor: colors.brand, backgroundColor: '#FEF2F2' },
+  choice: { paddingVertical: 14, borderRadius: 18, alignItems: 'center' },
   choiceText: { fontSize: 16, fontWeight: '600', color: colors.text },
-  choiceTextOn: { color: colors.brand },
+  choiceTextOn: { color: '#fff' },
   totalLabel: { fontSize: 17, color: colors.text },
   total: { fontSize: 24, fontWeight: '800', color: colors.text },
 })
