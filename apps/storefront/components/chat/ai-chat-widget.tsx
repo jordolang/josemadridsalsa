@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { PicanteChatLauncher } from '@/components/chat/picante-chat-launcher'
 import { PICANTE_INITIAL_MESSAGE } from '@/lib/ai-chat/persona'
+import { getAmplitudeDeviceId } from '@/lib/analytics/amplitude'
 
 type ChatMessage = {
   id: string
@@ -172,6 +173,7 @@ export function AiChatWidget() {
             .filter((m) => m.role !== 'system')
             .map((m) => ({ role: m.role, content: m.content })),
           sessionId: chatSessionId,
+          deviceId: getAmplitudeDeviceId(),
         }),
       })
       if (!response.ok) {

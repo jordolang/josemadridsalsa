@@ -204,6 +204,8 @@ export async function extractForm(input: {
   now?: Date
   /** The capture's id; one Agent Analytics session per form. */
   sessionId?: string
+  /** Who uploaded the form; the Agent Analytics user. */
+  userId?: string
 }): Promise<ExtractionResult & { classified: ClassifiedLine[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey && !input.client) {
@@ -216,7 +218,7 @@ export async function extractForm(input: {
     input.client
       ? input.client.messages.create(params)
       : formCaptureAgent
-          .session({ sessionId: input.sessionId })
+          .session({ sessionId: input.sessionId, userId: input.userId })
           .run(() => trackedAnthropic(apiKey, { metadataOnly: true }).createMessage(params))
   const image = await fetchImageAsBase64(input.fileUrl)
 

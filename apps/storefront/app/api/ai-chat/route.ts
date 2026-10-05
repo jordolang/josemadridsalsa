@@ -5,6 +5,7 @@ import { getIndexedContent } from '@/lib/ai-rag/content-cache'
 import { searchContent, formatContextForLLM } from '@/lib/ai-rag/retriever'
 import { PICANTE_SYSTEM_PROMPT } from '@/lib/ai-chat/persona'
 import { getCurrentUser } from '@/lib/rbac'
+import { Session } from '@amplitude/ai'
 import { storefrontChatAgent, trackedAnthropic } from '@/lib/analytics/agent-analytics'
 import prisma from '@/lib/prisma'
 import {
@@ -34,6 +35,8 @@ const ChatRequestSchema = z.object({
     .max(50, 'Too many messages in conversation'),
   /** One per widget conversation; groups its turns into one Agent Analytics session. */
   sessionId: z.string().uuid().optional(),
+  /** The browser's Amplitude device id when analytics is on; joins the chat to the visitor. */
+  deviceId: z.string().max(200).optional(),
 })
 
 const PROVIDER = process.env.AI_CHAT_PROVIDER?.toLowerCase() ?? 'anthropic'
@@ -82,7 +85,7 @@ function splitForAnthropic(messages: ChatMessage[]) {
 
 async function callAnthropic(
   messages: ChatMessage[],
-  session: { sessionId?: string; userId?: string },
+  session: { sessionId?: string; userId?: string; deviceId?: string },
 ) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
@@ -103,7 +106,16 @@ async function callAnthropic(
     // Each request resends the whole conversation, so input auto-tracking would re-emit every
     // earlier turn; only the newest user message is recorded.
     const latest = conversation[conversation.length - 1]
-    const message = await storefrontChatAgent.session(session).run(async (s) => {
+    // One widget conversation spans many requests, so a turn must not end the session: it stays
+    // open and the pipeline closes it after the idle timeout. Guests are identified by device.
+    const chatSession = new Session(storefrontChatAgent, {
+      sessionId: session.sessionId,
+      userId: session.userId,
+      deviceId: session.userId ? undefined : (session.deviceId ?? session.sessionId),
+      trackSessionEnd: false,
+      autoFlush: true,
+    })
+    const message = await chatSession.run(async (s) => {
       if (latest?.role === 'user' && typeof latest.content === 'string') s.trackUserMessage(latest.content)
       return trackedAnthropic(apiKey).createMessage(
         { model, max_tokens: 600, system, messages: conversation },
@@ -310,7 +322,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { messages, sessionId } = parsed.data
+    const { messages, sessionId, deviceId } = parsed.data
 
     // Get the latest user message for RAG retrieval
     const userMessages = messages.filter((m) => m.role === 'user')
@@ -339,7 +351,7 @@ export async function POST(request: Request) {
     } else if (PROVIDER === 'openai') {
       response = await callOpenAI(chatMessages)
     } else {
-      response = await callAnthropic(chatMessages, { sessionId, userId })
+      response = await callAnthropic(chatMessages, { sessionId, userId, deviceId })
     }
 
     // Log AI chat usage for analytics and rate limiting

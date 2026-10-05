@@ -273,6 +273,8 @@ export async function classifyEmail(params: {
   context: EmailContext
   /** The mailbox message id; one Agent Analytics session per email. */
   sessionId?: string
+  /** Stable Agent Analytics identity: the mailbox connection the email arrived on. */
+  deviceId?: string
 }): Promise<Classification> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return escalationFallback('ANTHROPIC_API_KEY is not configured')
@@ -292,7 +294,7 @@ export async function classifyEmail(params: {
 
   try {
     // Metadata only: the prompt is a customer's whole email.
-    const message = await inboxTriageAgent.session({ sessionId: params.sessionId }).run(() =>
+    const message = await inboxTriageAgent.session({ sessionId: params.sessionId, deviceId: params.deviceId }).run(() =>
       trackedAnthropic(apiKey, { metadataOnly: true }).createMessage({
         model: process.env.ANTHROPIC_MODEL ?? 'claude-opus-5',
         max_tokens: 2000,

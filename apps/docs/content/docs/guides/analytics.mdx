@@ -17,6 +17,8 @@ Amplitude is initialized in `lib/analytics/amplitude.ts`:
 import * as amplitude from '@amplitude/unified'
 
 export const initAmplitude = () => {
+  // Nothing starts until the visitor accepts the cookie banner; replay records page text.
+  if (localStorage.getItem('cookie-consent') !== 'accepted') return false
   if (isInitialized) return true
   const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY
   if (!apiKey) {
@@ -24,11 +26,14 @@ export const initAmplitude = () => {
     return false
   }
 
-  // Analytics with autocapture, plus session replay on every session.
+  // Analytics with autocapture, plus session replay on every consented session.
   amplitude.initAll(apiKey, { analytics: { autocapture: true }, sessionReplay: { sampleRate: 1 } })
   isInitialized = true
   return true
 }
+
+// Rejecting cookies later calls this; replay honours the same opt-out.
+export const disableAmplitude = () => amplitude.setOptOut(true)
 ```
 
 Set the environment variable:
