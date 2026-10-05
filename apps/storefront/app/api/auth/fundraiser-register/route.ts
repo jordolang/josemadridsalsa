@@ -3,6 +3,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { logEngagementRequest } from '@/lib/engagements'
+import { ensureCustomerAccount, splitName } from '@/lib/customers/ensure-account'
 
 const FundraiserRegisterSchema = z.object({
   email: z.string().email(),
@@ -135,6 +136,14 @@ export async function POST(request: Request) {
     })
 
     await Promise.allSettled([
+      ensureCustomerAccount({
+        email: normalizedEmail,
+        ...splitName(name),
+        phone: contactPhone,
+        userId: result.user.id,
+        source: 'REGISTERED',
+        accountType: 'FUNDRAISING',
+      }),
       logEngagementRequest({
         type: 'SIGNUP',
         email: normalizedEmail,

@@ -1,0 +1,466 @@
+/*
+ * Web admin look, matched to the desktop shell (`app/admin-desktop/desktop.css`).
+ *
+ * Two parts:
+ *
+ * 1. Theme tokens. The desktop palette (warm charcoal, cream text, chile gold)
+ *    is mapped onto the Shadcn variables, so every card, table, button and
+ *    dialog under /admin takes it on without touching the pages. The tokens
+ *    are set on the document while an admin page is mounted (`:has`) rather
+ *    than on a wrapper, because dialogs and menus portal to <body> and would
+ *    otherwise fall back to the storefront palette. Light and dark follow the
+ *    existing theme toggle (the `.dark` class next-themes puts on <html>).
+ *
+ * 2. The frame: sidebar, header and content pane. Sizes and the type scale
+ *    come from the desktop design (232px sidebar, 27px rows, small-caps group
+ *    headings, Volkhov titles), which sit off the Tailwind scale, so they live
+ *    here as in the desktop stylesheet.
+ */
+
+:root:has(.jma-admin) {
+  --background: 30 22.2% 92.9%;
+  --foreground: 16.4 23.4% 9.2%;
+  --card: 0 0% 100%;
+  --card-foreground: 16.4 23.4% 9.2%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 16.4 23.4% 9.2%;
+  --primary: 38.3 71.6% 38.6%;
+  --primary-foreground: 27.3 31.4% 6.9%;
+  --secondary: 30 37.5% 96.9%;
+  --secondary-foreground: 16.4 23.4% 9.2%;
+  --muted: 30 37.5% 96.9%;
+  --muted-foreground: 25.7 10.7% 38.6%;
+  --accent: 31.6 27.5% 86.5%;
+  --accent-foreground: 16.4 23.4% 9.2%;
+  --destructive: 0 66.3% 51.2%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 30 17% 81.6%;
+  --input: 30 17% 81.6%;
+  --ring: 38.3 71.6% 38.6%;
+  --radius: 0.375rem;
+
+  --sidebar: hsl(30 20% 88.2%);
+  --sidebar-foreground: hsl(25.7 10.7% 38.6%);
+  --sidebar-primary: hsl(38.3 71.6% 38.6%);
+  --sidebar-primary-foreground: hsl(27.3 31.4% 6.9%);
+  --sidebar-accent: hsl(31.6 27.5% 86.5%);
+  --sidebar-accent-foreground: hsl(16.4 23.4% 9.2%);
+  --sidebar-border: hsl(30 17% 81.6%);
+  --sidebar-ring: hsl(38.3 71.6% 38.6%);
+
+  /* Frame-only colours with no Shadcn equivalent. */
+  --jma-side: 30 20% 88.2%;
+  --jma-hair: 30 21.9% 87.5%;
+  --jma-faint: 27.3 10.4% 55%;
+  --jma-gold-text: 33.1 72.5% 31.4%;
+}
+
+:root.dark:has(.jma-admin) {
+  --background: 24 8.5% 11.6%;
+  --foreground: 30 33.3% 92.9%;
+  --card: 20 8.6% 13.7%;
+  --card-foreground: 30 33.3% 92.9%;
+  --popover: 17.1 8.6% 15.9%;
+  --popover-foreground: 30 33.3% 92.9%;
+  --primary: 39.9 68.3% 52.9%;
+  --primary-foreground: 27.3 31.4% 6.9%;
+  --secondary: 17.1 8.6% 15.9%;
+  --secondary-foreground: 30 33.3% 92.9%;
+  --muted: 17.1 8.6% 15.9%;
+  --muted-foreground: 26.7 9.4% 62.4%;
+  --accent: 25 12.2% 19.2%;
+  --accent-foreground: 30 33.3% 92.9%;
+  --destructive: 3 84.3% 62.5%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 18 9.4% 20.8%;
+  --input: 18 9.4% 20.8%;
+  --ring: 39.9 68.3% 52.9%;
+
+  --sidebar: hsl(17.1 17.9% 7.6%);
+  --sidebar-foreground: hsl(26.7 9.4% 62.4%);
+  --sidebar-primary: hsl(39.9 68.3% 52.9%);
+  --sidebar-primary-foreground: hsl(27.3 31.4% 6.9%);
+  --sidebar-accent: hsl(25 12.2% 19.2%);
+  --sidebar-accent-foreground: hsl(30 33.3% 92.9%);
+  --sidebar-border: hsl(18 9.4% 20.8%);
+  --sidebar-ring: hsl(39.9 68.3% 52.9%);
+
+  --jma-side: 17.1 17.9% 7.6%;
+  --jma-hair: 20 10.3% 17.1%;
+  --jma-faint: 27.3 10.4% 41.6%;
+  --jma-gold-text: 40.3 81.7% 67.8%;
+}
+
+/* ------------------------------------------------------------------- frame */
+
+.jma-shell {
+  --jma-sidebar-w: 232px;
+
+  display: grid;
+  grid-template-columns: var(--jma-sidebar-w) minmax(0, 1fr);
+  height: 100svh;
+  width: 100vw;
+  overflow: hidden;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-montserrat), Montserrat, system-ui, sans-serif;
+  transition: grid-template-columns 160ms ease;
+}
+
+.jma-shell[data-collapsed='true'] {
+  --jma-sidebar-w: 60px;
+}
+
+.jma-eyebrow,
+.jma-nav-group-label,
+.jma-brand-tag {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------------- sidebar */
+
+.jma-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: hsl(var(--jma-side));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.jma-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 54px;
+  flex: none;
+  padding: 0 16px;
+  border-bottom: 1px solid hsl(var(--jma-hair));
+  color: hsl(var(--foreground));
+}
+
+.jma-brand-name {
+  font-family: var(--font-volkhov), Volkhov, Georgia, serif;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.jma-brand-tag {
+  margin-top: 5px;
+  font-size: 8.5px;
+  letter-spacing: 0.33em;
+  font-weight: 600;
+  color: hsl(var(--jma-gold-text));
+}
+
+.jma-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 8px 12px;
+  scrollbar-width: thin;
+}
+
+.jma-nav-group {
+  margin-bottom: 10px;
+}
+
+.jma-nav-group-label {
+  padding: 6px 8px 5px;
+  color: hsl(var(--jma-faint));
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.jma-nav-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.jma-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  height: 27px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.jma-nav-item:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+}
+
+.jma-nav-item[aria-current='page'] {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 hsl(var(--primary));
+}
+
+.jma-nav-item:focus-visible,
+.jma-nav-subitem:focus-visible,
+.jma-nav-toggle:focus-visible,
+.jma-icon-button:focus-visible,
+.jma-user:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+
+.jma-nav-icon {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.jma-nav-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jma-nav-toggle {
+  position: absolute;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: hsl(var(--jma-faint));
+}
+
+.jma-nav-toggle:hover {
+  color: hsl(var(--foreground));
+}
+
+.jma-nav-toggle svg {
+  transition: transform 120ms ease;
+}
+
+.jma-nav-toggle svg[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.jma-nav-sub {
+  margin: 2px 0 4px 16px;
+  padding-left: 9px;
+  border-left: 1px solid hsl(var(--border));
+}
+
+.jma-nav-subitem {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jma-nav-subitem:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent));
+}
+
+.jma-nav-subitem[aria-current='page'] {
+  color: hsl(var(--jma-gold-text));
+  font-weight: 600;
+}
+
+/* Collapsed: an icon rail. Labels, headings and submenus drop away. */
+.jma-sidebar[data-collapsed='true'] .jma-brand {
+  align-items: center;
+  padding: 0;
+}
+
+.jma-sidebar[data-collapsed='true'] .jma-nav-group-label {
+  height: 1px;
+  padding: 0;
+  margin: 6px 8px;
+  background: hsl(var(--jma-hair));
+  color: transparent;
+}
+
+.jma-sidebar[data-collapsed='true'] .jma-nav-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.jma-sidebar[data-collapsed='true'] .jma-nav-label {
+  display: none;
+}
+
+.jma-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+  width: 100%;
+  padding: 10px 14px;
+  border-top: 1px solid hsl(var(--jma-hair));
+  text-align: left;
+  color: hsl(var(--foreground));
+}
+
+.jma-user:hover {
+  background: hsl(var(--accent));
+}
+
+.jma-sidebar[data-collapsed='true'] .jma-user {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.jma-avatar {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #d9a235, #8a5616);
+  display: grid;
+  place-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #17110c;
+}
+
+.jma-user-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.jma-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jma-user-role {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  color: hsl(var(--jma-faint));
+}
+
+/* ------------------------------------------------------------------ header */
+
+.jma-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.jma-header {
+  flex: none;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--jma-hair));
+}
+
+.jma-icon-button {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  color: hsl(var(--muted-foreground));
+}
+
+.jma-icon-button:hover {
+  border-color: hsl(var(--primary));
+  color: hsl(var(--foreground));
+}
+
+.jma-title {
+  min-width: 0;
+}
+
+.jma-eyebrow {
+  color: hsl(var(--jma-gold-text));
+  white-space: nowrap;
+}
+
+.jma-heading {
+  margin-top: 2px;
+  font-family: var(--font-volkhov), Volkhov, Georgia, serif;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jma-heading a:hover {
+  color: hsl(var(--jma-gold-text));
+}
+
+.jma-path {
+  align-self: flex-end;
+  margin-bottom: 9px;
+  min-width: 0;
+  font-family: var(--font-roboto-mono), 'Roboto Mono', Menlo, monospace;
+  font-size: 10.5px;
+  color: hsl(var(--jma-faint));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jma-header-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.jma-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px;
+  background: hsl(var(--background));
+}
+
+/* The storefront's dark cards glow red; the desktop's panels sit on a plain
+   shadow, so admin cards do too. */
+.dark .jma-admin .surface-shadow,
+.dark .jma-admin .surface-shadow:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jma-shell,
+  .jma-nav-item,
+  .jma-nav-toggle svg {
+    transition: none;
+  }
+}

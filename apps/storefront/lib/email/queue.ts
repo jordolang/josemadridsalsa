@@ -187,6 +187,7 @@ export async function processCampaign({
         subject,
         html: finalHtml,
         from: `${fromName} <${fromEmail}>`,
+        skipLog: true,
       },
       campaign.configId ?? undefined,
     )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { Loader2, Play, Plus, X } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -114,6 +114,11 @@ export function ReportBuilder({ datasetIds, initialDatasetId }: Props) {
   const [result, setResult] = useState<ReportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  // The result renders below the builder, usually off-screen; without this a run looks like a no-op.
+  const resultRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (result || error) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [result, error])
 
   const grains = dataset ? grainsFor(dataset) : []
   const isYearAxis = dataset?.timeAxis.kind === 'year'
@@ -474,6 +479,7 @@ export function ReportBuilder({ datasetIds, initialDatasetId }: Props) {
         </CardContent>
       </Card>
 
+      <div ref={resultRef} className="scroll-mt-4" />
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

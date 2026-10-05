@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 import prisma from '@/lib/prisma'
+import { ensureCustomerAccount } from '@/lib/customers/ensure-account'
 
 const FundraiserCreateSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -79,6 +80,14 @@ export async function POST(request: NextRequest) {
         isActive: data.isActive,
       },
     })
+
+    // The organizer's correspondence is filed on their customer account from here on.
+    await ensureCustomerAccount({
+      email: fundraiser.contactEmail,
+      phone: fundraiser.contactPhone,
+      source: 'MANUAL',
+      accountType: 'FUNDRAISING',
+    }).catch((error) => console.warn('[fundraisers] Could not file organizer account', error))
 
     // Audit log
     await logAudit({

@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Customer account page with one communications timeline** (`/admin/customers/[id]`). Click a
+  name on the customer list to see every order, fundraiser, email received (with its automatic
+  reply), email sent, contact-form submission, website message and live chat for that address,
+  newest first, alongside dated admin notes. Admins who can read the mailbox also see every Gmail
+  thread with the address, including replies typed in Gmail. Customer accounts are now created
+  automatically when someone pays for an order or starts a fundraiser, and single emails sent
+  through `sendEmail` and admin replies are logged so they show on the account. Schema: new
+  `CustomerNote` model.
 - **Mobile fundraiser app for iOS and Android** (`apps/fundraiser-app`, Expo). Sellers set it
   up with three things: the group ID, the group PIN, and their first and last name, then choose a
   personal PIN that unlocks the app every time it opens. Phones stay signed in for the campaign;
@@ -149,6 +157,10 @@ the root `package.json` is canonical.
   shows, wholesale, financials, marketing, content, analytics, messages, users and settings.
   Timeline entries can now carry an optional `features` list, which shows up when the card is
   expanded.
+
+### Fixed
+- **Run report looked like it did nothing.** On `/admin/data/new` the result (or error) renders below
+  the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
 
 ### Removed
 - **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
@@ -376,6 +388,12 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **Web admin restyled to match the desktop app.** `/admin` now uses the desktop shell's warm
+  charcoal and gold palette (light and dark), a denser sidebar grouped into Operations, Programs,
+  Money, Marketing, Insights and System with a gold rule on the current section, and a header that
+  shows the area in small caps over a serif page title. The sidebar collapses to an icon rail
+  (⌘B / Ctrl+B) and remembers the choice. Pages, dialogs and menus pick up the palette through the
+  theme tokens; no page content changed.
 - **Homepage hero names Zanesville the Salsa Capital of the World.** The first hero panel now
   reads "Produced in Zanesville, Ohio — the Salsa Capital of the World."
 - **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions
@@ -396,9 +414,11 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
-- **Docs match the code before launch.** The API overview, checkout, PayPal and payment-integration pages named about ten endpoints that do not exist (`/api/users/me`, `/api/cart/items`, `/api/checkout/create-session`, `/api/paypal/*`, `/api/chat`, …); each now names the real route. The Battle Arena page's tutorial for a `battle-state` route and a `BattleArena.tsx` component that were never built is replaced by a map of the real files and `/api/fundraiser/arena/*` routes. The scheduled-jobs docs list all thirteen crons, adding `inbox-triage`, `mail-organizer` and `bigcommerce-orders`.
-- **Environment reference covers what the code reads.** About forty variables the storefront reads were in neither `.env.example` nor the docs, including `ORDER_NOTIFICATION_EMAILS`, `SMILEYFACE_API_KEY`, `ARENA_SHARE_SECRET` and the browser-side PayPal and Square ids. Three documented names were never read: `STRIPE_PUBLISHABLE_KEY` is `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `GOOGLE_ANALYTICS_ID` is `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, and the UploadThing v6 pair is now `UPLOADTHING_TOKEN`.
-
+- **Admin Analytics says why Google Analytics data is missing.** When GA4 failed to load, the
+  overview showed "No Google Analytics metrics are available for this range yet" and hid the real
+  cause. It now shows the reason, and an expired or revoked credential (`invalid_grant`, e.g.
+  Workspace re-auth `invalid_rapt`) tells the admin to replace the `google_analytics /
+  service_account` secret with a service account key.
 - **`/battles` and season end crown the same, real champion.** `/battles` ranked every active
   fundraiser by all-time revenue, and season end ranked by the team's lifetime `salesCount`,
   which carries sales across seasons. Both now use `getBattleStandings`

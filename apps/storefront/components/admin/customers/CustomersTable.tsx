@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
@@ -278,7 +279,14 @@ export function CustomersTable({
                   />
                 </TableCell>
                 <TableCell className="max-w-[22rem] truncate px-2 py-1">
-                  <span className="font-medium">{fullName(c) || 'No name'}</span>
+                  <Link
+                    href={`/admin/customers/${c.id}`}
+                    className="font-medium hover:underline"
+                    // Opens the account timeline; the rest of the row still opens the editor.
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {fullName(c) || 'No name'}
+                  </Link>
                   <span className="ml-2 text-xs text-muted-foreground">
                     {c.email}
                   </span>
