@@ -9,6 +9,7 @@ import { clearDomainEventHandlers } from '../subscribe'
 
 import { registerArenaDamageHandlers } from './arena-damage'
 import { registerAutomationEnrollmentHandlers } from './automation-enrollment'
+import { registerCustomerAccountHandlers } from './customer-account'
 import { registerLedgerHandlers } from './ledger'
 import { registerOrderConfirmationHandlers } from './order-confirmation'
 import { registerOrderNotificationHandlers } from './order-notifications'
@@ -42,6 +43,7 @@ export function registerDomainEventConsumers(): void {
   registerRestockAlertHandlers()
   registerLedgerHandlers()
   registerArenaDamageHandlers()
+  registerCustomerAccountHandlers()
 }
 
 /** Reset registration state. For tests, which need to re-register against a clean registry. */

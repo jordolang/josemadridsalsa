@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
     const result = await applyPurchaseDamage({
       sellingTeamId: team.id,
       saleAmount: parsed.data.amount,
+      // Reported live by the team's own store, so it is placed now.
+      placedAt: new Date(),
       orderId: parsed.data.orderId,
       donor: parsed.data.donor,
     })

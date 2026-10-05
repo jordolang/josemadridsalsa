@@ -50,6 +50,8 @@ export type DesktopViewKind =
   | 'analytics'
   | 'settings'
   | 'link'
+  /** The Gmail client, drawn by the shell itself rather than from a section payload. */
+  | 'mail'
 
 /**
  * One page inside a section.
@@ -352,6 +354,9 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         kind: 'table',
         pages: [
           { id: 'messages', label: 'Inbox', path: '/admin/messages' },
+          // The connected Gmail mailbox, which the web panel configures under
+          // /admin/inbox/settings and the integrations sheet guards.
+          { id: 'messages.mail', label: 'Mail', path: '/admin/inbox', kind: 'mail', permission: 'api_keys:manage' },
           { id: 'messages.email', label: 'Customer email', path: '/admin/inbox' },
           { id: 'messages.live', label: 'Live chat', path: '/admin/messages/live' },
           { id: 'messages.notifications', label: 'Notifications', path: '/admin/notifications' },

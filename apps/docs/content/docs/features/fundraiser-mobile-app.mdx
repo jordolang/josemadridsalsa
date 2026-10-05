@@ -1,0 +1,246 @@
+---
+title: Fundraiser Mobile App
+description: The iOS and Android app sellers use to take fundraiser orders over the phone, and the admin controls behind it.
+---
+
+# Fundraiser Mobile App
+
+One app in the App Store and Google Play that every fundraising group uses. A seller downloads
+it, types three things their organizer gives them, and starts taking orders over the phone. Every
+order lands on the fundraising platform against the group and the seller, exactly like an order
+placed on the campaign page.
+
+| Part | Where | Job |
+|---|---|---|
+| Mobile app | `apps/fundraiser-app` (Expo / React Native) | Setup, PIN lock, taking orders, the seller's own orders, organizer tools |
+| App API | `/api/fundraiser-app/*` (`app/api/fundraiser-app`, `lib/fundraiser-app`) | Sign-in, PINs, catalog, orders |
+| Admin controls | **Fundraisers › campaign › Mobile App** (`/admin/fundraisers/[id]/mobile-app`) | Turn the app on, group ID, group PIN, organizer seat, PIN resets |
+
+The app is the same for every group. It becomes a group's app when a seller enters that group's
+ID: the group's name, its salsas and its prices all come from the server.
+
+## Setting up a group (Jose Madrid admin)
+
+1. Open the campaign in **Admin › Fundraisers** and click **Mobile App**.
+2. Enter a **group PIN** (4–6 digits) and save. It is stored as a hash, so write it down; you can
+   always set a new one.
+3. Turn the app **On**. This issues the **group ID**, six letters and digits with no look-alike
+   characters (no 0/O, 1/I/L, 5/S).
+4. Give the organizer the group ID and group PIN to hand out to their sellers.
+5. Once the organizer has joined in the app, pick them under **Organizer seat**.
+
+The campaign's store must be open (active, not ended) for sellers to take orders. Turning the app
+off shuts every phone out at once; turning it back on lets them back in without signing in again.
+
+## Seller setup: three identifiers
+
+1. **Join my group** → group ID and group PIN.
+2. First and last name → choose a personal PIN (4–6 digits), typed twice.
+
+The name registers the seller in the group (a `FundraiserParticipant`, no email needed). If the
+organizer or Jose Madrid already added someone with that name who has not set up the app, the
+app claims that record so their earlier sales stay theirs. Two sellers with the same name: the
+second adds a middle initial.
+
+The phone then **stays signed in for the campaign**. The device token lives in the iOS Keychain /
+Android Keystore; only its SHA-256 is on the server (`FundraiserAppSession`).
+
+## Every time the app opens
+
+The app asks for the seller's personal PIN on every launch, and again whenever it comes back
+after more than two minutes in the background (short enough to protect a lost phone, long enough
+to switch to the Phone app during a call). The server checks the PIN; the phone never stores it.
+Order routes refuse a session whose PIN was not entered in the last 12 hours.
+
+## Getting back in
+
+A seller on a new phone, after a reinstall, or after signing out taps **I already joined**:
+group ID and group PIN, then picks their name from the group's list and enters their own PIN.
+
+## Resetting a PIN
+
+Sellers set their PIN once. Only two people can reset it:
+
+- **The group's organizer**, from **Organizer tools** in the app (for anyone but themselves).
+- **A Jose Madrid admin**, from the Mobile App page (for anyone, the organizer included).
+
+A reset clears the PIN and signs that seller's phones out. They get back in with **I already
+joined**, pick their name, and choose a new PIN.
+
+Until they do, anyone with the group ID and group PIN could pick that name and set the PIN, so
+reset a PIN when the seller is ready to sign straight back in.
+
+## The organizer seat
+
+Each group has exactly one (`Fundraiser.appOrganizerId`), assigned by an admin. Its holder sees
+**Organizer tools** in the app: every seller's orders and sales, who is signed in or locked out,
+**Reset PIN**, and **Change group PIN** (phones already signed in stay signed in).
+
+## Taking an order
+
+The seller picks salsas and quantities, enters the customer's name and phone (email and a
+delivery address are optional), and how they were paid:
+
+| Choice | Order is recorded as | Group credited |
+|---|---|---|
+| Card | `PENDING` until Square confirms the card, then `PAID`, `CONFIRMED`, payment method "Card (Square)", with a `Payment` row (provider `SQUARE`, channel `POS`) | When Square confirms the payment |
+| Cash | `PAID`, `CONFIRMED`, payment method "Cash (collected by seller)" | Immediately |
+| Check | `PAID`, `CONFIRMED`, payment method "Check (collected by seller)" | Immediately |
+| Pay later | `PENDING`, payment method "Pay on delivery" | When an admin marks it paid |
+
+- **Prices come from the server**, from the group's fundraiser store (`priceInStore`), the same
+  prices the campaign page charges. The app sends only product ids and quantities.
+- Orders carry `fundraiserId`, `participantId`, `salesChannel = FUNDRAISER` and `sellerName`, so
+  they appear in every fundraiser report, leaderboard and rollup. Crediting runs through
+  `creditFundraiserCommission`, like every other paid fundraiser order.
+- Order numbers are `APP-` plus 12 characters derived from an id the app makes once per order, so
+  a retry after a dropped connection returns the same order instead of creating a second one.
+- No tax (Ohio does not tax salsa as grocery food), no shipping (the seller delivers), and no
+  stock reservation (fundraiser orders are packed in bulk). Only card orders have a `Payment`
+  row; cash, check and pay-later have no processor.
+- The customer's name is in the delivery address when one was given, and always in the order's
+  admin notes.
+
+## Card payments (Square)
+
+With **Card payments with Square** turned on for the group (admin › Mobile App), sellers get a
+**Card** choice. The phone takes the card with Square's Mobile Payments SDK
+(`mobile-payments-sdk-react-native`), in whichever way suits the sale:
+
+- **Tap to Pay** on the seller's iPhone or Android phone: the customer taps their card, phone or
+  watch. No extra hardware.
+- **Keyed entry**: the seller types the card number in, for an order taken over the phone.
+- **A Square Reader** paired under **Card reader & Tap to Pay** on the home screen.
+
+The money goes into Jose Madrid's Square account at `SQUARE_LOCATION_ID`, and shows in the Square
+dashboard like any other in-person sale. How a card sale works:
+
+1. The app saves the order as `PENDING` with provider `SQUARE`.
+2. It asks `GET /api/fundraiser-app/square/authorization` for the shop's Square OAuth token (the
+   same connection the iPad kiosk uses, **Settings › Payments › Connect Square**) and signs the
+   SDK in. The token is never built into the app.
+3. Square's payment screen takes the card, with the order id as the payment's `referenceId`.
+4. The app reports the Square payment id. The storefront looks the payment up **in Square** and
+   marks the order paid only if Square says it is completed, at our location, for exactly the
+   order total, and not already used for another order (`readerPaymentProblem`, shared with the
+   kiosk). It then records the `Payment`, credits the group, and emits `payment.completed`, which
+   sends the customer's confirmation email if they gave one.
+
+If the connection drops after the card was charged, **Try card again** asks the storefront first.
+It finds the payment in Square by the order's reference, so the customer is never charged twice.
+**Cancel card order** cancels the order unless Square shows it was paid after all; the cart stays
+filled so the seller can pick another way to pay.
+
+If the app is closed mid-sale, the order shows in **My orders** as *Card not finished*, with
+**Finish card payment** (checks Square first, then charges only if nothing went through) and
+**Cancel this order**. A card order the app canceled is still recorded as paid if Square later
+shows a completed payment for it, so a charged customer is never left without an order.
+
+The Square webhook settles fundraiser-app card orders (`APP-…`) through the same checks as the
+app, so a payment for the wrong amount or at another location never marks one paid, whichever
+arrives first.
+
+Signing out of the phone also signs the SDK out of Square. Turning card payments off for a group
+stops new card orders and new Square sign-ins straight away.
+
+<Callout type="warn">
+While card payments are on, each seller's phone holds an access token for the shop's Square
+account (that is how Square's SDK works). Turn it on for groups you trust with card payments, and
+off when their campaign ends.
+</Callout>
+
+### What has to be in place
+
+| What | Where |
+|---|---|
+| Square connected | **Admin › Settings › Payments › Connect Square** (OAuth), plus `SQUARE_LOCATION_ID`, `SQUARE_ACCESS_TOKEN`, `SQUARE_APPLICATION_ID`, `SQUARE_APPLICATION_SECRET`, as for the kiosk |
+| Card payments on for the group | **Fundraisers › campaign › Mobile App** |
+| A store build of the app | Card payments use native code, so they are not in Expo Go |
+| **Tap to Pay on iPhone** | Apple must grant the *Tap to Pay on iPhone* entitlement to the Apple Developer team: request it at developer.apple.com (Account › Tap to Pay on iPhone). Until it is granted, iOS builds with it fail to sign; set `"tapToPayOnIPhone": false` on the Square plugin in `app.json` to ship without it (keyed entry and readers still work). An iPhone XS or newer. The first time, Apple asks someone at Jose Madrid to accept its Tap to Pay terms: do that on your own phone before handing the app out. |
+| **Tap to Pay on Android** | An NFC phone on a recent Android that passes Google's security checks. Nothing to request. |
+| Phone permissions | Square asks for location (Square only takes US payments), Bluetooth (readers) and, on Android, phone state. Declare them in the store listings' privacy answers. |
+
+### Native setup
+
+`apps/fundraiser-app/plugins/with-square-mobile-payments.js` (a config plugin, adapted from
+Square's Expo sample) does the native work at build time: it initializes the SDK in the iOS
+`AppDelegate` and Android `MainApplication`, adds Square's Maven repository and Android
+permissions, the iOS usage strings, reader accessory protocols, the Tap to Pay entitlement, and the
+SDK's iOS setup build phase. `expo-build-properties` sets Android `minSdkVersion` 28 and
+`compileSdkVersion` 36, which the SDK needs. Release minification stays off, as Square requires.
+
+The plugin uses the shop's production Square application id. To build against a Square sandbox,
+set `SQUARE_APPLICATION_ID` to the sandbox app id in the EAS build profile, and point the build at a
+storefront that is connected to the same sandbox.
+
+## Lockouts
+
+| What | Limit | Then |
+|---|---|---|
+| Wrong personal PIN (unlock or reclaim) | 5 in a row | Seller locked out 15 minutes. An organizer or admin reset clears it. |
+| Wrong group PIN (any device) | 25 in a row | New sign-ups for that group pause 10 minutes. Setting a new group PIN clears it. |
+| Any request that takes a group PIN | 150 per network address per 15 minutes | Generous, so a whole class can join from one school network at once. |
+
+Unknown group IDs and wrong group PINs get the same answer, so group IDs cannot be discovered.
+
+## App API
+
+All under `/api/fundraiser-app`. Routes marked 🔑 need `Authorization: Bearer <device token>`;
+🔓 also need a recent PIN unlock.
+
+| Route | Purpose |
+|---|---|
+| `POST /group` | Check a group ID and group PIN; returns the group's name |
+| `POST /register` | Join: group credentials + first/last name + new PIN → device token |
+| `POST /roster` | Group credentials → the names to pick from |
+| `POST /reclaim` | Group credentials + seller + PIN (or a new PIN after a reset) → device token |
+| `POST /unlock` 🔑 | Personal PIN → profile |
+| `GET /me` 🔓 | Seller, group, order count and sales |
+| `GET /catalog` 🔓 | The group's salsas at its prices |
+| `GET /orders` 🔓, `POST /orders` 🔓 | The seller's orders; record a new one |
+| `GET /square/authorization` 🔓 | Square token and location for the payment SDK (card payments on) |
+| `POST /orders/{id}/card` 🔓 | Confirm the card with Square (`{ paymentId }`); `GET` re-checks Square by reference |
+| `POST /orders/{id}/card/cancel` 🔓 | Give up on the card; cancels unless Square shows it paid |
+| `POST /sign-out` 🔑 | Sign this phone out |
+| `GET /organizer/sellers` 🔓 | Organizer only |
+| `POST /organizer/sellers/{id}/reset-pin` 🔓 | Organizer only |
+| `POST /organizer/group-pin` 🔓 | Organizer only |
+
+Errors carry a `code` the app acts on: `signed_out` (back to setup), `locked` (back to the PIN
+pad), `group_closed`.
+
+Admin routes: `GET`/`PATCH /api/admin/fundraisers/{id}/mobile-app` and
+`POST /api/admin/fundraisers/{id}/mobile-app/sellers/{participantId}` (`reset-pin`, `sign-out`).
+They need `orders:read` / `orders:write` and are audit-logged; a group PIN is never logged.
+
+## Building and publishing the app
+
+The app is an Expo project outside the npm workspaces (`"!apps/fundraiser-app"` in the root
+`package.json`), so its React Native dependencies never touch the web build. Work in its folder:
+
+```bash
+cd apps/fundraiser-app
+npm install
+npm start                 # Expo dev server; scan the QR code with Expo Go
+npm run type-check
+npm run doctor            # expo-doctor
+```
+
+To try it against a local storefront, start the storefront and run
+`EXPO_PUBLIC_API_URL=http://<your computer's LAN IP>:3000 npm start`.
+
+Store builds use [EAS](https://docs.expo.dev/eas/), which builds and signs in the cloud, so no
+Mac or Android Studio is needed:
+
+1. `npx eas-cli@latest login` with the Jose Madrid Expo account, then `npx eas-cli@latest init`
+   once to link the project (this writes the EAS project id into `app.json`).
+2. **iOS:** an Apple Developer Program membership. `npm run build:ios`, then `npm run submit:ios`
+   uploads to App Store Connect. EAS creates the certificates and profiles when asked.
+3. **Android:** a Google Play Console account and an app created there with package
+   `net.josemadrid.fundraiser`. `npm run build:android`, then `npm run submit:android` (the
+   first upload to Play must be done by hand in the Play Console).
+4. Both stores need a privacy policy URL and screenshots. The app collects the seller's name and
+   their customers' names, phone numbers and optional email/address, used only to fulfil orders.
+
+Identifiers: bundle id / package `net.josemadrid.fundraiser`; build numbers are managed remotely
+by EAS (`autoIncrement`). Bump `version` in `app.json` for each store release.

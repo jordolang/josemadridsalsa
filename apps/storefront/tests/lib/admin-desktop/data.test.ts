@@ -681,8 +681,8 @@ describe('every command the desktop shell can run', () => {
   it('has a route table to check the remaining hand-offs against', () => {
     expect(ADMIN_ROUTES).toContain('/admin/customers')
     expect(ADMIN_ROUTES).toContain('/admin/events/[id]/edit')
-    // The two routes rows used to point at genuinely do not exist.
-    expect(ADMIN_ROUTES).not.toContain('/admin/customers/[id]')
+    // The customer account page exists now; the events detail route still does not.
+    expect(ADMIN_ROUTES).toContain('/admin/customers/[id]')
     expect(ADMIN_ROUTES).not.toContain('/admin/events/[id]')
   })
 

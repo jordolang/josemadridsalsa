@@ -7,267 +7,41 @@ description: Passive pixel art mascot battle game for fundraiser team profile pa
 
 ## Overview
 
-The Battle Arena is a passive, sale-driven pixel art mascot battle game
-embedded on each fundraiser team's profile page at:
+The Battle Arena is a passive, sale-driven pixel art mascot battle game. Each team's
+fundraiser page (`/fundraise/[slug]`) shows a compact battle widget, and the full arena
+for a month lives at `/arena/[period]` (period is `YYYY-MM`) in the fundraiser portal.
 
-  https://josemadrid.net/fundraise/[team-slug]
+Every sale for a team triggers an attack. Sharing the page activates a 30-minute shield.
+No manual gameplay exists — the game reflects real fundraising activity.
 
-Every sale on a team's page triggers an attack. Sharing the page on Facebook
-activates a 30-minute shield. No manual gameplay exists — the game reflects
-real fundraising activity in real time.
+## Where the code lives
 
----
+| Piece | Path |
+|-------|------|
+| Full arena UI | `components/arena/playable-arena.tsx` (rendered by `app/(fundraiser-portal)/arena/[period]/arena-client.tsx`) |
+| Page widget | `components/arena/battle-widget.tsx` (rendered by `app/fundraise/[slug]/page.tsx`) |
+| Client polling | `lib/arena/use-arena-state.ts` |
+| Snapshot builder | `lib/arena/server-state.ts` |
+| Damage | `lib/arena/damage.ts` (`applyPurchaseDamage`) |
+| Shields | `lib/arena/shield-service.ts`, `lib/arena/share-nonce.ts` |
+| Constants | `lib/arena/rules.ts` (`SHIELD_DURATION_MS`, `SHIELD_MAX_HP`) |
+| Standings | `lib/arena/standings.ts` (`getBattleStandings`) |
 
-## Files Installed
+## API routes
 
-```
-components/fundraiser/BattleArena.tsx   ← the entire game component
-docs/BATTLE_ARENA_INTEGRATION.md        ← this file
-```
+| Route | Purpose |
+|-------|---------|
+| `GET /api/fundraiser/arena/[period]/state` | Public arena snapshot (HP, shields, feed). Rate-limited to 120 req/min per IP. |
+| `GET`/`POST /api/fundraiser/arena/[period]/messages` | Arena chat feed |
+| `POST /api/fundraiser/arena/share/intent` | Mints a single-use share nonce; redeeming `/s/[nonce]` activates the shield |
+| `POST /api/fundraiser/sale` | Machine-to-machine sale ingest (HMAC API key, idempotent on `orderId`) |
+| `POST /api/fundraiser/sale-events/[id]/love`, `.../reply` | Reactions and replies on feed events |
+| `/api/admin/arena/seasons/...` | Season management: create, add/remove teams, reset HP, end season |
 
----
-
-## Step 1 — Embed the component in a fundraiser profile page
-
-Your fundraiser profile page lives at:
-  app/fundraise/[slug]/page.tsx
-
-The page is a Server Component. BattleArena is a Client Component ("use client").
-Pass data from your DB as props:
-
-```tsx
-// app/fundraise/[slug]/page.tsx  (Server Component — no changes needed here)
-
-import BattleArena from "@/components/fundraiser/BattleArena";
-import FundraiserBattleWrapper from "@/components/fundraiser/FundraiserBattleWrapper";
-
-export default async function FundraiserProfilePage({ params }) {
-  const team = await db.fundraiserTeam.findUnique({
-    where: { slug: params.slug, status: "ACTIVE" },
-  });
-  if (!team) notFound();
-
-  const oppTeam = await db.fundraiserTeam.findFirst({
-    where: {
-      status: "ACTIVE",
-      id: { not: team.id },
-      activePeriod: { equals: team.activePeriod },
-    },
-    orderBy: { salesCount: "desc" },
-  });
-
-  const shield = await db.fundraiserShield.findFirst({
-    where: { teamId: team.id, expiresAt: { gt: new Date() } },
-    orderBy: { expiresAt: "desc" },
-  });
-
-  return (
-    <main>
-      {/* ... rest of your page ... */}
-      <FundraiserBattleWrapper
-        shieldExpiresAt={shield?.expiresAt?.toISOString() ?? null}
-        shieldHPRemaining={shield?.remainingHP ?? 0}
-        myTeamId={team.id}
-        oppTeamId={oppTeam?.id ?? null}
-      />
-    </main>
-  );
-}
-```
-
----
-
-## Step 2 — Create the BattleWrapper client component
-
-This wrapper handles polling for new sale events and passing them as props:
-
-```tsx
-// components/fundraiser/FundraiserBattleWrapper.tsx
-"use client";
-
-import { useState, useEffect } from "react";
-import BattleArena from "./BattleArena";
-
-interface Props {
-  myTeamId: string;
-  oppTeamId: string | null;
-  shieldExpiresAt: string | null;
-  shieldHPRemaining: number;
-}
-
-export default function FundraiserBattleWrapper({
-  myTeamId, oppTeamId, shieldExpiresAt, shieldHPRemaining,
-}: Props) {
-  const [mySale,    setMySale]    = useState(0);
-  const [oppSale,   setOppSale]   = useState(0);
-  const [sharedAt,  setSharedAt]  = useState(false);
-  const [shieldExp, setShieldExp] = useState(shieldExpiresAt);
-  const [shieldHP,  setShieldHP]  = useState(shieldHPRemaining);
-
-  // Poll for new sale events every 10 seconds
-  useEffect(() => {
-    const poll = async () => {
-      const res = await fetch(`/api/fundraiser/battle-state?myTeam=${myTeamId}&oppTeam=${oppTeamId??""}`);
-      const data = await res.json();
-
-      if (data.latestMySaleDollars)  setMySale(data.latestMySaleDollars + Math.random() * 0.0001);
-      if (data.latestOppSaleDollars) setOppSale(data.latestOppSaleDollars + Math.random() * 0.0001);
-      if (data.shieldExpiresAt)      setShieldExp(data.shieldExpiresAt);
-      if (data.shieldHPRemaining !== undefined) setShieldHP(data.shieldHPRemaining);
-    };
-
-    poll();
-    const id = setInterval(poll, 10_000);
-    return () => clearInterval(id);
-  }, [myTeamId, oppTeamId]);
-
-  return (
-    <BattleArena
-      incomingSaleDollars={mySale}
-      opponentSaleDollars={oppSale}
-      shareConfirmed={sharedAt}
-      shieldExpiresAt={shieldExp}
-      shieldHPRemaining={shieldHP}
-    />
-  );
-}
-```
-
----
-
-## Step 3 — Create the battle-state API route
-
-```ts
-// app/api/fundraiser/battle-state/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-
-export async function GET(req: NextRequest) {
-  const myTeamId  = req.nextUrl.searchParams.get("myTeam");
-  const oppTeamId = req.nextUrl.searchParams.get("oppTeam");
-  if (!myTeamId) return NextResponse.json({ error: "myTeam required" }, { status: 400 });
-
-  // Latest sale on MY team's page (last 30 seconds to avoid replaying old events)
-  const mySale = await db.fundraiserSaleEvent.findFirst({
-    where: { teamId: myTeamId, createdAt: { gt: new Date(Date.now() - 30_000) } },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const oppSale = oppTeamId ? await db.fundraiserSaleEvent.findFirst({
-    where: { teamId: oppTeamId, createdAt: { gt: new Date(Date.now() - 30_000) } },
-    orderBy: { createdAt: "desc" },
-  }) : null;
-
-  const shield = await db.fundraiserShield.findFirst({
-    where: { teamId: myTeamId, expiresAt: { gt: new Date() } },
-    orderBy: { expiresAt: "desc" },
-  });
-
-  return NextResponse.json({
-    latestMySaleDollars:  mySale?.amount  ?? 0,
-    latestOppSaleDollars: oppSale?.amount ?? 0,
-    shieldExpiresAt:      shield?.expiresAt?.toISOString() ?? null,
-    shieldHPRemaining:    shield?.remainingHP ?? 0,
-  });
-}
-```
-
----
-
-## Step 4 — Update CONFIG in BattleArena.tsx for each team
-
-For each new team you onboard, create a copy of BattleArena.tsx
-OR — better — make CONFIG a prop:
-
-```tsx
-// Option A: One component per team (simplest)
-// Duplicate BattleArena.tsx → BattleArena_WestM.tsx, change CONFIG block.
-
-// Option B: Pass CONFIG as a prop (recommended for many teams)
-// Change the component signature to accept a config prop and
-// remove the hardcoded CONFIG const.
-```
-
-The CONFIG fields to update per team:
-
-| Field                     | What to change                              |
-|---------------------------|---------------------------------------------|
-| myTeam.name               | Team display name                           |
-| myTeam.school             | School name                                 |
-| myTeam.color              | Hex color matching team colors              |
-| myTeam.mascot             | Key matching MASCOT_SPRITES                 |
-| myTeam.goal               | Fundraising goal in dollars                 |
-| myTeam.shareUrl           | Full URL to this team's fundraiser page     |
-| myTeam.quips              | Array of battle cry strings (4–8 items)     |
-| oppTeam.*                 | Same fields for the opposing team           |
-| startingHP                | HP per round (default 1000)                 |
-| shieldDurationMinutes     | Minutes per Facebook share (default 30)     |
-| shieldHP                  | Max damage shield absorbs (default 30)      |
-
----
-
-## Step 5 — Add a new mascot sprite
-
-1. Open components/fundraiser/BattleArena.tsx
-2. Add your function above the MASCOT_SPRITES object:
-
-```tsx
-function EagleSprite({ color, state, tick, shielded, flipped, scale = 1 }: SpriteProps) {
-  // Build your SVG pixel art here
-  // state values: "idle" | "attack" | "hit" | "dead"
-  // Use tick for bob/animation: Math.sin(tick * 0.7) * 3
-  return <svg>...</svg>;
-}
-```
-
-3. Register it:
-```tsx
-const MASCOT_SPRITES = {
-  tornado: (p) => <TornadoSprite {...p}/>,
-  scottie: (p) => <ScottieSprite {...p}/>,
-  eagle:   (p) => <EagleSprite {...p}/>,   // ← new
-};
-```
-
-4. Set mascot: "eagle" in your team's CONFIG block.
-
----
-
-## Step 6 — Shield DB schema addition
-
-Add `remainingHP` to your FundraiserShield model:
-
-```graphql
-model FundraiserShield {
-  id          String   @id @default(cuid())
-  teamId      String
-  team        FundraiserTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  activatedAt DateTime @default(now())
-  expiresAt   DateTime
-  remainingHP Int      @default(30)   // ← add this field
-
-  @@index([teamId, expiresAt])
-}
-```
-
-Run: `npx prisma migrate dev --name add_shield_remaining_hp`
-
-Update the shield route to decrement remainingHP on each opponent sale:
-
-```ts
-// In app/api/fundraiser/sale/route.ts — after processing an opp sale
-// find the active shield for the team that was attacked and decrement
-const activeShield = await db.fundraiserShield.findFirst({
-  where: { teamId: attackedTeamId, expiresAt: { gt: new Date() }, remainingHP: { gt: 0 } },
-});
-if (activeShield) {
-  const absorb = Math.min(activeShield.remainingHP, saleDollars);
-  await db.fundraiserShield.update({
-    where: { id: activeShield.id },
-    data: { remainingHP: { decrement: absorb } },
-  });
-}
-```
+Shield HP is stored on `FundraiserShield.remainingHP` (default 30) and decremented as
+opponent damage is absorbed. Share rate limits (enforced at redemption): at most one
+shield per user per platform per hour, five per user per day, 20 per team per day, and the
+user account must be at least 24 hours old.
 
 ---
 
@@ -302,6 +76,22 @@ catalogue. Both that table and that route are gone. There is one catalogue
 goods, so it has no order to hang off and still settles through the Stripe metadata path in
 `app/api/webhooks/stripe`.
 
+## Which sales count, and who wins
+
+Only a sale **placed during the team's current battle** deals damage. `applyPurchaseDamage`
+takes the order's own `placedAt` and refuses anything placed before the team joined or outside
+the battle window (the season's `startsAt`–`endsAt`, else the period month). Past orders that
+arrive late — a history import, the BigCommerce mirror catching up, a late payment — record
+nothing and damage nobody.
+
+Each sale event stores the battle `period` it struck. Standings come from those events, not
+from `FundraiserTeam.salesCount` (a lifetime counter that survives across seasons):
+`getBattleStandings` in `lib/arena/standings.ts` ranks the season's own roster (or, with no
+season, the period's ACTIVE teams) by sales in that battle, earliest team first on a tie. The
+public `/battles` board and the season-end route (`POST /api/admin/arena/seasons/[id]/end`)
+both use it, so the leaderboard always shows the team the season will crown. A season that
+ends with no sales crowns nobody.
+
 ## Game Mechanics Reference
 
 | Event                        | Result                                               |
@@ -314,10 +104,3 @@ goods, so it has no order to hang off and still settles through the Stripe metad
 | Facebook share (no shield)   | 30-min shield activates, absorbs up to $30           |
 | Facebook share (shielded)    | No effect                                            |
 | Mascot HP reaches 0          | Round ends, both HP reset, round counter increments  |
-
----
-
-## Removing the Demo Controls
-
-The component has no demo controls in this version.
-All events are driven by props from your wrapper component.

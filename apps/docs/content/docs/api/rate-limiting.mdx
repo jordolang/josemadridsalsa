@@ -16,8 +16,8 @@ Rate limit state is stored **in-memory** on the server process. In a multi-serve
 | Tier | Max Requests | Window | Identifier | Endpoints |
 |------|-------------|--------|------------|-----------|
 | **General API** | 100 | 60 seconds | IP address | Most API endpoints |
-| **AI Chat** | 20 | 60 seconds | IP address | `/api/chat`, AI-powered endpoints |
-| **AI Chat (Authenticated)** | 50 | 60 seconds | User ID | `/api/chat` (logged-in users) |
+| **AI Chat** | 20 | 60 seconds | IP address | `/api/ai-chat`, AI-powered endpoints |
+| **AI Chat (Authenticated)** | 50 | 60 seconds | User ID | `/api/ai-chat` (logged-in users) |
 | **Auth Login** | 5 | 15 minutes | IP address | `/api/auth/callback/credentials` |
 | **Password Reset** | 3 | 60 minutes | IP address | `/api/auth/forgot-password`, `/api/auth/reset-password` |
 

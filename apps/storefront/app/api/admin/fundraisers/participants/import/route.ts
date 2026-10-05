@@ -116,7 +116,10 @@ export async function POST(req: NextRequest) {
     const participantKey = (fundraiserId: string, email: string) =>
       `${fundraiserId}|${email.toLowerCase()}`
     const byParticipant = new Map(
-      existingParticipants.map((p) => [participantKey(p.fundraiserId, p.email), p.id])
+      // App-registered sellers may have no email; they cannot collide with an imported row.
+      existingParticipants.flatMap((p) =>
+        p.email ? [[participantKey(p.fundraiserId, p.email), p.id] as const] : []
+      )
     )
 
     const seen = new Set<string>()

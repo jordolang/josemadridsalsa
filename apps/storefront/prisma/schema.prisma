@@ -116,10 +116,30 @@ model Customer {
   importedAt            DateTime?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
+  accountNotes          CustomerNote[]
 
   @@index([source])
   @@index([accountType])
   @@map("customers")
+}
+
+/// One dated note on a customer's account, written by an admin.
+///
+/// `Customer.notes` is a single free-text field that each edit overwrites. These are the
+/// running log beside it: who wrote what and when, shown in the account timeline next to
+/// the customer's emails, orders and chats so everything about them reads in one place.
+model CustomerNote {
+  id         String   @id @default(cuid())
+  customerId String
+  body       String
+  authorId   String?
+  /// Kept on the row so the note still says who wrote it after that admin is removed.
+  authorName String?
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@map("customer_notes")
 }
 
 model Address {
@@ -1081,6 +1101,21 @@ model Fundraiser {
   orders               Order[]
   /// The campaign's Battle Arena presence, when it has been entered into a season.
   arenaTeam            FundraiserTeam?
+  /// Mobile fundraiser app. The group ID sellers type at setup (e.g. "K7Q4MZ"); issued by a Jose Madrid admin.
+  appGroupCode         String?                 @unique
+  /// bcrypt hash of the group PIN the organizer hands to the sellers.
+  appGroupPinHash      String?
+  /// Wrong group PINs in a row. Enough of them locks sign-ups until `appGroupLockedUntil`.
+  appGroupPinFailures  Int                     @default(0)
+  appGroupLockedUntil  DateTime?
+  /// Off until an admin turns the app on for this group; off again shuts every device out.
+  appEnabled           Boolean                 @default(false)
+  /// Lets this group's sellers take cards in the app (Square Mobile Payments SDK). Off by default:
+  /// a phone that takes cards holds a Square access token for the shop's account.
+  appCardPayments      Boolean                 @default(false)
+  /// The one seat per group that may reset a seller's PIN from the app.
+  appOrganizerId       String?                 @unique
+  appOrganizer         FundraiserParticipant?  @relation("FundraiserAppOrganizer", fields: [appOrganizerId], references: [id], onDelete: SetNull)
 
   @@map("fundraisers")
 }
@@ -1150,7 +1185,16 @@ model FundraiserParticipant {
   id                    String                      @id @default(cuid())
   fundraiserId          String
   name                  String
-  email                 String
+  /// Optional: sellers who join through the mobile app register with their name alone.
+  email                 String?
+  firstName             String?
+  lastName              String?
+  /// bcrypt hash of the seller's own app PIN. Null until they set it; an organizer reset clears it.
+  appPinHash            String?
+  appPinSetAt           DateTime?
+  /// Wrong personal PINs in a row; enough of them locks the seller out until `appPinLockedUntil`.
+  appPinFailures        Int                         @default(0)
+  appPinLockedUntil     DateTime?
   phone                 String?
   referralCode          String                      @unique
   status                FundraiserParticipantStatus @default(ACTIVE)
@@ -1168,9 +1212,30 @@ model FundraiserParticipant {
   updatedAt             DateTime                    @default(now()) @updatedAt
   fundraiser            Fundraiser                  @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
   orders                Order[]
+  appSessions           FundraiserAppSession[]
+  appOrganizerOf        Fundraiser?                 @relation("FundraiserAppOrganizer")
 
   @@index([fundraiserId])
   @@map("fundraiser_participants")
+}
+
+/// A phone signed in to the mobile fundraiser app as one seller. The device keeps the raw token;
+/// only its SHA-256 is stored. The seller's PIN unlocks the session each time the app opens.
+model FundraiserAppSession {
+  id            String                @id @default(cuid())
+  participantId String
+  tokenHash     String                @unique
+  deviceName    String?
+  platform      String?
+  /// Last correct PIN entry. Order routes refuse a session that has not been unlocked recently.
+  unlockedAt    DateTime?
+  lastSeenAt    DateTime              @default(now())
+  revokedAt     DateTime?
+  createdAt     DateTime              @default(now())
+  participant   FundraiserParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([participantId])
+  @@map("fundraiser_app_sessions")
 }
 
 model FundraiserAccount {
@@ -3462,6 +3527,9 @@ model FundraiserSaleEvent {
   donorComment       String?
   isAnonymous        Boolean                       @default(false)
   sellingCharacterId String?
+  /// The battle period (YYYY-MM) this sale struck. Standings and the season champion count
+  /// these, not the team's lifetime salesCount.
+  period             String?
   reactions          FundraiserSaleEventReaction[]
   replies            FundraiserSaleEventReply[]
   donor              User?                         @relation(fields: [donorUserId], references: [id])
@@ -3471,6 +3539,7 @@ model FundraiserSaleEvent {
   @@index([teamId])
   @@index([donorUserId])
   @@index([sellingCharacterId])
+  @@index([period, teamId])
   @@map("fundraiser_sale_events")
 }
 

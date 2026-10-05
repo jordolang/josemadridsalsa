@@ -220,6 +220,12 @@ function BlockEditorPanel({ block, onChange }: EditorPanelProps) {
     return (
       <div className="grid gap-3 sm:grid-cols-2">
         <LabelInput label="Label" value={b.label ?? ''} onChange={(v) => onChange({ label: v })} placeholder="Fundraising Progress" />
+        <LabelSelect
+          label="Style"
+          value={b.style ?? 'bar'}
+          options={[{ value: 'bar', label: 'Progress bar' }, { value: 'thermometer', label: 'Thermometer' }]}
+          onChange={(v) => onChange({ style: v as 'bar' | 'thermometer' })}
+        />
         <div className="flex flex-col gap-2">
           <LabelCheckbox label="Show amount raised" checked={b.showAmount} onChange={(v) => onChange({ showAmount: v })} />
           <LabelCheckbox label="Show percentage" checked={b.showPercentage} onChange={(v) => onChange({ showPercentage: v })} />

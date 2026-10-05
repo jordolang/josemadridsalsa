@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma as db } from '@/lib/prisma'
 import { requireAdminSession } from '@/lib/admin-auth'
+import { getBattleStandings } from '@/lib/arena/standings'
 import { logAuditWithRequest } from '@/lib/audit'
 
 const EndSeasonSchema = z.object({
@@ -15,8 +16,9 @@ const EndSeasonSchema = z.object({
  * POST /api/admin/arena/seasons/[id]/end
  *
  * Atomically:
- *   1. Picks the winning team (highest salesCount among ACTIVE teams in
- *      the season). Ties break on earliest createdAt (stable).
+ *   1. Picks the winning team: most sales placed during this battle among
+ *      the season's ACTIVE teams (`getBattleStandings`, shared with /battles).
+ *      Ties break on earliest createdAt (stable). No sales, no champion.
  *   2. Creates a FundraiserChampionship row keyed on the season's
  *      period (month/year), tagged with seasonId for forward lookups.
  *   3. Sets the season status to ENDED and pins championTeamId.
@@ -73,11 +75,14 @@ export async function POST(
     )
   }
 
-  const champion = await db.fundraiserTeam.findFirst({
-    where: { seasonId: season.id, status: 'ACTIVE' },
-    orderBy: [{ salesCount: 'desc' }, { createdAt: 'asc' }],
-    select: { id: true, slug: true, name: true, salesCount: true },
-  })
+  // Same standings the public /battles board shows: this season's roster, ranked by sales
+  // placed during this battle (not the lifetime salesCount), earliest team on a tie. A season
+  // with no sales crowns nobody.
+  const [leader] = await getBattleStandings(season.period, { seasonId: season.id, status: 'ACTIVE' })
+  const champion =
+    leader && leader.battleSales > 0
+      ? { id: leader.id, slug: leader.slug, name: leader.name, salesCount: leader.battleSales }
+      : null
 
   const result = await db.$transaction(async (tx) => {
     const updatedSeason = await tx.fundraiserSeason.update({

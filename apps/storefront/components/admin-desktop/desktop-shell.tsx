@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DESKTOP_SECTION_GROUPS,
   findPage,
+  pageKind,
   pagesFor,
+  type DesktopPage,
   type DesktopSection,
   type DesktopSectionId,
 } from '@/lib/admin-desktop/sections'
@@ -32,6 +34,7 @@ import { attentionCount, badgeAlerts, type DesktopAlert } from '@/lib/admin-desk
 import { Icon, IconSprite } from './icons'
 import { RecordSheet, type SheetRequest } from './record-sheet'
 import { ScanSheet } from './scan-sheet'
+import { MailView } from './mail-view'
 import {
   AnalyticsView,
   DashboardView,
@@ -127,6 +130,35 @@ interface FetchOptions {
   silent?: boolean
 }
 
+/**
+ * The Mail page's payload, built here rather than fetched: MailView reads the
+ * mailbox API itself, so the section route has nothing to add. The empty link
+ * body keeps every table-only control — filter box, bulk bar, row counts,
+ * inspector — switched off.
+ */
+function mailPayload(entry: { section: DesktopSection; page: DesktopPage }, visiblePages?: string[]): SectionPayload {
+  return {
+    id: entry.section.id,
+    page: entry.page.id,
+    pages: pagesFor(entry.section)
+      .filter((page) => !visiblePages || visiblePages.includes(page.id))
+      .map(({ id, label }) => ({ id, label })),
+    kind: 'mail',
+    eyebrow: entry.section.label.toUpperCase(),
+    heading: entry.page.label,
+    path: entry.page.path,
+    filters: [],
+    actions: [],
+    body: { view: 'link', note: '', views: [] },
+    loadedAt: new Date().toISOString(),
+  }
+}
+
+function mailEntry(id: string) {
+  const entry = findPage(id)
+  return entry && pageKind(entry.section, entry.page) === 'mail' ? entry : undefined
+}
+
 /** POST one write and read back the route's fixed answer shape. */
 async function postWrite(command: WriteCommand): Promise<{ message: string } | { error: string }> {
   try {
@@ -168,7 +200,11 @@ export function DesktopShell({
    */
   visiblePages?: string[]
 }) {
-  const [section, setSection] = useState<SectionPayload>(initialSection)
+  const [section, setSection] = useState<SectionPayload>(() => {
+    // A cold load at ?page=messages.mail arrives with the section's table body.
+    const mail = mailEntry(initialSection.page)
+    return mail ? mailPayload(mail, visiblePages) : initialSection
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState(0)
@@ -271,6 +307,19 @@ export function DesktopShell({
     const entry = findPage(id)
     const sectionId = entry?.section.id ?? (id as DesktopSectionId)
     const ticket = ++requestId.current
+    const mail = mailEntry(id)
+    if (mail) {
+      // Mail loads itself; a reload or auto-refresh here has nothing to do.
+      if (keepPlace || silent) return
+      setSection(mailPayload(mail, visiblePages))
+      setError(null)
+      setLoading(false)
+      setSelected(0)
+      setQuery('')
+      setFilter(0)
+      setMarked(new Set())
+      return
+    }
     if (!silent) {
       setLoading(true)
       setError(null)
@@ -310,7 +359,7 @@ export function DesktopShell({
     } finally {
       if (ticket === requestId.current) setLoading(false)
     }
-  }, [])
+  }, [visiblePages])
 
   /**
    * Move the window to one page.
@@ -579,6 +628,7 @@ export function DesktopShell({
   // ---------------------------------------------------------------- rows
 
   const body = section.body
+  const isMail = section.kind === 'mail'
   const isRowView = body.view === 'table' || body.view === 'events'
   const allRows: Row[] = useMemo(
     () => (body.view === 'table' || body.view === 'events' ? body.rows : []),
@@ -958,6 +1008,9 @@ export function DesktopShell({
         return
       }
 
+      // MailView owns the plain keys on its page (e, #, r, f, …).
+      if (isMail) return
+
       // The inspector's own buttons, on the keys their labels advertise. These
       // are checked before the plain-key handlers below because they carry a
       // modifier, which the table's type-ahead deliberately ignores.
@@ -1054,6 +1107,7 @@ export function DesktopShell({
     runCommand,
     reload,
     marked.size,
+    isMail,
   ])
 
   useEffect(() => {
@@ -1232,58 +1286,60 @@ export function DesktopShell({
             </div>
           ) : null}
 
-          <div className="jmsd-filterbar">
-            <div className="jmsd-filter-input">
-              <Icon name="i-search" size={12} className="jmsd-tone-muted" />
-              <input
-                ref={filterInputRef}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value)
-                  setSelected(0)
-                }}
-                placeholder="Filter this table  /"
-                disabled={!isRowView}
-              />
+          {isMail ? null : (
+            <div className="jmsd-filterbar">
+              <div className="jmsd-filter-input">
+                <Icon name="i-search" size={12} className="jmsd-tone-muted" />
+                <input
+                  ref={filterInputRef}
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value)
+                    setSelected(0)
+                  }}
+                  placeholder="Filter this table  /"
+                  disabled={!isRowView}
+                />
+              </div>
+              {section.filters.map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  className="jmsd-chip"
+                  aria-pressed={index === filter}
+                  onClick={() => {
+                    setFilter(index)
+                    setSelected(0)
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+              {isRowView && hasCustomWidths(columnWidths, section.id) ? (
+                <button type="button" className="jmsd-chip" onClick={resetAllColumns} title="Back to the default widths">
+                  <Icon name="i-columns" size={11} />
+                  <span style={{ marginLeft: 5 }}>Reset columns</span>
+                </button>
+              ) : null}
+              <span className="jmsd-rowsummary">{rowSummary}</span>
+              {isRowView && list?.more && list.limit < MAX_LIST_LIMIT ? (
+                <button type="button" className="jmsd-chip" onClick={loadMore} title="Read the next rows">
+                  Load more
+                </button>
+              ) : null}
+              {isRowView ? (
+                <button
+                  type="button"
+                  className="jmsd-chip"
+                  onClick={exportCsv}
+                  aria-label="Export CSV"
+                  title="Export these rows as CSV"
+                >
+                  <Icon name="i-file" size={11} />
+                </button>
+              ) : null}
             </div>
-            {section.filters.map((label, index) => (
-              <button
-                key={label}
-                type="button"
-                className="jmsd-chip"
-                aria-pressed={index === filter}
-                onClick={() => {
-                  setFilter(index)
-                  setSelected(0)
-                }}
-              >
-                {label}
-              </button>
-            ))}
-            {isRowView && hasCustomWidths(columnWidths, section.id) ? (
-              <button type="button" className="jmsd-chip" onClick={resetAllColumns} title="Back to the default widths">
-                <Icon name="i-columns" size={11} />
-                <span style={{ marginLeft: 5 }}>Reset columns</span>
-              </button>
-            ) : null}
-            <span className="jmsd-rowsummary">{rowSummary}</span>
-            {isRowView && list?.more && list.limit < MAX_LIST_LIMIT ? (
-              <button type="button" className="jmsd-chip" onClick={loadMore} title="Read the next rows">
-                Load more
-              </button>
-            ) : null}
-            {isRowView ? (
-              <button
-                type="button"
-                className="jmsd-chip"
-                onClick={exportCsv}
-                aria-label="Export CSV"
-                title="Export these rows as CSV"
-              >
-                <Icon name="i-file" size={11} />
-              </button>
-            ) : null}
-          </div>
+          )}
 
           {isRowView && marked.size > 0 ? (
             <div className="jmsd-bulkbar" role="toolbar" aria-label="Bulk actions">
@@ -1310,7 +1366,9 @@ export function DesktopShell({
           ) : null}
 
           <div className="jmsd-pane">
-            {error ? (
+            {isMail ? (
+              <MailView onOpenPath={openPath} />
+            ) : error ? (
               <div className="jmsd-empty">{error}</div>
             ) : body.view === 'dashboard' ? (
               <DashboardView payload={body} onRun={runCommand} />
@@ -1353,7 +1411,7 @@ export function DesktopShell({
           </div>
         </main>
 
-        {inspectorOpen ? <Inspector data={inspectorData} onRun={runCommand} /> : null}
+        {inspectorOpen && !isMail ? <Inspector data={inspectorData} onRun={runCommand} /> : null}
       </div>
 
       <footer className="jmsd-statusbar">
@@ -1365,15 +1423,29 @@ export function DesktopShell({
         <span className="jmsd-quickfind" style={{ opacity: quickFind ? 1 : 0 }}>
           {quickFind ? `find: ${quickFind}` : ''}
         </span>
-        <span className="jmsd-statusbar-keys">
-          <span>J/K move</span>
-          <span>↵ open</span>
-          <span>/ filter</span>
-          <span>F cycle</span>
-          <span>Space mark</span>
-          <span>I inspector</span>
-          <span>⌘K search</span>
-        </span>
+        {isMail ? (
+          <span className="jmsd-statusbar-keys">
+            <span>J/K move</span>
+            <span>↵ open</span>
+            <span>U back</span>
+            <span>E archive</span>
+            <span># trash</span>
+            <span>S star</span>
+            <span>R/A/F reply · all · fwd</span>
+            <span>C compose</span>
+            <span>/ search</span>
+          </span>
+        ) : (
+          <span className="jmsd-statusbar-keys">
+            <span>J/K move</span>
+            <span>↵ open</span>
+            <span>/ filter</span>
+            <span>F cycle</span>
+            <span>Space mark</span>
+            <span>I inspector</span>
+            <span>⌘K search</span>
+          </span>
+        )}
       </footer>
 
       {paletteOpen ? (

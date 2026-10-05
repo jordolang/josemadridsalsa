@@ -31,7 +31,7 @@ interface ParticipantDashboardProps {
   participant: {
     id: string
     name: string
-    email: string
+    email: string | null
     referralCode: string
     totalOrders: number
     totalRevenue: number

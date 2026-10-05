@@ -139,7 +139,7 @@ export default async function InboxEmailPage({ params }: { params: Promise<{ id:
                 <p>
                   Customer:{' '}
                   <Link
-                    href={`/admin/customers?search=${encodeURIComponent(customer.email)}`}
+                    href={`/admin/customers/${customer.id}`}
                     className="hover:underline"
                   >
                     {[customer.firstName, customer.lastName].filter(Boolean).join(' ') || email.fromEmail}

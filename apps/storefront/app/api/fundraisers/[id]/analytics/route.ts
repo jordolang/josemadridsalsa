@@ -3,11 +3,35 @@ import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 import prisma from '@/lib/prisma'
+import { normalizeSeoKeywords } from '@/lib/fundraising/seo-keywords'
+import { normalizeGaMeasurementId } from '@/lib/fundraising/public-page-settings'
+
+// The portal form sends '' for a cleared field; store that as null.
+const emptyToNull = (value: unknown) => (typeof value === 'string' && value.trim() === '' ? null : value)
 
 const AnalyticsUpdateSchema = z.object({
-  googleMeasurementId: z.string().nullable().optional(),
-  googleMyBusinessId: z.string().nullable().optional(),
-  seoKeywords: z.array(z.string()).optional(),
+  googleMeasurementId: z
+    .preprocess(
+      emptyToNull,
+      z
+        .string()
+        .transform((id, ctx) => {
+          const normalized = normalizeGaMeasurementId(id)
+          if (!normalized) {
+            ctx.addIssue({ code: 'custom', message: 'Use a Google Analytics ID like G-XXXXXXXXXX' })
+            return z.NEVER
+          }
+          return normalized
+        })
+        .nullable(),
+    )
+    .optional(),
+  googleMyBusinessId: z.preprocess(emptyToNull, z.string().trim().max(200).nullable()).optional(),
+  seoKeywords: z
+    .array(z.string().max(200))
+    .max(100, 'Too many keywords')
+    .transform(normalizeSeoKeywords)
+    .optional(),
 })
 
 async function hasFundraiserAccess(userId: string, userEmail: string, fundraiserId: string) {

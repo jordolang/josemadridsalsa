@@ -1,6 +1,6 @@
 'use client'
 
-import * as React from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -10,7 +10,6 @@ import {
   Building2,
   Archive,
   CalendarDays,
-  ChefHat,
   ChevronRight,
   Contact,
   DollarSign,
@@ -36,26 +35,10 @@ import {
 
 import { NavUser } from '@/components/admin/NavUser'
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  SidebarRail,
-} from '@/components/ui/sidebar'
+  groupAdminNav,
+  isAdminHrefActive,
+  isAdminSectionActive,
+} from '@/lib/admin/nav-groups'
 import type { NavItem } from '@/lib/permissions-map'
 
 const iconMap: Record<string, LucideIcon> = {
@@ -86,132 +69,110 @@ const iconMap: Record<string, LucideIcon> = {
   Table2,
 }
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+interface AppSidebarProps {
   user: {
     name: string | null
     email: string
     role: string
   }
   navigation: NavItem[]
+  collapsed: boolean
 }
 
-function isHrefActive(pathname: string, href: string): boolean {
-  if (href === '/admin') return pathname === '/admin'
-  return pathname === href || pathname.startsWith(href + '/')
-}
-
-function isSectionActive(pathname: string, item: NavItem): boolean {
-  if (isHrefActive(pathname, item.href)) return true
-  return (item.children ?? []).some((child) => isHrefActive(pathname, child.href))
-}
-
-export function AppSidebar({ user, navigation, ...props }: AppSidebarProps) {
-  const pathname = usePathname()
+function NavEntry({
+  item,
+  pathname,
+  collapsed,
+}: {
+  item: NavItem
+  pathname: string
+  collapsed: boolean
+}) {
+  const Icon = item.icon ? iconMap[item.icon] : null
+  const children = item.children ?? []
+  const sectionActive = isAdminSectionActive(pathname, item)
+  // Follows the current page until the operator opens or closes it by hand.
+  const [override, setOverride] = useState<boolean | null>(null)
+  const expanded = !collapsed && children.length > 0 && (override ?? sectionActive)
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/admin">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <ChefHat className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Jose Madrid</span>
-                  <span className="truncate text-xs">Admin Panel</span>
-                </div>
+    <li>
+      <div className="jma-nav-row">
+        <Link
+          href={item.href}
+          className="jma-nav-item"
+          aria-current={sectionActive ? 'page' : undefined}
+          title={collapsed ? item.label : undefined}
+        >
+          {Icon && <Icon className="jma-nav-icon" aria-hidden="true" />}
+          <span className="jma-nav-label">{item.label}</span>
+        </Link>
+        {!collapsed && children.length > 0 && (
+          <button
+            type="button"
+            className="jma-nav-toggle"
+            aria-label={`${expanded ? 'Collapse' : 'Expand'} ${item.label}`}
+            aria-expanded={expanded}
+            onClick={() => setOverride(!expanded)}
+          >
+            <ChevronRight className="size-3.5" data-open={expanded} />
+          </button>
+        )}
+      </div>
+      {expanded && (
+        <ul className="jma-nav-sub">
+          {children.map((child) => (
+            <li key={child.href}>
+              <Link
+                href={child.href}
+                className="jma-nav-subitem"
+                aria-current={isAdminHrefActive(pathname, child.href) ? 'page' : undefined}
+              >
+                {child.label}
               </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navigation.map((item) => {
-                const Icon = item.icon ? iconMap[item.icon] : null
-                const hasChildren = (item.children?.length ?? 0) > 0
-                const sectionActive = isSectionActive(pathname, item)
+/**
+ * The web admin's sidebar, drawn to match the desktop shell: a serif wordmark,
+ * small-caps group headings and dense rows with a gold rule on the current
+ * section. Collapsed, it narrows to an icon rail.
+ */
+export function AppSidebar({ user, navigation, collapsed }: AppSidebarProps) {
+  const pathname = usePathname()
+  const groups = groupAdminNav(navigation)
 
-                if (!hasChildren) {
-                  const active = isHrefActive(pathname, item.href)
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={item.label}
-                        isActive={active}
-                      >
-                        <Link href={item.href}>
-                          {Icon && <Icon />}
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                }
+  return (
+    <nav className="jma-sidebar" aria-label="Admin" data-collapsed={collapsed}>
+      <Link href="/admin" className="jma-brand">
+        <span className="jma-brand-name">{collapsed ? 'JM' : 'Jose Madrid'}</span>
+        {!collapsed && <span className="jma-brand-tag">SALSA · ADMIN</span>}
+      </Link>
 
-                const parentActive = isHrefActive(pathname, item.href)
+      <div className="jma-nav">
+        {groups.map((group) => (
+          <section key={group.label} className="jma-nav-group">
+            <h2 className="jma-nav-group-label">{group.label}</h2>
+            <ul>
+              {group.items.map((item) => (
+                <NavEntry
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  collapsed={collapsed}
+                />
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
 
-                return (
-                  <Collapsible
-                    key={item.href}
-                    asChild
-                    defaultOpen={sectionActive}
-                    className="group/collapsible"
-                  >
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={item.label}
-                        isActive={parentActive || sectionActive}
-                      >
-                        <Link href={item.href}>
-                          {Icon && <Icon />}
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuAction
-                          aria-label={`Toggle ${item.label} submenu`}
-                          className="data-[state=open]:rotate-90"
-                        >
-                          <ChevronRight />
-                        </SidebarMenuAction>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {item.children?.map((child) => {
-                            const active = isHrefActive(pathname, child.href)
-                            return (
-                              <SidebarMenuSubItem key={child.href}>
-                                <SidebarMenuSubButton asChild isActive={active}>
-                                  <Link href={child.href}>
-                                    <span>{child.label}</span>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            )
-                          })}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter>
-        <NavUser user={user} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+      <NavUser user={user} collapsed={collapsed} />
+    </nav>
   )
 }

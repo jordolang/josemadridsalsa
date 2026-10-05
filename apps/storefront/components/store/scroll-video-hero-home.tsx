@@ -29,7 +29,7 @@ const PANELS: HeroPanel[] = [
     eyebrow: 'Award-winning since 1987',
     title: 'Premium Gourmet',
     accent: 'Salsa',
-    body: 'Made with the finest ingredients in Ohio. From mild to fiery hot, discover the perfect salsa for every taste, handcrafted in small batches.',
+    body: 'Produced in Zanesville, Ohio — the Salsa Capital of the World. From mild to fiery hot, discover the perfect salsa for every taste, handcrafted in small batches.',
     cta: true,
   },
   {

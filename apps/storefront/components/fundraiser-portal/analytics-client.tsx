@@ -103,20 +103,20 @@ export function AnalyticsClient({ fundraiserId }: { fundraiserId: string }) {
                 placeholder="G-XXXXXXXXXX"
                 className="font-mono text-sm max-w-sm"
               />
-              <p className="text-xs text-gray-500">Required for tracking page visits and conversions.</p>
+              <p className="text-xs text-gray-500">Loads Google Analytics on your public fundraiser page only.</p>
             </div>
             
             <div className="space-y-2 mt-4">
-              <Label htmlFor="googleMyBusinessId">Google My Business ID</Label>
+              <Label htmlFor="googleMyBusinessId">Google Business Place ID</Label>
               <Input
                 id="googleMyBusinessId"
                 name="googleMyBusinessId"
                 value={analytics.googleMyBusinessId}
                 onChange={handleChange}
-                placeholder="E.g. your business place ID"
+                placeholder="ChIJ..."
                 className="font-mono text-sm max-w-sm"
               />
-              <p className="text-xs text-gray-500">Used for local search optimization if applicable.</p>
+              <p className="text-xs text-gray-500">Your Google Business Profile&apos;s Place ID (starts with ChIJ). Adds a &quot;Find us on Google&quot; link to your page.</p>
             </div>
           </div>
         </div>
@@ -135,7 +135,7 @@ export function AnalyticsClient({ fundraiserId }: { fundraiserId: string }) {
                 rows={3}
                 placeholder="fundraising, salsa, charity, local community..."
               />
-              <p className="text-xs text-gray-500">Comma-separated list of keywords to improve your page's visibility in search results.</p>
+              <p className="text-xs text-gray-500">Comma-separated, up to 20. Added to your fundraiser page&apos;s keywords tag, which some search engines read (Google ignores it; your page title and mission statement matter more).</p>
             </div>
           </div>
         </div>

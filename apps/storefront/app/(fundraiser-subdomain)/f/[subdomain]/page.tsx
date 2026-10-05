@@ -13,7 +13,18 @@ import {
 import { FundraiserSocialBoard } from '@/components/social/fundraiser-board'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
+import Script from 'next/script'
 import { SITE_URL } from '@/lib/site-url'
+import { customCssScopeClass, sanitizeCustomCss } from '@/lib/fundraising/custom-css'
+import { normalizeSeoKeywords } from '@/lib/fundraising/seo-keywords'
+import {
+  normalizeGaMeasurementId,
+  toGooglePlaceUrl,
+  toLiveStream,
+  toTikTokProfileUrl,
+  toYouTubeEmbedUrl,
+  type LiveStream,
+} from '@/lib/fundraising/public-page-settings'
 
 type Props = {
   params: Promise<{ subdomain: string }>
@@ -23,6 +34,8 @@ const getFundraiserBySubdomain = cache(async function getFundraiserBySubdomain(s
   const fundraiser = await prisma.fundraiser.findUnique({
     where: { subdomain },
     include: {
+      profile: true,
+      analytics: true,
       participants: {
         where: { status: 'ACTIVE' },
         orderBy: { totalRevenue: 'desc' },
@@ -49,8 +62,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Fundraiser Not Found' }
   }
 
+  const keywords = normalizeSeoKeywords(fundraiser.analytics?.seoKeywords)
+
   return {
     title: `${fundraiser.name} | Jose Madrid Salsa Fundraiser`,
+    ...(keywords.length > 0 ? { keywords } : {}),
     description:
       fundraiser.missionStatement ||
       fundraiser.description ||
@@ -116,6 +132,16 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
   const protocol = headersList.get('x-forwarded-proto') || 'https'
   const currentUrl = `${protocol}://${host}/f/${subdomain}`
 
+  // Advanced-profile extras only show once the fundraiser switches advanced mode on.
+  const profile = fundraiser.profile?.isAdvancedMode ? fundraiser.profile : null
+  const scopeClass = customCssScopeClass(fundraiser.id)
+  const customCss = sanitizeCustomCss(profile?.customCss, scopeClass)
+  const youTubeEmbedUrl = toYouTubeEmbedUrl(profile?.youtubeVideoUrl)
+  const liveStream = toLiveStream(profile?.liveStreamUrl, host)
+  const tikTokUrl = toTikTokProfileUrl(profile?.tiktokFeedUrl)
+  const gaMeasurementId = normalizeGaMeasurementId(fundraiser.analytics?.googleMeasurementId)
+  const googlePlaceUrl = toGooglePlaceUrl(fundraiser.analytics?.googleMyBusinessId, fundraiser.organizationName)
+
   const fundraiserWithStore = {
     ...fundraiser,
     commissionRate: Number(fundraiser.commissionRate),
@@ -124,18 +150,44 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      {pageConfig.blocks.map((block, index) => (
-        <BlockRenderer
-          key={`${block.type}-${index}`}
-          block={block}
-          blockIndex={index}
-          fundraiser={fundraiserWithStore}
-        />
-      ))}
+      {gaMeasurementId && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
+            strategy="afterInteractive"
+          />
+          <Script id="fundraiser-gtag" strategy="afterInteractive">
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaMeasurementId}');`}
+          </Script>
+        </>
+      )}
 
-      {/* Render the interactive social progress board if enabled */}
-      <div className="max-w-7xl mx-auto px-4">
-        <FundraiserSocialBoard fundraiserSlug={fundraiser.slug} currentUrl={currentUrl} />
+      {/* Sanitised and @scope-d to this container, so it can't style the rest of the page.
+          `<` is stripped by the sanitiser, so the CSS can't close the <style> element. */}
+      {customCss && <style dangerouslySetInnerHTML={{ __html: customCss }} />}
+
+      <div className={scopeClass}>
+        {pageConfig.blocks.map((block, index) => (
+          <BlockRenderer
+            key={`${block.type}-${index}`}
+            block={block}
+            blockIndex={index}
+            fundraiser={fundraiserWithStore}
+          />
+        ))}
+
+        <FundraiserMedia
+          name={fundraiser.name}
+          youTubeEmbedUrl={youTubeEmbedUrl}
+          liveStream={liveStream}
+          tikTokUrl={tikTokUrl}
+          googlePlaceUrl={googlePlaceUrl}
+        />
+
+        {/* Render the interactive social progress board if enabled */}
+        <div className="max-w-7xl mx-auto px-4">
+          <FundraiserSocialBoard fundraiserSlug={fundraiser.slug} currentUrl={currentUrl} />
+        </div>
       </div>
 
       {/* Footer */}
@@ -153,5 +205,80 @@ export default async function FundraiserSubdomainPage({ params }: Props) {
         </p>
       </footer>
     </div>
+  )
+}
+
+function FundraiserMedia({
+  name,
+  youTubeEmbedUrl,
+  liveStream,
+  tikTokUrl,
+  googlePlaceUrl,
+}: {
+  name: string
+  youTubeEmbedUrl: string | null
+  liveStream: LiveStream | null
+  tikTokUrl: string | null
+  googlePlaceUrl: string | null
+}) {
+  const liveIframe = liveStream?.kind === 'iframe' ? liveStream : null
+  const liveLink = liveStream?.kind === 'link' ? liveStream : null
+  if (!youTubeEmbedUrl && !liveStream && !tikTokUrl && !googlePlaceUrl) return null
+
+  return (
+    <section className="fundraiser-media mx-auto max-w-5xl space-y-8 px-4 py-12">
+      {liveIframe && (
+        <div>
+          <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900">Watch Live</h2>
+          <div className="aspect-video overflow-hidden rounded-lg bg-black">
+            <iframe
+              src={liveIframe.src}
+              title={`${name} live stream on ${liveIframe.provider}`}
+              className="h-full w-full"
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+        </div>
+      )}
+
+      {youTubeEmbedUrl && (
+        <div>
+          <h2 className="mb-4 font-serif text-2xl font-bold text-gray-900">Video</h2>
+          <div className="aspect-video overflow-hidden rounded-lg bg-black">
+            <iframe
+              src={youTubeEmbedUrl}
+              title={`${name} video`}
+              className="h-full w-full"
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        </div>
+      )}
+
+      {(liveLink || tikTokUrl || googlePlaceUrl) && (
+        <div className="flex flex-wrap justify-center gap-3">
+          {liveLink && (
+            <a href={liveLink.href} target="_blank" rel="noopener noreferrer nofollow" className="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+              Watch live on {liveLink.provider}
+            </a>
+          )}
+          {tikTokUrl && (
+            <a href={tikTokUrl} target="_blank" rel="noopener noreferrer nofollow" className="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+              Follow us on TikTok
+            </a>
+          )}
+          {googlePlaceUrl && (
+            <a href={googlePlaceUrl} target="_blank" rel="noopener noreferrer nofollow" className="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+              Find us on Google
+            </a>
+          )}
+        </div>
+      )}
+    </section>
   )
 }

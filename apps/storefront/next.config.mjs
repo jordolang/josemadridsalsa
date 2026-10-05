@@ -76,12 +76,14 @@ const nextConfig = {
       "worker-src 'self' blob:",
       // Allow Google Maps iframes, GTM noscript, Stripe checkout iframes,
       // YouTube/Vimeo video embeds used in blog (Heat Index) posts, and the
-      // Facebook video plugin used by the /live page.
-      "frame-src https://www.google.com/maps/ https://maps.google.com https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com https://www.facebook.com https://web.facebook.com",
+      // Facebook video plugin used by the /live page, and the Twitch player for
+      // a fundraiser's live stream on /f/[subdomain].
+      "frame-src https://www.google.com/maps/ https://maps.google.com https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com https://www.facebook.com https://web.facebook.com https://player.twitch.tv",
       // Images from multiple CDNs and data URIs
-      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com",
-      // Allow connections to self, external APIs used client-side, and Sentry
-      "connect-src 'self' https://*.sentry.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com https://vercel.live wss://ws-us3.pusher.com",
+      "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com https://*.google-analytics.com https://*.googletagmanager.com",
+      // Allow connections to self, external APIs used client-side, Sentry, and
+      // the GA4 collect endpoints gtag uses (fundraiser pages load gtag.js).
+      "connect-src 'self' https://*.sentry.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com https://vercel.live wss://ws-us3.pusher.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
       "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://assets.vercel.com",
       "object-src 'none'",
       "base-uri 'self'",

@@ -23,6 +23,14 @@ vi.mock('@/lib/email/sender', () => ({
   sendEmail: vi.fn(),
 }))
 
+vi.mock('@/lib/customers/ensure-account', () => ({
+  ensureCustomerAccount: vi.fn().mockResolvedValue('customer-1'),
+  splitName: (name: string) => {
+    const [firstName = null, ...rest] = name.split(' ')
+    return { firstName, lastName: rest.join(' ') || null }
+  },
+}))
+
 describe('Fundraiser Signups API', () => {
   beforeEach(() => {
     vi.clearAllMocks()

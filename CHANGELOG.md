@@ -14,6 +14,55 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Customer account page with one communications timeline** (`/admin/customers/[id]`). Click a
+  name on the customer list to see every order, fundraiser, email received (with its automatic
+  reply), email sent, contact-form submission, website message and live chat for that address,
+  newest first, alongside dated admin notes. Admins who can read the mailbox also see every Gmail
+  thread with the address, including replies typed in Gmail. Customer accounts are now created
+  automatically when someone pays for an order or starts a fundraiser, and single emails sent
+  through `sendEmail` and admin replies are logged so they show on the account. Schema: new
+  `CustomerNote` model.
+- **Mobile fundraiser app for iOS and Android** (`apps/fundraiser-app`, Expo). Sellers set it
+  up with three things: the group ID, the group PIN, and their first and last name, then choose a
+  personal PIN that unlocks the app every time it opens. Phones stay signed in for the campaign;
+  a seller who loses access taps **I already joined**, picks their name and enters their PIN.
+  Sellers take phone orders priced from the group's own store; every order is recorded against
+  the fundraiser and the seller (cash or check is credited to the group at once, pay-later when
+  Jose Madrid marks it paid). One seller per group holds the **organizer seat** and can reset
+  other sellers' PINs and change the group PIN from the app. Admins control it all from
+  **Fundraisers › campaign › Mobile App**: turn the app on, issue the group ID, set the group
+  PIN, assign the organizer, reset PINs and sign phones out. Wrong PINs lock out a seller after 5
+  tries and pause group sign-ups after 25. Schema: new `FundraiserAppSession` model, app fields on
+  `Fundraiser` and `FundraiserParticipant`, and `FundraiserParticipant.email` is now optional.
+- **Card payments in the fundraiser app with Square.** Sellers in groups with card payments turned
+  on (admin › Mobile App) can take cards on their phone with Square's Mobile Payments SDK: Tap to
+  Pay on iPhone and Android, keyed entry for phone orders, or a paired Square Reader. Payments go
+  to the shop's Square account; the storefront confirms each one with Square (status, location,
+  amount, order reference) before marking the order paid, recording the `Payment` and crediting
+  the group. The phone gets the Square token from the storefront at runtime, never from the build.
+  Tap to Pay on iPhone needs Apple's entitlement (see the docs). Schema: `Fundraiser.appCardPayments`.
+- **Thermometer style for the fundraiser page's Progress block.** In the page editor, the
+  Progress block has a Style option (Progress bar / Thermometer). The thermometer is drawn in SVG
+  and honours the block's show-amount and show-percentage toggles.
+- **Fundraiser SEO keywords reach the page.** The keywords saved under the portal's analytics
+  settings now become the `<meta name="keywords">` of the campaign's indexed page,
+  `/fundraisers/[slug]`, and of `/f/[subdomain]` (trimmed, de-duplicated, at most 20 of 60
+  characters each). The help text notes that Google ignores this tag.
+- **Create invoices on the web.** `/admin/invoices` has a working **New invoice** button (for
+  `financials:write`) opening `/admin/invoices/new`: number (generated when blank), due date,
+  customer, status, notes and free-text lines. Totals are computed on the server. The web form and
+  the desktop app's `invoice.create` now share one create function (`lib/invoices/create-invoice.ts`).
+- **Mail in the desktop admin app.** Messages → Mail is a full client for the connected Gmail
+  mailbox (normally mike@josemadridsalsa.com). It covers every folder and label with unread counts,
+  Gmail search, threaded reading (HTML in a script-less sandbox, attachment downloads), compose, reply,
+  reply all and forward with attachments, drafts, and archive, trash, spam, star, read/unread and move
+  to a folder. It uses the existing triage grant (`gmail.modify` + `gmail.send`), so nothing can be
+  permanently deleted. It needs `api_keys:manage`. Sends, trash and spam are audited.
+- **Inbox organizer at 8am, noon and 5pm Eastern.** `/api/cron/mail-organizer`, or **Organize now**
+  on the Mail page, files inbox conversations into colour-coded Gmail folders and archives them:
+  Orders, Contact, Fundraisers, Wholesale, Shipping, Finance, Website, Events & Shows,
+  Marketing & Social and Newsletters. Starred mail, customer email still awaiting a person, and mail
+  the triage has not read yet stay in the inbox.
 - **Loyalty reward catalog management.** Admin → Settings → Loyalty Rewards
   (`/admin/settings/loyalty-rewards`) and, in the desktop app, Customers → Loyalty rewards let
   staff create, edit, switch off and delete the rewards customers spend points on: points cost,
@@ -109,7 +158,13 @@ the root `package.json` is canonical.
   Timeline entries can now carry an optional `features` list, which shows up when the card is
   expanded.
 
+### Fixed
+- **Run report looked like it did nothing.** On `/admin/data/new` the result (or error) renders below
+  the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
+
 ### Removed
+- **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
+
 - The "free shipping on 96+ jars" claim from the fundraising start and shipping pages.
 
 - **fundraising.josemadrid.net replaces josemadridsalsafundraising.com's pages.** The storefront app
@@ -340,6 +395,14 @@ the root `package.json` is canonical.
   page sends `Viewed Home Page`. `@amplitude/ai` instruments the storefront chat (full text, PII
   redacted, one session per widget conversation), inbox triage and form capture (both metadata
   only, as their prompts carry customer data).
+- **Web admin restyled to match the desktop app.** `/admin` now uses the desktop shell's warm
+  charcoal and gold palette (light and dark), a denser sidebar grouped into Operations, Programs,
+  Money, Marketing, Insights and System with a gold rule on the current section, and a header that
+  shows the area in small caps over a serif page title. The sidebar collapses to an icon rail
+  (⌘B / Ctrl+B) and remembers the choice. Pages, dialogs and menus pick up the palette through the
+  theme tokens; no page content changed.
+- **Homepage hero names Zanesville the Salsa Capital of the World.** The first hero panel now
+  reads "Produced in Zanesville, Ohio — the Salsa Capital of the World."
 - **CI now uses roughly a quarter of the GitHub Actions minutes it did.** The account's Actions
   budget ran out, which stops every check from starting. Each run took about 30 minutes, and ten of
   those were a Playwright step that hit its time limit on every run without producing a result;
@@ -358,6 +421,26 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Admin Analytics says why Google Analytics data is missing.** When GA4 failed to load, the
+  overview showed "No Google Analytics metrics are available for this range yet" and hid the real
+  cause. It now shows the reason, and an expired or revoked credential (`invalid_grant`, e.g.
+  Workspace re-auth `invalid_rapt`) tells the admin to replace the `google_analytics /
+  service_account` secret with a service account key.
+- **`/battles` and season end crown the same, real champion.** `/battles` ranked every active
+  fundraiser by all-time revenue, and season end ranked by the team's lifetime `salesCount`,
+  which carries sales across seasons. Both now use `getBattleStandings`
+  (`lib/arena/standings.ts`): the season's own roster ranked by sales placed during that battle,
+  earliest team on a tie, with exact takings and the top seller from that battle's sale events. A
+  season with no sales crowns nobody. Sale events now record the `period` they struck (migration
+  `20261003140000_sale_event_period`, backfilled from `createdAt`).
+- **Arena chat answers 401, not 500, for a session whose account no longer exists.**
+- **Only sales made during a battle deal arena damage.** `applyPurchaseDamage` now takes the
+  sale's `placedAt` (the order's own creation time) and refuses any sale placed before the team
+  joined or outside its current battle (the season's start/end, else the period month). Past
+  orders reaching the arena late — the BigCommerce mirror catching up, a history backfill, a
+  payment confirmed late for a stale order, an order that only now reads "shipped" — record
+  nothing and damage nobody. Applies to every caller: checkout and POS payments, the Stripe
+  donation webhooks, the partner sale API and the BigCommerce mirror.
 - **Follow-ups from #541's review.** Stripe and PayPal webhook payments now record `paidAt`, which
   the automation purchase stop reads, so a Stripe-paid abandoned checkout stops its series. The
   re-engagement scan is bounded again (oldest orders first, at most 500 address checks a tick). Forged
@@ -370,6 +453,34 @@ the root `package.json` is canonical.
   the newest 500 orders each tick. Each refund of an order enrolls its own automation run. Facebook
   catalog sync always upserts, so Shop and Marketplace exports of one product share its catalog
   item. `.env.example` names the Merchant API, not the sunset Content API.
+- **PayPal and Square webhooks deduct stock.** They marked orders paid without turning the stock
+  reservation into a sale, so an order finalized by the webhook (customer never returned to the
+  site) left its stock reserved. They now deduct through the same once-per-order-item guard as
+  Stripe and the capture routes, so whichever path finalizes the order deducts once. If the
+  reservation was already released, the order is still marked paid and staff get an alert to
+  adjust stock by hand (`lib/payments/webhook-stock.ts`).
+- **POS orders list shows POS orders; POS needs sign-in.** `/api/admin/orders` ignored
+  `?channel=` and returned every order; it now filters by sales channel (an unknown channel is a
+  400) and returns each order's latest payment method, so the list shows Cash/Card instead of
+  "Unknown". The `/pos` layout now requires sign-in and `orders:write` on the server.
+- **BigCommerce fundraising-store orders deal arena damage.** The mirror only recalculated
+  fundraiser totals. A counted (paid/shipped) order now damages its team once, keyed on the
+  existing unique `FundraiserSaleEvent.orderId`, so cron re-runs and webhook re-deliveries don't
+  repeat it. Orders placed before the team existed are skipped, so the history backfill doesn't
+  replay years of damage.
+- **Fundraiser page settings are used.** On `/f/[subdomain]`, with advanced mode on: custom CSS
+  (sanitised and confined with `@scope` to the fundraiser's own section), YouTube video and live
+  stream embeds (YouTube, Twitch, Facebook; Kick as a link), and a TikTok profile link. The Google
+  Analytics ID (`G-…`/`UA-…`) loads GA on that page only; a Google Place ID adds a "Find us on
+  Google" link. Clearing a field no longer fails the save. CSP now allows Twitch frames and GA
+  collection hosts.
+- **Fundraiser streak is a real daily streak** (consecutive days in America/New_York), counted
+  when the portal dashboard is opened and shown there with points. The gamification API now
+  requires access to the fundraiser and only accepts known actions; it previously let any
+  signed-in user add points to any fundraiser.
+- **Avatar upload requires sign-in and checks the file.** The type is read from the file's bytes
+  (JPEG, PNG or WebP only, 4 MB max) and the path is built from the user id; the caller-supplied
+  filename is ignored.
 - **28 dependency advisories closed.** Patched transitively through root `overrides` and in-place
   lockfile updates: undici (6.28.1, 7.29.1, 8.10.2), js-yaml (3.15.2, 4.3.2), `@grpc/grpc-js` 1.14.5
   and dompurify 3.4.16. Every patch release has the same dependencies as the version it replaces.

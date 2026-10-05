@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { getBattleStandings } from '@/lib/arena/standings'
 
 export async function getFundraiserTimeline(fundraiserSlug: string) {
   const fundraiser = await prisma.fundraiser.findUnique({
@@ -116,49 +117,37 @@ export async function getFundraiserHeavyHitters(fundraiserSlug: string) {
   }))
 }
 
+/**
+ * The live standings for one month's battle, from the same `getBattleStandings` the season-end
+ * route crowns its champion with — the season's roster ranked by sales placed during the battle.
+ */
 export async function getMonthlyChampionship(month: number, year: number) {
-  const startOfMonth = new Date(year, month - 1, 1)
-  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+  if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) {
+    throw new Error('Invalid month')
+  }
+  const period = `${year}-${String(month).padStart(2, '0')}`
 
-  const activeFundraisers = await prisma.fundraiser.findMany({
-    where: {
-      status: 'ACTIVE',
-      startDate: { lte: endOfMonth },
-      endDate: { gte: startOfMonth }
-    },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      organizationName: true,
-      totalRevenue: true,
-      logoUrl: true,
-      participants: {
-        orderBy: { totalRevenue: 'desc' },
-        take: 1,
-        select: { name: true, totalRevenue: true }
-      }
-    },
-    orderBy: {
-      totalRevenue: 'desc'
-    }
-  })
+  const [standings, history] = await Promise.all([
+    getBattleStandings(period),
+    prisma.fundraiserChampionship.findMany({
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      take: 12,
+    }),
+  ])
 
-  const history = await prisma.fundraiserChampionship.findMany({
-    orderBy: [ { year: 'desc' }, { month: 'desc' } ],
-    take: 12
-  })
-
-  return { 
-    currentLeaderboard: activeFundraisers.map(f => ({
-      ...f,
-      totalRevenue: f.totalRevenue.toNumber(),
-      topParticipant: f.participants[0] ? {
-        name: f.participants[0].name,
-        revenue: f.participants[0].totalRevenue.toNumber()
-      } : null
+  return {
+    period,
+    currentLeaderboard: standings.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      organizationName: t.school,
+      logoUrl: t.logoUrl,
+      salesCount: t.battleSales,
+      totalRevenue: t.battleRaised,
+      topParticipant: t.topSeller ? { name: t.topSeller.name, revenue: t.topSeller.raised } : null,
     })),
-    history 
+    history,
   }
 }
 

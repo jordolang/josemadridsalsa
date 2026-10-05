@@ -12,8 +12,9 @@ import { format } from 'date-fns'
 export default function FundraiserBattlesPage() {
   const [data, setData] = useState<any>(null)
   const { currentMonth, currentYear } = useMemo(() => {
+    // Battle periods are UTC months (how seasons are dated), so ask for the UTC month.
     const now = new Date()
-    return { currentMonth: now.getMonth() + 1, currentYear: now.getFullYear() }
+    return { currentMonth: now.getUTCMonth() + 1, currentYear: now.getUTCFullYear() }
   }, [])
 
   useEffect(() => {
@@ -65,9 +66,9 @@ export default function FundraiserBattlesPage() {
               <div>
                 <CardTitle className="text-3xl flex items-center gap-3 text-slate-900 dark:text-slate-100">
                   <Trophy className="h-8 w-8 text-amber-500" />
-                  {format(new Date(), 'MMMM')} Championship
+                  {format(new Date(Date.UTC(currentYear, currentMonth - 1, 15)), 'MMMM')} Championship
                 </CardTitle>
-                <CardDescription className="text-base mt-1">Live head-to-head competition across all active fundraisers.</CardDescription>
+                <CardDescription className="text-base mt-1">Live standings for this month&apos;s battle, ranked by sales made during the battle.</CardDescription>
               </div>
               <div className="hidden md:flex flex-col items-end">
                 <span className="text-sm text-slate-500 font-medium tracking-wide uppercase">Top Prize</span>
@@ -109,7 +110,7 @@ export default function FundraiserBattlesPage() {
 
                          {/* Details */}
                          <div className="flex-1 text-center sm:text-left min-w-0">
-                           <a href={`/f/${f.slug}`} className="hover:underline">
+                           <a href={`/fundraise/${f.slug}`} className="hover:underline">
                              <h2 className={`font-bold truncate ${isFirst ? 'text-2xl sm:text-3xl text-amber-900 dark:text-amber-100' : 'text-xl sm:text-2xl text-slate-800 dark:text-slate-200'}`}>
                                {f.name}
                              </h2>
@@ -139,12 +140,12 @@ export default function FundraiserBattlesPage() {
                                  <motion.div 
                                    className="h-full bg-blue-400 dark:bg-blue-600"
                                    initial={{ width: 0 }}
-                                   animate={{ width: `${Math.max(5, (f.totalRevenue / leaderboard[0].totalRevenue) * 100)}%` }}
+                                   animate={{ width: `${Math.max(5, leaderboard[0].salesCount > 0 ? (f.salesCount / leaderboard[0].salesCount) * 100 : 0)}%` }}
                                    transition={{ duration: 1 }}
                                  />
                                </div>
                                <p className="text-xs text-slate-500 mt-1 uppercase font-semibold">
-                                 ${(leaderboard[0].totalRevenue - f.totalRevenue).toFixed(2)} behind leader
+                                 {leaderboard[0].salesCount - f.salesCount} {leaderboard[0].salesCount - f.salesCount === 1 ? 'sale' : 'sales'} behind leader
                                </p>
                              </div>
                            )}
@@ -158,15 +159,16 @@ export default function FundraiserBattlesPage() {
                                <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{f.topParticipant.name}</p>
                                <Badge text={`$${f.topParticipant.revenue.toFixed(2)}`} isLeader={isFirst} />
                              </div>
-                           ) : <p className="text-sm text-slate-400 italic">No sales yet</p>}
+                           ) : <p className="text-sm text-slate-400 italic">{f.salesCount > 0 ? 'Not credited to a teammate' : 'No sales yet'}</p>}
                          </div>
 
                          {/* Revenue Total */}
                          <div className="shrink-0 text-center sm:text-right w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-800">
-                           <p className="text-sm uppercase font-bold text-slate-500 mb-1">Total Raised</p>
+                           <p className="text-sm uppercase font-bold text-slate-500 mb-1">Battle Sales</p>
                            <p className={`font-black text-3xl sm:text-4xl ${isFirst ? 'text-green-600 dark:text-green-400 drop-shadow-sm' : 'text-slate-700 dark:text-slate-300'}`}>
-                             ${f.totalRevenue.toFixed(2)}
+                             {f.salesCount}
                            </p>
+                           <p className="text-sm text-slate-500">${f.totalRevenue.toFixed(2)} raised this month</p>
                          </div>
                          
                          {/* Absolute Ribbon for winner */}

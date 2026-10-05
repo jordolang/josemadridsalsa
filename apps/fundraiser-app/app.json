@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Jose Madrid Fundraiser",
+    "slug": "jose-madrid-fundraiser",
+    "scheme": "jmsfundraiser",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "net.josemadrid.fundraiser",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "net.josemadrid.fundraiser",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#000000"
+      },
+      "predictiveBackGestureEnabled": false,
+      "allowBackup": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "imageWidth": 240,
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 28,
+            "compileSdkVersion": 36
+          }
+        }
+      ],
+      [
+        "./plugins/with-square-mobile-payments",
+        {
+          "applicationId": "sq0idp-yOtCWDhACLrw1cjKHPNFNA",
+          "tapToPayOnIPhone": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "https://www.josemadrid.net"
+    }
+  }
+}

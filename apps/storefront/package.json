@@ -86,7 +86,6 @@
     "@google-analytics/data": "^5.2.1",
     "@googleapis/calendar": "^14.2.0",
     "@hookform/resolvers": "^5.2.2",
-    "@jose-madrid/shared-types": "*",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/react-paypal-js": "^9.1.0",
     "@prisma/client": "^6.19.3",

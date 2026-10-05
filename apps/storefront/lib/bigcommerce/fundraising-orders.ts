@@ -2,6 +2,7 @@ import { Prisma, type OrderStatus, type PaymentStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { slugify } from '@/lib/collections'
 import { normalizeGroupName } from '@/lib/fundraising-site/checkout-fields'
+import { applyPurchaseDamage } from '@/lib/arena/damage'
 
 /**
  * Crediting BigCommerce fundraising-store orders to their groups.
@@ -170,4 +171,50 @@ export async function recomputeFundraiserTotals(fundraiserId: string): Promise<v
       totalCommission: totals._sum.fundraiserCommission ?? new Prisma.Decimal(0),
     },
   })
+}
+
+export type BigCommerceArenaSale = {
+  /** This site's copy of the order; `applyPurchaseDamage`'s idempotency key. */
+  orderId: string
+  fundraiserId: string
+  orderDate: Date
+  /** Merchandise less discounts, the same base commission is taken from. */
+  saleAmount: number
+  donorEmail: string | null
+}
+
+/**
+ * Battle-arena damage for a counted fundraising-store order, when its group is an arena team.
+ * Callers pass only orders `countsTowardCampaign` accepts.
+ *
+ * Replay-safe the same way `payment.completed` is: the order id lands in the unique
+ * `FundraiserSaleEvent.orderId`, so the hourly sweep and re-delivered webhooks strike once.
+ * Only an order placed during the team's current battle strikes — `applyPurchaseDamage` refuses
+ * anything older, so a history backfill or a late catch-up never does. A failure is logged, not
+ * thrown — the copy is already saved, and the next sweep of the order tries again.
+ */
+export async function dealBigCommerceArenaDamage(sale: BigCommerceArenaSale): Promise<void> {
+  if (sale.saleAmount <= 0) return
+  const team = await prisma.fundraiserTeam.findUnique({
+    where: { fundraiserId: sale.fundraiserId },
+    select: { id: true, status: true },
+  })
+  if (!team || team.status !== 'ACTIVE') return
+  try {
+    const result = await applyPurchaseDamage({
+      sellingTeamId: team.id,
+      saleAmount: sale.saleAmount,
+      placedAt: sale.orderDate,
+      orderId: sale.orderId,
+      donor: { email: sale.donorEmail },
+    })
+    if (result.skipped) {
+      console.info('[bigcommerce] fundraising order placed outside the battle, no damage', {
+        orderId: sale.orderId,
+        teamId: team.id,
+      })
+    }
+  } catch (error) {
+    console.error('[bigcommerce] arena damage failed for fundraising order', { orderId: sale.orderId, error })
+  }
 }
