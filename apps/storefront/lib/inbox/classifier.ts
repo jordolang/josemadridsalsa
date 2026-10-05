@@ -12,6 +12,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { inboxTriageAgent, trackedAnthropic } from '@/lib/analytics/agent-analytics'
 import type { InboundEmailCategory, NotificationSeverity } from '@prisma/client'
 
 import { getIndexedContent } from '@/lib/ai-rag/content-cache'
@@ -270,6 +271,10 @@ export async function classifyEmail(params: {
   subject: string
   body: string
   context: EmailContext
+  /** The mailbox message id; one Agent Analytics session per email. */
+  sessionId?: string
+  /** Stable Agent Analytics identity: the mailbox connection the email arrived on. */
+  deviceId?: string
 }): Promise<Classification> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return escalationFallback('ANTHROPIC_API_KEY is not configured')
@@ -288,14 +293,17 @@ export async function classifyEmail(params: {
   const body = params.body.slice(0, MAX_BODY_CHARS)
 
   try {
-    const message = await new Anthropic({ apiKey }).messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? 'claude-opus-5',
-      max_tokens: 2000,
-      system: SYSTEM_PROMPT,
-      tools: [TRIAGE_TOOL],
-      tool_choice: { type: 'tool', name: 'record_triage' },
-      messages: [{ role: 'user', content: buildUserPrompt({ ...params, body, siteContent }) }],
-    })
+    // Metadata only: the prompt is a customer's whole email.
+    const message = await inboxTriageAgent.session({ sessionId: params.sessionId, deviceId: params.deviceId }).run(() =>
+      trackedAnthropic(apiKey, { metadataOnly: true }).createMessage({
+        model: process.env.ANTHROPIC_MODEL ?? 'claude-opus-5',
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        tools: [TRIAGE_TOOL],
+        tool_choice: { type: 'tool', name: 'record_triage' },
+        messages: [{ role: 'user', content: buildUserPrompt({ ...params, body, siteContent }) }],
+      }),
+    )
 
     if (message.stop_reason === 'refusal') {
       return escalationFallback('the model declined to classify this message')
