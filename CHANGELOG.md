@@ -388,6 +388,16 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **Amplitude runs on `@amplitude/unified`, and the Claude calls report to Agent Analytics.** The
+  browser init is now `initAll` with autocapture and session replay, started only after the visitor
+  accepts the cookie banner and stopped again if they reject it (replacing
+  `@amplitude/analytics-browser` plus the replay plugin), still keyed by
+  `NEXT_PUBLIC_AMPLITUDE_API_KEY` and now warning when that key is missing from a build. The home
+  page sends `Viewed Home Page`. `@amplitude/ai` instruments the storefront chat (full text, PII
+  redacted, one session per widget conversation kept open across its turns), inbox triage and form
+  capture (both metadata only, as their prompts carry customer data). Every agent session carries a
+  stable identity (signed-in user, browser device, form uploader, or mailbox), and `@amplitude/ai`
+  is a server external package because it needs Node built-ins.
 - **Web admin restyled to match the desktop app.** `/admin` now uses the desktop shell's warm
   charcoal and gold palette (light and dark), a denser sidebar grouped into Operations, Programs,
   Money, Marketing, Insights and System with a gold rule on the current section, and a header that

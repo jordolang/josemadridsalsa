@@ -31,24 +31,20 @@ The Amplitude integration (`lib/analytics/amplitude.ts`) provides:
 ### Initialization
 
 ```ts
+import * as amplitude from '@amplitude/unified'
+
 export const initAmplitude = () => {
+  if (isInitialized) return true
   const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY
   if (!apiKey) {
-    console.warn('Amplitude API key not found. Analytics will not be tracked.')
-    return
+    console.warn('Amplitude API key missing — analytics disabled')
+    return false
   }
 
-  amplitude.init(apiKey, {
-    defaultTracking: {
-      sessions: true,
-      pageViews: true,
-      formInteractions: true,
-      fileDownloads: true,
-    },
-  })
-
-  // Session replay for visual debugging
-  amplitude.add(sessionReplayPlugin())
+  // Analytics with autocapture, plus session replay on every session.
+  amplitude.initAll(apiKey, { analytics: { autocapture: true }, sessionReplay: { sampleRate: 1 } })
+  isInitialized = true
+  return true
 }
 ```
 
@@ -81,17 +77,25 @@ export const identifyUser = (
 }
 ```
 
-### Default Tracking
+### Autocapture
 
-Amplitude automatically tracks:
-- **Sessions** -- session start/end with duration
-- **Page Views** -- every route navigation
-- **Form Interactions** -- form submissions and field focus
-- **File Downloads** -- any file download clicks
+`initAll` turns on Amplitude's autocapture: sessions, page views, clicks, form interactions and file downloads are recorded without per-event code. The one explicit load-time event is `Viewed Home Page`, sent by `components/analytics/home-page-view.tsx` when the home page mounts.
 
 ### Session Replay
 
-The `@amplitude/plugin-session-replay-browser` plugin records user sessions for visual replay and debugging in the Amplitude dashboard.
+`@amplitude/unified` includes session replay, set to record every session (`sampleRate: 1`) on the public site, cart and checkout included. Amplitude masks form inputs by default.
+
+### Agent Analytics
+
+The site's three Claude calls report to Amplitude Agent Analytics through `@amplitude/ai`, set up in `lib/analytics/agent-analytics.ts` with the same project key:
+
+| Agent | Call site | Session | Content captured |
+|---|---|---|---|
+| `storefront-chat` | `app/api/ai-chat/route.ts` | one UUID per chat-widget conversation | Full text, PII redacted |
+| `inbox-triage` | `lib/inbox/classifier.ts` | the mailbox message id | Metadata only (tokens, latency, cost, model) |
+| `form-capture` | `lib/form-capture/extract.ts` | the capture id | Metadata only |
+
+Inbox and form capture stay metadata-only because their prompts are whole customer emails and photographed order forms. `@amplitude/analytics-node` is passed in pre-initialized, because under Next's bundler the AI SDK cannot `require` it itself.
 
 ## Google Analytics
 

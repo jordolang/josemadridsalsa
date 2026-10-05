@@ -143,6 +143,8 @@ async function triageMessage(
     subject: message.subject,
     body: message.body,
     context,
+    sessionId: message.id,
+    deviceId: `inbox:${connection.id}`,
   })
 
   const decision = decideReply({
