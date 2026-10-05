@@ -412,6 +412,11 @@ the root `package.json` is canonical.
   quietly break it. Note this supersedes the 2.1 note that the macOS build needs a full Xcode.
 
 ### Fixed
+- **Admin Analytics says why Google Analytics data is missing.** When GA4 failed to load, the
+  overview showed "No Google Analytics metrics are available for this range yet" and hid the real
+  cause. It now shows the reason, and an expired or revoked credential (`invalid_grant`, e.g.
+  Workspace re-auth `invalid_rapt`) tells the admin to replace the `google_analytics /
+  service_account` secret with a service account key.
 - **`/battles` and season end crown the same, real champion.** `/battles` ranked every active
   fundraiser by all-time revenue, and season end ranked by the team's lifetime `salesCount`,
   which carries sales across seasons. Both now use `getBattleStandings`

@@ -77,6 +77,7 @@ export default async function AnalyticsPage({
       <GoogleAnalyticsSummary
         summaryCards={gaDashboard.summaryCards}
         isReady={gaStatusIsReady}
+        message={gaDashboard.message}
       />
 
       <CustomChartsManager charts={gaDashboard.charts} canManageGa={canManageGa} />
