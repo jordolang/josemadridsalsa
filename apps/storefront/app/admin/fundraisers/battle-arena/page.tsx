@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { Plus, Trophy } from 'lucide-react'
+import { KeyRound, Plus, Trophy } from 'lucide-react'
 import { requireAdminSession } from '@/lib/admin-auth'
 import { prisma as db } from '@/lib/prisma'
 import { Badge } from '@/components/ui/badge'
@@ -49,6 +49,12 @@ export default async function BattleArenaSeasonsAdminPage() {
         <div className="flex gap-2">
           <Button variant="outline" asChild>
             <Link href="/admin/fundraisers">Back to Fundraisers</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/admin/fundraisers/battle-arena/game-codes">
+              <KeyRound className="mr-2 h-4 w-4" />
+              Game codes
+            </Link>
           </Button>
           <Button asChild>
             <Link href="/admin/fundraisers/battle-arena/new">
