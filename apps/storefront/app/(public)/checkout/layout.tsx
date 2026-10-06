@@ -1,8 +1,1 @@
-export default function CheckoutLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return <>{children}</>
-}
-
+export { default } from '@/routes/checkout/layout'

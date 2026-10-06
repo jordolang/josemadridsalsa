@@ -24,6 +24,24 @@ app and core needs no import changes. Next.js (Turbopack), `tsc` and `tsx` all h
 Vitest does not read `paths`, so `vitest.config.ts` has a small resolver that tries the same two
 roots in the same order.
 
+## Shared pages and API routes
+
+Next.js only serves routes from an app's own `app/` folder, so a page or API route that two apps
+serve (checkout, order confirmation, sign-in, `/api/auth/[...nextauth]`, the checkout APIs)
+lives in **`packages/core/routes/`**, at its URL path. Each app keeps a one-line file at the
+route that re-exports it:
+
+```ts filename="apps/storefront/app/api/orders/[orderId]/route.ts"
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export { GET } from '@/routes/api/orders/[orderId]/route'
+```
+
+Route segment config (`dynamic`, `runtime`, `revalidate`, `maxDuration`, …) must be written in
+the app's file itself, because Next reads it from the file without running it. Keep it out of
+the core module.
+
 ## Rules
 
 - **Core never imports from an app.** Its `@/` alias points only at itself, and

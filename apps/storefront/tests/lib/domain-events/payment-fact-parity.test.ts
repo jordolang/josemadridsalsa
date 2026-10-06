@@ -23,7 +23,9 @@ import { describe, expect, it } from 'vitest'
  * appears without the emit.
  */
 
-const API_DIR = join(process.cwd(), 'app/api')
+// Checkout routes shared with the fundraising app live in packages/core; this app's copies are
+// one-line re-exports, so scan both trees.
+const API_DIRS = [join(process.cwd(), 'app/api'), join(process.cwd(), '../../packages/core/routes/api')]
 
 /** Writes that mean "this order is now paid" — the trigger for the whole consumer layer. */
 const MARKS_PAID = /paymentStatus:\s*(?:PAID_PAYMENT_STATUS|'PAID'|'SUCCEEDED'|"PAID"|"SUCCEEDED")/
@@ -37,11 +39,12 @@ function routeFiles(dir: string): string[] {
 }
 
 function settlementRoutes(): Array<{ name: string; source: string }> {
-  return routeFiles(API_DIR)
-    .map((path) => ({
-      name: path.slice(API_DIR.length + 1),
+  return API_DIRS.flatMap((dir) =>
+    routeFiles(dir).map((path) => ({
+      name: path.slice(dir.length + 1),
       source: readFileSync(path, 'utf8'),
     }))
+  )
     .filter((route) => MARKS_PAID.test(route.source))
 }
 

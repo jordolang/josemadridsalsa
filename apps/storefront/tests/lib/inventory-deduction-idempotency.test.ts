@@ -170,9 +170,9 @@ describe('Inventory deduction idempotency (oversell race)', () => {
   // the non-idempotent deduction directly. If a future edit reverts one, fail here.
   it('no checkout finalize path calls the non-idempotent deduction directly', () => {
     const routes = [
-      '../../app/api/checkout/complete/route.ts',
-      '../../app/api/checkout/paypal/capture-order/route.ts',
-      '../../app/api/checkout/square/process-payment/route.ts',
+      '../../../../packages/core/routes/api/checkout/complete/route.ts',
+      '../../../../packages/core/routes/api/checkout/paypal/capture-order/route.ts',
+      '../../../../packages/core/routes/api/checkout/square/process-payment/route.ts',
       '../../app/api/webhooks/stripe/route.ts',
     ]
 
