@@ -5,11 +5,28 @@ description: How players sign in to the 3D Battle Arena game with their account,
 
 # Battle Arena 3D game: accounts, profiles and leaderboards
 
-The 3D Battle Arena brawler (the separate `battle-arena-3d` repository, published at
-`https://battle-arena-3d-mauve.vercel.app`) requires every player to sign in with their José Madrid
-Salsa account before they can fight. This site owns those accounts, the players' profiles and the
-leaderboards. This is separate from the sales-driven fundraiser arena described in
-[Battle Arena Integration](./battle-arena).
+The 3D Battle Arena brawler (built from the separate `battle-arena-3d` repository) requires every
+player to sign in with their José Madrid Salsa account before they can fight. This site owns those
+accounts, the players' profiles and the leaderboards. The sales-driven team standings it sits beside
+are described in [Battle Arena Integration](./battle-arena).
+
+## Where the game is served
+
+The fundraising app serves the game at `/battle-arena` (`https://fundraising.josemadrid.net/battle-arena`),
+and each month's arena page (`/arena/[period]`) opens it with its **Play now** card. It is one static
+file, `apps/fundraising/public/battle-arena/index.html`, with its link-preview image beside it:
+
+- `next.config.mjs` rewrites `/battle-arena` to that file and gives `/battle-arena/*` its own
+  Content-Security-Policy, which lets the page reach `www.josemadrid.net` (this API), the game's own
+  deployment (fundraising teams for its donate button), the CDN its sounds are on and the PeerJS
+  server that links online rooms.
+- `app/battle-arena/share/route.ts` is the page shared match links point to: its Open Graph tags
+  name the winner, and it sends the visitor on to the game (into the room, for an invite).
+
+To update the game, build it in the `battle-arena-3d` repository (its root `index.html` is the
+build), then from `apps/fundraising` run `node scripts/sync-battle-arena.mjs <path to that checkout>`,
+which copies the page and image and points the page's preview tags at this site. The game also
+stays published at `https://battle-arena-3d-mauve.vercel.app`.
 
 ## Signing in
 
@@ -20,7 +37,8 @@ leaderboards. This is separate from the sales-driven fundraiser arena described 
    `return_to#arena_token=<token>&state=<state>`. The token is in the fragment, so it never reaches a
    server log; the game checks `state` against the one it sent.
 
-Tokens only go to listed game origins: the published game plus any in `ARENA_GAME_ORIGINS`. Plain
+Tokens only go to listed game origins: the fundraising site (`NEXT_PUBLIC_FUNDRAISING_SITE_URL`), the
+game's own deployment, plus any in `ARENA_GAME_ORIGINS`. Plain
 `http://localhost` is accepted outside production for developing the game. The game keeps the token
 for 90 days (`ArenaPlayerSession`, SHA-256 only) and sends it as `Authorization: Bearer <token>`.
 
