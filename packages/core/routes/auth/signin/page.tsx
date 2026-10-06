@@ -197,7 +197,11 @@ function SignInFormInner() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3 text-sm text-gray-600">
           <div className="text-center">
-            <Link href="/auth/signup" className="text-salsa-600 hover:text-salsa-700">
+            {/* Keep where the visitor was going, so a new account lands there too (e.g. back in the Battle Arena game). */}
+            <Link
+              href={/^\/(?!\/)./.test(callbackUrl) ? `/auth/signup?${new URLSearchParams({ callbackUrl })}` : '/auth/signup'}
+              className="text-salsa-600 hover:text-salsa-700"
+            >
               Need an account? Create one
             </Link>
           </div>

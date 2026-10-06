@@ -332,6 +332,7 @@ Staff inboxes are comma-separated lists. Public contact values all have built-in
 |---|---|---|
 | `FUNDRAISER_API_SECRET` | For sale ingest | HMAC secret for `POST /api/fundraiser/sale` (`lib/fundraiser-auth.ts`) |
 | `ARENA_SHARE_SECRET` | For share shields | Signs arena share nonces. At least 32 characters; share links fail without it. |
+| `ARENA_GAME_ORIGINS` | No | Extra Battle Arena 3D game origins (comma separated, e.g. a custom domain) allowed to receive game sign-in tokens and call the game API. The published game is always allowed. |
 
 ## Platform Agent (`apps/agent`)
 
