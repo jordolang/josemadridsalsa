@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The 3D Battle Arena game replaces the 2D playable arena.** The fundraising site now serves the
+  game at `/battle-arena`, and each month's arena page (`/arena/[period]`) opens it with a
+  **Play now** card above the live team standings, in place of the old move-around arena and its
+  chat box. Players still sign in with their José Madrid Salsa account, and their matches still feed
+  the player and group leaderboards; the fundraising site is now a listed game origin for sign-in.
+  Shared match links go to the new `/battle-arena/share`. The game page has its own
+  Content-Security-Policy. Update it with `apps/fundraising/scripts/sync-battle-arena.mjs`.
 - **Accounts, profiles and leaderboards for the Battle Arena 3D game.** Players sign in to the game
   with their José Madrid Salsa account (`/battle-arena/connect`) before they can fight. Each match
   they play is recorded on their profile (fighter name, fundraising group, wins, knockouts, streaks,

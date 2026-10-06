@@ -2,14 +2,16 @@
  * Pure rules for the 3D Battle Arena game's player accounts: handles, sign-in tokens, which
  * sites may receive a token, how results are checked, and the leaderboard periods.
  *
- * The game is a separate static site (the battle-arena-3d repository) that players reach from
- * its own domain. It signs players in by sending them here; this site hands the game back a
- * long random token in the URL fragment, which the game then sends as a bearer token.
+ * The game is a static page built from the battle-arena-3d repository. Players reach it on the
+ * fundraising site (/battle-arena) or on the game's own deployment. It signs players in by
+ * sending them here; this site hands the game back a long random token in the URL fragment,
+ * which the game then sends as a bearer token.
  */
 import { createHash, randomBytes, randomInt } from 'crypto'
 import { z } from 'zod'
+import { getFundraisingSiteUrl } from '@/lib/fundraising-site/host'
 
-/** Where the game is published. More origins (a custom domain, a preview) come from `ARENA_GAME_ORIGINS`. */
+/** The game's own deployment. More origins (a custom domain, a preview) come from `ARENA_GAME_ORIGINS`. */
 export const DEFAULT_GAME_ORIGINS = ['https://battle-arena-3d-mauve.vercel.app']
 
 /** How long the game stays signed in before the player is sent to sign in again. */
@@ -89,13 +91,13 @@ export function suggestHandle(name: string | null | undefined): string {
   return `${clean.length >= 2 ? clean : 'Fighter'} ${randomInt(1000, 10000)}`
 }
 
-/** The game origins tokens may be sent to, from the environment plus the published game. */
+/** The game origins tokens may be sent to: the fundraising site, the game's own deployment and the environment's. */
 export function allowedGameOrigins(env: string | undefined = process.env.ARENA_GAME_ORIGINS): string[] {
   const extra = (env || '')
     .split(',')
     .map((s) => s.trim().replace(/\/+$/, ''))
     .filter(Boolean)
-  return [...new Set([...DEFAULT_GAME_ORIGINS, ...extra])]
+  return [...new Set([new URL(getFundraisingSiteUrl()).origin, ...DEFAULT_GAME_ORIGINS, ...extra])]
 }
 
 /**

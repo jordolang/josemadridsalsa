@@ -25,6 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...FUNDRAISING_STATIC_PAGES.map((path) => ({ url: url(path), priority: path === '/' ? 1 : 0.6 })),
     { url: url('/shop'), priority: 0.9 },
     { url: url('/groups'), priority: 0.8 },
+    { url: url('/battle-arena'), priority: 0.6 },
     ...products.map((product) => ({ url: url(`/shop/${product.slug}`), priority: 0.7 })),
     ...groups.map((group) => ({ url: url(`/groups/${group.slug}`), priority: 0.5 })),
   ]

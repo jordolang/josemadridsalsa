@@ -18,7 +18,7 @@ No manual gameplay exists — the game reflects real fundraising activity.
 
 | Piece | Path |
 |-------|------|
-| Full arena UI | `components/arena/playable-arena.tsx` (rendered by `app/(fundraiser-portal)/arena/[period]/arena-client.tsx`) |
+| Full arena UI | `app/(fundraiser-portal)/arena/[period]/arena-client.tsx`: the 3D game's Play card (`components/arena/battle-arena-game.tsx`) above the live standings (`components/arena/leaderboard-table.tsx`) |
 | Page widget | `components/arena/battle-widget.tsx` (rendered by `app/fundraise/[slug]/page.tsx`) |
 | Client polling | `lib/arena/use-arena-state.ts` |
 | Snapshot builder | `lib/arena/server-state.ts` |
@@ -32,7 +32,7 @@ No manual gameplay exists — the game reflects real fundraising activity.
 | Route | Purpose |
 |-------|---------|
 | `GET /api/fundraiser/arena/[period]/state` | Public arena snapshot (HP, shields, feed). Rate-limited to 120 req/min per IP. |
-| `GET`/`POST /api/fundraiser/arena/[period]/messages` | Arena chat feed |
+| `GET`/`POST /api/fundraiser/arena/[period]/messages` | Arena chat feed (no page posts to it since the 3D game replaced the 2D arena) |
 | `POST /api/fundraiser/arena/share/intent` | Mints a single-use share nonce; redeeming `/s/[nonce]` activates the shield |
 | `POST /api/fundraiser/sale` | Machine-to-machine sale ingest (HMAC API key, idempotent on `orderId`) |
 | `POST /api/fundraiser/sale-events/[id]/love`, `.../reply` | Reactions and replies on feed events |

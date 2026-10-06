@@ -57,11 +57,43 @@ const MAIN_SITE_PATHS = [
   'wishlist',
 ]
 
+/**
+ * The 3D Battle Arena game (the battle-arena-3d repository), built to one file in
+ * public/battle-arena/index.html and served at /battle-arena. Its page loads its
+ * code inline and talks to the main site's /api/arena (sign-in, results,
+ * leaderboards, game codes), the game's own deployment (fundraising teams), the
+ * CDN its sounds live on and the PeerJS server that links online rooms, so it
+ * gets its own Content-Security-Policy in place of the site-wide one.
+ */
+const BATTLE_ARENA_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob:",
+  "media-src 'self' data: blob:",
+  "worker-src 'self' blob:",
+  // The game calls www.josemadrid.net by name, whatever NEXT_PUBLIC_SITE_URL says.
+  `connect-src 'self' ${[...new Set(['https://www.josemadrid.net', siteUrl])].join(' ')} https://battle-arena-3d-mauve.vercel.app https://d2ol7oe51mr4n9.cloudfront.net https://0.peerjs.com wss://0.peerjs.com`,
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(process.env.NODE_ENV === 'production' ? ['upgrade-insecure-requests'] : []),
+].join('; ')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: monorepoRoot,
   // The same security headers, image hosts and server packages as the main site.
-  headers: sharedHeaders,
+  // Listed after the site-wide rule, the game's CSP wins on its own pages.
+  headers: async () => [
+    ...(await sharedHeaders()),
+    {
+      source: '/battle-arena/:path*',
+      headers: [{ key: 'Content-Security-Policy', value: BATTLE_ARENA_CSP }],
+    },
+  ],
   images: sharedImages,
   serverExternalPackages: sharedServerExternalPackages,
   transpilePackages: sharedTranspilePackages,
@@ -83,7 +115,8 @@ const nextConfig = {
     })),
   ],
   rewrites: async () => ({
-    beforeFiles: [],
+    // The game is a static page; /battle-arena (with any ?room= or ?t= invite) serves it.
+    beforeFiles: [{ source: '/battle-arena', destination: '/battle-arena/index.html' }],
     // Images that live only in the main site's public/ folder. Not a fallback
     // rewrite: the old-URL catch-all page would answer first.
     afterFiles: [{ source: '/images/:path*', destination: `${siteUrl}/images/:path*` }],
