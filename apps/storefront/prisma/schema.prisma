@@ -1101,6 +1101,8 @@ model Fundraiser {
   orders               Order[]
   /// The campaign's Battle Arena presence, when it has been entered into a season.
   arenaTeam            FundraiserTeam?
+  /// Codes this group's players type into the Battle Arena browser game.
+  arenaGameCodes       ArenaGameCode[]
   /// Mobile fundraiser app. The group ID sellers type at setup (e.g. "K7Q4MZ"); issued by a Jose Madrid admin.
   appGroupCode         String?                 @unique
   /// bcrypt hash of the group PIN the organizer hands to the sellers.
@@ -3575,6 +3577,25 @@ model FundraiserSaleEventReply {
   @@index([saleEventId, createdAt])
   @@index([authorUserId])
   @@map("fundraiser_sale_event_replies")
+}
+
+/// A fundraiser code for the Battle Arena browser game: players type it on the game's title
+/// screen and the game checks it with `POST /api/arena/game-codes/verify`, so a code made here
+/// works on every device. `groupName` is the team the player fights for. Revoking keeps the row.
+model ArenaGameCode {
+  id           String      @id @default(cuid())
+  /// Always stored formatted, `JM-XXXX-XXXX` (see `lib/arena/game-codes.ts`).
+  code         String      @unique
+  groupName    String
+  fundraiserId String?
+  createdBy    String?
+  createdAt    DateTime    @default(now())
+  revokedAt    DateTime?
+  lastUsedAt   DateTime?
+  fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id], onDelete: SetNull)
+
+  @@index([fundraiserId])
+  @@map("arena_game_codes")
 }
 
 /// Spectator chat bubble posted at a team's camp in the monthly battle arena.
