@@ -176,6 +176,10 @@ the root `package.json` is canonical.
   added its `[SquareMobilePaymentsSDK] setup` phase before CocoaPods added the embed phase, so
   Square's setup script ran first. The plugin now adds the phase from `post_integrate` and places
   it right after `[CP] Embed Pods Frameworks`, as Square requires.
+- **CI test run failed on `main`.** `tests/lib/fundraiser-app/app-client.test.ts` imports helpers
+  from the mobile app, whose `tsconfig.json` extends `expo/tsconfig.base`; CI doesn't install the
+  app's dependencies, so Vite's per-file tsconfig lookup threw "Tsconfig not found". The storefront
+  Vitest config now turns that lookup off.
 
 ### Security
 - **Dependabot alerts.** Overrides move `postcss` (the copy nested under `@amplitude/rrweb-snapshot`)
