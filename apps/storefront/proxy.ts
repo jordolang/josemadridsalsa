@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { FUNDRAISING_SITE_PREFIX, getFundraisingSiteUrl, isFundraisingSiteHost } from '@/lib/fundraising-site/host'
+import { getFundraisingSiteUrl } from '@/lib/fundraising-site/host'
 
+/**
+ * Pages that moved to the fundraising app (apps/fundraising), which has its own
+ * domain. Old links to them on this site redirect there, path and query intact.
+ */
 const FUNDRAISING_ROUTE_PREFIXES = [
   '/arena',
+  '/auth/fundraiser-signup',
   '/f',
   '/fundraise',
   '/fundraiser-portal',
   '/fundraisers',
   '/fundraising',
+  '/fundraising-site',
+  '/game-icons',
+  '/s',
 ]
 
 /**
@@ -28,9 +36,6 @@ interface CmsRedirect {
   destination: string
   permanent: boolean
 }
-
-/** Sentry's browser-event tunnel; see `tunnelRoute` in next.config.mjs. */
-const SENTRY_TUNNEL_ROUTE = '/monitoring'
 
 const CACHE_TTL_MS = 60_000
 /**
@@ -81,36 +86,16 @@ export default async function proxy(request: NextRequest) {
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? request.nextUrl.host
   const isApiPath = pathname.startsWith('/api') || pathname.startsWith('/trpc')
 
-  // The fundraising site (fundraising.josemadrid.net) is this same app, with its
-  // pages under app/fundraising-site. Its host is rewritten there; its API calls
-  // and the Sentry tunnel (tunnelRoute in next.config.mjs) go through untouched.
-  if (isFundraisingSiteHost(host)) {
-    if (isApiPath || pathname === SENTRY_TUNNEL_ROUTE || pathname.startsWith(FUNDRAISING_SITE_PREFIX)) {
-      return NextResponse.next()
-    }
-    const target = request.nextUrl.clone()
-    target.pathname = `${FUNDRAISING_SITE_PREFIX}${pathname === '/' ? '' : pathname}`
-    return NextResponse.rewrite(target)
-  }
-
-  // The internal path is not a page of the main site; send it to the real host.
-  if (pathname === FUNDRAISING_SITE_PREFIX || pathname.startsWith(`${FUNDRAISING_SITE_PREFIX}/`)) {
-    const rest = pathname.slice(FUNDRAISING_SITE_PREFIX.length) || '/'
-    return NextResponse.redirect(new URL(rest + search, getFundraisingSiteUrl()), 308)
-  }
-
-  const fundraisingOrigin = process.env.FUNDRAISING_APP_ORIGIN
   const isFundraisingRoute = FUNDRAISING_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   )
-  const isFundraisingAppProxy = request.nextUrl.searchParams.get('fundraising-app-proxy') === '1'
-
-  if (fundraisingOrigin && isFundraisingRoute && !isFundraisingAppProxy) {
-    const target = new URL(pathname + search, fundraisingOrigin)
-    const requestHost = request.headers.get('x-forwarded-host') ?? request.nextUrl.host
-
-    if (target.host !== requestHost) {
-      return NextResponse.redirect(target)
+  if (isFundraisingRoute) {
+    const rest = pathname.startsWith('/fundraising-site') ? pathname.slice('/fundraising-site'.length) || '/' : pathname
+    const target = new URL(rest + search, getFundraisingSiteUrl())
+    // Never redirect a host to itself: until its DNS moves, the fundraising
+    // domain may still reach this app.
+    if (target.host !== host) {
+      return NextResponse.redirect(target, 308)
     }
   }
 

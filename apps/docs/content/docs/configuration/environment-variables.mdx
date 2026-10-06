@@ -201,8 +201,7 @@ variables unset is treated as not configured.
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_ID` | For fundraising orders | Fundraising store API account client ID. |
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET` | For fundraising orders | Fundraising store API account client secret. |
 | `BIGCOMMERCE_FUNDRAISING_STOREFRONT_URL` | No | Fundraising store's storefront origin, where its hosted checkout and checkout form fields live. Defaults to https://josemadridsalsafundraising.com. |
-| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | No | Canonical origin of the fundraising site (canonicals, sitemap, robots). Defaults to https://fundraising.josemadrid.net. |
-| `FUNDRAISING_SITE_HOSTS` | No | Extra comma-separated hosts that serve the fundraising site, e.g. josemadridsalsafundraising.com once its DNS points here. |
+| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | No | Origin of the fundraising app (apps/fundraising): its canonicals, sitemap and robots, and where the main site sends its old fundraiser paths. Set it in both Vercel projects. Defaults to https://fundraising.josemadrid.net. |
 | `NEXT_PUBLIC_COMMERCE_BACKEND` | At cutover | Set to `bigcommerce` to switch the storefront over: product prices and stock come from BigCommerce, and retail carts check out in BigCommerce's hosted checkout. Unset, the site prices and checks out as before. Fundraiser carts keep this site's checkout either way. Build-time: redeploy after changing it. |
 | `BIGCOMMERCE_CHANNEL_ID` | No | BigCommerce channel carts are created in. Defaults to `1`, the existing storefront, whose checkout is served on josemadridsalsa.com — correct while that domain still points at BigCommerce. Once the domain points at this site, set it to the headless channel whose checkout domain is a subdomain. |
 | `BIGCOMMERCE_ORDERS_TO_QUICKBOOKS` | No | `true` lets orders copied from either BigCommerce store (`importSource = bigcommerce` or `bigcommerce-fundraising`) flow into the hourly QuickBooks sync as sales receipts. Off by default: if online revenue already reaches QuickBooks another way, such as the Stripe and PayPal deposits, syncing these too would count every retail sale twice. Decide with whoever keeps the books before turning it on. |
@@ -333,7 +332,6 @@ Staff inboxes are comma-separated lists. Public contact values all have built-in
 |---|---|---|
 | `FUNDRAISER_API_SECRET` | For sale ingest | HMAC secret for `POST /api/fundraiser/sale` (`lib/fundraiser-auth.ts`) |
 | `ARENA_SHARE_SECRET` | For share shields | Signs arena share nonces. At least 32 characters; share links fail without it. |
-| `FUNDRAISING_APP_ORIGIN` | No | Origin of a standalone fundraising app. When set, `proxy.ts` redirects fundraising routes there. |
 
 ## Platform Agent (`apps/agent`)
 

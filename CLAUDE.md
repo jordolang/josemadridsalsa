@@ -57,8 +57,8 @@ A **Turborepo** monorepo using **npm workspaces** (`npm@11.12.1`, Node **20** pe
 josemadridsalsa/
 ├── apps/
 │   ├── storefront/     # PRIMARY app — storefront, accounts, checkout, admin,
-│   │                   #   fundraising portal, arena, POS, and ALL API routes
-│   ├── fundraising/    # Standalone fundraising campaign app (port 3001)
+│   │                   #   POS, and most API routes
+│   ├── fundraising/    # Fundraising site + all fundraiser pages/APIs (port 3001)
 │   ├── admin/          # Standalone role-based admin app (port 3003)
 │   └── docs/           # Fumadocs documentation site (port 3002) — canonical docs home
 ├── packages/
@@ -67,7 +67,7 @@ josemadridsalsa/
 └── turbo.json          # Turborepo task graph
 ```
 
-**Key fact:** `apps/storefront` is where essentially all product code lives today — including the admin dashboard (`app/admin`), the fundraiser portal, the arena, POS, and every API route (`app/api`). The `fundraising` and `admin` workspaces are separate deployment boundaries that exist but are secondary; when in doubt, work in `storefront`. There is **no** `apps/backend` (a phantom left over from a reverted function-split; API handlers live in `apps/storefront/app/api`).
+**Key fact:** `apps/storefront` is where most product code lives — including the admin dashboard (`app/admin`, which also manages fundraisers), POS, and most API routes (`app/api`). **`apps/fundraising`** is its own deployment: the fundraising site (`app/(site)`), and every public fundraiser page, the fundraiser portal, the arena and their APIs; the storefront redirects those paths to it. The fundraiser mobile app's API (`/api/fundraiser-app`) and all webhooks stay in the storefront. The `admin` workspace is secondary; when in doubt about non-fundraiser work, use `storefront`. There is **no** `apps/backend` (a phantom left over from a reverted function-split; API handlers live in `apps/storefront/app/api`).
 
 **`packages/core`** holds the code more than one app imports (Prisma, auth, RBAC, email, UI primitives, fundraising domain logic). It mirrors the storefront's layout, and each app's `@/` alias resolves to the app first, then to core, so `@/lib/prisma` works everywhere. Core must never import from an app (`npm run type-check --workspace=@jose-madrid/core` enforces it). See `apps/docs/content/docs/guides/shared-code-strategy.mdx`.
 
@@ -114,8 +114,8 @@ Prefer the latest, most capable Claude models when building AI features (`ANTHRO
 
 ## Part 5 — Storefront Layout (`apps/storefront`)
 
-- **`app/`** route groups: `(public)`, `admin`, `auth`, `cart`, `order-confirmation`, `pos`, `fundraise`, `(fundraiser-portal)`, `(fundraiser-subdomain)`, `avatar`, `game-icons`, `s` (short links), plus `api`.
-- **`app/api/`** (~50 groups): `checkout`, `payment(s)`, `orders`, `cart`, `products`, `salsas`, `recipes`, `reviews`, `recommendations`, `gift-certificates`, `loyalty`, `fundraiser(s)` + `fundraiser-portal` + `fundraiser-signups` + `participants`, `social`, `integrations`, `developer`, `admin`, `account`, `ai-chat`, `chat-handoff`, `heat-index`, `newsletter`/`unsubscribe`/`send-email`, `locations`/`places`, `calendar`, `feeds`, `forms`, `live`, `pos`, `track`, `cron`, `uploadthing`, and **`webhooks/`** (`stripe`, `paypal`, `square`, `easypost`, `resend`).
+- **`app/`** route groups: `(public)`, `admin`, `auth`, `cart`, `order-confirmation`, `pos`, `avatar`, plus `api`. (The fundraiser pages, `fundraise`, `(fundraiser-portal)`, `(fundraiser-subdomain)`, `game-icons` and `s`, are in `apps/fundraising`.)
+- **`app/api/`** (~50 groups): `checkout`, `payment(s)`, `orders`, `cart`, `products`, `salsas`, `recipes`, `reviews`, `recommendations`, `gift-certificates`, `loyalty`, `fundraiser-app` (mobile app API), `social`, `integrations`, `developer`, `admin`, `account`, `ai-chat`, `chat-handoff`, `heat-index`, `newsletter`/`unsubscribe`/`send-email`, `locations`/`places`, `calendar`, `feeds`, `forms`, `live`, `pos`, `track`, `cron`, `uploadthing`, and **`webhooks/`** (`stripe`, `paypal`, `square`, `easypost`, `resend`).
 - **`lib/`** domain modules (~60): `payments`, `stripe`, `quickbooks`, `orders`, `financials`, `fundraising`/`fundraisers`, `arena`, `events`, `email`, `social`, `merchandise`, `gift-certificates`, `loyalty` (`loyalty.ts`), `inventory` (`inventory-manager.ts`, `inventory-alerts.ts`), `shipping` (`shipping-calculator.ts`, `shipping-api.ts`, `shipping-carriers.ts`), `tax-calculator.ts`, `recommendations.ts`, `discounts.ts`, `blog`, `seo`, `ai-rag`, `chat`, `forms`, `locations`, `analytics`, `tracking`, `notifications`, `training-data`, `customers`, `users`, `feeds`, `rate-limit`, plus core helpers: `prisma.ts`, `rbac.ts`, `admin-auth.ts`, `fundraiser-auth.ts`, `crypto.ts`, `validation(s)`, `logger.ts`, `errors.ts`, `csv.ts`.
 - **`components/`**: `ui` (Shadcn primitives), `store`, `admin`, `account`, `cart`, `checkout`, `products`, `reviews`, `fundraiser`/`fundraiser-portal`/`fundraising`, `arena`, `chat`, `messaging`, `dashboard`, `heat-index`, `social`, `seo`, `analytics`, `forms`, `providers`.
 - **`prisma/`**: `schema.prisma` (+ migrations, seeds).

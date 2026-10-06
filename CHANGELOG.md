@@ -422,6 +422,19 @@ the root `package.json` is canonical.
   and password reset, the checkout and auth APIs, newsletter and contact) moved to
   `packages/core/routes`, and the storefront's files at those routes now re-export them.
   See [Shared Code Strategy](/docs/guides/shared-code-strategy).
+- **The fundraising site and every fundraiser page are their own app, `apps/fundraising`.** The
+  fundraising site (home, shop, groups, cart, blog), `/fundraising`, `/fundraisers/...`,
+  `/fundraise/...`, `/f/...`, the arena, the fundraiser portal, fundraiser sign-up, share links
+  and their APIs moved out of the storefront into `apps/fundraising`, which serves them on its
+  own Vercel project and domain (`NEXT_PUBLIC_FUNDRAISING_SITE_URL`) with its own checkout and
+  sign-in from `packages/core/routes`. The storefront now redirects (308) those paths to the same
+  path on the fundraising site, and no longer rewrites a fundraising host into
+  `app/fundraising-site`. `FUNDRAISING_APP_ORIGIN` and `FUNDRAISING_SITE_HOSTS` are gone. The
+  fundraiser kits, fliers and game-icon manifest moved with the pages. Staff still manage
+  fundraisers in the main admin, and the fundraiser mobile app's API and all webhooks stay on the
+  main site. Security headers and image settings both apps use are in
+  `packages/core/next-config.mjs`. Setup steps are in the
+  [cutover runbook](/docs/deployment/bigcommerce-cutover#fundraising-app).
 - **Amplitude runs on `@amplitude/unified`, and the Claude calls report to Agent Analytics.** The
   browser init is now `initAll` with autocapture and session replay, started only after the visitor
   accepts the cookie banner and stopped again if they reject it (replacing

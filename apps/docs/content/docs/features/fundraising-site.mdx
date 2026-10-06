@@ -1,6 +1,6 @@
 ---
 title: Fundraising Site
-description: fundraising.josemadrid.net — the replacement for josemadridsalsafundraising.com, served by the storefront app and checking out through the BigCommerce fundraising store.
+description: fundraising.josemadrid.net — the replacement for josemadridsalsafundraising.com, served by its own app (apps/fundraising) and checking out through the BigCommerce fundraising store.
 ---
 
 # Fundraising Site
@@ -14,25 +14,35 @@ checkout, payment and orders.
 | | |
 |---|---|
 | Live host | `fundraising.josemadrid.net` |
-| Later host | `fundraising.josemadridsalsa.com` (already recognised; add the domain in Vercel when ready) |
-| Code | `apps/storefront/app/fundraising-site/`, `components/fundraising-site/`, `lib/fundraising-site/` |
+| Later host | `fundraising.josemadridsalsa.com` (add the domain to the fundraising Vercel project when ready) |
+| Code | `apps/fundraising/` — site pages in `app/(site)/`, plus `components/fundraising-site/`, `lib/fundraising-site/` |
 | Checkout | BigCommerce fundraising store (`BIGCOMMERCE_FUNDRAISING_*`), hosted checkout on josemadridsalsafundraising.com |
 
-## How the host works
+## How the app works
 
-It is not a separate deployment. `proxy.ts` recognises the fundraising host and
-rewrites every page request into `app/fundraising-site/`, so `/shop` on the
-fundraising host renders `app/fundraising-site/shop/page.tsx`. API routes
-(`/api/*`) and the Sentry tunnel are shared and are not rewritten. Opening
-`/fundraising-site/...` on www redirects to the fundraising host, and the main
-site's build-time redirects in `next.config.mjs` are switched off on that host.
+The fundraising site is its own Next.js app, `apps/fundraising`, deployed as its own
+Vercel project. It serves:
 
-Hosts served: `fundraising.josemadrid.net`, `fundraising.josemadridsalsa.com`,
-`fundraising.localhost` (local development), plus anything in
-`FUNDRAISING_SITE_HOSTS`. The list lives in `lib/fundraising-site/host.ts` and is
-repeated in `next.config.mjs`; change both together.
+- the site's own pages (`app/(site)/`): home, shop, groups, cart, blog and the rest below;
+- every fundraiser page that used to live on the main site: `/fundraising`,
+  `/fundraisers/...`, `/fundraise/...`, `/f/...`, `/arena/...`, the fundraiser portal
+  (`/fundraiser-portal/...`), fundraiser sign-up (`/auth/fundraiser-signup`) and the
+  share-shield links (`/s/...`);
+- their APIs (`/api/fundraiser/...`, `/api/fundraisers/...`, `/api/fundraiser-portal/...`,
+  `/api/fundraising-site/...`, `/api/participants/...`, `/api/fundraiser-signups`);
+- the checkout, order confirmation and sign-in pages it shares with the main site, from
+  `packages/core/routes` (see [Shared Code Strategy](/docs/guides/shared-code-strategy)).
 
-Local development: run the storefront and open `http://fundraising.localhost:3000`.
+The main site redirects (308) its old fundraiser paths to the same path on
+`NEXT_PUBLIC_FUNDRAISING_SITE_URL` (`apps/storefront/proxy.ts`), and the fundraising app
+sends main-site pages that shared components link to (`/products`, `/salsas`,
+`/account`, …) back to `NEXT_PUBLIC_SITE_URL` (`apps/fundraising/next.config.mjs`).
+
+Staff still manage fundraisers in the main site's admin. Two things stay on the main
+site for now: the fundraiser mobile app's API (`/api/fundraiser-app`, because the app
+has the main site's address built in) and the BigCommerce and payment webhooks.
+
+Local development: `npm run dev:fundraising` serves it on `http://localhost:3001`.
 
 ## Pages
 
@@ -46,7 +56,7 @@ Local development: run the storefront and open `http://fundraising.localhost:300
 | `/our-story`, `/testimonials`, `/survey`, `/blog`, `/contact`, `/shipping` | Content carried over from the old site |
 
 Order-form packs and fliers are static files in
-`apps/storefront/public/fundraising/downloads/`. Replace a file there to update it.
+`apps/fundraising/public/fundraising/downloads/`. Replace a file there to update it.
 
 Old josemadridsalsafundraising.com URLs (`/start-your-fundraiser/`,
 `/original-mild-salsa/`, `/cart.php`…) redirect permanently to their new paths
@@ -86,7 +96,8 @@ estimate; BigCommerce charges the real total.
 
 ## Going live on a domain
 
-1. Add the domain to the `josemadridsalsa` Vercel project (Settings › Domains).
+1. Add the domain to the fundraising Vercel project (Settings › Domains); see the
+   [cutover runbook](/docs/deployment/bigcommerce-cutover#fundraising-app) for setting that project up.
    `fundraising.josemadrid.net` needs no DNS change — josemadrid.net's DNS is
    already on Vercel. `fundraising.josemadridsalsa.com` needs a CNAME to
    `cname.vercel-dns.com` in that domain's DNS.
@@ -99,8 +110,7 @@ estimate; BigCommerce charges the real total.
 
 ### Moving josemadridsalsafundraising.com here
 
-Pointing the old domain at Vercel (and adding it to `FUNDRAISING_SITE_HOSTS`)
-turns its URLs into redirects to the new site — but the BigCommerce hosted
+Adding the old domain to the fundraising Vercel project turns its URLs into redirects to the new site — but the BigCommerce hosted
 checkout lives on that domain today. Before moving it, have BigCommerce move the
 fundraising store's checkout to its own subdomain and set
 `BIGCOMMERCE_FUNDRAISING_STOREFRONT_URL` to it, exactly as the main store's

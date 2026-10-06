@@ -56,6 +56,9 @@ the core module.
 - **Tailwind:** each app's `tailwind.config.ts` lists `../../packages/core/{components,lib}` in
   `content`, so classes used by core components are generated.
 - **Tests** for core code still live in the storefront's `tests/` folder and import it through
-  `@/`. The storefront's coverage report includes core (`coverage.allowExternal`).
+  `@/`. The storefront's coverage report includes core (`coverage.allowExternal`). Tests for
+  fundraising-only code live in `apps/fundraising/tests`.
+- **Next.js config** that both apps need (security headers, image hosts, server packages) is in
+  `packages/core/next-config.mjs`, which each app's `next.config.mjs` imports.
 - **Runtime file paths:** code in core must not read files relative to `process.cwd()` or its own
   location, because it runs from whichever app imported it.
