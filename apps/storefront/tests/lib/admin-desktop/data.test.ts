@@ -81,6 +81,7 @@ const prismaMock = {
   fundraiser: { count: vi.fn(), findMany: vi.fn() },
   fundraiserParticipant: { count: vi.fn(), findMany: vi.fn() },
   fundraiserTeam: { findMany: vi.fn() },
+  arenaGameCode: { findMany: vi.fn() },
   invoice: { findMany: vi.fn() },
   inboundEmail: { findMany: vi.fn() },
   lead: { findMany: vi.fn() },

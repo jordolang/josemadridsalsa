@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const prismaMock = {
   $transaction: vi.fn(),
+  arenaGameCode: { create: vi.fn(), update: vi.fn() },
   blogPost: { create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   customer: { create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   emailCampaign: { create: vi.fn(), update: vi.fn(), delete: vi.fn(), findUnique: vi.fn() },
@@ -1060,5 +1061,34 @@ describe('what the audit row keeps', () => {
         expect(handler.redact, `${op} logs its password in the clear`).toContain('password')
       }
     }
+  })
+})
+
+describe('Battle Arena game codes', () => {
+  it("makes a JM code named after the picked fundraiser's group", async () => {
+    prismaMock.fundraiser.findUnique.mockResolvedValue({ organizationName: 'Eagles Band Boosters', name: 'Fall drive' })
+    prismaMock.arenaGameCode.create.mockImplementation(async ({ data }) => ({ id: 'c1', ...data }))
+
+    const outcome = await WRITE_HANDLERS['gameCode.create'].execute({ fundraiserId: 'f1' }, { ...actor })
+
+    const { data } = prismaMock.arenaGameCode.create.mock.calls[0][0]
+    expect(data).toMatchObject({ groupName: 'Eagles Band Boosters', fundraiserId: 'f1', createdBy: 'u1' })
+    expect(data.code).toMatch(/^JM-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/)
+    expect(outcome.message).toBe(`Eagles Band Boosters: ${data.code}`)
+  })
+
+  it('needs a group name or a fundraiser', async () => {
+    await expect(WRITE_HANDLERS['gameCode.create'].execute({}, { ...actor })).rejects.toBeInstanceOf(WriteError)
+    expect(prismaMock.arenaGameCode.create).not.toHaveBeenCalled()
+  })
+
+  it('revokes and restores without deleting the row', async () => {
+    prismaMock.arenaGameCode.update.mockResolvedValue({ code: 'JM-7KQ4-X2PD' })
+
+    await WRITE_HANDLERS['gameCode.revoke'].execute({}, { ...actor, recordId: 'c1' })
+    expect(prismaMock.arenaGameCode.update.mock.calls[0][0].data.revokedAt).toBeInstanceOf(Date)
+
+    await WRITE_HANDLERS['gameCode.restore'].execute({}, { ...actor, recordId: 'c1' })
+    expect(prismaMock.arenaGameCode.update.mock.calls[1][0].data.revokedAt).toBeNull()
   })
 })
