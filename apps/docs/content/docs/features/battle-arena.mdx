@@ -92,6 +92,21 @@ public `/battles` board and the season-end route (`POST /api/admin/arena/seasons
 both use it, so the leaderboard always shows the team the season will crown. A season that
 ends with no sales crowns nobody.
 
+## Browser game fundraiser codes
+
+The 3D Battle Arena browser game (a separate project) lets only enrolled fundraising groups
+fight online and in tournaments. An admin makes one code per group at
+**Admin → Fundraisers → Battle Arena → Game codes** (`/admin/fundraisers/battle-arena/game-codes`),
+optionally linked to a `Fundraiser`, and hands it to the group's players. Codes are
+`ArenaGameCode` rows formatted `JM-XXXX-XXXX` (`lib/arena/game-codes.ts`), so the same code
+works on every device.
+
+The game checks a typed code with the public `POST /api/arena/game-codes/verify`
+(`{ code }` → `{ valid: true, name }` or `{ valid: false }`). It answers any origin (the game is
+served from its own domain), accepts the code however it is typed, and is limited to 30 checks
+a minute per IP so codes cannot be guessed. Revoking a code (`PATCH
+/api/admin/arena/game-codes/[id]`) stops new players using it and keeps the row.
+
 ## Game Mechanics Reference
 
 | Event                        | Result                                               |

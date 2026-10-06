@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Battle Arena game codes** (`/admin/fundraisers/battle-arena/game-codes`). Make one fundraiser
+  code per group for the 3D Battle Arena browser game, copy it for the group, and revoke it when
+  needed. The game checks codes with the public `POST /api/arena/game-codes/verify`, so a code
+  works on any device. Schema: new `ArenaGameCode` model.
 - **Customer account page with one communications timeline** (`/admin/customers/[id]`). Click a
   name on the customer list to see every order, fundraiser, email received (with its automatic
   reply), email sent, contact-form submission, website message and live chat for that address,
