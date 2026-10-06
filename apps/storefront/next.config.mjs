@@ -42,11 +42,11 @@ const nextConfig = {
     ...bigCommerceRedirects(),
     // The fundraiser kits and fliers moved to the fundraising site with its pages.
     // proxy.ts redirects the pages; static files skip the proxy, so they go here.
-    {
-      source: '/fundraising/downloads/:file*',
-      destination: `${fundraisingSiteUrl}/fundraising/downloads/:file*`,
+    ...['/fundraising/downloads/:file*', '/game-icons/:file*'].map((source) => ({
+      source,
+      destination: `${fundraisingSiteUrl}${source}`,
       permanent: true,
-    },
+    })),
   ],
   // Security headers, image hosts and server packages, shared with apps/fundraising
   headers: sharedHeaders,
