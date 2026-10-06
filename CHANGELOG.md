@@ -186,6 +186,8 @@ the root `package.json` is canonical.
   to 8.5.23, `source-map-js` to 1.2.2, `postcss-selector-parser` to 7.1.6, `katex` to 0.18.11,
   `smol-toml` to 1.9.0 and `deepmerge-ts` to 8.0.2 in the root lockfile, and `uuid` to 11.1.1 in
   the fundraiser app. `braces`, `sprintf-js` and `node-forge` have no patched release yet.
+- **sharp 0.35.5** (GHSA-wq5f-xc86-pv6w, CVE-2026-96889). The bundled librsvg could be crashed by
+  a crafted SVG; the storefront dependency and the root override both move to 0.35.5.
 
 ### Removed
 - **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
