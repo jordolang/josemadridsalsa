@@ -1,9 +1,15 @@
 import { defineConfig } from 'vitest/config'
+import type { UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  // Don't look up a tsconfig per transformed file. tests/lib/fundraiser-app imports helpers from
+  // apps/fundraiser-app, whose tsconfig extends `expo/tsconfig.base`; CI doesn't install that app's
+  // dependencies, so the lookup fails ("Tsconfig not found") and the whole run goes red. Vite's
+  // OxcOptions type omits `tsconfig`, though the transform accepts it.
+  oxc: { tsconfig: false } as UserConfig['oxc'],
   test: {
     globals: true,
     environment: 'jsdom',

@@ -171,6 +171,21 @@ the root `package.json` is canonical.
 ### Fixed
 - **Run report looked like it did nothing.** On `/admin/data/new` the result (or error) renders below
   the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
+- **Fundraiser app iOS build failed in "[CP] Embed Pods Frameworks"** with `lipo: open() failed,
+  errno=17 (File exists)` on `MockReaderUI.framework`. On a fresh prebuild the Square config plugin
+  added its `[SquareMobilePaymentsSDK] setup` phase before CocoaPods added the embed phase, so
+  Square's setup script ran first. The plugin now adds the phase from `post_integrate` and places
+  it right after `[CP] Embed Pods Frameworks`, as Square requires.
+- **CI test run failed on `main`.** `tests/lib/fundraiser-app/app-client.test.ts` imports helpers
+  from the mobile app, whose `tsconfig.json` extends `expo/tsconfig.base`; CI doesn't install the
+  app's dependencies, so Vite's per-file tsconfig lookup threw "Tsconfig not found". The storefront
+  Vitest config now turns that lookup off.
+
+### Security
+- **Dependabot alerts.** Overrides move `postcss` (the copy nested under `@amplitude/rrweb-snapshot`)
+  to 8.5.23, `source-map-js` to 1.2.2, `postcss-selector-parser` to 7.1.6, `katex` to 0.18.11,
+  `smol-toml` to 1.9.0 and `deepmerge-ts` to 8.0.2 in the root lockfile, and `uuid` to 11.1.1 in
+  the fundraiser app. `braces`, `sprintf-js` and `node-forge` have no patched release yet.
 
 ### Removed
 - **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
