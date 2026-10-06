@@ -1,0 +1,63 @@
+---
+title: Battle Arena 3D Game Accounts
+description: How players sign in to the 3D Battle Arena game with their account, and the profile and leaderboard API behind it.
+---
+
+# Battle Arena 3D game: accounts, profiles and leaderboards
+
+The 3D Battle Arena brawler (the separate `battle-arena-3d` repository, published at
+`https://battle-arena-3d-mauve.vercel.app`) requires every player to sign in with their José Madrid
+Salsa account before they can fight. This site owns those accounts, the players' profiles and the
+leaderboards. This is separate from the sales-driven fundraiser arena described in
+[Battle Arena Integration](./battle-arena).
+
+## Signing in
+
+1. The game sends the browser to `/battle-arena/connect?return_to=<game page>&state=<random>`.
+2. A signed-out visitor goes through `/auth/signin` (or `/auth/signup`) and comes back to the same page.
+3. The visitor presses **Play as …**, which posts to `/api/arena/auth/authorize`.
+4. That route creates the account's `ArenaPlayer` on first use, issues a game token and redirects to
+   `return_to#arena_token=<token>&state=<state>`. The token is in the fragment, so it never reaches a
+   server log; the game checks `state` against the one it sent.
+
+Tokens only go to listed game origins: the published game plus any in `ARENA_GAME_ORIGINS`. Plain
+`http://localhost` is accepted outside production for developing the game. The game keeps the token
+for 90 days (`ArenaPlayerSession`, SHA-256 only) and sends it as `Authorization: Bearer <token>`.
+
+## Groups
+
+A player's fundraising group (`ArenaPlayer.teamId`, a `FundraiserTeam`) comes from their account
+when it can: the team of a `FundraiserCharacter` they claimed, else the team of the fundraiser their
+`FundraiserAccount` runs. Those players cannot change it. Anyone else picks an `ACTIVE` team in the
+game and can switch once every 7 days. Each match stores the group it was played for, so switching
+never moves old results.
+
+## Recording matches
+
+The game is peer to peer, so no server watches the fight. Instead the game opens an `ArenaMatch`
+when the first round starts and closes it with the player's own result when the match ends. A
+result is accepted once, only for an open match, within 3 hours, and only if the match could have
+produced it (at least 6 seconds a round, no more knockouts than opponents allow, a damage ceiling).
+A player can open at most 40 matches an hour. Closing a match adds it to the player's running
+totals in the same transaction.
+
+## API
+
+All routes live in `apps/storefront/app/api/arena` and the logic in `apps/storefront/lib/arena-game`.
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `POST /api/arena/auth/authorize` | Site session (form) | Issue a game token and return to the game |
+| `POST /api/arena/auth/sign-out` | Game token | Revoke the token |
+| `GET /api/arena/me` | Game token | Profile: name, group, totals, rank, recent matches |
+| `PATCH /api/arena/me` | Game token | `{ handle?, teamId? }` rename or choose a group |
+| `GET /api/arena/teams` | Public | Groups a player can choose |
+| `POST /api/arena/matches` | Game token | `{ mode, fighter?, opponents, room? }` open a match |
+| `POST /api/arena/matches/[id]` | Game token | `{ won, roundsWon, rounds, knockouts, damage }` close it |
+| `GET /api/arena/leaderboard` | Public | `board=players\|teams`, `period=week\|month\|all`, `mode=all\|versus\|cpu\|online\|tournament`, `teamId`, `limit` |
+| `GET /api/arena/players/[handle]` | Public | A fighter's public profile |
+
+Signed-in routes answer cross-origin only to the listed game origins; the public ones to anyone.
+Errors are `{ error, code? }`, where `code: "signed_out"` tells the game to sign in again. Weeks
+start Monday 00:00 UTC and months on the 1st (UTC), like the fundraiser battle months. Boards rank
+by wins, then knockouts.

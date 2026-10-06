@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Accounts, profiles and leaderboards for the Battle Arena 3D game.** Players sign in to the game
+  with their José Madrid Salsa account (`/battle-arena/connect`) before they can fight. Each match
+  they play is recorded on their profile (fighter name, fundraising group, wins, knockouts, streaks,
+  rank, recent matches) and feeds weekly, monthly and all-time boards for fighters and fundraising
+  groups, served by the new `/api/arena/me`, `/matches`, `/leaderboard`, `/players` and `/teams`
+  routes. Players in a fundraiser get its group automatically. The sign-in page's "Create one" link
+  now keeps where the visitor was going. Schema: new `ArenaPlayer`, `ArenaPlayerSession` and
+  `ArenaMatch` models and `ArenaMatchMode` enum. Env: optional `ARENA_GAME_ORIGINS`.
 - **Battle Arena game codes** (`/admin/fundraisers/battle-arena/game-codes`). Make one fundraiser
   code per group for the 3D Battle Arena browser game, copy it for the group, and revoke it when
   needed. The game checks codes with the public `POST /api/arena/game-codes/verify`, so a code

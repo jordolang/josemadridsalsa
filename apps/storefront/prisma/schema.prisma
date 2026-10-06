@@ -44,6 +44,7 @@ model User {
   fundraiserSaleReactions FundraiserSaleEventReaction[]
   fundraiserSaleReplies   FundraiserSaleEventReply[]
   arenaMessages           ArenaMessage[]
+  arenaPlayer             ArenaPlayer?
   fundraiserSaleEvents    FundraiserSaleEvent[]
   loyaltyAccount          LoyaltyAccount?
   orders                  Order[]
@@ -3430,6 +3431,8 @@ model FundraiserTeam {
   campaignTitle     String?
   tagline           String?
   storyHtml         String?
+  arenaPlayers      ArenaPlayer[]
+  arenaMatches      ArenaMatch[]
   characters        FundraiserCharacter[]
   saleEvents        FundraiserSaleEvent[]
   championOfSeasons FundraiserSeason[]     @relation("SeasonChampion")
@@ -3612,6 +3615,92 @@ model ArenaMessage {
   @@index([period, createdAt])
   @@index([authorUserId])
   @@map("arena_messages")
+}
+
+/// A José Madrid account's fighter in the 3D Battle Arena game (the separate battle-arena-3d
+/// site). Players sign in with their account before they can play; the game then reports every
+/// match here, which feeds their profile and the leaderboards.
+///
+/// The running totals are kept on this row so a profile and the all-time board are one read;
+/// `ArenaMatch` keeps the per-match history the weekly and monthly boards are summed from.
+model ArenaPlayer {
+  id            String               @id @default(cuid())
+  userId        String               @unique
+  /// The name shown in the game and on the leaderboards.
+  handle        String
+  /// `handle` lower-cased with spaces collapsed, so no two players read the same.
+  handleKey     String               @unique
+  /// The fundraising group this player fights for. Filled in from the character they claimed
+  /// or the fundraiser account they run when there is one, otherwise chosen by the player.
+  teamId        String?
+  /// When the player last picked a group themselves; switching is limited (see lib/arena-game).
+  teamChangedAt DateTime?
+  matches       Int                  @default(0)
+  wins          Int                  @default(0)
+  roundsWon     Int                  @default(0)
+  knockouts     Int                  @default(0)
+  damage        Int                  @default(0)
+  currentStreak Int                  @default(0)
+  bestStreak    Int                  @default(0)
+  lastPlayedAt  DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team          FundraiserTeam?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  sessions      ArenaPlayerSession[]
+  matchHistory  ArenaMatch[]
+
+  @@index([teamId])
+  @@index([wins])
+  @@map("arena_players")
+}
+
+/// The game signed in as one player. The browser keeps the raw token; only its SHA-256 is
+/// stored, like the mobile fundraiser app's device sessions.
+model ArenaPlayerSession {
+  id         String      @id @default(cuid())
+  playerId   String
+  tokenHash  String      @unique
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+  lastUsedAt DateTime    @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  player     ArenaPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@map("arena_player_sessions")
+}
+
+/// One player's side of one game match. The game opens it when the fight starts and closes it
+/// with the result, so a result can only land on a match the server saw begin, once, and after
+/// a plausible amount of time. `teamId` is the player's group when the match started, so a
+/// later change of group does not move old results.
+model ArenaMatch {
+  id         String          @id @default(cuid())
+  playerId   String
+  teamId     String?
+  mode       ArenaMatchMode
+  /// The fighter the player used (the game's roster id, e.g. `ronin`).
+  fighter    String?
+  /// Everyone else in the match, CPU fighters included.
+  opponents  Int             @default(0)
+  /// The online room or tournament code, when there was one.
+  room       String?
+  startedAt  DateTime        @default(now())
+  finishedAt DateTime?
+  /// 1 when the player won the match, 0 otherwise: a number so the boards can sum it.
+  win        Int             @default(0)
+  roundsWon  Int             @default(0)
+  knockouts  Int             @default(0)
+  damage     Int             @default(0)
+  player     ArenaPlayer     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team       FundraiserTeam? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([playerId, startedAt])
+  @@index([finishedAt])
+  @@index([teamId, finishedAt])
+  @@map("arena_matches")
 }
 
 model FundraiserShield {
@@ -4318,6 +4407,16 @@ enum SeasonStatus {
   ACTIVE
   ENDED
   ARCHIVED
+}
+
+/// How a Battle Arena game match was played.
+enum ArenaMatchMode {
+  /// Versus CPU fighters on one keyboard.
+  CPU
+  /// The public online queue or a private online room.
+  ONLINE
+  /// A fundraiser tournament match.
+  TOURNAMENT
 }
 
 enum FundraiserTeamStatus {
