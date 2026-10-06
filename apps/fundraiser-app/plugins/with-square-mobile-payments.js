@@ -149,18 +149,30 @@ function withSquareIos(config, { applicationId, tapToPayOnIPhone }) {
     return mod
   })
 
-  // Square's framework ships a setup script that must run as the app's last build phase.
+  // Square's framework ships a setup script that must run after CocoaPods' "[CP] Embed Pods Frameworks"
+  // phase. CocoaPods only adds that phase when it integrates the Xcode project, which happens after
+  // post_install, so the phase is added from post_integrate. Run from post_install (as Square's Expo
+  // sample does), a fresh prebuild puts the setup script first, it rewrites the frameworks before
+  // they are embedded, and the build fails in "[CP] Embed Pods Frameworks" with
+  // "lipo: open() failed, errno=17 (File exists)" on MockReaderUI.
   return withDangerousMod(config, [
     'ios',
     async (mod) => {
       const podfile = path.join(mod.modRequest.platformProjectRoot, 'Podfile')
       if (!fs.existsSync(podfile)) return mod
       let contents = fs.readFileSync(podfile, 'utf8')
+      // Undo what the earlier version of this plugin wrote: a definition without the reordering, called
+      // from post_install.
+      contents = contents.replace(/(post_install do \|installer\|\n)[ ]*add_square_setup_build_phase\(installer\)\n/, '$1')
+      if (!contents.includes('embed_phase_name')) {
+        contents = contents.replace(/def add_square_setup_build_phase\(installer\)\n[\s\S]*?\nend\n\n/, '')
+      }
       if (!contents.includes('def add_square_setup_build_phase')) {
         contents = contents.replace(
           'prepare_react_native_project!',
           `def add_square_setup_build_phase(installer)
   phase_name = '[SquareMobilePaymentsSDK] setup'
+  embed_phase_name = '[CP] Embed Pods Frameworks'
   script = <<-'SCRIPT'
 SETUP_SCRIPT="\${BUILT_PRODUCTS_DIR}/\${FRAMEWORKS_FOLDER_PATH}/SquareMobilePaymentsSDK.framework/setup"
 if [ -f "$SETUP_SCRIPT" ]; then
@@ -176,6 +188,8 @@ SCRIPT
       phase = target.new_shell_script_build_phase(phase_name)
       phase.shell_script = script
       phase.always_out_of_date = '1'
+      embed_phase = target.shell_script_build_phases.find { |p| p.name == embed_phase_name }
+      target.build_phases.move(phase, target.build_phases.index(embed_phase) + 1) if embed_phase
     end
     user_project.save
   end
@@ -184,8 +198,8 @@ end
 prepare_react_native_project!`
         )
       }
-      if (!/^\s+add_square_setup_build_phase\(installer\)/m.test(contents)) {
-        contents = contents.replace(/post_install do \|installer\|\n/, `$&    add_square_setup_build_phase(installer)\n`)
+      if (!/^post_integrate do \|installer\|\n[ ]*add_square_setup_build_phase\(installer\)/m.test(contents)) {
+        contents = `${contents.trimEnd()}\n\npost_integrate do |installer|\n  add_square_setup_build_phase(installer)\nend\n`
       }
       fs.writeFileSync(podfile, contents)
       return mod

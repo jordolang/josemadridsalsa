@@ -37,5 +37,8 @@
     "submit:ios": "npx eas-cli@latest submit --platform ios --profile production",
     "submit:android": "npx eas-cli@latest submit --platform android --profile production"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "uuid@<11.1.1": "11.1.1"
+  }
 }
