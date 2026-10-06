@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Battle Arena game codes** (`/admin/fundraisers/battle-arena/game-codes`). Make one fundraiser
+  code per group for the 3D Battle Arena browser game, copy it for the group, and revoke it when
+  needed. The game checks codes with the public `POST /api/arena/game-codes/verify`, so a code
+  works on any device. Schema: new `ArenaGameCode` model.
 - **Routing tests and README for the fundraising app** (`apps/fundraising`). Tests cover the
   app's own redirects: old `/fundraising-site/...` links, main-site pages such as `/products` going
   back to `NEXT_PUBLIC_SITE_URL`, and the old order-form zips pointing at kit files that exist. The
