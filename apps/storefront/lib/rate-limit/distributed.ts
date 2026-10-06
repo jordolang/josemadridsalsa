@@ -6,9 +6,9 @@
  * Provides the same interface as lib/rate-limiter.ts but with distributed storage.
  */
 
-import type { RateLimitConfig, RateLimitResult, RateLimitStorage } from './types'
-import { VercelKVStorage } from './storage/vercel-kv'
-import { InMemoryStorage } from './storage/fallback'
+import type { RateLimitConfig, RateLimitResult, RateLimitStorage } from '@/lib/rate-limit/types'
+import { VercelKVStorage } from '@/lib/rate-limit/storage/vercel-kv'
+import { InMemoryStorage } from '@/lib/rate-limit/storage/fallback'
 
 /**
  * Detect if Vercel KV is available

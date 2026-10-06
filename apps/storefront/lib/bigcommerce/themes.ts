@@ -1,5 +1,5 @@
-import { bigCommerceFetch } from './client'
-import { getBigCommerceStore } from './config'
+import { bigCommerceFetch } from '@/lib/bigcommerce/client'
+import { getBigCommerceStore } from '@/lib/bigcommerce/config'
 
 /**
  * The BigCommerce storefront theme (main store, channel 1): backing it up,

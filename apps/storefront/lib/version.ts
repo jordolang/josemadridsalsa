@@ -177,4 +177,5 @@ export const VERSIONED_PACKAGE_FILES = [
   'apps/fundraising/package.json',
   'apps/admin/package.json',
   'apps/windows-admin/package.json',
+  'packages/core/package.json',
 ] as const

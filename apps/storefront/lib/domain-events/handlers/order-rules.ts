@@ -19,7 +19,7 @@ import type { RuleOrderContext } from '@/lib/notifications/order-rules'
 
 import { registerDomainEventHandler } from '../subscribe'
 import type { DomainEventRecord } from '../subscribe'
-import type { DomainEventType } from '../types'
+import type { DomainEventType } from '@/lib/domain-events/types'
 import { SITE_URL } from '@/lib/site-url'
 
 const appUrl =

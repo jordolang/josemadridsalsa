@@ -1,5 +1,5 @@
 import { EmailTemplateDefinition } from './index'
-import { baseStyles, headerImg, jmsFooter } from '../shared/components'
+import { baseStyles, headerImg, jmsFooter } from '@/lib/email/shared/components'
 import { SITE_DOMAIN } from '@/lib/site-url'
 
 export const giftCertificateDeliveryTemplate: EmailTemplateDefinition = {

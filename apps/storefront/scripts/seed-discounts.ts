@@ -1,4 +1,4 @@
-import { createDefaultDiscountCodes } from '../lib/discounts'
+import { createDefaultDiscountCodes } from '@/lib/discounts'
 
 async function main() {
   console.log('Seeding default discount codes...')

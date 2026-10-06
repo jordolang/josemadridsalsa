@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { allocateCents } from '@/lib/bundles'
 import { deriveFulfillmentStatus } from '@/lib/orders/fulfillment'
 import { calculateFundraiserCommission, commissionBase } from '@/lib/fundraising/commission'
-import { bigCommerceFetch } from './client'
-import type { BigCommerceStoreKey } from './config'
+import { bigCommerceFetch } from '@/lib/bigcommerce/client'
+import type { BigCommerceStoreKey } from '@/lib/bigcommerce/config'
 import {
   findProductForJarLabel,
   getBigCommerceProducts,
   normalizeProductName,
   type BigCommerceProduct,
-} from './catalog'
+} from '@/lib/bigcommerce/catalog'
 import {
   countsTowardCampaign,
   dealBigCommerceArenaDamage,

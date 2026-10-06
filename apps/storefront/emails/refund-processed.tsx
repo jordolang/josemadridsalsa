@@ -1,8 +1,8 @@
 import { Text, Section, Row, Column, Hr } from '@react-email/components'
-import { EmailLayout } from './components/EmailLayout'
-import { EmailHeader } from './components/EmailHeader'
-import { EmailFooter } from './components/EmailFooter'
-import { bodyContent } from './styles'
+import { EmailLayout } from '@/emails/components/EmailLayout'
+import { EmailHeader } from '@/emails/components/EmailHeader'
+import { EmailFooter } from '@/emails/components/EmailFooter'
+import { bodyContent } from '@/emails/styles'
 
 interface RefundProcessedEmailProps {
   name?: string

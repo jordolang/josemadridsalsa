@@ -6,8 +6,8 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getSquareConnectionStatus } from '@/lib/square/oauth'
-import { PinSchema, generateGroupCode, hashPin, isLocked } from './credentials'
-import { FundraiserAppError } from './errors'
+import { PinSchema, generateGroupCode, hashPin, isLocked } from '@/lib/fundraiser-app/credentials'
+import { FundraiserAppError } from '@/lib/fundraiser-app/errors'
 
 export const AppSettingsUpdateSchema = z
   .object({

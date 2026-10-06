@@ -9,7 +9,7 @@ import {
   type ShippingAddress,
   type Parcel,
 } from './shipping-api'
-import { prisma } from './prisma'
+import { prisma } from '@/lib/prisma'
 import { describeMissingOrigin, getShippingOrigin } from './shipping/origin'
 import { packJars } from './shipping/jar-packing'
 import { withHandlingFee } from './shipping/handling-fee'

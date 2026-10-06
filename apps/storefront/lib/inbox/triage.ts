@@ -28,7 +28,7 @@ import {
   type GmailMessage,
 } from './gmail'
 import { decideReply, gmailLabelFor, humaniseCategory, stepsFor } from './policy'
-import { INBOUND_EMAIL_ENTITY } from './resolution'
+import { INBOUND_EMAIL_ENTITY } from '@/lib/inbox/resolution'
 
 /** Messages read per tick. Enough to clear a normal morning, small enough to finish. */
 const SWEEP_LIMIT = 25

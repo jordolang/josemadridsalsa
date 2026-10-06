@@ -5,7 +5,7 @@
  * email-client compatibility (Outlook, Gmail, Apple Mail, etc.).
  */
 
-import { getImageBaseUrl, getLogoUrl } from '../shared/components'
+import { getImageBaseUrl, getLogoUrl } from '@/lib/email/shared/components'
 import { SITE_URL } from '@/lib/site-url'
 
 const IMAGE_BASE_URL = getImageBaseUrl()

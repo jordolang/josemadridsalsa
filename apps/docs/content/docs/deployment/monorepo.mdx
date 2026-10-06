@@ -19,6 +19,7 @@ and its own build. A commit that only touches one app rebuilds only that app.
 | `@jose-madrid/fundraising` | `apps/fundraising` | 3001 | Not yet linked |
 | `@jose-madrid/admin` | `apps/admin` | 3003 | Not yet linked |
 | `@jose-madrid/agent` | `apps/agent` | — | No (local tooling; excluded from `npm run build`) |
+| `@jose-madrid/core` | `packages/core` | — | No (shared code, built into each app that imports it; see [Shared Code Strategy](/docs/guides/shared-code-strategy)) |
 
 `apps/macos-admin` is a Swift package, not an npm workspace, and is built with
 `build-app.sh` rather than deployed. See [macOS Admin App](/docs/features/macos-admin-app).

@@ -4,10 +4,10 @@
  */
 import { prisma } from '@/lib/prisma'
 import { PAID_PAYMENT_STATUSES } from '@/lib/payments/status'
-import { sendEmail, substituteVariables } from './sender'
-import { checkSuppression } from './suppression'
-import { checkUnsubscribed } from './logger'
-import { buildOneClickUnsubscribeUrl, buildUnsubscribeUrl } from './unsubscribe-url'
+import { sendEmail, substituteVariables } from '@/lib/email/sender'
+import { checkSuppression } from '@/lib/email/suppression'
+import { checkUnsubscribed } from '@/lib/email/logger'
+import { buildOneClickUnsubscribeUrl, buildUnsubscribeUrl } from '@/lib/email/unsubscribe-url'
 
 export type AutomationTriggerType =
   | 'USER_REGISTERED'

@@ -1,6 +1,6 @@
-import { getBigCommerceProducts, normalizeProductName, type BigCommerceProduct } from './catalog'
-import { isBigCommerceConfigured } from './config'
-import { BIGCOMMERCE_BUNDLE_PRODUCT_IDS } from './product-map'
+import { getBigCommerceProducts, normalizeProductName, type BigCommerceProduct } from '@/lib/bigcommerce/catalog'
+import { isBigCommerceConfigured } from '@/lib/bigcommerce/config'
+import { BIGCOMMERCE_BUNDLE_PRODUCT_IDS } from '@/lib/bigcommerce/product-map'
 import { getSalsaBundle, type PackOverrides } from '@/lib/bundles'
 
 /**

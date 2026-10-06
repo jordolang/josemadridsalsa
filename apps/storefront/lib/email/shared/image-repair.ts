@@ -10,7 +10,7 @@
  * placeholder in the recipient's inbox.
  */
 
-import { getImageBaseUrl, jmsFooter } from './components'
+import { getImageBaseUrl, jmsFooter } from '@/lib/email/shared/components'
 
 /** Referenced filename → the asset that actually exists in public/email-templates. */
 export const FILENAME_REMAP: Record<string, string> = {

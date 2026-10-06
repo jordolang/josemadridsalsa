@@ -1,7 +1,7 @@
 import 'server-only'
 import { bigCommerceFetch } from '@/lib/bigcommerce/client'
 import { requireGroup } from './checkout'
-import { getFundraisingCheckoutFields } from './checkout-fields'
+import { getFundraisingCheckoutFields } from '@/lib/fundraising-site/checkout-fields'
 import { DUE_PER_JAR, type OrderSubmission } from './order-submission'
 
 /**

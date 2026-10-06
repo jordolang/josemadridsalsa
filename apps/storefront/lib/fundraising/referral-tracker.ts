@@ -5,6 +5,6 @@
  * Client components should import from '@/lib/fundraising/referral-tracker.client'
  * Server components / API routes can import from here or '@/lib/fundraising/referral-tracker.server'
  */
-export type { ReferralInfo } from './referral-tracker.client'
-export { getReferralFromCookie, getReferralFromCode } from './referral-tracker.server'
-export { getReferralCodeFromCookie, setReferralCookie, clearReferralCookie } from './referral-tracker.client'
+export type { ReferralInfo } from '@/lib/fundraising/referral-tracker.client'
+export { getReferralFromCookie, getReferralFromCode } from '@/lib/fundraising/referral-tracker.server'
+export { getReferralCodeFromCookie, setReferralCookie, clearReferralCookie } from '@/lib/fundraising/referral-tracker.client'

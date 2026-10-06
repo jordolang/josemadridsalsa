@@ -1,5 +1,5 @@
 import { PrismaClient, UserRole } from '@prisma/client'
-import { permissionDefinitions, defaultRolePermissions } from '../lib/permissions-data'
+import { permissionDefinitions, defaultRolePermissions } from '@/lib/permissions-data'
 
 const prisma = new PrismaClient()
 

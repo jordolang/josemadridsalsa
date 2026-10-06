@@ -413,6 +413,15 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **Shared code moved to `packages/core` (`@jose-madrid/core`).** The 124 storefront files the
+  fundraising pages also need (Prisma, auth, RBAC, email, the UI primitives, the fundraising and
+  arena domain logic, and their dependencies) now live in `packages/core`, so a separate
+  fundraising app can use them without importing the storefront. Each app's `@/` alias tries the
+  app first and then core, so no import paths changed and the storefront behaves exactly as before.
+  The pages and API routes a fundraising site also serves (checkout, order confirmation, sign-in
+  and password reset, the checkout and auth APIs, newsletter and contact) moved to
+  `packages/core/routes`, and the storefront's files at those routes now re-export them.
+  See [Shared Code Strategy](/docs/guides/shared-code-strategy).
 - **Amplitude runs on `@amplitude/unified`, and the Claude calls report to Agent Analytics.** The
   browser init is now `initAll` with autocapture and session replay, started only after the visitor
   accepts the cookie banner and stopped again if they reject it (replacing

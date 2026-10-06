@@ -7,7 +7,7 @@ import {
   getFundraisingCheckoutFields,
   type FundraisingCheckoutFields,
   type FundraisingGroupOption,
-} from './checkout-fields'
+} from '@/lib/fundraising-site/checkout-fields'
 
 /**
  * Hands a fundraising-site cart to the BigCommerce fundraising store's hosted

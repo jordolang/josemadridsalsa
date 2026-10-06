@@ -5,7 +5,7 @@ import {
   hasAttribution,
   serialiseAttribution,
   type AttributionFields,
-} from './attribution'
+} from '@/lib/analytics/attribution'
 
 /** Whether the first-touch cookie is already present (client-side). */
 function attributionCookieExists(): boolean {

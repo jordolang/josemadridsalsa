@@ -4,7 +4,7 @@
  */
 
 import { EmailTemplateDefinition } from './index'
-import { baseStyles, headerImg, jmsFooter } from '../shared/components'
+import { baseStyles, headerImg, jmsFooter } from '@/lib/email/shared/components'
 
 const seasonalFallTemplate: EmailTemplateDefinition = {
   key: 'seasonal_fall',

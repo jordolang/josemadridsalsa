@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { prisma } from '../lib/prisma'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 async function testAuth() {

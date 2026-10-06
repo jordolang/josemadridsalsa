@@ -7,7 +7,7 @@
  */
 
 import { Resend } from 'resend'
-import { logEmailSend, checkUnsubscribed } from './logger'
+import { logEmailSend, checkUnsubscribed } from '@/lib/email/logger'
 import { createHash } from 'crypto'
 import { getTemplateByAlias } from './resend-templates'
 import type { OrderItem } from '@/emails/components/OrderItemsTable'

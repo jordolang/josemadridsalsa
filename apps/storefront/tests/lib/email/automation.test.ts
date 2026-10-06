@@ -327,7 +327,7 @@ describe('unsubscribe footer target', () => {
     // (welcome, newsletter, contact, fundraiser-followup) bury unsubscribeUrl on a nested
     // EmailFooter. This source guard covers every sender in the file at once and catches the
     // 404 from creeping back in.
-    const source = readFileSync(join(__dirname, '../../../lib/email/automation.ts'), 'utf8')
+    const source = readFileSync(join(__dirname, '../../../../../packages/core/lib/email/automation.ts'), 'utf8')
     expect(source).not.toContain('/account/preferences')
     expect(source).toContain('buildUnsubscribeUrl(')
   })

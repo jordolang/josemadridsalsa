@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 async function verifyLocations() {
   console.log('Verifying retail locations...\n')
