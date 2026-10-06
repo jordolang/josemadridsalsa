@@ -205,6 +205,10 @@ the root `package.json` is canonical.
   to 8.5.23, `source-map-js` to 1.2.2, `postcss-selector-parser` to 7.1.6, `katex` to 0.18.11,
   `smol-toml` to 1.9.0 and `deepmerge-ts` to 8.0.2 in the root lockfile, and `uuid` to 11.1.1 in
   the fundraiser app. `braces`, `sprintf-js` and `node-forge` have no patched release yet.
+- **Dependabot alerts (nodemailer, sharp, MCP SDK).** Overrides move every `nodemailer` below
+  10.0.6 (the 7.x copy pulled in by `next-auth`'s peer range) to 10.0.15 and `sharp` to 0.35.5
+  (librsvg CVE-2026-96889). The `@modelcontextprotocol/sdk` override to 1.31.0 drops the 1.27.1
+  copy that `@amplitude/ai` listed as optional; only that package's `amplitude-ai-mcp` CLI used it.
 
 ### Removed
 - **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
