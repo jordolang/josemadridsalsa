@@ -3,8 +3,6 @@ import { NextRequest } from 'next/server'
 
 type Proxy = (request: NextRequest) => Promise<Response>
 
-const originalFundraisingOrigin = process.env.FUNDRAISING_APP_ORIGIN
-
 /**
  * The proxy fetches the CMS redirect table from an internal route and caches it
  * in module scope for 60 seconds. Each test therefore stubs the fetch and then
@@ -29,53 +27,72 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
-  if (originalFundraisingOrigin === undefined) {
-    delete process.env.FUNDRAISING_APP_ORIGIN
-  } else {
-    process.env.FUNDRAISING_APP_ORIGIN = originalFundraisingOrigin
-  }
+  delete process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL
 })
 
 describe('storefront fundraising boundary', () => {
-  it('redirects fundraising pages to the fundraising application', async () => {
-    process.env.FUNDRAISING_APP_ORIGIN = 'https://fundraising.example.com'
-
+  it('redirects fundraiser pages to the fundraising site', async () => {
     const response = await (await loadProxy())(
-      new NextRequest('https://store.example.com/fundraise/school?participant=abc')
+      new NextRequest('https://www.josemadrid.net/fundraise/school?participant=abc')
     )
 
-    expect(response.status).toBe(307)
+    expect(response.status).toBe(308)
     expect(response.headers.get('location')).toBe(
-      'https://fundraising.example.com/fundraise/school?participant=abc',
+      'https://fundraising.josemadrid.net/fundraise/school?participant=abc',
     )
+  })
+
+  it.each([
+    '/arena/2026-fall',
+    '/auth/fundraiser-signup',
+    '/f/lincoln-band',
+    '/fundraiser-portal/dashboard',
+    '/fundraisers/lincoln-band',
+    '/fundraising',
+    '/game-icons/lorc/fire.svg',
+    '/s/abc123',
+  ])('redirects %s to the same path on the fundraising site', async (path) => {
+    const response = await (await loadProxy())(new NextRequest(`https://www.josemadrid.net${path}`))
+
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe(`https://fundraising.josemadrid.net${path}`)
+  })
+
+  it('uses NEXT_PUBLIC_FUNDRAISING_SITE_URL', async () => {
+    process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL = 'https://fundraising.josemadridsalsa.com'
+
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadridsalsa.com/fundraising'))
+
+    expect(response.headers.get('location')).toBe('https://fundraising.josemadridsalsa.com/fundraising')
+  })
+
+  it('sends the old internal fundraising-site path to the fundraising host', async () => {
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/fundraising-site/shop?a=b'))
+
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe('https://fundraising.josemadrid.net/shop?a=b')
   })
 
   it('does not redirect main storefront pages', async () => {
-    process.env.FUNDRAISING_APP_ORIGIN = 'https://fundraising.example.com'
-
-    const response = await (await loadProxy())(new NextRequest('https://store.example.com/products'))
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/products'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })
 
-  it('does not redirect requests already on the fundraising origin', async () => {
-    process.env.FUNDRAISING_APP_ORIGIN = 'https://fundraising.example.com'
-
-    const response = await (await loadProxy())(new NextRequest('https://fundraising.example.com/fundraising'))
+  it('does not redirect lookalike paths', async () => {
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/fundraisingfaq'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })
 
-  it('does not redirect a fundraising rewrite forwarded from the fundraising origin', async () => {
-    process.env.FUNDRAISING_APP_ORIGIN = 'https://fundraising.example.com'
+  it('does not redirect the fundraising host to itself', async () => {
+    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadrid.net/fundraising'))
 
-    const response = await (await loadProxy())(
-      new NextRequest('https://store.example.com/fundraising', {
-        headers: {
-          'x-forwarded-host': 'fundraising.example.com',
-        },
-      }),
-    )
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
+  it('leaves the fundraiser mobile app API on this app', async () => {
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/api/fundraiser-app/me'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })
@@ -157,62 +174,6 @@ describe('CMS redirects', () => {
     const response = await failingProxy(new NextRequest('https://store.example.com/products'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
-  })
-})
-
-describe('fundraising site host', () => {
-  it('rewrites the fundraising host into app/fundraising-site', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadrid.net/shop?x=1'))
-
-    expect(response.headers.get('x-middleware-rewrite')).toBe('https://fundraising.josemadrid.net/fundraising-site/shop?x=1')
-  })
-
-  it('rewrites the fundraising home page to the section root', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadrid.net/'))
-
-    expect(response.headers.get('x-middleware-rewrite')).toBe('https://fundraising.josemadrid.net/fundraising-site')
-  })
-
-  it('honours the forwarded host', async () => {
-    const response = await (await loadProxy())(
-      new NextRequest('https://josemadridsalsa.vercel.app/groups', {
-        headers: { 'x-forwarded-host': 'fundraising.josemadridsalsa.com' },
-      }),
-    )
-
-    expect(response.headers.get('x-middleware-rewrite')).toBe('https://josemadridsalsa.vercel.app/fundraising-site/groups')
-  })
-
-  it('leaves API calls on the fundraising host alone', async () => {
-    const response = await (await loadProxy())(
-      new NextRequest('https://fundraising.josemadrid.net/api/fundraising-site/checkout'),
-    )
-
-    expect(response.headers.get('x-middleware-rewrite')).toBeNull()
-    expect(response.headers.get('x-middleware-next')).toBe('1')
-  })
-
-  it('leaves the Sentry tunnel on the fundraising host alone', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadrid.net/monitoring?o=1'))
-
-    expect(response.headers.get('x-middleware-rewrite')).toBeNull()
-  })
-
-  it('serves extra hosts listed in FUNDRAISING_SITE_HOSTS', async () => {
-    process.env.FUNDRAISING_SITE_HOSTS = 'josemadridsalsafundraising.com'
-    try {
-      const response = await (await loadProxy())(new NextRequest('https://josemadridsalsafundraising.com/start'))
-      expect(response.headers.get('x-middleware-rewrite')).toBe('https://josemadridsalsafundraising.com/fundraising-site/start')
-    } finally {
-      delete process.env.FUNDRAISING_SITE_HOSTS
-    }
-  })
-
-  it('sends the internal path on the main host to the fundraising host', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/fundraising-site/shop?a=b'))
-
-    expect(response.status).toBe(308)
-    expect(response.headers.get('location')).toBe('https://fundraising.josemadrid.net/shop?a=b')
   })
 })
 

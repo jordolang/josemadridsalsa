@@ -144,6 +144,49 @@ solutions**, connect them using the same accounts the website uses:
 - **Meta pixel**: `2546527762445636`.
 - **TikTok pixel**: `D8OEDO3C77U56UIVDE3G`, through BigCommerce's TikTok channel or app.
 
+## Fundraising app
+
+The fundraiser pages (`/fundraising`, `/fundraisers/...`, `/fundraise/...`, `/f/...`, the
+fundraiser portal, the arena) and the fundraising site are their own app, `apps/fundraising`, on
+their own Vercel project and domain. The main site redirects its old fundraiser paths there. Do
+this before Phase 3, or at any time after it; it does not depend on the BigCommerce switch.
+
+<Callout type="warn" title="Merge, then move the domain">
+Until the fundraising domain points at the new project, it still reaches the main site, which no
+longer serves those pages after the merge. Have step 4 ready before merging, and do it right
+after the merge deploys.
+</Callout>
+
+1. **Create the project.** Vercel → Add New → Project → import `jordolang/josemadridsalsa` again,
+   with **Root Directory** `apps/fundraising` (leave "Include files outside the root directory"
+   on). The framework, build command and ignored-build step come from `apps/fundraising/vercel.json`.
+2. **Environment variables (Production).** Copy all of the main project's Production variables
+   into the new project (Vercel's "Import .env" takes a file from `vercel env pull`). The two
+   apps share the database, payment, email, upload and sign-in settings. Then set, in **both**
+   projects:
+   - `NEXT_PUBLIC_SITE_URL`: the main site (`https://www.josemadrid.net` today,
+     `https://www.josemadridsalsa.com` after Phase 3)
+   - `NEXT_PUBLIC_FUNDRAISING_SITE_URL`: the fundraising site (`https://fundraising.josemadrid.net`)
+
+   and in the fundraising project only, `NEXTAUTH_URL` = the fundraising site's address.
+3. **Sign-in callbacks.** Add `https://fundraising.josemadrid.net/api/auth/callback/<provider>`
+   to each sign-in provider (Google, Facebook, Apple), alongside the main site's. Accounts are
+   shared, but a session is per domain, so people sign in once on each site.
+4. **Move the domain.** After the merge deploys both projects: Vercel → josemadridsalsa →
+   Settings → Domains → remove `fundraising.josemadrid.net`, then add it to the fundraising
+   project. No DNS change; josemadrid.net's DNS is already on Vercel.
+5. **Check.** `https://www.josemadrid.net/fundraising` lands on
+   `https://fundraising.josemadrid.net/fundraising`; a fundraiser page, the portal sign-in and a
+   test checkout on a fundraiser link all work on the fundraising domain; the portal's logo upload
+   works.
+
+What stays on the main site for now: staff manage fundraisers in the main admin; the fundraiser
+mobile app's API (`/api/fundraiser-app`, since the app has the main site's address built in);
+and every webhook (Stripe, PayPal, Square, BigCommerce), so nothing in 3.4 changes for this. The
+fundraising app has no Sentry project yet.
+
+**Rollback:** move `fundraising.josemadrid.net` back to the main project and revert the merge.
+
 ## Phase 3 — Move the domains
 
 ### 3.1 Move the BigCommerce storefront to a subdomain (call BigCommerce)

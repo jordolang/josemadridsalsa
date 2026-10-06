@@ -14,6 +14,12 @@ const config = [
     ignores: ['node_modules/**', '.next/**'],
   },
   ...compat.extends('next/core-web-vitals'),
+  {
+    rules: {
+      '@next/next/no-img-element': 'off',
+      'react/no-unescaped-entities': 'off',
+    },
+  },
 ]
 
 export default config

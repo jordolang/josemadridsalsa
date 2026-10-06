@@ -6,14 +6,18 @@ import { BIGCOMMERCE_PRODUCT_SLUGS } from '@/lib/bigcommerce/product-map'
 
 const redirects = bigCommerceRedirects(null)
 const appDir = path.resolve(__dirname, '../app')
+// Fundraiser pages such as /fundraising are served by apps/fundraising; proxy.ts sends them there.
+const fundraisingAppDir = path.resolve(__dirname, '../../fundraising/app')
 
-/** Whether this app serves `pathname` from a static route. */
+/** Whether this app, or the fundraising app it redirects to, serves `pathname` from a static route. */
 function routeExists(pathname: string): boolean {
   if (pathname === '/sitemap.xml') return existsSync(path.join(appDir, 'sitemap.ts'))
   const segments = pathname.replace(/^\//, '')
-  return [path.join(appDir, segments), path.join(appDir, '(public)', segments)].some((dir) =>
-    existsSync(path.join(dir, 'page.tsx')),
-  )
+  return [
+    path.join(appDir, segments),
+    path.join(appDir, '(public)', segments),
+    path.join(fundraisingAppDir, '(site)', segments),
+  ].some((dir) => existsSync(path.join(dir, 'page.tsx')))
 }
 
 describe('legacy BigCommerce redirects', () => {
