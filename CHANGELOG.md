@@ -408,6 +408,12 @@ the root `package.json` is canonical.
   capture (both metadata only, as their prompts carry customer data). Every agent session carries a
   stable identity (signed-in user, browser device, form uploader, or mailbox), and `@amplitude/ai`
   is a server external package because it needs Node built-ins.
+- **Customer-email alerts are readable at a glance.** On `/admin/notifications`, each unread
+  customer email now shows a bold heading ("General Question from …"), a bold From/Subject
+  block, the numbered steps needed to clear it (finished steps struck through), a clickable Gmail
+  link, and a footer with the time, "New Alert" and whether Anthropic classified the email. The
+  card is built from the stored email, so alerts raised before this change get the layout too.
+  Other notifications now keep their line breaks.
 - **Web admin restyled to match the desktop app.** `/admin` now uses the desktop shell's warm
   charcoal and gold palette (light and dark), a denser sidebar grouped into Operations, Programs,
   Money, Marketing, Insights and System with a gold rule on the current section, and a header that
