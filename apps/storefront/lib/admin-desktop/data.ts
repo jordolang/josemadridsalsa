@@ -5096,6 +5096,97 @@ async function loadArena(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
 }
 
 // ---------------------------------------------------------------------------
+// Fundraisers · Arena game codes
+// ---------------------------------------------------------------------------
+
+const GAME_CODE_FILTERS = ['All codes', 'Active', 'Revoked']
+
+/** The codes players type into the Battle Arena browser game; see `lib/arena/game-codes.ts`. */
+async function loadArenaGameCodes(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
+  const codes = await safe(
+    () =>
+      prisma.arenaGameCode.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: list.limit,
+        include: { fundraiser: { select: { name: true } } },
+      }),
+    [],
+  )
+
+  const columns: Column[] = [
+    { label: 'Group', width: 'minmax(0,1.5fr)' },
+    { label: 'Code', width: '140px' },
+    { label: 'Fundraiser', width: 'minmax(0,1.2fr)' },
+    { label: 'Last used', width: '120px' },
+    { label: 'Status', width: '100px' },
+  ]
+
+  const rows: Row[] = codes.map((code) => {
+    const revoked = code.revokedAt !== null
+    return {
+      id: code.id,
+      search: `${code.groupName} ${code.code} ${code.fundraiser?.name ?? ''}`,
+      buckets: [0, revoked ? 2 : 1],
+      cells: [
+        text(code.groupName, { strong: true }),
+        text(code.code, { mono: true, strong: !revoked, dim: revoked }),
+        text(code.fundraiser?.name ?? '—', { dim: true }),
+        text(code.lastUsedAt ? shortDate(code.lastUsedAt) : 'Never', { mono: true, dim: true }),
+        statusCell(revoked ? 'Revoked' : 'Active', revoked ? 'muted' : 'good'),
+      ],
+      inspector: {
+        title: code.groupName,
+        tag: revoked ? 'Revoked' : 'Active',
+        tagTone: revoked ? 'muted' : 'good',
+        groups: [
+          {
+            label: 'CODE',
+            fields: [
+              { label: 'Code', value: code.code, mono: true, strong: true },
+              { label: 'Fundraiser', value: code.fundraiser?.name ?? '—' },
+              { label: 'Created', value: stamp(code.createdAt), mono: true },
+              { label: 'Last used', value: code.lastUsedAt ? stamp(code.lastUsedAt) : 'Never', mono: true },
+              { label: 'Revoked', value: code.revokedAt ? stamp(code.revokedAt) : '—', mono: true },
+            ],
+          },
+          {
+            label: 'SEND TO THE GROUP',
+            fields: [
+              {
+                label: 'Message',
+                value: `${code.groupName}: your José Madrid Salsa Battle Arena fundraiser code is ${code.code}. Type it in the Fundraiser code box on the game's title screen.`,
+                wrap: true,
+              },
+            ],
+          },
+        ],
+        actions: [
+          revoked
+            ? { label: 'Restore', command: write('gameCode.restore', code.id) }
+            : {
+                label: 'Revoke',
+                danger: true,
+                command: write('gameCode.revoke', code.id, {
+                  confirm: `Revoke ${code.code} for ${code.groupName}? New players can no longer join with it.`,
+                  danger: true,
+                }),
+              },
+          { label: 'Battle arena', command: page('fundraisers.arena') },
+        ],
+      },
+    }
+  })
+
+  const active = codes.filter((code) => code.revokedAt === null).length
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [text(`${count(rows.length)} codes`), text(`${count(active)} active`), text(''), text(''), text('')],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Events · Packing manifests
 // ---------------------------------------------------------------------------
 
@@ -9933,6 +10024,16 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
           { label: 'Open the arena…', icon: 'i-chev', command: link('/admin/fundraisers/battle-arena') },
         ],
       }
+    case 'fundraisers.codes':
+      return {
+        eyebrow,
+        filters: GAME_CODE_FILTERS,
+        actions: [
+          { label: 'New code', icon: 'i-plus', command: form('gameCode.create'), primary: true },
+          { label: 'Battle arena', icon: 'i-chev', command: page('fundraisers.arena') },
+          back,
+        ],
+      }
     case 'events.manifests':
       return {
         eyebrow,
@@ -10266,6 +10367,8 @@ async function loadPageBody(pageId: string, list: ListQuery): Promise<SectionPay
       return loadSuppliers(list)
     case 'fundraisers.arena':
       return loadArena(list)
+    case 'fundraisers.codes':
+      return loadArenaGameCodes(list)
     case 'events.manifests':
       return loadManifests(list)
     case 'wholesale.locations':

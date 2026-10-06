@@ -22,6 +22,9 @@ the root `package.json` is canonical.
   app's own redirects: old `/fundraising-site/...` links, main-site pages such as `/products` going
   back to `NEXT_PUBLIC_SITE_URL`, and the old order-form zips pointing at kit files that exist. The
   new `apps/fundraising/README.md` lists its routes, commands and environment variables.
+- **Battle Arena game codes in the desktop apps.** The admin shell has an Arena game codes page
+  under Fundraisers (make, copy, revoke and restore codes), and the macOS and Windows apps list
+  it as **Battle Arena Codes** in the Go menu.
 - **Customer account page with one communications timeline** (`/admin/customers/[id]`). Click a
   name on the customer list to see every order, fundraiser, email received (with its automatic
   reply), email sent, contact-form submission, website message and live chat for that address,

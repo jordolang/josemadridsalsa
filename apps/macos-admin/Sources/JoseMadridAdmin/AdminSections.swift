@@ -13,7 +13,8 @@ import Foundation
 ///
 /// Each path opens the shell at that section rather than the web admin page
 /// behind it, so a menu choice stays in the window the operator is already in.
-/// Developer Console opens the Developer page inside the Database section.
+/// Developer Console opens the Developer page inside the Database section, and
+/// Battle Arena Codes the game-codes page inside the Fundraisers section.
 struct AdminSection: Identifiable, Hashable {
   let label: String
   let path: String
@@ -54,6 +55,7 @@ enum AdminSections {
     ]),
     AdminSectionGroup("Programs", [
       AdminSection("Fundraisers", "/admin-desktop?section=fundraisers", "7"),
+      AdminSection("Battle Arena Codes", "/admin-desktop?section=fundraisers&page=fundraisers.codes"),
       AdminSection("Events & Shows", "/admin-desktop?section=events", "8"),
       AdminSection("Wholesale", "/admin-desktop?section=wholesale"),
     ]),

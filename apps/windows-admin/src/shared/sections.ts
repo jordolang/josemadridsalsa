@@ -12,7 +12,8 @@
  *
  * Each path opens the shell at that section rather than the web admin page
  * behind it, so a menu choice stays in the window the operator is already in.
- * Developer Console opens the Developer page inside the Database section.
+ * Developer Console opens the Developer page inside the Database section, and
+ * Battle Arena Codes the game-codes page inside the Fundraisers section.
  */
 export interface AdminSection {
   label: string
@@ -43,6 +44,7 @@ export const ADMIN_SECTION_GROUPS: AdminSectionGroup[] = [
     label: 'Programs',
     sections: [
       { label: 'Fundraisers', path: '/admin-desktop?section=fundraisers', accelerator: 'CmdOrCtrl+7' },
+      { label: 'Battle Arena Codes', path: '/admin-desktop?section=fundraisers&page=fundraisers.codes' },
       { label: 'Events & Shows', path: '/admin-desktop?section=events', accelerator: 'CmdOrCtrl+8' },
       { label: 'Wholesale', path: '/admin-desktop?section=wholesale' },
     ],

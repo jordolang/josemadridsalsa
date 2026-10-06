@@ -52,6 +52,7 @@ import {
   updateReward,
 } from '@/lib/loyalty-rewards'
 import { rewardInputSchema } from '@/lib/loyalty-rewards-schema'
+import { generateGameCode } from '@/lib/arena/game-codes'
 import { PRODUCT_IMAGE_LIMIT, slugify, type WriteOpId } from './forms'
 import type { DesktopSectionId } from './sections'
 
@@ -3369,6 +3370,75 @@ const arenaHandlers: Record<string, WriteHandler> = {
         .catch((error) => friendly(error, 'That team could not be suspended.'))
 
       return { message: `${team.name} suspended`, recordId: id }
+    },
+  }),
+
+  'gameCode.create': handler({
+    permission: 'orders:write',
+    entity: 'ArenaGameCode',
+    action: 'create',
+    schema: z
+      .object({
+        groupName: z.string().trim().max(40).optional(),
+        fundraiserId: z.string().min(1).optional(),
+      })
+      .refine((v) => v.groupName || v.fundraiserId, { message: 'Give a group name or pick a fundraiser', path: ['groupName'] }),
+    async run(values, context) {
+      let groupName = values.groupName?.replace(/\s+/g, ' ') || ''
+      const fundraiserId = values.fundraiserId ?? null
+      if (fundraiserId) {
+        const fundraiser = await prisma.fundraiser.findUnique({
+          where: { id: fundraiserId },
+          select: { organizationName: true, name: true },
+        })
+        if (!fundraiser) throw new WriteError('That fundraiser no longer exists.', 'fundraiserId')
+        groupName ||= (fundraiser.organizationName || fundraiser.name).slice(0, 40)
+      }
+
+      // a clash in a trillion codes is unlikely, but retry rather than fail on one
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const code = await prisma.arenaGameCode.create({
+            data: { code: generateGameCode(), groupName, fundraiserId, createdBy: context.actor.id },
+          })
+          return { message: `${code.groupName}: ${code.code}`, recordId: code.id }
+        } catch (error) {
+          if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
+            return friendly(error, 'That code could not be made.')
+          }
+        }
+      }
+      throw new WriteError('Could not make a unique code, try again.')
+    },
+  }),
+
+  'gameCode.revoke': handler({
+    permission: 'orders:write',
+    entity: 'ArenaGameCode',
+    action: 'update',
+    schema: z.object({}),
+    async run(_values, context) {
+      const id = requireRecord(context)
+      const code = await prisma.arenaGameCode
+        .update({ where: { id }, data: { revokedAt: new Date() }, select: { code: true } })
+        .catch((error) => friendly(error, 'That code could not be revoked.'))
+
+      return { message: `${code.code} revoked`, recordId: id }
+    },
+  }),
+
+  'gameCode.restore': handler({
+    permission: 'orders:write',
+    entity: 'ArenaGameCode',
+    action: 'update',
+    schema: z.object({}),
+    async run(_values, context) {
+      const id = requireRecord(context)
+      const code = await prisma.arenaGameCode
+        .update({ where: { id }, data: { revokedAt: null }, select: { code: true } })
+        .catch((error) => friendly(error, 'That code could not be restored.'))
+
+      return { message: `${code.code} restored`, recordId: id }
     },
   }),
 }

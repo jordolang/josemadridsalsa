@@ -1748,6 +1748,20 @@ export const DESKTOP_FORMS = {
     ],
   },
 
+  'gameCode.create': {
+    title: 'New Battle Arena game code',
+    subtitle: 'Players type the code on the game’s title screen to fight online and in tournaments as this group.',
+    submitLabel: 'Make code',
+    sections: [
+      {
+        fields: [
+          { name: 'fundraiserId', label: 'Fundraiser (optional)', type: 'select', optionsFrom: 'fundraisers', span: 2 },
+          { name: 'groupName', label: 'Group name in the game', type: 'text', max: 40, span: 2 },
+        ],
+      },
+    ],
+  },
+
   // ---------------------------------------------------------- email marketing
   'automation.edit': {
     title: 'Edit automation',
@@ -2308,6 +2322,8 @@ export const DIRECT_OPS = [
   'location.delete',
   'team.approve',
   'team.suspend',
+  'gameCode.revoke',
+  'gameCode.restore',
   'automation.activate',
   'automation.pause',
   'subscriber.unsubscribe',
