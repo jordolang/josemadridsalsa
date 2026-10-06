@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Routing tests and README for the fundraising app** (`apps/fundraising`). Tests cover the
+  app's own redirects: old `/fundraising-site/...` links, main-site pages such as `/products` going
+  back to `NEXT_PUBLIC_SITE_URL`, and the old order-form zips pointing at kit files that exist. The
+  new `apps/fundraising/README.md` lists its routes, commands and environment variables.
 - **Customer account page with one communications timeline** (`/admin/customers/[id]`). Click a
   name on the customer list to see every order, fundraiser, email received (with its automatic
   reply), email sent, contact-form submission, website message and live chat for that address,
