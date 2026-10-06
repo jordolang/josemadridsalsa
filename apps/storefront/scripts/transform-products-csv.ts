@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import Papa from 'papaparse';
-import { getErrorMessage } from '../lib/errors';
+import { getErrorMessage } from '@/lib/errors';
 
 /**
  * Transform old BigCommerce CSV export to new import format

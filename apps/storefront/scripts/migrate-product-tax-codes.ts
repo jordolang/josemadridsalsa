@@ -9,7 +9,7 @@
  *   tsx scripts/migrate-product-tax-codes.ts --dry-run
  */
 
-import prisma from '../lib/prisma'
+import prisma from '@/lib/prisma'
 import { getErrorMessage, isErrorWithMessage } from '@/lib/errors'
 
 /**

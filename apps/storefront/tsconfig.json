@@ -24,7 +24,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./*"
+        "./*",
+        "../../packages/core/*"
       ]
     },
     "target": "ES2017"

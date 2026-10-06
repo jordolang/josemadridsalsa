@@ -3,8 +3,8 @@
  * José Madrid Salsa E-commerce Platform
  */
 
-import { getStripe } from './stripe'
-import { prisma } from './prisma'
+import { getStripe } from '@/lib/stripe'
+import { prisma } from '@/lib/prisma'
 
 export interface TaxCalculationInput {
   /** Order line items */

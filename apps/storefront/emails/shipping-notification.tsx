@@ -1,10 +1,10 @@
 import { Text, Section, Row, Column, Hr } from '@react-email/components';
-import { EmailLayout } from './components/EmailLayout';
-import { EmailHeader } from './components/EmailHeader';
-import { EmailFooter } from './components/EmailFooter';
-import { OrderItemsTable, OrderItem } from './components/OrderItemsTable';
-import { Button } from './components/Button';
-import { bodyContent } from './styles';
+import { EmailLayout } from '@/emails/components/EmailLayout';
+import { EmailHeader } from '@/emails/components/EmailHeader';
+import { EmailFooter } from '@/emails/components/EmailFooter';
+import { OrderItemsTable, OrderItem } from '@/emails/components/OrderItemsTable';
+import { Button } from '@/emails/components/Button';
+import { bodyContent } from '@/emails/styles';
 
 interface ShippingNotificationEmailProps {
   name?: string;

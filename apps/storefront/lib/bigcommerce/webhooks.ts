@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
-import { bigCommerceFetch } from './client'
-import type { BigCommerceStoreKey } from './config'
+import { bigCommerceFetch } from '@/lib/bigcommerce/client'
+import type { BigCommerceStoreKey } from '@/lib/bigcommerce/config'
 
 /**
  * BigCommerce webhooks keep the storefront's cached catalog fresh: when staff

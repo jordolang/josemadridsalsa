@@ -5,7 +5,7 @@
  */
 
 import { EmailTemplateDefinition } from './index'
-import { baseStyles, headerImg, jmsFooter } from '../shared/components'
+import { baseStyles, headerImg, jmsFooter } from '@/lib/email/shared/components'
 
 export const websiteLaunchAnnouncementTemplate: EmailTemplateDefinition = {
   key: 'website_launch_announcement',

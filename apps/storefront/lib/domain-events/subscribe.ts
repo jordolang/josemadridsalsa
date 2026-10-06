@@ -23,7 +23,7 @@ import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { isMissingColumnError } from '@/lib/prisma-errors'
 
-import type { DomainEventType } from './types'
+import type { DomainEventType } from '@/lib/domain-events/types'
 
 /** A persisted event row, as a handler receives it. */
 export interface DomainEventRecord {

@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client'
 
-import { commissionBase } from './commission'
+import { commissionBase } from '@/lib/fundraising/commission'
 
 /**
  * Take back a fundraising group's share when an order is refunded. Exactly once per refund.

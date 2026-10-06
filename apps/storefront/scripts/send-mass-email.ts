@@ -44,7 +44,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import Papa from 'papaparse'
 import { Resend } from 'resend'
-import { substituteVariables, isValidEmail } from '../lib/email/sender'
+import { substituteVariables, isValidEmail } from '@/lib/email/sender'
 
 // Load env the same way the app does (.env.local wins, then .env fills gaps).
 loadEnv({ path: resolve(process.cwd(), '.env.local') })
@@ -138,7 +138,7 @@ async function main() {
   // Suppression check (unsubscribed / bounced / complained).
   const checkSuppression = skipSuppression
     ? async () => false
-    : (await import('../lib/email/suppression')).checkSuppression
+    : (await import('@/lib/email/suppression')).checkSuppression
 
   if (!send) {
     const sample = rows[0]

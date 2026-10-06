@@ -4,7 +4,7 @@
  * Safe to re-run (uses upsert).
  */
 import { PrismaClient } from '@prisma/client'
-import { permissionDefinitions, defaultRolePermissions } from '../lib/permissions-data'
+import { permissionDefinitions, defaultRolePermissions } from '@/lib/permissions-data'
 
 const prisma = new PrismaClient()
 

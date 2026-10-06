@@ -4,7 +4,7 @@
  */
 
 import { EmailTemplateDefinition } from './index'
-import { baseStyles, headerImg, jmsFooter } from '../shared/components'
+import { baseStyles, headerImg, jmsFooter } from '@/lib/email/shared/components'
 
 export const eventInvitationTemplate: EmailTemplateDefinition = {
   key: 'event_invitation',

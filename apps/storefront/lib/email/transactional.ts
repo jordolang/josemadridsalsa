@@ -1,4 +1,4 @@
-import { sendEmail, substituteVariables } from './sender'
+import { sendEmail, substituteVariables } from '@/lib/email/sender'
 import { orderCancellationTemplate } from './templates/order-cancellation'
 import { refundProcessedTemplate } from './templates/refund-processed'
 import { reviewRequestTemplate } from './templates/review-request'

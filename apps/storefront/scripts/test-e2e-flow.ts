@@ -9,7 +9,7 @@
  * 5. POST /api/checkout - create Stripe checkout session
  */
 
-import { prisma as db } from '../lib/prisma'
+import { prisma as db } from '@/lib/prisma'
 
 interface TestResult {
   step: string

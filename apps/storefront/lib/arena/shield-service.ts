@@ -1,5 +1,5 @@
 import { prisma as db } from '@/lib/prisma'
-import { checkShareAllowed, newShield, resolveRules } from './rules'
+import { checkShareAllowed, newShield, resolveRules } from '@/lib/arena/rules'
 
 export type ShieldActivationInput = {
   teamId: string

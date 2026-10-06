@@ -1,5 +1,5 @@
 import 'server-only'
-import { getFundraisingCheckoutFields, type FundraisingGroupOption } from './checkout-fields'
+import { getFundraisingCheckoutFields, type FundraisingGroupOption } from '@/lib/fundraising-site/checkout-fields'
 
 /**
  * The groups taking online orders right now — exactly the fundraising store's

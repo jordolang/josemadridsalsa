@@ -1,6 +1,6 @@
 import 'server-only'
 import { prisma } from '@/lib/prisma'
-import { normalizeGroupName } from './checkout-fields'
+import { normalizeGroupName } from '@/lib/fundraising-site/checkout-fields'
 
 export type GroupProgress = { orders: number; earned: number }
 

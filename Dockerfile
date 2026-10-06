@@ -37,6 +37,7 @@ COPY apps/admin/package.json ./apps/admin/
 COPY apps/docs/package.json ./apps/docs/
 COPY apps/fundraising/package.json ./apps/fundraising/
 COPY apps/storefront/package.json ./apps/storefront/
+COPY packages/core/package.json ./packages/core/
 # The storefront's postinstall runs `prisma generate`, so the schema must exist
 # before install.
 COPY apps/storefront/prisma ./apps/storefront/prisma

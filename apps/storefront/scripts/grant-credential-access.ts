@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { withAccelerate } from '@prisma/extension-accelerate'
-import { DEVELOPER_ACCOUNT_EMAIL } from '../lib/developer/constants'
+import { DEVELOPER_ACCOUNT_EMAIL } from '@/lib/developer/constants'
 
 const baseClient = new PrismaClient()
 const prisma = process.env.DATABASE_URL?.includes('prisma+postgres://')

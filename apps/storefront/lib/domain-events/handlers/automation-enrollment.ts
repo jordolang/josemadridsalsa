@@ -12,7 +12,7 @@ import { enrollInAutomation } from '@/lib/email/automation-engine'
 
 import { registerDomainEventHandler } from '../subscribe'
 import type { DomainEventRecord } from '../subscribe'
-import type { DomainEventType } from '../types'
+import type { DomainEventType } from '@/lib/domain-events/types'
 
 /**
  * Which committed fact starts which automation.

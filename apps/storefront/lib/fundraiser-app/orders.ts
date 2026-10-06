@@ -27,9 +27,9 @@ import {
 import { emitOrderCreated } from '@/lib/orders/events'
 import { deriveSalesChannel } from '@/lib/orders/sales-channel'
 import { inPersonOrderNumber } from '@/lib/pos/terminal-checkout'
-import type { AppSession } from './access'
-import { requireCardPayments } from './card-payments'
-import { FundraiserAppError } from './errors'
+import type { AppSession } from '@/lib/fundraiser-app/access'
+import { requireCardPayments } from '@/lib/fundraiser-app/card-payments'
+import { FundraiserAppError } from '@/lib/fundraiser-app/errors'
 
 export const PAYMENT_METHODS = {
   CASH: 'Cash (collected by seller)',

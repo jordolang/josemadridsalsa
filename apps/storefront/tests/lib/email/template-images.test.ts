@@ -15,7 +15,9 @@ import { repairImageUrls, repairFooter, repairEmailHtml } from '@/lib/email/shar
 
 const ROOT = path.resolve(__dirname, '../../..')
 const IMAGE_DIR = path.join(ROOT, 'public/email-templates')
-const SOURCE_DIRS = ['lib/email', 'emails']
+// Email code lives in this app and in packages/core.
+const CORE_ROOT = path.resolve(ROOT, '../../packages/core')
+const SOURCE_DIRS = [ROOT, CORE_ROOT].flatMap((root) => ['lib/email', 'emails'].map((dir) => path.join(root, dir)))
 
 /** Recursively collect .ts/.tsx files under a directory. */
 function sourceFiles(dir: string): string[] {
@@ -32,7 +34,7 @@ function referencedImages(): Map<string, string[]> {
   const found = new Map<string, string[]>()
 
   for (const dir of SOURCE_DIRS) {
-    for (const file of sourceFiles(path.join(ROOT, dir))) {
+    for (const file of sourceFiles(dir)) {
       const contents = readFileSync(file, 'utf8')
       for (const match of contents.matchAll(pattern)) {
         const filename = match[1]

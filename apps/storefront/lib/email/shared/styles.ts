@@ -5,4 +5,4 @@
  * single definition.
  */
 
-export { getImageBaseUrl, getLogoUrl, headerImg, baseStyles } from './components'
+export { getImageBaseUrl, getLogoUrl, headerImg, baseStyles } from '@/lib/email/shared/components'
