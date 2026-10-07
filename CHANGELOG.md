@@ -219,6 +219,9 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Fundraising preview builds no longer fail without a database.** The active fundraising teams
+  grid now hides itself when the database can't be reached, as the featured products already do,
+  instead of failing the `/fundraising` prerender.
 - **Battle Arena "Play as" button did nothing.** The site CSP has `form-action 'self'`, which
   browsers apply to a form's redirect, so `/api/arena/auth/authorize`'s 303 back to the game's
   origin was blocked and `/battle-arena/connect` just stayed put. The route now answers with a small

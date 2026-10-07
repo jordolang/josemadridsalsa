@@ -94,7 +94,7 @@ export async function ActiveCampaignsGrid({
   subheading = 'Support a team near you — every jar helps them reach their goal.',
   className,
 }: ActiveCampaignsGridProps) {
-  const campaigns = await getActiveCampaigns(limit)
+  const campaigns = await getActiveCampaigns(limit).catch(() => [])
 
   if (campaigns.length === 0) {
     return null
