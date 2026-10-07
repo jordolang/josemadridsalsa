@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Battle Live in the masthead, and a Battle Arena section on the homepage.** The nav's Live tab is
+  now **Battle Live**: it opens the 3D game at `battle.josemadridsalsa.com` in a new tab, and its
+  green dot blinks while anyone is playing (new public `GET /api/arena/live`, counted from the
+  game's friends check-ins). The Facebook live stream page at `/live` stays, without a nav link. The
+  homepage gains a Battle Arena block below the fundraising pitch with the game's features, a
+  "playing now" count and a Play Now button (CMS key `battleArena`). `battle.josemadridsalsa.com`
+  is now a listed game origin for sign-in.
 - **The 3D Battle Arena game replaces the 2D playable arena.** The fundraising site now serves the
   game at `/battle-arena`, and each month's arena page (`/arena/[period]`) opens it with a
   **Play now** card above the live team standings, in place of the old move-around arena and its

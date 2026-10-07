@@ -10,9 +10,10 @@
 import { createHash, randomBytes, randomInt } from 'crypto'
 import { z } from 'zod'
 import { getFundraisingSiteUrl } from '@/lib/fundraising-site/host'
+import { BATTLE_ARENA_URL } from './links'
 
-/** The game's own deployment. More origins (a custom domain, a preview) come from `ARENA_GAME_ORIGINS`. */
-export const DEFAULT_GAME_ORIGINS = ['https://battle-arena-3d-mauve.vercel.app']
+/** The game's own deployment, on its subdomain and its Vercel URL. More origins (a preview) come from `ARENA_GAME_ORIGINS`. */
+export const DEFAULT_GAME_ORIGINS = [BATTLE_ARENA_URL, 'https://battle-arena-3d-mauve.vercel.app']
 
 /** How long the game stays signed in before the player is sent to sign in again. */
 export const SESSION_DAYS = 90
