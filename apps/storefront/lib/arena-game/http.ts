@@ -22,7 +22,7 @@ export type Access = 'player' | 'public'
 
 export function corsHeaders(request: Request, access: Access): Record<string, string> {
   const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Max-Age': '600',
     Vary: 'Origin',
