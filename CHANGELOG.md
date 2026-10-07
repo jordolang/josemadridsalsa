@@ -226,6 +226,13 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Fundraising link went to a 404.** The storefront sent `/fundraising` to
+  `https://fundraising.josemadrid.net/fundraising`; it now sends it to the fundraising site's home
+  page, and the fundraising site's default origin is `https://fundraising.josemadridsalsa.com`.
+- **Fundraising deployments get past `npm install` again.** The root `prepare` script ran
+  `husky install`, which exits 127 on Vercel where husky isn't available, failing every
+  `josemadridsalsa-fundraising` build before it started. It now skips hook setup when husky is
+  missing.
 - **Merch page images were broken.** The three mockup photos it showed had been moved to
   `public/images/unused`, so the page pointed at files that no longer existed. They now live in
   `public/images/merch` and show while the Printify catalog is empty or not connected.
