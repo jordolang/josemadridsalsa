@@ -12,7 +12,7 @@ if (!from) {
   process.exit(1)
 }
 
-const site = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadrid.net').replace(/\/+$/, '')
+const site = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadridsalsa.com').replace(/\/+$/, '')
 const out = join(dirname(fileURLToPath(import.meta.url)), '../public/battle-arena')
 
 const html = readFileSync(join(from, 'index.html'), 'utf8')
