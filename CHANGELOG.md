@@ -223,6 +223,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Fundraising preview builds failed without a database.** The active-campaigns grid on
+  `/fundraising` queried Prisma while the page was prerendered, so any build with no
+  `DATABASE_URL` (every fundraising preview deployment) stopped there. The grid now renders
+  nothing when the query fails, and the page's 15-minute revalidation fills it in.
 - **Fundraising link went to a 404.** The storefront sent `/fundraising` to
   `https://fundraising.josemadrid.net/fundraising`; it now sends it to the fundraising site's home
   page, and the fundraising site's default origin is `https://fundraising.josemadridsalsa.com`.

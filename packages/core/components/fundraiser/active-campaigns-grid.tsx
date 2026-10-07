@@ -37,6 +37,9 @@ interface CampaignCard {
 async function getActiveCampaigns(limit: number): Promise<CampaignCard[]> {
   const now = new Date()
 
+  // Pages that show this grid are prerendered at build time. A build without a database (a
+  // preview deployment, a local production build) shows no campaigns instead of failing; the
+  // page's revalidation fills them in once the database is reachable.
   const campaigns = await prisma.fundraiser.findMany({
     where: {
       isActive: true,
@@ -49,6 +52,9 @@ async function getActiveCampaigns(limit: number): Promise<CampaignCard[]> {
     },
     orderBy: { endDate: 'asc' },
     take: limit,
+  }).catch((error: unknown) => {
+    console.error('[ActiveCampaignsGrid] Could not load active campaigns:', error)
+    return []
   })
 
   return campaigns.map((campaign) => ({
