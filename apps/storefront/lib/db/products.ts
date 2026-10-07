@@ -267,6 +267,19 @@ export const getCategories = unstable_cache(
 )
 
 /**
+ * Get an active category by slug (name, description, image and SEO fields), or null when it does
+ * not exist or is inactive. Products are fetched separately with `getProducts({ category })`.
+ */
+export const getCategoryBySlug = unstable_cache(
+  async (slug: string) => prisma.category.findFirst({ where: { slug, isActive: true } }),
+  ['category-by-slug'],
+  {
+    revalidate: 3600,
+    tags: ['categories'],
+  }
+)
+
+/**
  * Get an active collection by slug with its active products, in the curated order.
  *
  * Mirrors the product mapping used by `getProducts` (Decimals → numbers) so the result drops

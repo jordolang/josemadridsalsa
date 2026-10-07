@@ -111,6 +111,22 @@ Users can compare up to 4 products side-by-side using the comparison store (`lib
 - Nutritional info (when available)
 - Weight and dimensions
 
+## Salsa Categories
+
+Salsas are sorted into five shopper-facing categories: **Fruit Mild**, **Fruit Hot**, **Mild**,
+**Medium** and **Hot**. Fruit salsas split by heat; savory salsas split by the 0–10 heat rating in
+`lib/salsa-heat.ts` (up to 4 Mild, 4.5–5.5 Medium, 6+ Hot, with Extra Hot folded into Hot).
+
+- **Source of truth:** `lib/salsa-categories.ts` holds each category's name, slug, description,
+  image, SEO title/description and which flavors belong to it. Images are in
+  `public/images/categories/` (1200×630, also used as the social share image).
+- **Applying it:** `npm run products:salsa-categories --workspace @jose-madrid/storefront` prints a
+  dry run; add `-- --apply` to upsert the categories, move each salsa, and mirror each category
+  as a collection with the same name, slug, copy and salsas (managed at `/admin/collections`). Products that aren't a
+  known flavor (variety packs, merchandise) are listed and left where they are.
+- **Storefront:** `/salsas/category/[slug]` renders the category with its SEO fields, and the
+  categories are listed in the sitemap once they have active products.
+
 ## Admin Product Management
 
 Admin users manage products at `/admin/products` with CRUD operations, image upload via UploadThing, category assignment, and inventory adjustments.
