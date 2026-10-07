@@ -17,6 +17,7 @@ import { getPageContent } from '@/lib/cms/queries'
 import { homeHeroPanels } from '@/lib/cms/home'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
+import { BattleArenaSection } from '@/components/store/battle-arena-section'
 import { getBigCommercePackOverrides } from '@/lib/bigcommerce/storefront'
 
 export const revalidate = 300
@@ -212,6 +213,14 @@ export default async function Home() {
             </ScrollReveal>
           </div>
         </section>
+        )}
+
+        {/* Battle Arena — the 3D fighting game, right after the fundraising pitch it feeds */}
+        {content.isVisible('battleArena') && (
+          <BattleArenaSection
+            heading={content.text('battleArena', 'heading')}
+            body={content.text('battleArena', 'body')}
+          />
         )}
 
         {/* Heat-Level Categories */}

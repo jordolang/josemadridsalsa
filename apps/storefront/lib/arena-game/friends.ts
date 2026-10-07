@@ -44,6 +44,11 @@ export function isOnline(seenAt: Date | null, now = new Date()): boolean {
   return !!seenAt && now.getTime() - seenAt.getTime() < ONLINE_SECONDS * 1000
 }
 
+/** How many players have the game open right now; the site's Battle Live tab blinks when any do. */
+export async function countPlayersOnline(now = new Date()): Promise<number> {
+  return prisma.arenaPlayer.count({ where: { seenAt: { gt: new Date(now.getTime() - ONLINE_SECONDS * 1000) } } })
+}
+
 function friendView(p: FriendRow, now: Date) {
   const online = isOnline(p.seenAt, now)
   return {
