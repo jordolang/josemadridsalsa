@@ -11,6 +11,7 @@ import prisma from '@/lib/prisma'
 import { ArenaGameError } from './http'
 import {
   HandleSchema,
+  PROVISIONAL_GAMES,
   TEAM_CHANGE_DAYS,
   bearerToken,
   handleKey,
@@ -133,11 +134,11 @@ function statsView(p: Pick<ArenaPlayer, 'matches' | 'wins' | 'roundsWon' | 'knoc
   }
 }
 
-/** Position on the all-time board: wins first, knockouts break ties. */
-async function allTimeRank(p: Pick<ArenaPlayer, 'wins' | 'knockouts' | 'matches'>): Promise<number | null> {
-  if (!p.matches) return null
+/** Position on the all-time board (matches against other people): wins first, knockouts break ties. */
+async function allTimeRank(p: Pick<ArenaPlayer, 'versusWins' | 'versusKnockouts' | 'versusMatches'>): Promise<number | null> {
+  if (!p.versusMatches) return null
   const ahead = await prisma.arenaPlayer.count({
-    where: { OR: [{ wins: { gt: p.wins } }, { wins: p.wins, knockouts: { gt: p.knockouts } }] },
+    where: { OR: [{ versusWins: { gt: p.versusWins } }, { versusWins: p.versusWins, versusKnockouts: { gt: p.versusKnockouts } }] },
   })
   return ahead + 1
 }
@@ -147,7 +148,7 @@ async function recentMatches(playerId: string, take = 10) {
     where: { playerId, finishedAt: { not: null } },
     orderBy: { finishedAt: 'desc' },
     take,
-    select: { id: true, mode: true, fighter: true, opponents: true, finishedAt: true, win: true, roundsWon: true, knockouts: true, damage: true },
+    select: { id: true, mode: true, fighter: true, opponents: true, finishedAt: true, win: true, roundsWon: true, knockouts: true, damage: true, ratingDelta: true },
   })
   return rows.map((m) => ({ ...m, won: m.win === 1 }))
 }
@@ -183,6 +184,9 @@ export async function describeSelf(player: ArenaPlayer) {
       teamChangeAvailableAt: nextTeamChange && nextTeamChange > new Date() ? nextTeamChange : null,
       favouriteFighter: fighter,
       rank,
+      rating: synced.rating,
+      rankedGames: synced.rankedGames,
+      ratingProvisional: synced.rankedGames < PROVISIONAL_GAMES,
       stats: statsView(synced),
       memberSince: synced.createdAt,
       lastPlayedAt: synced.lastPlayedAt,
@@ -205,6 +209,8 @@ export async function describePublic(handle: string) {
       team: teamView(player.team),
       favouriteFighter: fighter,
       rank,
+      rating: player.rating,
+      rankedGames: player.rankedGames,
       stats: statsView(player),
       memberSince: player.createdAt,
       lastPlayedAt: player.lastPlayedAt,

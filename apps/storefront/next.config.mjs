@@ -53,7 +53,16 @@ const nextConfig = {
   ],
   // Security headers, image hosts and server packages, shared with apps/fundraising
   headers: sharedHeaders,
-  images: sharedImages,
+  images: {
+    ...sharedImages,
+    // Merch photos come straight from Printify (lib/printify). Storefront-only, so the
+    // fundraising site's image config stays as it is.
+    remotePatterns: [
+      ...sharedImages.remotePatterns,
+      { protocol: 'https', hostname: 'images-api.printify.com', port: '', pathname: '/**' },
+      { protocol: 'https', hostname: 'images.printify.com', port: '', pathname: '/**' },
+    ],
+  },
   serverExternalPackages: sharedServerExternalPackages,
   transpilePackages: sharedTranspilePackages,
   experimental: {

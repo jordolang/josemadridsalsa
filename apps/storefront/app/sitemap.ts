@@ -2,6 +2,8 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getSitemapLandingPages } from '@/lib/cms/queries'
 import { SITE_URL } from '@/lib/site-url'
+import { SALSA_CATEGORIES } from '@/lib/salsa-categories'
+import { getMerchCatalog } from '@/lib/merchandise/catalog'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let baseUrl = SITE_URL
@@ -232,6 +234,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
+    const categories = await prisma.category.findMany({
+      where: {
+        isActive: true,
+        slug: { in: SALSA_CATEGORIES.map((category) => category.slug) },
+        products: { some: { isActive: true } },
+      },
+      select: { slug: true, updatedAt: true },
+    })
+
+    categories.forEach((category) => {
+      urls.push({
+        url: `${baseUrl}/salsas/category/${category.slug}`,
+        lastModified: category.updatedAt,
+        changeFrequency: 'weekly',
+        priority: priorities.products || 0.9,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch salsa categories for sitemap:', error)
+  }
+
+  try {
     const recipes = await prisma.recipe.findMany({
       select: { slug: true, updatedAt: true },
     })
@@ -387,6 +411,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch locations for sitemap:', error)
+  }
+
+  // Merch products live in Printify; getMerchCatalog never throws.
+  const merch = await getMerchCatalog()
+  if (merch.status === 'ok') {
+    merch.products.forEach((product) => {
+      urls.push({
+        url: `${baseUrl}/merchandise/${product.id}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: priorities.products || 0.8,
+      })
+    })
   }
 
   return urls

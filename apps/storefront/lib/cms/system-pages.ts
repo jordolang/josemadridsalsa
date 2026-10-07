@@ -93,6 +93,12 @@ export const SYSTEM_PAGES: SystemPageDefinition[] = [
         description: 'Fundraising pitch with stats and buttons.',
       },
       {
+        key: 'battleArena',
+        block: 'imageText',
+        label: 'Battle Arena game',
+        description: 'Feature list and Play Now button for the 3D Battle Arena game.',
+      },
+      {
         key: 'heatLevels',
         block: 'richText',
         label: 'Heat level categories',

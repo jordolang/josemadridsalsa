@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { bigCommerceRedirects } from '@/bigcommerce-redirects.mjs'
+import { bigCommerceRedirects, legacyProductDestination } from '@/bigcommerce-redirects.mjs'
 import { BIGCOMMERCE_PRODUCT_SLUGS } from '@/lib/bigcommerce/product-map'
 
 const redirects = bigCommerceRedirects(null)
@@ -96,5 +96,25 @@ describe('legacy BigCommerce redirects', () => {
     for (const slug of Object.values(BIGCOMMERCE_PRODUCT_SLUGS)) {
       expect(destinations).toContain(`/products/${slug}`)
     }
+  })
+
+  describe('old /products/ slugs', () => {
+    it('send a BigCommerce-era product slug to the product it became', () => {
+      expect(legacyProductDestination('cherry-mild')).toBe('/products/cherry-mild-salsa')
+      expect(legacyProductDestination('original-mild')).toBe('/products/jose-madrid-original-mild')
+      expect(legacyProductDestination('clovis-medium-original-medium-chunky')).toBe('/products/clovis-medium-salsa')
+    })
+
+    it('send retired salsas and packs to their catalog page', () => {
+      expect(legacyProductDestination('green-apple')).toBe('/salsas')
+      expect(legacyProductDestination('choose-12')).toBe('/bundles')
+    })
+
+    it('leave current slugs, unknown slugs and non-catalog pages alone', () => {
+      expect(legacyProductDestination('original-hot')).toBeNull()
+      expect(legacyProductDestination('no-such-salsa')).toBeNull()
+      expect(legacyProductDestination('about-jose')).toBeNull()
+      expect(legacyProductDestination('cart.php')).toBeNull()
+    })
   })
 })

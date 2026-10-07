@@ -14,6 +14,34 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The merch page sells the Printify catalog.** `/merchandise` now lists the products in the
+  Printify shop (photos, colors, sizes, prices) instead of placeholder copy about a fulfillment
+  partner, and each product has its own page with a Buy now button. Customers pay on a Square
+  payment link that collects the shipping address; the paid order is then sent to Printify to print
+  and ship, from the thank-you page or the new `merch-orders` cron. New `MerchOrder` table; set
+  `PRINTIFY_API_TOKEN` (and optionally `PRINTIFY_SHOP_ID`). `/admin/merchandise` shows the
+  connection, the products and recent merch orders. See the Printify integration doc.
+- **Battle Live in the masthead, and a Battle Arena section on the homepage.** The nav's Live tab is
+  now **Battle Live**: it opens the 3D game at `battle.josemadridsalsa.com` in a new tab, and its
+  green dot blinks while anyone is playing (new public `GET /api/arena/live`, counted from the
+  game's friends check-ins). The Facebook live stream page at `/live` stays, without a nav link. The
+  homepage gains a Battle Arena block below the fundraising pitch with the game's features, a
+  "playing now" count and a Play Now button (CMS key `battleArena`). `battle.josemadridsalsa.com`
+  is now a listed game origin for sign-in.
+- **Battle Arena online results come only from the match's host, and ranked matches carry a rating.**
+  The host opens each online match (`POST /api/arena/hosted-matches`), every other player claims
+  their seat with their own sign-in using a one-time ticket the host hands them, and the host
+  reports every seat's result once. A player can no longer post their own online win:
+  `/api/arena/matches` takes CPU matches only. Leaderboards now count only host-reported matches
+  with at least two signed-in players (the CPU board is unchanged); earlier self-reported online
+  wins stay on profiles but leave the boards. Ranked 1v1 matches move an Elo rating (start 1000,
+  K=32, first 10 games provisional), shown on profiles and on `?board=rating`. Migration
+  `20261007060000_arena_hosted_matches`.
+- **Five salsa categories with their own pages.** Fruit Mild, Fruit Hot, Mild, Medium and Hot
+  each have a description, SEO title and meta description, and a category image, defined in
+  `lib/salsa-categories.ts` along with which flavor goes where. Each one has a page at
+  `/salsas/category/[slug]` and a sitemap entry. `npm run products:salsa-categories` applies them to
+  the database (dry run unless `--apply`) and mirrors each one as a collection at `/admin/collections`.
 - **The 3D Battle Arena game replaces the 2D playable arena.** The fundraising site now serves the
   game at `/battle-arena`, and each month's arena page (`/arena/[period]`) opens it with a
   **Play now** card above the live team standings, in place of the old move-around arena and its
@@ -195,6 +223,9 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Merch page images were broken.** The three mockup photos it showed had been moved to
+  `public/images/unused`, so the page pointed at files that no longer existed. They now live in
+  `public/images/merch` and show while the Printify catalog is empty or not connected.
 - **Battle Arena "Play as" button did nothing.** The site CSP has `form-action 'self'`, which
   browsers apply to a form's redirect, so `/api/arena/auth/authorize`'s 303 back to the game's
   origin was blocked and `/battle-arena/connect` just stayed put. The route now answers with a small
@@ -216,6 +247,10 @@ the root `package.json` is canonical.
   to 8.5.23, `source-map-js` to 1.2.2, `postcss-selector-parser` to 7.1.6, `katex` to 0.18.11,
   `smol-toml` to 1.9.0 and `deepmerge-ts` to 8.0.2 in the root lockfile, and `uuid` to 11.1.1 in
   the fundraiser app. `braces`, `sprintf-js` and `node-forge` have no patched release yet.
+- **Dependabot alerts (nodemailer, sharp, MCP SDK).** Overrides move every `nodemailer` below
+  10.0.6 (the 7.x copy pulled in by `next-auth`'s peer range) to 10.0.15 and `sharp` to 0.35.5
+  (librsvg CVE-2026-96889). The `@modelcontextprotocol/sdk` override to 1.31.0 drops the 1.27.1
+  copy that `@amplitude/ai` listed as optional; only that package's `amplitude-ai-mcp` CLI used it.
 
 ### Removed
 - **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
