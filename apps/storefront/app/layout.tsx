@@ -94,6 +94,7 @@ export default function RootLayout({
     <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
       <head>
         <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
+        <meta name="facebook-domain-verification" content="7kfb51qu3466hctngy2wldog2btpul" />
 
         {/* Resource hints for external services */}
         <link rel="preconnect" href="https://www.googletagmanager.com" />
