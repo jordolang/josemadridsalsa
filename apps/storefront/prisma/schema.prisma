@@ -3649,6 +3649,14 @@ model ArenaPlayer {
   team          FundraiserTeam?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
   sessions      ArenaPlayerSession[]
   matchHistory  ArenaMatch[]
+  /// When the game last said this player was online (it checks in about every 30 seconds).
+  seenAt        DateTime?
+  /// The private room the player is in right now, shown to their friends so they can join.
+  room          String?
+  friendsAsked  ArenaFriend[]        @relation("ArenaFriendRequester")
+  friendsAnswer ArenaFriend[]        @relation("ArenaFriendAddressee")
+  invitesSent   ArenaRoomInvite[]    @relation("ArenaInviteFrom")
+  invitesGot    ArenaRoomInvite[]    @relation("ArenaInviteTo")
 
   @@index([teamId])
   @@index([wins])
@@ -3670,6 +3678,45 @@ model ArenaPlayerSession {
 
   @@index([playerId])
   @@map("arena_player_sessions")
+}
+
+enum ArenaFriendStatus {
+  PENDING
+  ACCEPTED
+}
+
+/// A friendship between two Battle Arena game players. One row per pair: the player who asked is
+/// the requester; it stays PENDING until the other player accepts. Either side deleting it ends it.
+model ArenaFriend {
+  id          String            @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      ArenaFriendStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  acceptedAt  DateTime?
+  requester   ArenaPlayer       @relation("ArenaFriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   ArenaPlayer       @relation("ArenaFriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@map("arena_friends")
+}
+
+/// A player inviting a friend into their private game room. Short-lived: the room only exists
+/// while the host's browser keeps it open.
+model ArenaRoomInvite {
+  id        String      @id @default(cuid())
+  fromId    String
+  toId      String
+  room      String
+  createdAt DateTime    @default(now())
+  expiresAt DateTime
+  from      ArenaPlayer @relation("ArenaInviteFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to        ArenaPlayer @relation("ArenaInviteTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([toId, expiresAt])
+  @@index([fromId, createdAt])
+  @@map("arena_room_invites")
 }
 
 /// One player's side of one game match. The game opens it when the fight starts and closes it

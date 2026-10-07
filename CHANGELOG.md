@@ -200,10 +200,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
-- **Fundraising deployments get past `npm install` again.** The root `prepare` script ran
-  `husky install`, which exits 127 on Vercel where husky isn't available, failing every
-  `josemadridsalsa-fundraising` build before it started. It now skips hook setup when husky is
-  missing.
+- **Battle Arena "Play as" button did nothing.** The site CSP has `form-action 'self'`, which
+  browsers apply to a form's redirect, so `/api/arena/auth/authorize`'s 303 back to the game's
+  origin was blocked and `/battle-arena/connect` just stayed put. The route now answers with a small
+  same-origin page that moves on to the game (meta refresh plus a link).
 - **Run report looked like it did nothing.** On `/admin/data/new` the result (or error) renders below
   the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
 - **Fundraiser app iOS build failed in "[CP] Embed Pods Frameworks"** with `lipo: open() failed,
