@@ -14,6 +14,9 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Order form packs and fliers on the fundraising home page.** The 25, 16 and 9 flavor kit
+  downloads and both fliers now appear on the fundraising home page as well as `/start`, from one
+  shared component.
 - **The merch page sells the Printify catalog.** `/merchandise` now lists the products in the
   Printify shop (photos, colors, sizes, prices) instead of placeholder copy about a fulfillment
   partner, and each product has its own page with a Buy now button. Customers pay on a Square
@@ -223,6 +226,16 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Fundraising preview builds no longer fail without a database.** The active fundraising teams
+  grid now hides itself when the database can't be reached, as the featured products already do,
+  instead of failing the `/fundraising` prerender.
+- **Fundraising link went to a 404.** The storefront sent `/fundraising` to
+  `https://fundraising.josemadrid.net/fundraising`; it now sends it to the fundraising site's home
+  page, and the fundraising site's default origin is `https://fundraising.josemadridsalsa.com`.
+- **Fundraising deployments get past `npm install` again.** The root `prepare` script ran
+  `husky install`, which exits 127 on Vercel where husky isn't available, failing every
+  `josemadridsalsa-fundraising` build before it started. It now skips hook setup when husky is
+  missing.
 - **Merch page images were broken.** The three mockup photos it showed had been moved to
   `public/images/unused`, so the page pointed at files that no longer existed. They now live in
   `public/images/merch` and show while the Printify catalog is empty or not connected.
