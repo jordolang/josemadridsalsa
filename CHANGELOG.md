@@ -17,6 +17,13 @@ the root `package.json` is canonical.
 - **Order form packs and fliers on the fundraising home page.** The 25, 16 and 9 flavor kit
   downloads and both fliers now appear on the fundraising home page as well as `/start`, from one
   shared component.
+- **The merch page sells the Printify catalog.** `/merchandise` now lists the products in the
+  Printify shop (photos, colors, sizes, prices) instead of placeholder copy about a fulfillment
+  partner, and each product has its own page with a Buy now button. Customers pay on a Square
+  payment link that collects the shipping address; the paid order is then sent to Printify to print
+  and ship, from the thank-you page or the new `merch-orders` cron. New `MerchOrder` table; set
+  `PRINTIFY_API_TOKEN` (and optionally `PRINTIFY_SHOP_ID`). `/admin/merchandise` shows the
+  connection, the products and recent merch orders. See the Printify integration doc.
 - **Battle Live in the masthead, and a Battle Arena section on the homepage.** The nav's Live tab is
   now **Battle Live**: it opens the 3D game at `battle.josemadridsalsa.com` in a new tab, and its
   green dot blinks while anyone is playing (new public `GET /api/arena/live`, counted from the
@@ -222,6 +229,16 @@ the root `package.json` is canonical.
 - **Fundraising preview builds no longer fail without a database.** The active fundraising teams
   grid now hides itself when the database can't be reached, as the featured products already do,
   instead of failing the `/fundraising` prerender.
+- **Fundraising link went to a 404.** The storefront sent `/fundraising` to
+  `https://fundraising.josemadrid.net/fundraising`; it now sends it to the fundraising site's home
+  page, and the fundraising site's default origin is `https://fundraising.josemadridsalsa.com`.
+- **Fundraising deployments get past `npm install` again.** The root `prepare` script ran
+  `husky install`, which exits 127 on Vercel where husky isn't available, failing every
+  `josemadridsalsa-fundraising` build before it started. It now skips hook setup when husky is
+  missing.
+- **Merch page images were broken.** The three mockup photos it showed had been moved to
+  `public/images/unused`, so the page pointed at files that no longer existed. They now live in
+  `public/images/merch` and show while the Printify catalog is empty or not connected.
 - **Battle Arena "Play as" button did nothing.** The site CSP has `form-action 'self'`, which
   browsers apply to a form's redirect, so `/api/arena/auth/authorize`'s 303 back to the game's
   origin was blocked and `/battle-arena/connect` just stayed put. The route now answers with a small

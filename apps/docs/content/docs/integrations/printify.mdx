@@ -1,0 +1,38 @@
+---
+title: Printify
+description: Merch catalog and print-on-demand fulfilment for the /merchandise pages
+---
+
+# Printify Integration
+
+Merch (tour shirts, apparel, accessories) is printed and shipped on demand by Printify. The storefront does not keep merch in the `Product` table: it reads the catalog straight from the Printify shop and hands paid orders to Printify.
+
+## Setup
+
+1. In Printify, open **My Profile → Connections**, create a personal access token with the products and orders scopes.
+2. Add it to the storefront's Vercel project as `PRINTIFY_API_TOKEN`. Set `PRINTIFY_SHOP_ID` only if the account has more than one shop; otherwise the first shop is used.
+3. Redeploy. `/admin/merchandise` shows **Connected** and lists the products for sale.
+
+Square must already be configured (`SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, `SQUARE_SANDBOX=false` in production), since merch is paid for through Square.
+
+## What appears on the site
+
+- `/merchandise` lists every product in the shop that has at least one enabled, in-stock variant, newest first. A product hidden in Printify after being published is left off.
+- `/merchandise/[productId]` shows the photos, color and size choices and the price for each variant.
+- Prices, titles, descriptions and photos are edited in Printify. The site caches the catalog for five minutes; checkout always re-reads the price live.
+
+## How an order flows
+
+1. **Buy now** calls `POST /api/merchandise/checkout`, which prices the variant from Printify, creates a Square payment link (with a flat shipping fee: $6.99 for the first item, $2.50 for each additional) and records a `MerchOrder` as `AWAITING_PAYMENT`.
+2. The customer pays on Square's hosted page, which also collects the shipping address.
+3. Square redirects to `/merchandise/order-complete`, which checks the Square order is paid in full for the expected amount and submits it to Printify (`MerchOrder` → `SUBMITTED`).
+4. If the customer never reaches that page, the `/api/cron/merch-orders` sweep (every 15 minutes) submits it instead. Orders Printify refuses are marked `FAILED` with the error and retried by the sweep; unpaid links expire after 7 days.
+
+Each order is claimed before it is sent, so it reaches Printify once. Printify emails the customer tracking when it ships.
+
+Code: `lib/printify/client.ts`, `lib/merchandise/catalog.ts`, `lib/merchandise/orders.ts`.
+
+## Limits
+
+- Shipping is a flat fee and sales tax is not added on merch orders.
+- Orders are created in the configured Printify shop through the API; that shop must allow API orders.

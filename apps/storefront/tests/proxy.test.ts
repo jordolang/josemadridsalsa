@@ -38,7 +38,7 @@ describe('storefront fundraising boundary', () => {
 
     expect(response.status).toBe(308)
     expect(response.headers.get('location')).toBe(
-      'https://fundraising.josemadrid.net/fundraise/school?participant=abc',
+      'https://fundraising.josemadridsalsa.com/fundraise/school?participant=abc',
     )
   })
 
@@ -48,29 +48,35 @@ describe('storefront fundraising boundary', () => {
     '/f/lincoln-band',
     '/fundraiser-portal/dashboard',
     '/fundraisers/lincoln-band',
-    '/fundraising',
     '/game-icons/lorc/fire.svg',
     '/s/abc123',
   ])('redirects %s to the same path on the fundraising site', async (path) => {
     const response = await (await loadProxy())(new NextRequest(`https://www.josemadrid.net${path}`))
 
     expect(response.status).toBe(308)
-    expect(response.headers.get('location')).toBe(`https://fundraising.josemadrid.net${path}`)
+    expect(response.headers.get('location')).toBe(`https://fundraising.josemadridsalsa.com${path}`)
+  })
+
+  it.each(['/fundraising', '/fundraising/'])('sends %s to the fundraising site home page', async (path) => {
+    const response = await (await loadProxy())(new NextRequest(`https://www.josemadridsalsa.com${path}?ref=nav`))
+
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe('https://fundraising.josemadridsalsa.com/?ref=nav')
   })
 
   it('uses NEXT_PUBLIC_FUNDRAISING_SITE_URL', async () => {
-    process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL = 'https://fundraising.josemadridsalsa.com'
+    process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL = 'https://fundraising.example.com'
 
     const response = await (await loadProxy())(new NextRequest('https://www.josemadridsalsa.com/fundraising'))
 
-    expect(response.headers.get('location')).toBe('https://fundraising.josemadridsalsa.com/fundraising')
+    expect(response.headers.get('location')).toBe('https://fundraising.example.com/')
   })
 
   it('sends the old internal fundraising-site path to the fundraising host', async () => {
     const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/fundraising-site/shop?a=b'))
 
     expect(response.status).toBe(308)
-    expect(response.headers.get('location')).toBe('https://fundraising.josemadrid.net/shop?a=b')
+    expect(response.headers.get('location')).toBe('https://fundraising.josemadridsalsa.com/shop?a=b')
   })
 
   it('does not redirect main storefront pages', async () => {
@@ -86,7 +92,7 @@ describe('storefront fundraising boundary', () => {
   })
 
   it('does not redirect the fundraising host to itself', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadrid.net/fundraising'))
+    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadridsalsa.com/fundraising'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })

@@ -201,7 +201,7 @@ variables unset is treated as not configured.
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_ID` | For fundraising orders | Fundraising store API account client ID. |
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET` | For fundraising orders | Fundraising store API account client secret. |
 | `BIGCOMMERCE_FUNDRAISING_STOREFRONT_URL` | No | Fundraising store's storefront origin, where its hosted checkout and checkout form fields live. Defaults to https://josemadridsalsafundraising.com. |
-| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | No | Origin of the fundraising app (apps/fundraising): its canonicals, sitemap and robots, and where the main site sends its old fundraiser paths. Set it in both Vercel projects. Defaults to https://fundraising.josemadrid.net. |
+| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | No | Origin of the fundraising app (apps/fundraising): its canonicals, sitemap and robots, and where the main site sends its old fundraiser paths. Set it in both Vercel projects. Defaults to https://fundraising.josemadridsalsa.com. |
 | `NEXT_PUBLIC_COMMERCE_BACKEND` | At cutover | Set to `bigcommerce` to switch the storefront over: product prices and stock come from BigCommerce, and retail carts check out in BigCommerce's hosted checkout. Unset, the site prices and checks out as before. Fundraiser carts keep this site's checkout either way. Build-time: redeploy after changing it. |
 | `BIGCOMMERCE_CHANNEL_ID` | No | BigCommerce channel carts are created in. Defaults to `1`, the existing storefront, whose checkout is served on josemadridsalsa.com — correct while that domain still points at BigCommerce. Once the domain points at this site, set it to the headless channel whose checkout domain is a subdomain. |
 | `BIGCOMMERCE_ORDERS_TO_QUICKBOOKS` | No | `true` lets orders copied from either BigCommerce store (`importSource = bigcommerce` or `bigcommerce-fundraising`) flow into the hourly QuickBooks sync as sales receipts. Off by default: if online revenue already reaches QuickBooks another way, such as the Stripe and PayPal deposits, syncing these too would count every retail sale twice. Decide with whoever keeps the books before turning it on. |
@@ -322,9 +322,9 @@ Staff inboxes are comma-separated lists. Public contact values all have built-in
 | `NEXT_PUBLIC_FACEBOOK_URL` | No | Facebook link in the testimonials section |
 | `NEXT_PUBLIC_GOOGLE_BUSINESS_URL` | No | Google Business review link |
 | `GOOGLE_REVIEW_URL` | No | Review link on the order-confirmation page (takes precedence over `NEXT_PUBLIC_GOOGLE_BUSINESS_URL`) |
-| `NEXT_PUBLIC_FULFILLMENT_EMAIL` | No | Merchandise fulfillment partner contact |
-| `NEXT_PUBLIC_FULFILLMENT_PARTNER` | No | Merchandise fulfillment partner name |
-| `NEXT_PUBLIC_FULFILLMENT_PORTAL_URL` | No | Merchandise fulfillment partner portal |
+| `NEXT_PUBLIC_FULFILLMENT_EMAIL` | No | Contact email shown on the merch pages |
+| `PRINTIFY_API_TOKEN` | For merch | Printify personal access token (products and orders scopes). Without it `/merchandise` shows a coming-soon message. See [Printify](/docs/integrations/printify). |
+| `PRINTIFY_SHOP_ID` | No | Printify shop to sell from; defaults to the first shop on the account |
 
 ## Fundraising & Arena
 

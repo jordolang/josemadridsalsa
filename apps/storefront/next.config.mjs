@@ -19,7 +19,7 @@ const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
  * The fundraising site (apps/fundraising). Keep the default in step with
  * lib/fundraising-site/host.ts (this config cannot import TypeScript).
  */
-const fundraisingSiteUrl = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadrid.net').replace(/\/+$/, '')
+const fundraisingSiteUrl = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadridsalsa.com').replace(/\/+$/, '')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -50,7 +50,16 @@ const nextConfig = {
   ],
   // Security headers, image hosts and server packages, shared with apps/fundraising
   headers: sharedHeaders,
-  images: sharedImages,
+  images: {
+    ...sharedImages,
+    // Merch photos come straight from Printify (lib/printify). Storefront-only, so the
+    // fundraising site's image config stays as it is.
+    remotePatterns: [
+      ...sharedImages.remotePatterns,
+      { protocol: 'https', hostname: 'images-api.printify.com', port: '', pathname: '/**' },
+      { protocol: 'https', hostname: 'images.printify.com', port: '', pathname: '/**' },
+    ],
+  },
   serverExternalPackages: sharedServerExternalPackages,
   transpilePackages: sharedTranspilePackages,
   experimental: {
