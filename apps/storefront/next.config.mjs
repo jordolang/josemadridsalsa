@@ -19,7 +19,7 @@ const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
  * The fundraising site (apps/fundraising). Keep the default in step with
  * lib/fundraising-site/host.ts (this config cannot import TypeScript).
  */
-const fundraisingSiteUrl = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadrid.net').replace(/\/+$/, '')
+const fundraisingSiteUrl = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadridsalsa.com').replace(/\/+$/, '')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
