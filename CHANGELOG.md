@@ -14,6 +14,15 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Battle Arena online results come only from the match's host, and ranked matches carry a rating.**
+  The host opens each online match (`POST /api/arena/hosted-matches`), every other player claims
+  their seat with their own sign-in using a one-time ticket the host hands them, and the host
+  reports every seat's result once. A player can no longer post their own online win:
+  `/api/arena/matches` takes CPU matches only. Leaderboards now count only host-reported matches
+  with at least two signed-in players (the CPU board is unchanged); earlier self-reported online
+  wins stay on profiles but leave the boards. Ranked 1v1 matches move an Elo rating (start 1000,
+  K=32, first 10 games provisional), shown on profiles and on `?board=rating`. Migration
+  `20261007050000_arena_hosted_matches`.
 - **The 3D Battle Arena game replaces the 2D playable arena.** The fundraising site now serves the
   game at `/battle-arena`, and each month's arena page (`/arena/[period]`) opens it with a
   **Play now** card above the live team standings, in place of the old move-around arena and its
