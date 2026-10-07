@@ -5679,3 +5679,40 @@ enum CaptureStatus {
   /// A person judged the form unusable or a duplicate. Terminal, never posts.
   REJECTED
 }
+
+/// A merch purchase: a Printify product paid for through a Square payment link, then sent
+/// to Printify to print and ship. Created when the customer starts checkout, so the
+/// fulfilment sweep can find paid orders whose buyer never came back to the thank-you page.
+/// The merch catalog itself lives in Printify, not in `Product`. See `lib/merchandise/orders.ts`.
+model MerchOrder {
+  id                  String           @id @default(cuid())
+  squareOrderId       String           @unique
+  squarePaymentLinkId String?
+  status              MerchOrderStatus @default(AWAITING_PAYMENT)
+  printifyOrderId     String?
+  /// `[{ productId, variantId, quantity, title, variantTitle, unitPriceCents }]`
+  items               Json
+  totalCents          Int
+  customerEmail       String?
+  customerName        String?
+  lastError           String?
+  submittedAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@map("merch_orders")
+}
+
+enum MerchOrderStatus {
+  /// Payment link created; the customer has not paid (or we have not seen it yet).
+  AWAITING_PAYMENT
+  /// Paid, and a worker has claimed it to send to Printify.
+  SUBMITTING
+  /// Printify accepted the order.
+  SUBMITTED
+  /// Paid, but Printify refused the order. Retried by the sweep; see `lastError`.
+  FAILED
+  /// Never paid within the payment window.
+  EXPIRED
+}

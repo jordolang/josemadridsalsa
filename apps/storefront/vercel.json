@@ -49,6 +49,10 @@
       "schedule": "20 */2 * * *"
     },
     {
+      "path": "/api/cron/merch-orders",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/processor-fees",
       "schedule": "30 */2 * * *"
     },
