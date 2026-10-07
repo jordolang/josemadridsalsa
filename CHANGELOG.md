@@ -18,7 +18,7 @@ the root `package.json` is canonical.
   each have a description, SEO title and meta description, and a category image, defined in
   `lib/salsa-categories.ts` along with which flavor goes where. Each one has a page at
   `/salsas/category/[slug]` and a sitemap entry. `npm run products:salsa-categories` applies them to
-  the database (dry run unless `--apply`).
+  the database (dry run unless `--apply`) and mirrors each one as a collection at `/admin/collections`.
 - **The 3D Battle Arena game replaces the 2D playable arena.** The fundraising site now serves the
   game at `/battle-arena`, and each month's arena page (`/arena/[period]`) opens it with a
   **Play now** card above the live team standings, in place of the old move-around arena and its

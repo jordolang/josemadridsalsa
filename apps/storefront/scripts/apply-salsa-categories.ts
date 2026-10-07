@@ -1,6 +1,8 @@
 /**
- * Creates/updates the five salsa categories (lib/salsa-categories.ts) and moves each salsa into its
- * category. Dry run by default: prints what would change and writes nothing. Pass --apply to write.
+ * Creates/updates the five salsa categories (lib/salsa-categories.ts), moves each salsa into its
+ * category, and mirrors each category as a collection of the same name and slug (shown at
+ * /admin/collections) holding the same salsas. Dry run by default: prints what would change and
+ * writes nothing. Pass --apply to write.
  *
  *   npm run products:salsa-categories --workspace @jose-madrid/storefront            # dry run
  *   npm run products:salsa-categories --workspace @jose-madrid/storefront -- --apply # write
@@ -11,6 +13,7 @@
 import { PrismaClient } from '@prisma/client'
 import { getErrorMessage } from '@/lib/errors'
 import { SALSA_CATEGORIES, getSalsaCategorySlug } from '@/lib/salsa-categories'
+import { collectionProductRows } from '@/lib/collections'
 
 const prisma = new PrismaClient()
 const apply = process.argv.includes('--apply')
@@ -53,6 +56,19 @@ async function applySalsaCategories() {
           update: { ...fields, isActive: true },
         })
         idBySlug.set(slug, category.id)
+
+        // Same salsas as a collection; its membership is replaced so reruns stay in sync.
+        const collection = await tx.collection.upsert({
+          where: { slug },
+          create: { slug, ...fields, isActive: true },
+          update: { ...fields, isActive: true },
+        })
+        await tx.collectionProduct.deleteMany({ where: { collectionId: collection.id } })
+        await tx.collectionProduct.createMany({
+          data: collectionProductRows(
+            moves.filter((move) => move.target === slug).map((move) => move.product.id)
+          ).map((row) => ({ ...row, collectionId: collection.id })),
+        })
       }
       for (const { product, target } of moves) {
         await tx.product.update({
@@ -60,8 +76,8 @@ async function applySalsaCategories() {
           data: { categoryId: idBySlug.get(target) },
         })
       }
-    })
-    console.log(`\n✅ Upserted ${SALSA_CATEGORIES.length} categories and assigned ${moves.length} products`)
+    }, { timeout: 60_000 })
+    console.log(`\n✅ Upserted ${SALSA_CATEGORIES.length} categories and collections and assigned ${moves.length} products`)
   } catch (error: unknown) {
     console.error('❌ Error:', getErrorMessage(error))
     process.exit(1)
