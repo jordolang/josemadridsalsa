@@ -10,7 +10,7 @@ export function OPTIONS(request: Request) {
 }
 
 /**
- * GET /api/arena/leaderboard?board=players|teams&period=week|month|all&mode=all|cpu|online|tournament|versus&teamId=&limit=
+ * GET /api/arena/leaderboard?board=players|teams|rating&period=week|month|all&mode=all|cpu|online|tournament|ranked|versus&teamId=&limit=
  * Public: handles, groups and totals only.
  */
 export async function GET(request: Request) {
