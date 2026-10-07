@@ -123,7 +123,7 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass �
 | `NEXT_PUBLIC_FROM_EMAIL` | No | Sender for queued bulk email. Falls back to `FROM_EMAIL`. |
 | `EMAIL_CHUNK_BUDGET_MS` | No | Time budget per email-queue run, in ms. Defaults to `45000`. |
 | `EMAIL_SEND_DELAY_MS` | No | Delay between queued sends, in ms (keeps under Resend's rate limit). Defaults to `550`. |
-| `EMAIL_IMAGE_BASE_URL` | No | Absolute base URL for email header and footer images. Email clients cannot resolve relative paths, so every image needs a full URL. Defaults to `https://www.josemadrid.net/email-templates`; point it at the Vercel Blob store to serve the assets from there instead. No trailing slash. |
+| `EMAIL_IMAGE_BASE_URL` | No | Absolute base URL for email header and footer images. Email clients cannot resolve relative paths, so every image needs a full URL. Defaults to `https://www.josemadridsalsa.com/email-templates`; point it at the Vercel Blob store to serve the assets from there instead. No trailing slash. |
 
 ## Google Services
 
@@ -201,7 +201,7 @@ variables unset is treated as not configured.
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_ID` | For fundraising orders | Fundraising store API account client ID. |
 | `BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET` | For fundraising orders | Fundraising store API account client secret. |
 | `BIGCOMMERCE_FUNDRAISING_STOREFRONT_URL` | No | Fundraising store's storefront origin, where its hosted checkout and checkout form fields live. Defaults to https://josemadridsalsafundraising.com. |
-| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | No | Origin of the fundraising app (apps/fundraising): its canonicals, sitemap and robots, and where the main site sends its old fundraiser paths. Set it in both Vercel projects. Defaults to https://fundraising.josemadrid.net. |
+| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | No | Origin of the fundraising app (apps/fundraising): its canonicals, sitemap and robots, and where the main site sends its old fundraiser paths. Set it in both Vercel projects. Defaults to https://fundraising.josemadridsalsa.com. |
 | `NEXT_PUBLIC_COMMERCE_BACKEND` | At cutover | Set to `bigcommerce` to switch the storefront over: product prices and stock come from BigCommerce, and retail carts check out in BigCommerce's hosted checkout. Unset, the site prices and checks out as before. Fundraiser carts keep this site's checkout either way. Build-time: redeploy after changing it. |
 | `BIGCOMMERCE_CHANNEL_ID` | No | BigCommerce channel carts are created in. Defaults to `1`, the existing storefront, whose checkout is served on josemadridsalsa.com — correct while that domain still points at BigCommerce. Once the domain points at this site, set it to the headless channel whose checkout domain is a subdomain. |
 | `BIGCOMMERCE_ORDERS_TO_QUICKBOOKS` | No | `true` lets orders copied from either BigCommerce store (`importSource = bigcommerce` or `bigcommerce-fundraising`) flow into the hourly QuickBooks sync as sales receipts. Off by default: if online revenue already reaches QuickBooks another way, such as the Stripe and PayPal deposits, syncing these too would count every retail sale twice. Decide with whoever keeps the books before turning it on. |
@@ -297,7 +297,7 @@ environment — connect it at `/admin/inbox/settings`.
 | `SALSADOCS_GITHUB_REPO` | No | Defaults to `jordolang/salsadocs` |
 | `SALSADOCS_GITHUB_BRANCH` | No | Defaults to `main` |
 | `SALSADOCS_CONTENT_DIR` | No | Defaults to `content/docs` |
-| `NEXT_PUBLIC_SITE_URL` | Production | The site's public origin, e.g. `https://www.josemadrid.net` (the default). Canonical links, the sitemap, structured data, feeds, email links and the domain printed on invoices and packing slips are all built from it (`lib/site-url.ts`). Build-time: redeploy after changing it. |
+| `NEXT_PUBLIC_SITE_URL` | Production | The site's public origin, e.g. `https://www.josemadridsalsa.com` (the default). Canonical links, the sitemap, structured data, feeds, email links and the domain printed on invoices and packing slips are all built from it (`lib/site-url.ts`). Build-time: redeploy after changing it. |
 | `NEXT_PUBLIC_BASE_URL` | No | Public-facing base URL used by some email links and product feeds. Falls back to `NEXT_PUBLIC_SITE_URL`. |
 | `NEXT_PUBLIC_APP_URL` | No | Base URL for share links and order-rule emails. Falls back to `NEXTAUTH_URL`, then `NEXT_PUBLIC_SITE_URL`. |
 
@@ -342,7 +342,7 @@ Set these in `apps/agent/.env.local`, not the storefront's.
 |---|---|---|
 | `AI_GATEWAY_API_KEY` | One of these | Vercel AI Gateway key used to reach the agent's model |
 | `VERCEL_OIDC_TOKEN` | One of these | Pulled automatically by `eve link`; the alternative to an AI Gateway key |
-| `STOREFRONT_API_URL` | No | Base URL the agent's read-only tools call. Defaults to `https://www.josemadrid.net`. Point it at `http://localhost:3000` to run against a local storefront. |
+| `STOREFRONT_API_URL` | No | Base URL the agent's read-only tools call. Defaults to `https://www.josemadridsalsa.com`. Point it at `http://localhost:3000` to run against a local storefront. |
 
 ## Mobile Fundraiser App (`apps/fundraiser-app`)
 
@@ -352,4 +352,4 @@ build profile (`apps/fundraiser-app/eas.json`).
 | Variable | Required | Description |
 |---|---|---|
 | `SQUARE_APPLICATION_ID` | No | Square application id built into the app for card payments. Defaults to the shop's production app id (set on the Square plugin in `app.json`); set a sandbox app id for a sandbox build. Not a secret. |
-| `EXPO_PUBLIC_API_URL` | No | Storefront the app talks to. Defaults to `https://www.josemadrid.net` (`extra.apiUrl` in `app.json`). Point a development build at a local storefront on your network, e.g. `http://192.168.1.20:3000`. |
+| `EXPO_PUBLIC_API_URL` | No | Storefront the app talks to. Defaults to `https://www.josemadridsalsa.com` (`extra.apiUrl` in `app.json`). Point a development build at a local storefront on your network, e.g. `http://192.168.1.20:3000`. |

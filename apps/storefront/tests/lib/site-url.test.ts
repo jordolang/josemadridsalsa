@@ -11,8 +11,8 @@ afterEach(() => vi.unstubAllEnvs())
 describe('SITE_URL', () => {
   it('defaults to the current production origin', async () => {
     const { SITE_URL, SITE_DOMAIN } = await load('')
-    expect(SITE_URL).toBe('https://www.josemadrid.net')
-    expect(SITE_DOMAIN).toBe('josemadrid.net')
+    expect(SITE_URL).toBe('https://www.josemadridsalsa.com')
+    expect(SITE_DOMAIN).toBe('josemadridsalsa.com')
   })
 
   it('follows NEXT_PUBLIC_SITE_URL, so a domain move needs no code change', async () => {
@@ -26,6 +26,6 @@ describe('SITE_URL', () => {
   })
 
   it('ignores a value that is not a URL', async () => {
-    expect((await load('josemadridsalsa')).SITE_URL).toBe('https://www.josemadrid.net')
+    expect((await load('josemadridsalsa')).SITE_URL).toBe('https://www.josemadridsalsa.com')
   })
 })

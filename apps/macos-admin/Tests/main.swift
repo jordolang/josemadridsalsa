@@ -7,13 +7,13 @@ import Foundation
 // MARK: validated
 
 precondition(
-  AdminEndpoint.validated("https://www.josemadrid.net")?.absoluteString ==
-    "https://www.josemadrid.net/admin-desktop",
+  AdminEndpoint.validated("https://www.josemadridsalsa.com")?.absoluteString ==
+    "https://www.josemadridsalsa.com/admin-desktop",
   "a bare origin should resolve to the desktop shell"
 )
 precondition(
-  AdminEndpoint.validated("https://www.josemadrid.net/admin/orders")?.absoluteString ==
-    "https://www.josemadrid.net/admin/orders",
+  AdminEndpoint.validated("https://www.josemadridsalsa.com/admin/orders")?.absoluteString ==
+    "https://www.josemadridsalsa.com/admin/orders",
   "a deeper admin path should be kept"
 )
 precondition(
@@ -22,8 +22,8 @@ precondition(
   "http should be allowed for a local development server"
 )
 precondition(
-  AdminEndpoint.validated("https://www.josemadrid.net/admin?tab=1#top")?.absoluteString ==
-    "https://www.josemadrid.net/admin",
+  AdminEndpoint.validated("https://www.josemadridsalsa.com/admin?tab=1#top")?.absoluteString ==
+    "https://www.josemadridsalsa.com/admin",
   "query and fragment should be dropped"
 )
 precondition(AdminEndpoint.validated("http://example.com/admin") == nil, "plain http to a remote host")
@@ -36,7 +36,7 @@ precondition(AdminEndpoint.validated("   ") == nil, "blank input")
 // The app may have the pre-shell default saved in @AppStorage, which would
 // otherwise pin it to the old web panel forever.
 precondition(
-  AdminEndpoint.migratingLegacyDefault("https://www.josemadrid.net/admin") ==
+  AdminEndpoint.migratingLegacyDefault("https://www.josemadridsalsa.com/admin") ==
     AdminEndpoint.production.absoluteString,
   "an install that predates the shell should move onto the new default"
 )
@@ -45,8 +45,8 @@ precondition(
   "a local development endpoint should be left alone"
 )
 precondition(
-  AdminEndpoint.migratingLegacyDefault("https://www.josemadrid.net/admin/orders") ==
-    "https://www.josemadrid.net/admin/orders",
+  AdminEndpoint.migratingLegacyDefault("https://www.josemadridsalsa.com/admin/orders") ==
+    "https://www.josemadridsalsa.com/admin/orders",
   "a deliberately chosen admin page should be left alone"
 )
 precondition(
@@ -60,11 +60,11 @@ precondition(
 let home = AdminEndpoint.production
 
 precondition(
-  AdminEndpoint.isInternal(URL(string: "https://www.josemadrid.net/admin/orders")!, endpoint: home),
+  AdminEndpoint.isInternal(URL(string: "https://www.josemadridsalsa.com/admin/orders")!, endpoint: home),
   "same origin is internal"
 )
 precondition(
-  !AdminEndpoint.isInternal(URL(string: "https://josemadrid.net/admin")!, endpoint: home),
+  !AdminEndpoint.isInternal(URL(string: "https://josemadridsalsa.com/admin")!, endpoint: home),
   "a sibling host is a different origin"
 )
 precondition(
@@ -106,8 +106,8 @@ precondition(!AdminEndpoint.isSafeExternal(URL(string: "file:///Users")!), "neve
 // MARK: section URLs
 
 precondition(
-  AdminEndpoint.sectionURL("/admin/financials", endpoint: URL(string: "https://www.josemadrid.net/admin/orders")!)?
-    .absoluteString == "https://www.josemadrid.net/admin/financials",
+  AdminEndpoint.sectionURL("/admin/financials", endpoint: URL(string: "https://www.josemadridsalsa.com/admin/orders")!)?
+    .absoluteString == "https://www.josemadridsalsa.com/admin/financials",
   "sections resolve against the origin, not the current path"
 )
 precondition(
@@ -135,7 +135,7 @@ for section in AdminSections.all {
 // MARK: page bridge
 
 precondition(
-  AdminEndpoint.isEndpointOrigin(scheme: "https", host: "www.josemadrid.net", port: 0, endpoint: home),
+  AdminEndpoint.isEndpointOrigin(scheme: "https", host: "www.josemadridsalsa.com", port: 0, endpoint: home),
   "the admin page itself may use the bridge"
 )
 precondition(
@@ -151,7 +151,7 @@ precondition(
 )
 precondition(
   AdminEndpoint.notificationTarget("/admin-desktop?section=orders", endpoint: home)?.absoluteString ==
-    "https://www.josemadrid.net/admin-desktop?section=orders",
+    "https://www.josemadridsalsa.com/admin-desktop?section=orders",
   "a notification opens its section in the shell"
 )
 for path in ["https://evil.example/admin-desktop?x", "//evil.example/admin-desktop?x", "/admin/users", "/admin-desktop"] {
@@ -182,7 +182,7 @@ precondition(!UpdateFeed.isNewer("2.1.0", than: "2.1.0"), "the same version is n
 precondition(!UpdateFeed.isNewer("2.0.9", than: "2.1.0"), "an older feed is not an update")
 precondition(
   UpdateFeed.diskImage(for: "2.2.0").absoluteString ==
-    "https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-2.2.0.dmg",
+    "https://www.josemadridsalsa.com/api/desktop/updates/JoseMadridSalsaAdmin-2.2.0.dmg",
   "the disk image sits beside the manifest"
 )
 

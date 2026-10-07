@@ -35,7 +35,7 @@ const player = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-const withToken = (token: string) => new Request('https://www.josemadrid.net/api/arena/me', { headers: { authorization: `Bearer ${token}` } })
+const withToken = (token: string) => new Request('https://www.josemadridsalsa.com/api/arena/me', { headers: { authorization: `Bearer ${token}` } })
 const TOKEN = 'a'.repeat(43)
 
 beforeEach(() => {

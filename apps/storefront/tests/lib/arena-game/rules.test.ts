@@ -20,8 +20,8 @@ const GAME = 'https://battle-arena-3d-mauve.vercel.app'
 describe('arena game sign-in', () => {
   it('only sends tokens to listed game origins', () => {
     const origins = allowedGameOrigins('https://play.example.com/, ')
-    expect(origins).toEqual(['https://fundraising.josemadrid.net', GAME, 'https://play.example.com'])
-    expect(isAllowedReturnUrl('https://fundraising.josemadrid.net/battle-arena?room=AB12', origins, false)).toBe(true)
+    expect(origins).toEqual(['https://fundraising.josemadridsalsa.com', GAME, 'https://play.example.com'])
+    expect(isAllowedReturnUrl('https://fundraising.josemadridsalsa.com/battle-arena?room=AB12', origins, false)).toBe(true)
     expect(isAllowedReturnUrl(`${GAME}/?room=AB12`, origins, false)).toBe(true)
     expect(isAllowedReturnUrl('https://play.example.com/x', origins, false)).toBe(true)
     expect(isAllowedReturnUrl('https://battle-arena-3d-evil.vercel.app/', origins, false)).toBe(false)

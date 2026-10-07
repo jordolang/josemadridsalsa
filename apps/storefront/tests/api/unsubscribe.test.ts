@@ -51,7 +51,7 @@ describe('POST /api/unsubscribe (one-click)', () => {
 
   it('caps forged one-click requests per IP before verifying them', async () => {
     const forged = (i: number) => {
-      const req = oneClick(`https://www.josemadrid.net/api/unsubscribe?email=x${i}@example.com&token=bad`)
+      const req = oneClick(`https://www.josemadridsalsa.com/api/unsubscribe?email=x${i}@example.com&token=bad`)
       return new Request(req, { headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-forwarded-for': '203.0.113.9' } })
     }
     const statuses = []

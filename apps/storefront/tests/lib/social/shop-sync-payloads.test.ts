@@ -36,7 +36,7 @@ function makeGoogleProduct(overrides: Partial<GoogleShoppingProduct> = {}): Goog
     images: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
     featuredImage: 'https://example.com/a.jpg',
     inventory: 25,
-    url: 'https://www.josemadrid.net/products/original-mild',
+    url: 'https://www.josemadridsalsa.com/products/original-mild',
     gtin: '012345678905',
     weightOz: 16,
     ...overrides,

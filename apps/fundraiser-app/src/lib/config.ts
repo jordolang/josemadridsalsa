@@ -8,7 +8,7 @@ import { joinImageUrl } from '@/lib/image-url'
 export const API_URL: string =
   process.env.EXPO_PUBLIC_API_URL ??
   (Constants.expoConfig?.extra?.apiUrl as string | undefined) ??
-  'https://www.josemadrid.net'
+  'https://www.josemadridsalsa.com'
 
 /** Product photos are stored as site paths (`/images/...`); the phone needs the full address. */
 export const imageUrl = (path: string | null | undefined) => joinImageUrl(API_URL, path)

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { withSentryConfig } from '@sentry/nextjs'
 import { bigCommerceRedirects } from './bigcommerce-redirects.mjs'
+import { domainRedirects } from './domain-redirects.mjs'
 import {
   sharedHeaders,
   sharedImages,
@@ -19,7 +20,7 @@ const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
  * The fundraising site (apps/fundraising). Keep the default in step with
  * lib/fundraising-site/host.ts (this config cannot import TypeScript).
  */
-const fundraisingSiteUrl = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadrid.net').replace(/\/+$/, '')
+const fundraisingSiteUrl = (process.env.NEXT_PUBLIC_FUNDRAISING_SITE_URL?.trim() || 'https://fundraising.josemadridsalsa.com').replace(/\/+$/, '')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -32,6 +33,8 @@ const nextConfig = {
     return `build-${Date.now()}`
   },
   redirects: async () => [
+    // josemadrid.net and the bare domain land on www.josemadridsalsa.com
+    ...domainRedirects(),
     // Permanent redirect from the old La Perla page URL
     {
       source: '/la-perla-ave',

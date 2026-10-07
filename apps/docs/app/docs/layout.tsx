@@ -68,7 +68,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           footer: (
             <div className="px-2 py-3 border-t border-fd-border">
               <a
-                href="https://www.josemadrid.net"
+                href="https://www.josemadridsalsa.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-xs text-fd-muted-foreground hover:text-fd-primary transition-colors"
@@ -80,7 +80,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   height={16}
                   className="rounded opacity-60"
                 />
-                josemadrid.net
+                josemadridsalsa.com
               </a>
             </div>
           ),
@@ -88,12 +88,12 @@ export default function Layout({ children }: { children: ReactNode }) {
         links={[
           {
             text: 'Main Site',
-            url: 'https://www.josemadrid.net',
+            url: 'https://www.josemadridsalsa.com',
             external: true,
           },
           {
             text: 'Products',
-            url: 'https://www.josemadrid.net/products',
+            url: 'https://www.josemadridsalsa.com/products',
             external: true,
           },
         ]}

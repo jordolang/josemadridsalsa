@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { isRepeat, parseAlert, parseBadge, parseLabelUrl } from '../src/shared/alerts'
 
-const ENDPOINT = 'https://www.josemadrid.net/admin-desktop'
-const PAGE = 'https://www.josemadrid.net/admin-desktop?section=orders'
+const ENDPOINT = 'https://www.josemadridsalsa.com/admin-desktop'
+const PAGE = 'https://www.josemadridsalsa.com/admin-desktop?section=orders'
 
 describe('parseAlert', () => {
   it('accepts a shell notification and resolves where a click goes', () => {
@@ -11,7 +11,7 @@ describe('parseAlert', () => {
     ).toEqual({
       title: 'New order to fulfil',
       body: '3 waiting',
-      url: 'https://www.josemadrid.net/admin-desktop?section=orders',
+      url: 'https://www.josemadridsalsa.com/admin-desktop?section=orders',
     })
   })
 

@@ -240,7 +240,7 @@ curl -X POST http://localhost:3000/api/send-email/delivery \
         "price": 8.99
       }
     ],
-    "feedbackUrl": "https://josemadrid.net/review?order=TEST-001"
+    "feedbackUrl": "https://josemadridsalsa.com/review?order=TEST-001"
   }'
 
 # Contact form

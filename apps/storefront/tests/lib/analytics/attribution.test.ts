@@ -22,19 +22,19 @@ const fields = (over: Partial<AttributionFields> = {}): AttributionFields => ({
 
 describe('referrerHost', () => {
   it('returns the host of an external referrer', () => {
-    expect(referrerHost('https://www.google.com/search?q=salsa', 'josemadrid.net')).toBe(
+    expect(referrerHost('https://www.google.com/search?q=salsa', 'josemadridsalsa.com')).toBe(
       'www.google.com'
     )
   })
 
   it('treats the site itself as no referrer', () => {
-    expect(referrerHost('https://josemadrid.net/products', 'josemadrid.net')).toBeNull()
+    expect(referrerHost('https://josemadridsalsa.com/products', 'josemadridsalsa.com')).toBeNull()
   })
 
   it('is null for empty or unparseable input', () => {
-    expect(referrerHost('', 'josemadrid.net')).toBeNull()
-    expect(referrerHost(null, 'josemadrid.net')).toBeNull()
-    expect(referrerHost('not a url', 'josemadrid.net')).toBeNull()
+    expect(referrerHost('', 'josemadridsalsa.com')).toBeNull()
+    expect(referrerHost(null, 'josemadridsalsa.com')).toBeNull()
+    expect(referrerHost('not a url', 'josemadridsalsa.com')).toBeNull()
   })
 })
 
@@ -46,7 +46,7 @@ describe('buildAttribution', () => {
       ),
       referrer: 'https://l.facebook.com/',
       landingPage: '/products/mango',
-      selfHost: 'josemadrid.net',
+      selfHost: 'josemadridsalsa.com',
     })
     expect(result).toEqual({
       utmSource: 'facebook',
@@ -67,7 +67,7 @@ describe('buildAttribution', () => {
       params: new URLSearchParams(`utm_source=${encodeURIComponent(long)}`),
       referrer: null,
       landingPage: null,
-      selfHost: 'josemadrid.net',
+      selfHost: 'josemadridsalsa.com',
     })
     expect(result.utmSource).not.toBeNull()
     // 256 whole code points, no unpaired surrogate → round-trips through JSON/UTF-8 cleanly.
@@ -80,7 +80,7 @@ describe('buildAttribution', () => {
       params: new URLSearchParams('utm_source=%20%20&utm_campaign=spring'),
       referrer: null,
       landingPage: null,
-      selfHost: 'josemadrid.net',
+      selfHost: 'josemadridsalsa.com',
     })
     expect(result.utmSource).toBeNull() // whitespace-only → null
     expect(result.utmCampaign).toBe('spring')

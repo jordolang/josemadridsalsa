@@ -228,7 +228,7 @@ apps/docs/imported/
 # Design screenshots of the desktop admin, kept locally as the reference the
 # /admin-desktop shell was built against. 21 MB of mockups that nothing in the
 # app or the database references, and public/ is served: committing them would
-# publish staff-panel mockups at josemadrid.net/images/admin-panel/. Same rule
+# publish staff-panel mockups at josemadridsalsa.com/images/admin-panel/. Same rule
 # as the photo working files above — reference material belongs outside git.
 apps/storefront/public/images/admin-panel/
 

@@ -33,12 +33,12 @@ afterEach(() => {
 describe('storefront fundraising boundary', () => {
   it('redirects fundraiser pages to the fundraising site', async () => {
     const response = await (await loadProxy())(
-      new NextRequest('https://www.josemadrid.net/fundraise/school?participant=abc')
+      new NextRequest('https://www.josemadridsalsa.com/fundraise/school?participant=abc')
     )
 
     expect(response.status).toBe(308)
     expect(response.headers.get('location')).toBe(
-      'https://fundraising.josemadrid.net/fundraise/school?participant=abc',
+      'https://fundraising.josemadridsalsa.com/fundraise/school?participant=abc',
     )
   })
 
@@ -52,10 +52,10 @@ describe('storefront fundraising boundary', () => {
     '/game-icons/lorc/fire.svg',
     '/s/abc123',
   ])('redirects %s to the same path on the fundraising site', async (path) => {
-    const response = await (await loadProxy())(new NextRequest(`https://www.josemadrid.net${path}`))
+    const response = await (await loadProxy())(new NextRequest(`https://www.josemadridsalsa.com${path}`))
 
     expect(response.status).toBe(308)
-    expect(response.headers.get('location')).toBe(`https://fundraising.josemadrid.net${path}`)
+    expect(response.headers.get('location')).toBe(`https://fundraising.josemadridsalsa.com${path}`)
   })
 
   it('uses NEXT_PUBLIC_FUNDRAISING_SITE_URL', async () => {
@@ -67,32 +67,32 @@ describe('storefront fundraising boundary', () => {
   })
 
   it('sends the old internal fundraising-site path to the fundraising host', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/fundraising-site/shop?a=b'))
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadridsalsa.com/fundraising-site/shop?a=b'))
 
     expect(response.status).toBe(308)
-    expect(response.headers.get('location')).toBe('https://fundraising.josemadrid.net/shop?a=b')
+    expect(response.headers.get('location')).toBe('https://fundraising.josemadridsalsa.com/shop?a=b')
   })
 
   it('does not redirect main storefront pages', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/products'))
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadridsalsa.com/products'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })
 
   it('does not redirect lookalike paths', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/fundraisingfaq'))
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadridsalsa.com/fundraisingfaq'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })
 
   it('does not redirect the fundraising host to itself', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadrid.net/fundraising'))
+    const response = await (await loadProxy())(new NextRequest('https://fundraising.josemadridsalsa.com/fundraising'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })
 
   it('leaves the fundraiser mobile app API on this app', async () => {
-    const response = await (await loadProxy())(new NextRequest('https://www.josemadrid.net/api/fundraiser-app/me'))
+    const response = await (await loadProxy())(new NextRequest('https://www.josemadridsalsa.com/api/fundraiser-app/me'))
 
     expect(response.headers.get('x-middleware-next')).toBe('1')
   })

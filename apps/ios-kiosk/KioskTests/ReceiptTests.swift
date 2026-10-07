@@ -15,7 +15,7 @@ final class ReceiptTests: XCTestCase {
         tax: "$0.00",
         total: "$25.00",
         payment: "Card · Square Terminal",
-        footer: ["¡Gracias!", "josemadrid.net"]
+        footer: ["¡Gracias!", "josemadridsalsa.com"]
     )
 
     func testStartsWithInitAndEndsWithCut() {

@@ -352,7 +352,7 @@ describe('Email Templates - Comprehensive Rendering Tests', () => {
         it('should include support email', async () => {
           const html = await render(<Component {...props} />)
 
-          expect(html).toContain('josemadrid.net')
+          expect(html).toContain('josemadridsalsa.com')
         })
 
         it.runIf(subscriberFacing)('should include unsubscribe functionality', async () => {

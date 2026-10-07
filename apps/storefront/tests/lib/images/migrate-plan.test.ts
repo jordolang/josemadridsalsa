@@ -9,7 +9,7 @@ import {
 } from '@/lib/images/migrate-plan'
 
 const STORE = 'https://abc123.public.blob.vercel-storage.com'
-const SITE = 'https://www.josemadrid.net'
+const SITE = 'https://www.josemadridsalsa.com'
 
 describe('planFile', () => {
   it('preserves the directory structure so a URL stays traceable', () => {
@@ -91,7 +91,7 @@ describe('rewriteText', () => {
 
   it('rewrites the absolute form without mangling it', () => {
     // The short key is a substring of the long one; replacing it first would produce
-    // "https://www.josemadrid.net" + blobUrl, a broken hybrid URL.
+    // "https://www.josemadridsalsa.com" + blobUrl, a broken hybrid URL.
     const { text } = rewriteText(`url: '${SITE}/images/shared/salsa-bowl.png',`, map)
     expect(text).toBe(`url: '${blobUrl}',`)
     expect(text).not.toContain(SITE)

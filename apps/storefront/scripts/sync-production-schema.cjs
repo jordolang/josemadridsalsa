@@ -143,7 +143,7 @@ function main() {
     log('   1. If this is a fresh database, seed it with data:');
     log('      node scripts/seed-production.cjs\n', 'blue');
     log('   2. Verify your application is working:');
-    log('      https://www.josemadrid.net\n', 'blue');
+    log('      https://www.josemadridsalsa.com\n', 'blue');
 
   } catch (error) {
     log('\n❌ Error syncing schema', 'red');

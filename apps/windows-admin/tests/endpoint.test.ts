@@ -21,14 +21,14 @@ describe('validateEndpoint', () => {
   })
 
   it('fills in the desktop shell when only an origin is given', () => {
-    expect(validateEndpoint('https://www.josemadrid.net')).toEqual({
+    expect(validateEndpoint('https://www.josemadridsalsa.com')).toEqual({
       url: DEFAULT_ENDPOINT,
     })
   })
 
   it('keeps a deeper admin path', () => {
-    expect(validateEndpoint('https://www.josemadrid.net/admin/orders')).toEqual({
-      url: 'https://www.josemadrid.net/admin/orders',
+    expect(validateEndpoint('https://www.josemadridsalsa.com/admin/orders')).toEqual({
+      url: 'https://www.josemadridsalsa.com/admin/orders',
     })
   })
 
@@ -42,7 +42,7 @@ describe('validateEndpoint', () => {
   })
 
   it('rejects plain http to a remote host', () => {
-    const result = validateEndpoint('http://josemadrid.net/admin')
+    const result = validateEndpoint('http://josemadridsalsa.com/admin')
     expect(result).toHaveProperty('error')
     expect((result as { error: string }).error).toMatch(/HTTPS is required/i)
   })
@@ -54,18 +54,18 @@ describe('validateEndpoint', () => {
 
   it('rejects blank and unparseable input', () => {
     expect(validateEndpoint('   ')).toHaveProperty('error')
-    expect(validateEndpoint('www.josemadrid.net')).toHaveProperty('error')
+    expect(validateEndpoint('www.josemadridsalsa.com')).toHaveProperty('error')
   })
 
   it('drops any query string or fragment', () => {
-    expect(validateEndpoint('https://www.josemadrid.net/admin?tab=1#top')).toEqual({
-      url: 'https://www.josemadrid.net/admin',
+    expect(validateEndpoint('https://www.josemadridsalsa.com/admin?tab=1#top')).toEqual({
+      url: 'https://www.josemadridsalsa.com/admin',
     })
   })
 
   it('trims surrounding whitespace', () => {
-    expect(validateEndpoint('  https://www.josemadrid.net/admin  ')).toEqual({
-      url: 'https://www.josemadrid.net/admin',
+    expect(validateEndpoint('  https://www.josemadridsalsa.com/admin  ')).toEqual({
+      url: 'https://www.josemadridsalsa.com/admin',
     })
   })
 })
@@ -74,13 +74,13 @@ describe('migrateLegacyDefault', () => {
   it('moves an install that predates the shell onto the new default', () => {
     // The app rewrites its settings file on every close, so the old default is
     // saved as though it were a deliberate choice.
-    expect(migrateLegacyDefault('https://www.josemadrid.net/admin')).toBe(DEFAULT_ENDPOINT)
+    expect(migrateLegacyDefault('https://www.josemadridsalsa.com/admin')).toBe(DEFAULT_ENDPOINT)
   })
 
   it('leaves a deliberately chosen endpoint alone', () => {
     expect(migrateLegacyDefault('http://localhost:3000/admin')).toBe('http://localhost:3000/admin')
-    expect(migrateLegacyDefault('https://www.josemadrid.net/admin/orders')).toBe(
-      'https://www.josemadrid.net/admin/orders',
+    expect(migrateLegacyDefault('https://www.josemadridsalsa.com/admin/orders')).toBe(
+      'https://www.josemadridsalsa.com/admin/orders',
     )
     expect(migrateLegacyDefault('https://staging.example.com/admin')).toBe(
       'https://staging.example.com/admin',
@@ -97,7 +97,7 @@ describe('isLocalHost', () => {
     expect(isLocalHost('localhost')).toBe(true)
     expect(isLocalHost('LOCALHOST')).toBe(true)
     expect(isLocalHost('127.0.0.1')).toBe(true)
-    expect(isLocalHost('josemadrid.net')).toBe(false)
+    expect(isLocalHost('josemadridsalsa.com')).toBe(false)
   })
 })
 
@@ -105,12 +105,12 @@ describe('navigation boundaries', () => {
   const endpoint = DEFAULT_ENDPOINT
 
   it('treats same-origin URLs as internal', () => {
-    expect(isInternalUrl(endpoint, 'https://www.josemadrid.net/admin/orders')).toBe(true)
-    expect(isInternalUrl(endpoint, 'https://www.josemadrid.net/')).toBe(true)
+    expect(isInternalUrl(endpoint, 'https://www.josemadridsalsa.com/admin/orders')).toBe(true)
+    expect(isInternalUrl(endpoint, 'https://www.josemadridsalsa.com/')).toBe(true)
   })
 
   it('treats other origins as external, including sibling hosts', () => {
-    expect(isInternalUrl(endpoint, 'https://josemadrid.net/admin')).toBe(false)
+    expect(isInternalUrl(endpoint, 'https://josemadridsalsa.com/admin')).toBe(false)
     expect(isInternalUrl(endpoint, 'https://dashboard.stripe.com/payments')).toBe(false)
     expect(isInternalUrl(endpoint, 'not a url')).toBe(false)
   })
@@ -124,8 +124,8 @@ describe('navigation boundaries', () => {
   })
 
   it('resolves section paths against the endpoint origin, not its path', () => {
-    expect(sectionUrl('https://www.josemadrid.net/admin/orders', '/admin/financials')).toBe(
-      'https://www.josemadrid.net/admin/financials'
+    expect(sectionUrl('https://www.josemadridsalsa.com/admin/orders', '/admin/financials')).toBe(
+      'https://www.josemadridsalsa.com/admin/financials'
     )
     expect(sectionUrl('http://localhost:3000/admin', '/admin/events')).toBe(
       'http://localhost:3000/admin/events'
@@ -133,7 +133,7 @@ describe('navigation boundaries', () => {
   })
 
   it('exposes the origin without a trailing path', () => {
-    expect(originOf(DEFAULT_ENDPOINT)).toBe('https://www.josemadrid.net')
+    expect(originOf(DEFAULT_ENDPOINT)).toBe('https://www.josemadridsalsa.com')
   })
 })
 
@@ -188,7 +188,7 @@ describe('sign-in providers', () => {
   })
 
   it('keeps admin pages in the app', () => {
-    expect(shouldOpenInApp(endpoint, 'https://www.josemadrid.net/admin/orders')).toBe(true)
+    expect(shouldOpenInApp(endpoint, 'https://www.josemadridsalsa.com/admin/orders')).toBe(true)
   })
 })
 

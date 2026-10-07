@@ -430,7 +430,7 @@ export function SocialComposer({
                   type="url"
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="https://josemadrid.net/..."
+                  placeholder="https://josemadridsalsa.com/..."
                   className="text-sm"
                 />
                 <p className="text-xs text-muted-foreground">Attached to Facebook/X posts</p>

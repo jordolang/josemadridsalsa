@@ -2,7 +2,7 @@
 
 ![Jose Madrid Salsa](./apps/storefront/public/logo.png)
 
-The Jose Madrid Salsa monorepo contains the new public e-commerce website, fundraising platform, admin console, and supporting packages for Jose Madrid Salsa (https://www.josemadrid.net).
+The Jose Madrid Salsa monorepo contains the new public e-commerce website, fundraising platform, admin console, and supporting packages for Jose Madrid Salsa (https://www.josemadridsalsa.com).
 
 This README is the primary public-facing documentation for the project: it explains what the project contains, highlights key features and screenshots, links to in-repo documentation, and provides clear instructions for running, testing, and contributing.
 

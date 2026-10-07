@@ -10,7 +10,7 @@ There are two desktop applications for running the business away from a browser 
 | Windows 11 | `apps/windows-admin` | Electron 44 + TypeScript | `JoseMadridSalsaAdmin-Setup-<version>.exe` (NSIS) |
 | macOS (Apple silicon) | `apps/macos-admin` | SwiftUI + WKWebView | `JoseMadridSalsaAdmin-<version>.dmg` |
 
-Both open on the **desktop shell** at `https://www.josemadrid.net/admin-desktop` — the same
+Both open on the **desktop shell** at `https://www.josemadridsalsa.com/admin-desktop` — the same
 database, drawn as a dense keyboard-driven window instead of the web panel's page chrome — and
 both can reach every other page of the admin panel from there.
 
@@ -342,7 +342,7 @@ weeks later that the indexed-page count is rising.
 ### Windows 11
 
 1. Download the installer from
-   [`www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe`](https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe),
+   [`www.josemadridsalsa.com/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe`](https://www.josemadridsalsa.com/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe),
    which is always the current build.
 2. Run it. The build is not code-signed yet, so SmartScreen shows
    **"Windows protected your PC"** — choose **More info → Run anyway**. This is expected once.
@@ -355,7 +355,7 @@ a check.
 ### macOS
 
 1. Download
-   [`JoseMadridSalsaAdmin-latest.dmg`](https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-latest.dmg)
+   [`JoseMadridSalsaAdmin-latest.dmg`](https://www.josemadridsalsa.com/api/desktop/updates/JoseMadridSalsaAdmin-latest.dmg)
    and drag the app to Applications.
    It is a universal app — the same download runs on Apple silicon and Intel Macs, macOS 14 or
    later.
@@ -418,7 +418,7 @@ showing.
 **File → Server Settings…** on Windows, **Settings** on macOS. HTTPS is required except for a
 `localhost` development server, which is how you point either app at `npm run dev`. A bare origin
 is treated as `/admin-desktop`; any other path on the same origin is accepted as typed, so
-`https://www.josemadrid.net/admin` still opens the web panel directly.
+`https://www.josemadridsalsa.com/admin` still opens the web panel directly.
 
 ### Links and sign-in
 
@@ -526,7 +526,7 @@ marked not-latest so they never shadow the platform releases.
 to an app with no GitHub session — an app pointed there would never see an update. Instead the
 workflow's publish step (`.github/scripts/publish-desktop-updates.mjs`) uploads the build to the
 public Vercel Blob store under `desktop/`, and both apps read it through the storefront at
-`https://www.josemadrid.net/api/desktop/updates/<file>`, which redirects there. That address is
+`https://www.josemadridsalsa.com/api/desktop/updates/<file>`, which redirects there. That address is
 baked into every installed copy, so the files can move without breaking updates. The installers
 go up before `latest.yml`, so a check mid-publish never sees a manifest naming a missing file,
 and older builds are deleted afterwards. The step needs the `BLOB_READ_WRITE_TOKEN` repository

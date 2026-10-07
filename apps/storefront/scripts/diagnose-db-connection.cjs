@@ -177,7 +177,7 @@ async function provideSolutions() {
   log('3. Set NEXTAUTH_SECRET (generate with: openssl rand -hex 32):', colors.cyan)
   log('   NEXTAUTH_SECRET="your-32-character-secret"', colors.blue)
   log('4. Set NEXTAUTH_URL:', colors.cyan)
-  log('   NEXTAUTH_URL="https://www.josemadrid.net"', colors.blue)
+  log('   NEXTAUTH_URL="https://www.josemadridsalsa.com"', colors.blue)
   log('5. Redeploy your application', colors.cyan)
 
   log('\nFor Local Development:', colors.bright)
