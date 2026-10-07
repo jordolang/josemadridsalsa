@@ -20,6 +20,16 @@ const FUNDRAISING_ROUTE_PREFIXES = [
 ]
 
 /**
+ * Where an old fundraiser path lives on the fundraising site. Its home page is
+ * the old /fundraising landing page, so that one goes to the root.
+ */
+function fundraisingSitePath(pathname: string): string {
+  if (pathname === '/fundraising' || pathname === '/fundraising/') return '/'
+  if (pathname.startsWith('/fundraising-site')) return pathname.slice('/fundraising-site'.length) || '/'
+  return pathname
+}
+
+/**
  * CMS-managed redirects.
  *
  * Editors add these in /admin/content/redirects and expect them live without a
@@ -90,7 +100,7 @@ export default async function proxy(request: NextRequest) {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   )
   if (isFundraisingRoute) {
-    const rest = pathname.startsWith('/fundraising-site') ? pathname.slice('/fundraising-site'.length) || '/' : pathname
+    const rest = fundraisingSitePath(pathname)
     const target = new URL(rest + search, getFundraisingSiteUrl())
     // Never redirect a host to itself: until its DNS moves, the fundraising
     // domain may still reach this app.
