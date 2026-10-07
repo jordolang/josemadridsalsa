@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowRight, ClipboardList, HandCoins, Share2, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FeaturedFundraisingProducts } from '@/components/fundraising-site/featured-products'
+import { FundraiserDownloads } from './_components/fundraiser-downloads'
 import { YouTubeEmbed } from './_components/youtube-embed'
 
 export const revalidate = 300
@@ -117,6 +118,8 @@ export default function FundraisingHomePage() {
           </Button>
         </div>
       </section>
+
+      <FundraiserDownloads className="bg-card" />
 
       <section className="py-16">
         <div className="container mx-auto px-4">

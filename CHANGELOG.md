@@ -14,6 +14,9 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Order form packs and fliers on the fundraising home page.** The 25, 16 and 9 flavor kit
+  downloads and both fliers now appear on the fundraising home page as well as `/start`, from one
+  shared component.
 - **Battle Arena online results come only from the match's host, and ranked matches carry a rating.**
   The host opens each online match (`POST /api/arena/hosted-matches`), every other player claims
   their seat with their own sign-in using a one-time ticket the host hands them, and the host
