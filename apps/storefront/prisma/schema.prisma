@@ -3642,6 +3642,14 @@ model ArenaPlayer {
   damage        Int                  @default(0)
   currentStreak Int                  @default(0)
   bestStreak    Int                  @default(0)
+  /// Totals over host-reported matches against other people only: what the boards rank.
+  /// The totals above also count matches against the CPU, which each browser reports itself.
+  versusMatches   Int                @default(0)
+  versusWins      Int                @default(0)
+  versusKnockouts Int                @default(0)
+  /// Elo rating from ranked 1v1 matches (see lib/arena-game/rules.ts).
+  rating        Int                  @default(1000)
+  rankedGames   Int                  @default(0)
   lastPlayedAt  DateTime?
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
@@ -3649,9 +3657,13 @@ model ArenaPlayer {
   team          FundraiserTeam?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
   sessions      ArenaPlayerSession[]
   matchHistory  ArenaMatch[]
+  hostedMatches ArenaHostedMatch[]
+  hostedSeats   ArenaHostedSeat[]
 
   @@index([teamId])
   @@index([wins])
+  @@index([versusWins])
+  @@index([rating])
   @@map("arena_players")
 }
 
@@ -3694,13 +3706,66 @@ model ArenaMatch {
   roundsWon  Int             @default(0)
   knockouts  Int             @default(0)
   damage     Int             @default(0)
+  /// The host-reported match this result came from; null for a self-reported CPU match.
+  hostedMatchId String?
+  /// True when the host's report covered at least two signed-in players. Only verified
+  /// results count on the leaderboards.
+  verified   Boolean         @default(false)
+  /// Change to the player's rating from this match (ranked matches only).
+  ratingDelta Int?
   player     ArenaPlayer     @relation(fields: [playerId], references: [id], onDelete: Cascade)
   team       FundraiserTeam? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  hostedMatch ArenaHostedMatch? @relation(fields: [hostedMatchId], references: [id], onDelete: SetNull)
 
   @@index([playerId, startedAt])
+  @@index([verified, finishedAt])
+  @@index([hostedMatchId])
   @@index([finishedAt])
   @@index([teamId, finishedAt])
   @@map("arena_matches")
+}
+
+/// An online match as its host opened it. The game is peer to peer and only the host runs the
+/// fight, so the host reports every player's result at once. Each other player seat gets a
+/// secret ticket that the host hands to that player only; the player claims the seat with
+/// their own sign-in, so a result can only land on an account that was really in the match.
+model ArenaHostedMatch {
+  id           String            @id @default(cuid())
+  hostPlayerId String
+  mode         ArenaMatchMode
+  room         String?
+  /// Every fighter in the match, CPUs included.
+  fighters     Int
+  startedAt    DateTime          @default(now())
+  reportedAt   DateTime?
+  host         ArenaPlayer       @relation(fields: [hostPlayerId], references: [id], onDelete: Cascade)
+  seats        ArenaHostedSeat[]
+  results      ArenaMatch[]
+
+  @@index([hostPlayerId, startedAt])
+  @@map("arena_hosted_matches")
+}
+
+/// One player seat (the game's fighter slot) in a hosted match.
+model ArenaHostedSeat {
+  id            String           @id @default(cuid())
+  hostedMatchId String
+  seat          Int
+  /// SHA-256 of the seat's ticket; null for the host's own seat.
+  ticketHash    String?          @unique
+  /// The player who claimed the seat, once claimed.
+  playerId      String?
+  /// The claimer's group when they claimed it, so their result goes to that group.
+  teamId        String?
+  fighter       String?
+  claimedAt     DateTime?
+  hostedMatch   ArenaHostedMatch @relation(fields: [hostedMatchId], references: [id], onDelete: Cascade)
+  player        ArenaPlayer?     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([hostedMatchId, seat])
+  @@unique([hostedMatchId, playerId])
+  @@index([playerId])
+  @@map("arena_hosted_seats")
 }
 
 model FundraiserShield {
@@ -4417,6 +4482,8 @@ enum ArenaMatchMode {
   ONLINE
   /// A fundraiser tournament match.
   TOURNAMENT
+  /// A ranked 1v1 online match; moves both players' ratings.
+  RANKED
 }
 
 enum FundraiserTeamStatus {

@@ -2,10 +2,15 @@ import { describe, expect, it } from 'vitest'
 import {
   FinishMatchSchema,
   HandleSchema,
+  HostedMatchSchema,
+  HostedReportSchema,
+  StartMatchSchema,
   allowedGameOrigins,
   bearerToken,
+  eloDeltas,
   handleKey,
   hashSessionToken,
+  implausibleReport,
   implausibleResult,
   isAllowedReturnUrl,
   modesFor,
@@ -100,6 +105,54 @@ describe('arena game results', () => {
   })
 })
 
+describe('arena game hosted matches', () => {
+  const started = new Date('2026-10-06T12:00:00Z')
+  const at = (seconds: number) => new Date(started.getTime() + seconds * 1000)
+  const line = (seat: number, won: boolean, roundsWon = won ? 2 : 1) => ({ seat, won, roundsWon, rounds: 3, knockouts: won ? 2 : 1, damage: 400 })
+  const report = (over: Record<string, unknown> = {}) =>
+    HostedReportSchema.parse({ rounds: 3, winnerSeat: 0, winnerTeam: null, results: [line(0, true), line(1, false)], ...over })
+
+  it('lets a browser report its own result only against the CPU', () => {
+    expect(StartMatchSchema.safeParse({ mode: 'CPU', opponents: 3 }).success).toBe(true)
+    expect(StartMatchSchema.safeParse({ mode: 'ARCADE', opponents: 1 }).success).toBe(true)
+    const online = StartMatchSchema.safeParse({ mode: 'ONLINE', opponents: 3 })
+    expect(online.success).toBe(false)
+    expect(online.error?.issues[0].message).toMatch(/host/)
+  })
+
+  it('checks the seats the host opens', () => {
+    const ok = { mode: 'ONLINE', fighters: 4, seats: [0, 2], hostSeat: 0 }
+    expect(HostedMatchSchema.safeParse(ok).success).toBe(true)
+    expect(HostedMatchSchema.parse({ ...ok, mode: 'HILL' }).mode).toBe('ONLINE')
+    expect(HostedMatchSchema.safeParse({ ...ok, mode: 'CPU' }).success).toBe(false)
+    expect(HostedMatchSchema.safeParse({ ...ok, seats: [0, 0] }).success).toBe(false)
+    expect(HostedMatchSchema.safeParse({ ...ok, seats: [0, 4] }).success).toBe(false)
+    expect(HostedMatchSchema.safeParse({ ...ok, hostSeat: 1 }).success).toBe(false)
+    expect(HostedMatchSchema.safeParse({ ...ok, hostSeat: -1 }).success).toBe(true)
+  })
+
+  it('accepts a normal report and rejects impossible ones', () => {
+    const match = { fighters: 4, startedAt: started }
+    expect(implausibleReport(report(), match, at(120))).toBeNull()
+    expect(implausibleReport(report(), match, at(5))).toMatch(/too short/)
+    expect(implausibleReport(report({ results: [line(0, true), line(1, true)] }), match, at(120))).toMatch(/Only one fighter/)
+    expect(implausibleReport(report({ results: [line(0, true), line(0, false)] }), match, at(120))).toMatch(/twice/)
+  })
+
+  it('lets every member of the winning team win, rounds or not', () => {
+    const teams = report({ winnerTeam: 1, results: [line(0, true), line(1, true, 0), line(2, false)] })
+    expect(implausibleReport(teams, { fighters: 4, startedAt: started }, at(120))).toBeNull()
+  })
+
+  it('moves ratings by Elo', () => {
+    expect(eloDeltas(1000, 1000)).toEqual([16, -16])
+    const [upset] = eloDeltas(1000, 1400)
+    const [expected] = eloDeltas(1400, 1000)
+    expect(upset).toBeGreaterThan(expected)
+    expect(expected).toBeGreaterThanOrEqual(1)
+  })
+})
+
 describe('arena game leaderboards', () => {
   it('starts weeks on Monday and months on the 1st, in UTC', () => {
     const wednesday = new Date('2026-10-07T15:00:00Z')
@@ -111,8 +164,9 @@ describe('arena game leaderboards', () => {
   })
 
   it('maps board filters to match modes', () => {
-    expect(modesFor('versus')).toEqual(['ONLINE', 'TOURNAMENT'])
-    expect(modesFor('all')).toEqual(['CPU', 'ONLINE', 'TOURNAMENT'])
+    expect(modesFor('versus')).toEqual(['ONLINE', 'TOURNAMENT', 'RANKED'])
+    expect(modesFor('all')).toEqual(['ONLINE', 'TOURNAMENT', 'RANKED'])
+    expect(modesFor('ranked')).toEqual(['RANKED'])
     expect(modesFor('cpu')).toEqual(['CPU'])
   })
 })
