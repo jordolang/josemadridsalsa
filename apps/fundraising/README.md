@@ -26,7 +26,7 @@ Run from the repository root:
 | Variable | Used for |
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | Main site that main-site pages and `/images` go to (default `https://www.josemadrid.net`) |
-| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | This app's own public URL (default `https://fundraising.josemadrid.net`) |
+| `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | This app's own public URL (default `https://fundraising.josemadridsalsa.com`) |
 
 Everything else (database, auth, Stripe, BigCommerce) is shared with the main site; see
 `.env.example` at the repository root.
