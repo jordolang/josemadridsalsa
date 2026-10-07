@@ -2,7 +2,7 @@
 
 The fundraising site and every fundraiser page: `/fundraising`, `/fundraisers/...`,
 `/fundraise/...`, `/f/...`, `/arena/...`, the fundraiser portal and their APIs. It is
-deployed as its own Vercel project at `fundraising.josemadrid.net`. The main site
+deployed as its own Vercel project at `fundraising.josemadridsalsa.com`. The main site
 308-redirects those paths here (`apps/storefront/proxy.ts`), and this app sends
 main-site pages such as `/products` and `/account` back (`next.config.mjs`).
 
@@ -25,7 +25,7 @@ Run from the repository root:
 
 | Variable | Used for |
 |---|---|
-| `NEXT_PUBLIC_SITE_URL` | Main site that main-site pages and `/images` go to (default `https://www.josemadrid.net`) |
+| `NEXT_PUBLIC_SITE_URL` | Main site that main-site pages and `/images` go to (default `https://www.josemadridsalsa.com`) |
 | `NEXT_PUBLIC_FUNDRAISING_SITE_URL` | This app's own public URL (default `https://fundraising.josemadridsalsa.com`) |
 
 Everything else (database, auth, Stripe, BigCommerce) is shared with the main site; see

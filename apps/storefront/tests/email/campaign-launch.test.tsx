@@ -16,7 +16,7 @@ describe('campaign launch email', () => {
     campaignUrl: 'https://www.josemadridsalsa.com/fundraisers/spring-2024',
     startDate: 'March 1, 2024',
     endDate: 'March 15, 2024',
-    unsubscribeUrl: 'https://josemadrid.net/unsubscribe?email=fixture%40example.com',
+    unsubscribeUrl: 'https://josemadridsalsa.com/unsubscribe?email=fixture%40example.com',
   }
 
   describe('rendering with required props', () => {

@@ -1,4 +1,4 @@
-const PRODUCTION_ENDPOINT = 'https://www.josemadrid.net/admin-desktop'
+const PRODUCTION_ENDPOINT = 'https://www.josemadridsalsa.com/admin-desktop'
 
 const input = document.getElementById('endpoint')
 const printer = document.getElementById('labelPrinter')

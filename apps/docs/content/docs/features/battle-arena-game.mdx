@@ -12,12 +12,12 @@ are described in [Battle Arena Integration](./battle-arena).
 
 ## Where the game is served
 
-The fundraising app serves the game at `/battle-arena` (`https://fundraising.josemadrid.net/battle-arena`),
+The fundraising app serves the game at `/battle-arena` (`https://fundraising.josemadridsalsa.com/battle-arena`),
 and each month's arena page (`/arena/[period]`) opens it with its **Play now** card. It is one static
 file, `apps/fundraising/public/battle-arena/index.html`, with its link-preview image beside it:
 
 - `next.config.mjs` rewrites `/battle-arena` to that file and gives `/battle-arena/*` its own
-  Content-Security-Policy, which lets the page reach `www.josemadrid.net` (this API), the game's own
+  Content-Security-Policy, which lets the page reach `www.josemadridsalsa.com` (this API), the game's own
   deployment (fundraising teams for its donate button), the CDN its sounds are on and the PeerJS
   server that links online rooms.
 - `app/battle-arena/share/route.ts` is the page shared match links point to: its Open Graph tags

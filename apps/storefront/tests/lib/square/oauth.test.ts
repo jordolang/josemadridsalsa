@@ -64,7 +64,7 @@ describe('OAuth state', () => {
     expect(url.origin).toBe('https://connect.squareup.com')
     expect(url.searchParams.get('client_id')).toBe('sq0idp-app')
     expect(url.searchParams.get('scope')).toBe('MERCHANT_PROFILE_READ PAYMENTS_WRITE PAYMENTS_WRITE_IN_PERSON PAYMENTS_READ')
-    expect(url.searchParams.get('redirect_uri')).toBe('https://www.josemadrid.net/api/admin/square/oauth/callback')
+    expect(url.searchParams.get('redirect_uri')).toBe('https://www.josemadridsalsa.com/api/admin/square/oauth/callback')
   })
 })
 

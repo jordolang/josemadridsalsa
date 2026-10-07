@@ -17,7 +17,7 @@ const presenceRoute = await import('@/app/api/arena/friends/presence/route')
 const inviteRoute = await import('@/app/api/arena/friends/invites/route')
 const { ArenaGameError } = await import('@/lib/arena-game/http')
 
-const SITE = 'https://www.josemadrid.net'
+const SITE = 'https://www.josemadridsalsa.com'
 const GAME = 'https://battle-arena-3d-mauve.vercel.app'
 const me = { id: 'p_me', handle: 'Maria 1234', userId: 'u_1' }
 const ana = { id: 'p_ana', handle: 'Ana 77', userId: 'u_2' }

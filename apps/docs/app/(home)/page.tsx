@@ -106,7 +106,7 @@ export default function Home() {
           </Link>
           <div className="flex items-center gap-5">
             <Link
-              href="https://www.josemadrid.net"
+              href="https://www.josemadridsalsa.com"
               className="hidden md:inline text-sm text-stone-500 hover:text-red-600 transition-colors"
             >
               Main Site
@@ -196,7 +196,7 @@ export default function Home() {
                 <p className="text-white/60 text-xs">Handcrafted in Ohio with the finest ingredients</p>
               </div>
               <Link
-                href="https://www.josemadrid.net/products"
+                href="https://www.josemadridsalsa.com/products"
                 className="text-xs text-white/80 hover:text-white border border-white/30 rounded-lg px-3 py-1.5 backdrop-blur-sm hover:bg-white/10 transition-all"
               >
                 View Products
@@ -289,16 +289,16 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-8 text-sm text-stone-500">
-            <Link href="https://www.josemadrid.net" className="hover:text-red-600 transition-colors">
-              josemadrid.net
+            <Link href="https://www.josemadridsalsa.com" className="hover:text-red-600 transition-colors">
+              josemadridsalsa.com
             </Link>
             <Link href="https://github.com/jordolang/josemadridsalsa" className="hover:text-red-600 transition-colors">
               GitHub
             </Link>
-            <Link href="https://www.josemadrid.net/products" className="hover:text-red-600 transition-colors">
+            <Link href="https://www.josemadridsalsa.com/products" className="hover:text-red-600 transition-colors">
               Products
             </Link>
-            <Link href="https://www.josemadrid.net/fundraising" className="hover:text-red-600 transition-colors">
+            <Link href="https://www.josemadridsalsa.com/fundraising" className="hover:text-red-600 transition-colors">
               Fundraising
             </Link>
           </div>

@@ -26,7 +26,7 @@ const productSchema = z.object({
  * contract. Calling it keeps the agent on one definition of "the catalog"
  * instead of a second Prisma client with its own idea of what is for sale.
  */
-const STOREFRONT_URL = process.env.STOREFRONT_API_URL ?? 'https://www.josemadrid.net'
+const STOREFRONT_URL = process.env.STOREFRONT_API_URL ?? 'https://www.josemadridsalsa.com'
 
 export default defineTool({
   description:

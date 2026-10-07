@@ -18,7 +18,7 @@ const monorepoRoot = existsSync(path.join(workspaceRoot, 'turbo.json'))
  * The main site (apps/storefront). Keep the default in step with
  * packages/core/lib/site-url.ts (this config cannot import TypeScript).
  */
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.josemadrid.net').replace(/\/+$/, '')
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.josemadridsalsa.com').replace(/\/+$/, '')
 
 /**
  * Main-site pages that shared components (cart, checkout, footer, sign-in)
@@ -73,8 +73,8 @@ const BATTLE_ARENA_CSP = [
   "img-src 'self' data: blob:",
   "media-src 'self' data: blob:",
   "worker-src 'self' blob:",
-  // The game calls www.josemadrid.net by name, whatever NEXT_PUBLIC_SITE_URL says.
-  `connect-src 'self' ${[...new Set(['https://www.josemadrid.net', siteUrl])].join(' ')} https://battle-arena-3d-mauve.vercel.app https://d2ol7oe51mr4n9.cloudfront.net https://0.peerjs.com wss://0.peerjs.com`,
+  // The game calls www.josemadridsalsa.com by name, whatever NEXT_PUBLIC_SITE_URL says.
+  `connect-src 'self' ${[...new Set(['https://www.josemadridsalsa.com', siteUrl])].join(' ')} https://battle-arena-3d-mauve.vercel.app https://d2ol7oe51mr4n9.cloudfront.net https://0.peerjs.com wss://0.peerjs.com`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

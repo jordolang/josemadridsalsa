@@ -213,4 +213,4 @@ jobs:
             --target "$GITHUB_SHA" \
             --latest=false \
             --title "Desktop Apps ${VERSION} (${TAG})" \
-            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel, built from ${GITHUB_SHA}. Installed apps update from https://www.josemadrid.net/api/desktop/updates, not from this release."
+            --notes "Windows installer and macOS app for the Jose Madrid Salsa admin panel, built from ${GITHUB_SHA}. Installed apps update from https://www.josemadridsalsa.com/api/desktop/updates, not from this release."

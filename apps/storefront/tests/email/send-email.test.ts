@@ -9,7 +9,7 @@ import React from 'react'
 // Set environment variables before any imports
 process.env.RESEND_API_KEY = 'test_resend_api_key_12345'
 process.env.FROM_EMAIL = 'Jose Madrid Salsa <mike@josemadridsalsa.com>'
-process.env.NEXT_PUBLIC_BASE_URL = 'https://josemadrid.net'
+process.env.NEXT_PUBLIC_BASE_URL = 'https://josemadridsalsa.com'
 
 // Mock Resend client with proper constructor
 // We need to create the mock send function inside the factory to avoid hoisting issues
@@ -81,7 +81,7 @@ describe('sendEmail', () => {
         html: '<html><body>Test Email</body></html>',
         replyTo: undefined,
         headers: {
-          'List-Unsubscribe': '<https://josemadrid.net/unsubscribe?email=customer%40example.com>',
+          'List-Unsubscribe': '<https://josemadridsalsa.com/unsubscribe?email=customer%40example.com>',
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         },
       })
@@ -464,7 +464,7 @@ describe('sendEmail', () => {
       expect(mockResendSend).toHaveBeenCalledWith(
         expect.objectContaining({
           headers: {
-            'List-Unsubscribe': '<https://josemadrid.net/unsubscribe?email=test%2Bspecial%40example.com>',
+            'List-Unsubscribe': '<https://josemadridsalsa.com/unsubscribe?email=test%2Bspecial%40example.com>',
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
           },
         })

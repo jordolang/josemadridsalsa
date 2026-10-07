@@ -70,14 +70,14 @@ Go to [console.cloud.google.com](https://console.cloud.google.com) and create a 
 
 ### Configure OAuth Consent Screen
 
-Navigate to APIs & Services > OAuth consent screen. Set the app name, support email, and authorized domains (e.g., `josemadrid.net`).
+Navigate to APIs & Services > OAuth consent screen. Set the app name, support email, and authorized domains (e.g., `josemadridsalsa.com`).
 
 ### Create OAuth 2.0 Credentials
 
 Go to APIs & Services > Credentials > Create Credentials > OAuth 2.0 Client ID:
 
 - **Application type**: Web application
-- **Authorized redirect URIs**: `https://www.josemadrid.net/api/auth/callback/google` and `http://localhost:3000/api/auth/callback/google`
+- **Authorized redirect URIs**: `https://www.josemadridsalsa.com/api/auth/callback/google` and `http://localhost:3000/api/auth/callback/google`
 
 ### Set Environment Variables
 
@@ -94,8 +94,8 @@ GOOGLE_CLIENT_SECRET="GOCSPX-..."
 
 Go to [github.com/settings/applications/new](https://github.com/settings/applications/new):
 
-- **Homepage URL**: `https://www.josemadrid.net`
-- **Authorization callback URL**: `https://www.josemadrid.net/api/auth/callback/github`
+- **Homepage URL**: `https://www.josemadridsalsa.com`
+- **Authorization callback URL**: `https://www.josemadridsalsa.com/api/auth/callback/github`
 
 ### Set Environment Variables
 
@@ -116,7 +116,7 @@ Go to [developers.facebook.com](https://developers.facebook.com) and create a ne
 
 Under Facebook Login > Settings:
 
-`https://www.josemadrid.net/api/auth/callback/facebook`
+`https://www.josemadridsalsa.com/api/auth/callback/facebook`
 
 ### Set Environment Variables
 
@@ -137,7 +137,7 @@ In [developer.apple.com](https://developer.apple.com), create an App ID with Sig
 
 Create a Services ID (this becomes your `APPLE_CLIENT_ID`). Configure the return URL:
 
-`https://www.josemadrid.net/api/auth/callback/apple`
+`https://www.josemadridsalsa.com/api/auth/callback/apple`
 
 ### Generate a Client Secret
 
@@ -162,4 +162,4 @@ All providers use the same NextAuth.js callback pattern:
 | Facebook | `/api/auth/callback/facebook` |
 | Apple | `/api/auth/callback/apple` |
 
-In production, prepend `https://www.josemadrid.net` to each path. For local development, use `http://localhost:3000`.
+In production, prepend `https://www.josemadridsalsa.com` to each path. For local development, use `http://localhost:3000`.

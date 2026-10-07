@@ -42,5 +42,5 @@ nsis:
 # 404 to an app with no GitHub session and no update would ever be found.
 publish:
   provider: generic
-  url: https://www.josemadrid.net/api/desktop/updates
+  url: https://www.josemadridsalsa.com/api/desktop/updates
   channel: latest

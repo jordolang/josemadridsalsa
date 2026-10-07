@@ -31,7 +31,7 @@ const detail = {
     {
       id: 'm1',
       from: 'Ann Buyer <ann@shop.com>',
-      to: 'orders@josemadrid.net',
+      to: 'orders@josemadridsalsa.com',
       cc: 'boss@shop.com',
       date: 'Wed, 30 Sep 2026 10:00:00 -0400',
       subject: 'Wholesale order for 40 jars',
@@ -55,7 +55,7 @@ function setup(overrides: Record<string, () => ReturnType<typeof json>> = {}) {
     if (overrides[key]) return overrides[key]()
     switch (key) {
       case 'GET /api/admin/mailbox':
-        return json({ mailbox: 'orders@josemadrid.net', labels })
+        return json({ mailbox: 'orders@josemadridsalsa.com', labels })
       case 'GET /api/admin/mailbox/threads':
         return json({ threads, nextPageToken: null })
       case 'GET /api/admin/mailbox/threads/t1':
@@ -87,7 +87,7 @@ describe('MailView', () => {
     expect(within(folders).getByText('Orders')).toBeInTheDocument()
     expect(within(folders).getByText('Receipts')).toBeInTheDocument()
     expect(within(folders).getByText('LABELS')).toBeInTheDocument()
-    expect(within(folders).getByText('orders@josemadrid.net')).toBeInTheDocument()
+    expect(within(folders).getByText('orders@josemadridsalsa.com')).toBeInTheDocument()
     expect(await screen.findByText('Wholesale order for 40 jars')).toBeInTheDocument()
     expect(screen.getByText('Ann Buyer')).toBeInTheDocument()
   })
@@ -133,7 +133,7 @@ describe('MailView', () => {
     const draft = draftFrom(
       { ...detail.messages[0], subject: 'RE: jars' },
       'replyAll',
-      'orders@josemadrid.net',
+      'orders@josemadridsalsa.com',
     )
     expect(draft.to).toBe('ann@shop.com')
     expect(draft.cc).toBe('boss@shop.com')
@@ -142,7 +142,7 @@ describe('MailView', () => {
 
   it('replies to Reply-To rather than a service From address', () => {
     const draft = draftFrom(
-      { ...detail.messages[0], from: 'Website <noreply@josemadrid.net>', replyTo: 'Pat <pat@gmail.com>' },
+      { ...detail.messages[0], from: 'Website <noreply@josemadridsalsa.com>', replyTo: 'Pat <pat@gmail.com>' },
       'reply',
       'mike@josemadridsalsa.com',
     )

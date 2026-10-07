@@ -24,7 +24,7 @@ enum PrinterConfig: Codable, Equatable {
 /// Kiosk configuration. The device token and staff PIN live in the Keychain; the rest in UserDefaults.
 final class KioskSettings: ObservableObject {
     static let shared = KioskSettings()
-    static let defaultURL = "https://www.josemadrid.net/kiosk"
+    static let defaultURL = "https://www.josemadridsalsa.com/kiosk"
 
     private let defaults = UserDefaults.standard
 

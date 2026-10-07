@@ -445,7 +445,7 @@ export function PageEditor({ page, sections: initialSections, blocks }: PageEdit
                 id="canonicalUrl"
                 value={meta.canonicalUrl}
                 onChange={(e) => setMeta({ ...meta, canonicalUrl: e.target.value })}
-                placeholder="https://www.josemadrid.net/example"
+                placeholder="https://www.josemadridsalsa.com/example"
               />
             </div>
             <label className="flex items-center gap-3 text-sm">

@@ -5,7 +5,7 @@ All notable changes to the Jose Madrid Salsa e-commerce platform are documented 
 This project follows the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format and its
 own version scheme: `MAJOR.MINOR` with an optional letter, where a large feature bumps the minor
 (`2.0` → `2.1`) and everything smaller takes a letter (`2.1` → `2.1a`). See
-[Versioning](https://josemadrid.net/docs/guides/versioning) for the full rule and the release
+[Versioning](https://josemadridsalsa.com/docs/guides/versioning) for the full rule and the release
 command. `package.json` carries the derived SemVer form so npm stays happy; `projectVersion` in
 the root `package.json` is canonical.
 
@@ -491,6 +491,14 @@ the root `package.json` is canonical.
   treated as success.
 
 ### Changed
+- **The site's address is now www.josemadridsalsa.com, and the fundraising site's is
+  fundraising.josemadridsalsa.com.** Every built-in default (site URL, fundraising URL, the
+  fundraising CSP, the Mac and Windows admin apps, the kiosks, the fundraiser phone app, the
+  BigCommerce checkout header, email links and sender addresses, docs) moved from josemadrid.net.
+  `josemadrid.net` and `www.josemadrid.net` now 308 to the same path on www.josemadridsalsa.com,
+  except `/api`, which stays put so webhooks and already-installed apps keep working; the bare
+  josemadridsalsa.com goes to `www`. Other josemadrid.net subdomains are untouched. Calendar event
+  ids keep `@josemadrid.net` so subscribed calendars don't duplicate events.
 - **Shared code moved to `packages/core` (`@jose-madrid/core`).** The 124 storefront files the
   fundraising pages also need (Prisma, auth, RBAC, email, the UI primitives, the fundraising and
   arena domain logic, and their dependencies) now live in `packages/core`, so a separate

@@ -43,7 +43,7 @@ describe('parseFormDate', () => {
 describe('isBusinessEmail', () => {
   it('flags Jose Madrid addresses', () => {
     expect(isBusinessEmail('mike@josemadridsalsa.com and mail check')).toBe(true)
-    expect(isBusinessEmail('info@josemadrid.net')).toBe(true)
+    expect(isBusinessEmail('info@josemadridsalsa.com')).toBe(true)
   })
   it('passes a real organizer email', () => {
     expect(isBusinessEmail('gerard.grimm@school.org')).toBe(false)

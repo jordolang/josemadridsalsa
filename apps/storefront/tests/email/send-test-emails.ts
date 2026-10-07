@@ -44,7 +44,7 @@ const TEST_ORDER_DATA = {
     },
   ],
   total: 47.94,
-  trackingUrl: 'https://josemadrid.net/orders/TEST-2026-001',
+  trackingUrl: 'https://josemadridsalsa.com/orders/TEST-2026-001',
 };
 
 const TEST_SHIPPING_DATA = {
@@ -62,8 +62,8 @@ const TEST_DELIVERY_DATA = {
   deliveryDate: new Date().toISOString(),
   shippingAddress: TEST_ORDER_DATA.shippingAddress,
   items: TEST_ORDER_DATA.items,
-  feedbackUrl: 'https://josemadrid.net/review?order=TEST-2026-001',
-  orderDetailsUrl: 'https://josemadrid.net/orders/TEST-2026-001',
+  feedbackUrl: 'https://josemadridsalsa.com/review?order=TEST-2026-001',
+  orderDetailsUrl: 'https://josemadridsalsa.com/orders/TEST-2026-001',
 };
 
 const TEST_CONTACT_DATA = {

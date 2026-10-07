@@ -11,7 +11,7 @@ Vercel provides automatic SSL/TLS certificates for all deployments, including cu
 
 Every Vercel deployment gets a free SSL certificate:
 
-- **Production:** `https://www.josemadrid.net`
+- **Production:** `https://www.josemadridsalsa.com`
 - **Preview:** `https://<branch>-josemadridsalsa.vercel.app`
 - **Default:** `https://josemadridsalsa.vercel.app`
 
@@ -19,7 +19,7 @@ Certificates are issued via Let's Encrypt and renewed automatically before expir
 
 ## Custom Domain Setup
 
-The production domain `www.josemadrid.net` is configured in the Vercel Dashboard.
+The production domain `www.josemadridsalsa.com` is configured in the Vercel Dashboard.
 
 <Steps>
   <Step>
@@ -37,7 +37,7 @@ The production domain `www.josemadrid.net` is configured in the Vercel Dashboard
     | `CNAME` | `www` | `cname.vercel-dns.com` |
     | `A` | `@` | `76.76.21.21` |
 
-    The `A` record handles the apex domain (`josemadrid.net`), and the `CNAME` handles `www.josemadrid.net`.
+    The `A` record handles the apex domain (`josemadridsalsa.com`), and the `CNAME` handles `www.josemadridsalsa.com`.
   </Step>
   <Step>
     ### Wait for verification
@@ -69,16 +69,16 @@ if (!imageUrl.startsWith('https://')) {
 NextAuth is configured with the production URL:
 
 ```bash
-NEXTAUTH_URL="https://www.josemadrid.net"
+NEXTAUTH_URL="https://www.josemadridsalsa.com"
 ```
 
 For cross-subdomain session sharing (if needed), set:
 
 ```bash
-NEXTAUTH_COOKIE_DOMAIN=".josemadrid.net"
+NEXTAUTH_COOKIE_DOMAIN=".josemadridsalsa.com"
 ```
 
-This allows session cookies to be shared between `www.josemadrid.net` and any future subdomains.
+This allows session cookies to be shared between `www.josemadridsalsa.com` and any future subdomains.
 
 ## TLS Version
 
@@ -95,7 +95,7 @@ All certificates issued by Let's Encrypt are logged in public Certificate Transp
 **Cause:** DNS records are not pointing to Vercel, or DNS has not propagated.
 
 **Fix:**
-- Verify DNS records with `dig www.josemadrid.net`
+- Verify DNS records with `dig www.josemadridsalsa.com`
 - Wait up to 48 hours for DNS propagation (usually much faster)
 - Check the Vercel Dashboard for specific error messages
 

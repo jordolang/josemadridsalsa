@@ -1,5 +1,5 @@
 /**
- * The fundraising site is its own app (apps/fundraising) on its own host,
+ * The fundraising site is its own app (apps/fundraising) on its own host:
  * fundraising.josemadridsalsa.com. The main site links to it, and sends its old
  * fundraiser paths there, through this origin.
  */

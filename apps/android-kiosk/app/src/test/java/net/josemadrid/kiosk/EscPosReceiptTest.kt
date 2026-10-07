@@ -18,7 +18,7 @@ class EscPosReceiptTest {
         tax = "$0.00",
         total = "$25.00",
         payment = "Card · Square Terminal",
-        footer = listOf("¡Gracias!", "josemadrid.net"),
+        footer = listOf("¡Gracias!", "josemadridsalsa.com"),
     )
 
     @Test fun startsWithInitAndEndsWithCut() {

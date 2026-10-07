@@ -42,8 +42,8 @@ These guidelines bias toward caution over speed. For trivial tasks, use judgment
 
 **Jose Madrid Salsa** is the production e-commerce, fundraising, and business-management platform for a salsa company based in Zanesville, Ohio.
 
-- **Production storefront:** https://www.josemadrid.net
-- **Legacy store being migrated from:** BigCommerce at josemadridsalsa.com (feature-parity/cutover work is ongoing — see `apps/docs/content/docs/guides/ordering-system-comparison.mdx`).
+- **Production storefront:** https://www.josemadridsalsa.com
+- **BigCommerce:** the former store, now headless behind the new site, with checkout on shop.josemadridsalsa.com. `josemadrid.net` is kept for side apps only (feature-parity/cutover history — see `apps/docs/content/docs/guides/ordering-system-comparison.mdx`).
 
 It is a large, mature application: a public storefront, customer accounts, multi-provider checkout, a full fundraising platform (with a gamified "battle arena"), an email-marketing suite, social-commerce publishing, a QuickBooks-synced financials back office, and a role-based admin console — all in one primary Next.js app.
 

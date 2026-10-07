@@ -50,8 +50,8 @@ describe('markdownToPlainText', () => {
   })
 
   it('renders links as "text (url)"', () => {
-    expect(markdownToPlainText('Try our [salsa](https://josemadrid.net/shop).')).toBe(
-      'Try our salsa (https://josemadrid.net/shop).',
+    expect(markdownToPlainText('Try our [salsa](https://josemadridsalsa.com/shop).')).toBe(
+      'Try our salsa (https://josemadridsalsa.com/shop).',
     )
   })
 
@@ -168,7 +168,7 @@ describe('blogPostToSocialText', () => {
 })
 
 describe('buildTwitterText', () => {
-  const url = 'https://www.josemadrid.net/heat-index/y-bridge'
+  const url = 'https://www.josemadridsalsa.com/heat-index/y-bridge'
 
   it('includes title, excerpt, and link when within the limit', () => {
     const out = buildTwitterText({ title: 'Y-Bridge', excerpt: 'A tasting note.' }, url)
@@ -189,7 +189,7 @@ describe('buildTwitterText', () => {
 describe('blogPostUrl', () => {
   it('builds the canonical heat-index URL', () => {
     expect(blogPostUrl('y-bridge')).toBe(
-      `${process.env.NEXTAUTH_URL ?? 'https://www.josemadrid.net'}/heat-index/y-bridge`,
+      `${process.env.NEXTAUTH_URL ?? 'https://www.josemadridsalsa.com'}/heat-index/y-bridge`,
     )
   })
 })

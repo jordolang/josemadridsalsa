@@ -61,8 +61,7 @@ describe('email template images', () => {
   })
 
   it('builds absolute image URLs so email clients can resolve them', () => {
-    expect(jmsFooter).toContain('https://www.josemadrid.net/email-templates/')
-    expect(jmsFooter).not.toContain('josemadridsalsa.com/email-templates/')
+    expect(jmsFooter).toContain('https://www.josemadridsalsa.com/email-templates/')
   })
 })
 
@@ -84,22 +83,22 @@ describe('footer link layout', () => {
 describe('stored HTML repair', () => {
   it('rewrites dead filenames and the retired origin', () => {
     const stored = [
-      '<img src="https://www.josemadrid.net/email-templates/cart-reminder.png" />',
+      '<img src="https://www.josemadridsalsa.com/email-templates/cart-reminder.png" />',
       '<img src="https://www.josemadridsalsa.com/email-templates/order-confirmed.png" />',
       '<img src="https://josemadrid.net/images/logo.png" />',
     ].join('')
 
     expect(repairImageUrls(stored)).toBe(
       [
-        '<img src="https://www.josemadrid.net/email-templates/abandoned-cart.png" />',
-        '<img src="https://www.josemadrid.net/email-templates/order-confirmed.png" />',
-        '<img src="https://www.josemadrid.net/email-templates/Jose-Madrid-Profile.png" />',
+        '<img src="https://www.josemadridsalsa.com/email-templates/abandoned-cart.png" />',
+        '<img src="https://www.josemadridsalsa.com/email-templates/order-confirmed.png" />',
+        '<img src="https://www.josemadridsalsa.com/email-templates/Jose-Madrid-Profile.png" />',
       ].join('')
     )
   })
 
   it('leaves already-correct HTML untouched', () => {
-    const stored = '<img src="https://www.josemadrid.net/email-templates/abandoned-cart.png" />'
+    const stored = '<img src="https://www.josemadridsalsa.com/email-templates/abandoned-cart.png" />'
     expect(repairImageUrls(stored)).toBe(stored)
   })
 })
@@ -168,7 +167,7 @@ describe('stored footer repair', () => {
 
   it('repairEmailHtml fixes images and the footer together', () => {
     const out = repairEmailHtml(
-      `<img src="https://www.josemadrid.net/email-templates/cart-reminder.png" />${legacyFooter}`
+      `<img src="https://www.josemadridsalsa.com/email-templates/cart-reminder.png" />${legacyFooter}`
     )
     expect(out).toContain('email-templates/abandoned-cart.png')
     expect(out).toContain('white-space: nowrap')

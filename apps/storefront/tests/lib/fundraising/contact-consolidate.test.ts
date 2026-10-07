@@ -44,7 +44,7 @@ describe('normalizeEmail', () => {
 
   it("drops Jose Madrid's own addresses, which appear on blank templates", () => {
     expect(normalizeEmail('mike@josemadridsalsa.com')).toBeNull()
-    expect(normalizeEmail('orders@josemadrid.net')).toBeNull()
+    expect(normalizeEmail('orders@josemadridsalsa.com')).toBeNull()
   })
 })
 

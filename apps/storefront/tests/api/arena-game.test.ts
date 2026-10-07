@@ -23,7 +23,7 @@ const authorize = await import('@/app/api/arena/auth/authorize/route')
 const me = await import('@/app/api/arena/me/route')
 const { ArenaGameError } = await import('@/lib/arena-game/http')
 
-const SITE = 'https://www.josemadrid.net'
+const SITE = 'https://www.josemadridsalsa.com'
 const GAME = 'https://battle-arena-3d-mauve.vercel.app'
 
 function connect(fields: Record<string, string>, origin = SITE) {

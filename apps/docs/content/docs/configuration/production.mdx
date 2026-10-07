@@ -19,7 +19,7 @@ These must be set in Vercel > Settings > Environment Variables for the Productio
 | `DATABASE_URL` | Neon pooled connection string |
 | `DATABASE_URL_UNPOOLED` | Neon direct connection string |
 | `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | `https://www.josemadrid.net` |
+| `NEXTAUTH_URL` | `https://www.josemadridsalsa.com` |
 | `MASTER_KEY` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `ENCRYPTION_KEY` | `node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"` |
 
@@ -80,7 +80,7 @@ All required variables should be set in Vercel for the Production environment. D
 
 Ensure the production webhook endpoint is configured in Stripe:
 
-- **URL**: `https://www.josemadrid.net/api/webhooks/stripe`
+- **URL**: `https://www.josemadridsalsa.com/api/webhooks/stripe`
 - **Events**: `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`
 
 ### Verify Email Sender Domain
@@ -91,10 +91,10 @@ Ensure your sending domain is verified in Resend with proper DNS records (SPF, D
 
 Update all OAuth providers with production callback URLs:
 
-- Google: `https://www.josemadrid.net/api/auth/callback/google`
-- GitHub: `https://www.josemadrid.net/api/auth/callback/github`
-- Facebook: `https://www.josemadrid.net/api/auth/callback/facebook`
-- Apple: `https://www.josemadrid.net/api/auth/callback/apple`
+- Google: `https://www.josemadridsalsa.com/api/auth/callback/google`
+- GitHub: `https://www.josemadridsalsa.com/api/auth/callback/github`
+- Facebook: `https://www.josemadridsalsa.com/api/auth/callback/facebook`
+- Apple: `https://www.josemadridsalsa.com/api/auth/callback/apple`
 
 ### Deploy
 
@@ -154,6 +154,6 @@ debug: process.env.NODE_ENV === 'development',
 
 Configure your custom domain in Vercel:
 
-1. Add `josemadrid.net` and `www.josemadrid.net` in Vercel > Domains
+1. Add `josemadridsalsa.com` and `www.josemadridsalsa.com` in Vercel > Domains
 2. Update DNS records to point to Vercel
 3. Enable automatic HTTPS (Vercel handles TLS certificates)

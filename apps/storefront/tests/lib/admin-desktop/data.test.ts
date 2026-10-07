@@ -1049,7 +1049,7 @@ describe('users', () => {
       {
         id: 'u1',
         name: 'Mike Madrid',
-        email: 'mike@josemadrid.net',
+        email: 'mike@josemadridsalsa.com',
         role: 'DEVELOPER',
         isEmailVerified: true,
         twoFactorEnabledAt: new Date('2026-03-01T12:00:00Z'),
@@ -1059,7 +1059,7 @@ describe('users', () => {
       {
         id: 'u2',
         name: 'Casey Lin',
-        email: 'casey@josemadrid.net',
+        email: 'casey@josemadridsalsa.com',
         role: 'STAFF',
         isEmailVerified: false,
         twoFactorEnabledAt: null,
@@ -1099,7 +1099,7 @@ describe('content', () => {
         tags: ['kitchen'],
         coverImage: null,
         updatedAt: new Date('2026-09-13T12:00:00Z'),
-        author: { name: 'Mike', email: 'mike@josemadrid.net' },
+        author: { name: 'Mike', email: 'mike@josemadridsalsa.com' },
         category: { name: 'Kitchen' },
         series: null,
         crosspost: null,

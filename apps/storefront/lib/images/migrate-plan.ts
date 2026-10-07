@@ -70,7 +70,7 @@ export function planFile(image: LocalImage, convert: boolean): MigrationEntry {
  * Build the lookup used to rewrite every reference.
  *
  * Keyed by the local reference exactly as it is written. Both the root-relative form
- * (`/images/x.png`) and the absolute form (`https://www.josemadrid.net/images/x.png`) map to the
+ * (`/images/x.png`) and the absolute form (`https://www.josemadridsalsa.com/images/x.png`) map to the
  * same blob URL, because the codebase uses both — metadata and email templates need absolute URLs.
  */
 export function buildRewriteMap(
@@ -120,7 +120,7 @@ const TRAILING_BOUNDARY = String.raw`(?=["'\`)\s,;>}]|$)`
 /**
  * Replace every known image reference in a blob of text.
  *
- * Longest key first: `https://www.josemadrid.net/images/x.png` contains `/images/x.png`, so
+ * Longest key first: `https://www.josemadridsalsa.com/images/x.png` contains `/images/x.png`, so
  * rewriting the short form first would corrupt the absolute one into a mangled hybrid.
  *
  * Matching is on exact, whole references only — a path is required to end at a quote, whitespace,
