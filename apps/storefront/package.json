@@ -52,6 +52,7 @@
     "pre-commit": "lint-staged && npm run security:protect",
     "prebuild": "node scripts/sync-findus.cjs",
     "products:ensure-category": "tsx scripts/ensure-salsa-category.ts",
+    "products:salsa-categories": "tsx scripts/apply-salsa-categories.ts",
     "products:test-import": "tsx scripts/test-csv-import.ts",
     "products:transform": "tsx scripts/transform-products-csv.ts",
     "security:baseline": "gitleaks detect --source . --verbose --report-format json --report-path gitleaks-report.json",

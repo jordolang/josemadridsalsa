@@ -37,7 +37,7 @@
     "vercel-build": "npm run vercel-build --workspace=@jose-madrid/storefront",
     "security:scan": "npm run security:scan --workspace=@jose-madrid/storefront",
     "security:protect": "npm run security:protect --workspace=@jose-madrid/storefront",
-    "prepare": "husky install"
+    "prepare": "husky install || true"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "5.0.1",

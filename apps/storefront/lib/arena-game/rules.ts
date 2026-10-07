@@ -127,10 +127,22 @@ export function returnUrlWithToken(returnTo: string, token: string, state: strin
 
 export const StateSchema = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/)
 
-export const MATCH_MODES = ['CPU', 'ONLINE', 'TOURNAMENT'] as const
+export const MATCH_MODES = ['CPU', 'ONLINE', 'TOURNAMENT', 'RANKED'] as const
 
+/**
+ * Game modes this site does not track on their own count as the nearest one it does: the
+ * arcade ladder is against the CPU, other online formats are online matches.
+ */
+const MODE_ALIASES: Record<string, (typeof MATCH_MODES)[number]> = { ARCADE: 'CPU', HILL: 'ONLINE', TEAMS2V2: 'ONLINE' }
+const modeField = <T extends readonly [string, ...string[]]>(modes: T) =>
+  z.preprocess((v) => (typeof v === 'string' && MODE_ALIASES[v] ? MODE_ALIASES[v] : v), z.enum(modes))
+
+/**
+ * A browser reports its own result only against the CPU. Results against other people come
+ * from the match's host (`HostedMatchSchema`), so no player can post a win for themselves.
+ */
 export const StartMatchSchema = z.object({
-  mode: z.enum(MATCH_MODES),
+  mode: modeField(MATCH_MODES).refine((m) => m === 'CPU', 'Online results are sent by the host now. Reload the game to get the latest version.'),
   fighter: z
     .string()
     .regex(/^[a-z0-9-]{1,32}$/)
@@ -153,6 +165,81 @@ export const FinishMatchSchema = z.object({
 })
 
 export type FinishMatchInput = z.infer<typeof FinishMatchSchema>
+
+const FighterId = z.string().regex(/^[a-z0-9-]{1,32}$/)
+const Seat = z.number().int().min(0).max(MAX_OPPONENTS)
+
+/** The host opens a match when its first round starts, naming the seats people play. */
+export const HostedMatchSchema = z
+  .object({
+    mode: modeField(['ONLINE', 'TOURNAMENT', 'RANKED'] as const),
+    room: z
+      .string()
+      .regex(/^[A-Z0-9-]{1,24}$/)
+      .optional(),
+    fighters: z.number().int().min(2).max(MAX_OPPONENTS + 1),
+    seats: z.array(Seat).min(1).max(MAX_OPPONENTS + 1),
+    /** The host's own seat, or -1 when the host only runs the match (a tournament admin). */
+    hostSeat: z.number().int().min(-1).max(MAX_OPPONENTS),
+    fighter: FighterId.nullish(),
+    seatFighters: z.array(FighterId).max(MAX_OPPONENTS + 1).optional(),
+  })
+  .refine((m) => new Set(m.seats).size === m.seats.length && m.seats.every((s) => s < m.fighters), 'Those seats do not fit the match.')
+  .refine((m) => m.hostSeat === -1 || m.seats.includes(m.hostSeat), 'The host seat must be one of the seats.')
+
+export type HostedMatchInput = z.infer<typeof HostedMatchSchema>
+
+/** A player claims their seat with the ticket the host handed them. */
+export const JoinHostedMatchSchema = z.object({
+  ticket: z.string().regex(/^[A-Za-z0-9_-]{20,64}$/, 'That seat ticket is not valid.'),
+  fighter: FighterId.nullish(),
+})
+
+/** The host's report: every player seat's result, once. */
+export const HostedReportSchema = z.object({
+  rounds: z.number().int().min(1).max(MAX_ROUNDS),
+  winnerSeat: z.number().int().min(-1).max(MAX_OPPONENTS),
+  winnerTeam: z.number().int().min(0).max(MAX_OPPONENTS).nullish(),
+  results: z
+    .array(FinishMatchSchema.extend({ seat: Seat, fighter: FighterId.nullish() }))
+    .min(1)
+    .max(MAX_OPPONENTS + 1),
+})
+
+export type HostedReportInput = z.infer<typeof HostedReportSchema>
+
+/** A seat ticket: long and random, like a sign-in token, and stored hashed the same way. */
+export function newSeatTicket(): string {
+  return randomBytes(24).toString('base64url')
+}
+
+/** Why a host's report cannot be real, or null when it can. */
+export function implausibleReport(input: HostedReportInput, match: { fighters: number; startedAt: Date }, now = new Date()): string | null {
+  const seats = input.results.map((r) => r.seat)
+  if (new Set(seats).size !== seats.length) return 'A seat is reported twice.'
+  const winners = input.results.filter((r) => r.won).length
+  if (input.winnerTeam == null && winners > 1) return 'Only one fighter can win a free-for-all.'
+  for (const r of input.results) {
+    if (r.rounds > input.rounds) return 'More rounds than the match had.'
+    // In a team match a fighter whose team won may not have taken a round themselves.
+    const own = input.winnerTeam == null ? r : { ...r, won: false }
+    const problem = implausibleResult(own, { opponents: match.fighters - 1, startedAt: match.startedAt }, now)
+    if (problem) return problem
+  }
+  return null
+}
+
+/** Ranked ratings: Elo, everyone starts at 1000, K = 32. The first games are provisional. */
+export const RATING_START = 1000
+export const RATING_K = 32
+export const PROVISIONAL_GAMES = 10
+
+/** Rating changes for a 1v1 where `winner` beat `loser`: [winner's gain, loser's loss (negative)]. */
+export function eloDeltas(winner: number, loser: number, k = RATING_K): [number, number] {
+  const expected = 1 / (1 + 10 ** ((loser - winner) / 400))
+  const gain = Math.max(1, Math.round(k * (1 - expected)))
+  return [gain, -gain]
+}
 
 /**
  * Why a reported result cannot be real, or null when it can. The game is peer to peer, so
@@ -185,16 +272,19 @@ export function periodStart(period: LeaderboardPeriod, now = new Date()): Date |
 }
 
 export const LeaderboardQuerySchema = z.object({
-  board: z.enum(['players', 'teams']).default('players'),
+  board: z.enum(['players', 'teams', 'rating']).default('players'),
   period: z.enum(['week', 'month', 'all']).default('week'),
-  mode: z.enum(['all', 'cpu', 'online', 'tournament', 'versus']).default('all'),
+  mode: z.enum(['all', 'cpu', 'online', 'tournament', 'ranked', 'versus']).default('all'),
   teamId: z.string().min(1).max(64).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
 })
 
 export type LeaderboardQuery = z.infer<typeof LeaderboardQuerySchema>
 
-/** The match modes a board filter covers. `versus` is every match against other people. */
+/**
+ * The match modes a board filter covers. Boards rank host-reported matches against other
+ * people; `all` and `versus` are the same set. `cpu` is the one board of self-reported matches.
+ */
 export function modesFor(mode: LeaderboardQuery['mode']): (typeof MATCH_MODES)[number][] {
   switch (mode) {
     case 'cpu':
@@ -203,9 +293,9 @@ export function modesFor(mode: LeaderboardQuery['mode']): (typeof MATCH_MODES)[n
       return ['ONLINE']
     case 'tournament':
       return ['TOURNAMENT']
-    case 'versus':
-      return ['ONLINE', 'TOURNAMENT']
+    case 'ranked':
+      return ['RANKED']
     default:
-      return [...MATCH_MODES]
+      return ['ONLINE', 'TOURNAMENT', 'RANKED']
   }
 }
