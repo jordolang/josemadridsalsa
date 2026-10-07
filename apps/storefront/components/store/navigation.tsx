@@ -42,7 +42,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
 import { CartIcon } from "@/components/store/cart-icon";
-import { LiveNavLink, LiveNavMobileLink } from "@/components/store/live-nav-link";
+import { BattleLiveNavLink, BattleLiveNavMobileLink } from "@/components/store/battle-live-nav-link";
 import { SITE_URL } from '@/lib/site-url'
 
 interface NavSubItem {
@@ -407,8 +407,8 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                     />
                   </button>
                 </div>
-                {/* Live tab sits immediately after Shop */}
-                {group.id === "shop" && <LiveNavLink isHome={isHome} />}
+                {/* Battle Live tab sits immediately after Shop */}
+                {group.id === "shop" && <BattleLiveNavLink isHome={isHome} />}
                 </Fragment>
               );
             })}
@@ -650,7 +650,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                         </div>
                       </div>
                       {group.id === "shop" && (
-                        <LiveNavMobileLink onNavigate={() => setIsMobileMenuOpen(false)} />
+                        <BattleLiveNavMobileLink onNavigate={() => setIsMobileMenuOpen(false)} />
                       )}
                       </Fragment>
                     ))}

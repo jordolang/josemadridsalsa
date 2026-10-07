@@ -25,8 +25,17 @@ file, `apps/fundraising/public/battle-arena/index.html`, with its link-preview i
 
 To update the game, build it in the `battle-arena-3d` repository (its root `index.html` is the
 build), then from `apps/fundraising` run `node scripts/sync-battle-arena.mjs <path to that checkout>`,
-which copies the page and image and points the page's preview tags at this site. The game also
-stays published at `https://battle-arena-3d-mauve.vercel.app`.
+which copies the page and image and points the page's preview tags at this site. The game's own
+deployment (the `battle-arena-3d` Vercel project) is published at `https://battle.josemadridsalsa.com`,
+which the storefront's **Battle Live** nav tab and homepage **Battle Arena** section link to, and
+still answers at `https://battle-arena-3d-mauve.vercel.app`.
+
+## Battle Live
+
+The masthead's **Battle Live** tab (next to Shop, and in the mobile menu) opens the game. Its dot
+blinks green while anyone is playing: it polls `GET /api/arena/live` every 30 seconds, which counts
+players whose game checked in (`POST /api/arena/friends/presence`, about every 30 seconds while the
+game is open and signed in) within the last 90 seconds. The homepage section shows the same count.
 
 ## Signing in
 
@@ -38,7 +47,7 @@ stays published at `https://battle-arena-3d-mauve.vercel.app`.
    server log; the game checks `state` against the one it sent.
 
 Tokens only go to listed game origins: the fundraising site (`NEXT_PUBLIC_FUNDRAISING_SITE_URL`), the
-game's own deployment, plus any in `ARENA_GAME_ORIGINS`. Plain
+game's own deployment (`battle.josemadridsalsa.com` and its Vercel URL), plus any in `ARENA_GAME_ORIGINS`. Plain
 `http://localhost` is accepted outside production for developing the game. The game keeps the token
 for 90 days (`ArenaPlayerSession`, SHA-256 only) and sends it as `Authorization: Bearer <token>`.
 
@@ -74,6 +83,7 @@ All routes live in `apps/storefront/app/api/arena` and the logic in `apps/storef
 | `POST /api/arena/matches/[id]` | Game token | `{ won, roundsWon, rounds, knockouts, damage }` close it |
 | `GET /api/arena/leaderboard` | Public | `board=players\|teams`, `period=week\|month\|all`, `mode=all\|versus\|cpu\|online\|tournament`, `teamId`, `limit` |
 | `GET /api/arena/players/[handle]` | Public | A fighter's public profile |
+| `GET /api/arena/live` | Public | `{ playing }`: players with the game open right now |
 
 Signed-in routes answer cross-origin only to the listed game origins; the public ones to anyone.
 Errors are `{ error, code? }`, where `code: "signed_out"` tells the game to sign in again. Weeks
