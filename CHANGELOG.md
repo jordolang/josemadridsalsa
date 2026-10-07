@@ -200,6 +200,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Fundraising deployments get past `npm install` again.** The root `prepare` script ran
+  `husky install`, which exits 127 on Vercel where husky isn't available, failing every
+  `josemadridsalsa-fundraising` build before it started. It now skips hook setup when husky is
+  missing.
 - **Run report looked like it did nothing.** On `/admin/data/new` the result (or error) renders below
   the builder, off-screen, so a successful run showed no visible change. The page now scrolls to it.
 - **Fundraiser app iOS build failed in "[CP] Embed Pods Frameworks"** with `lipo: open() failed,
