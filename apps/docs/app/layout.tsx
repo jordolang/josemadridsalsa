@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     siteName: 'Jose Madrid Salsa Docs',
     images: [
       {
-        url: 'https://www.josemadrid.net/images/Opengraph/josemadrid-hero.png',
+        url: 'https://www.josemadridsalsa.com/images/Opengraph/josemadrid-hero.png',
         width: 1200,
         height: 630,
         alt: 'Jose Madrid Salsa',

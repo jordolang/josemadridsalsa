@@ -5,9 +5,11 @@
  * Stored HTML — seeded templates, saved template versions, lead campaign bodies —
  * is a snapshot, so correcting a template file does not correct rows already
  * written. Two faults are repaired: filenames that never existed in
- * public/email-templates, and the retired josemadridsalsa.com origin, which
- * serves 404 for the whole /email-templates path. Both render as a broken-image
- * placeholder in the recipient's inbox.
+ * public/email-templates, and image origins written while josemadridsalsa.com
+ * still ran the old BigCommerce store (which served 404 for /email-templates).
+ * Both render as a broken-image placeholder in the recipient's inbox. Now that
+ * josemadridsalsa.com serves this site those origins resolve again, and rewriting
+ * them to the configured base is harmless.
  */
 
 import { getImageBaseUrl, jmsFooter } from '@/lib/email/shared/components'

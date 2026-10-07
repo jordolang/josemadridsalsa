@@ -81,7 +81,7 @@ function renderShell(visibleSections?: DesktopSectionId[]) {
     <DesktopShell
       initialSection={payload}
       badges={{ orders: 6 }}
-      operator={{ name: 'Mike Madrid', email: 'mike@josemadrid.net' }}
+      operator={{ name: 'Mike Madrid', email: 'mike@josemadridsalsa.com' }}
       visibleSections={visibleSections}
     />,
   )
@@ -93,7 +93,7 @@ function renderAt(initial: SectionPayload) {
     <DesktopShell
       initialSection={initial}
       badges={{}}
-      operator={{ name: 'Mike Madrid', email: 'mike@josemadrid.net' }}
+      operator={{ name: 'Mike Madrid', email: 'mike@josemadridsalsa.com' }}
     />,
   )
 }

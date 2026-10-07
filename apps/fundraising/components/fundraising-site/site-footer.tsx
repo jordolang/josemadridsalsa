@@ -33,7 +33,7 @@ export function FundraisingSiteFooter() {
             ))}
             <li>
               <a href={RETAIL_SITE_URL} className="text-muted-foreground hover:text-foreground">
-                Retail store at josemadrid.net
+                Retail store at josemadridsalsa.com
               </a>
             </li>
           </ul>

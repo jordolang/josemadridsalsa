@@ -7,16 +7,16 @@ import { joinImageUrl } from '../../../../fundraiser-app/src/lib/image-url'
 import { mayHaveSaved } from '../../../../fundraiser-app/src/lib/save-outcome'
 
 describe('joinImageUrl', () => {
-  const base = 'https://www.josemadrid.net'
+  const base = 'https://www.josemadridsalsa.com'
 
   it('prefixes a site path with the storefront address', () => {
     expect(joinImageUrl(base, '/images/new-products/mild.png')).toBe(
-      'https://www.josemadrid.net/images/new-products/mild.png'
+      'https://www.josemadridsalsa.com/images/new-products/mild.png'
     )
   })
 
   it('adds the slash a relative path is missing', () => {
-    expect(joinImageUrl(base, 'images/mild.png')).toBe('https://www.josemadrid.net/images/mild.png')
+    expect(joinImageUrl(base, 'images/mild.png')).toBe('https://www.josemadridsalsa.com/images/mild.png')
   })
 
   it('leaves an absolute URL alone', () => {

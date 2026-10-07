@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { GET } from '@/app/battle-arena/share/route'
 
-const ORIGIN = 'https://fundraising.josemadrid.net'
+const ORIGIN = 'https://fundraising.josemadridsalsa.com'
 
 async function share(query: string) {
   const res = GET(new Request(`${ORIGIN}/battle-arena/share?${query}`))

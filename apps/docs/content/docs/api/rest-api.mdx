@@ -9,7 +9,7 @@ Complete REST API documentation for Jose Madrid Salsa's e-commerce platform. Thi
 
 ## Overview
 
-**Base URL:** `https://josemadrid.net/api` (Production) or `http://localhost:3000/api` (Development)
+**Base URL:** `https://josemadridsalsa.com/api` (Production) or `http://localhost:3000/api` (Development)
 
 **Content Type:** `application/json`
 
@@ -132,7 +132,7 @@ Retrieve the authenticated user's shopping cart with all items and totals.
 
 **Example Request:**
 ```bash
-curl -X GET https://josemadrid.net/api/cart \
+curl -X GET https://josemadridsalsa.com/api/cart \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json"
 ```
@@ -183,7 +183,7 @@ Add a product to the authenticated user's cart. If the product already exists in
 
 **Example Request:**
 ```bash
-curl -X POST https://josemadrid.net/api/cart \
+curl -X POST https://josemadridsalsa.com/api/cart \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -240,7 +240,7 @@ Update the quantity of an existing cart item.
 
 **Example Request:**
 ```bash
-curl -X PUT https://josemadrid.net/api/cart/cm5cart789ghi \
+curl -X PUT https://josemadridsalsa.com/api/cart/cm5cart789ghi \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -275,7 +275,7 @@ Remove an item from the authenticated user's cart.
 
 **Example Request:**
 ```bash
-curl -X DELETE https://josemadrid.net/api/cart/cm5cart789ghi \
+curl -X DELETE https://josemadridsalsa.com/api/cart/cm5cart789ghi \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json"
 ```
@@ -356,7 +356,7 @@ Create a new order from cart items. This endpoint:
 
 **Example Request:**
 ```bash
-curl -X POST https://josemadrid.net/api/orders \
+curl -X POST https://josemadridsalsa.com/api/orders \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -435,12 +435,12 @@ Retrieve a paginated list of orders for the authenticated user with optional fil
 **Example Request:**
 ```bash
 # Get all orders
-curl -X GET https://josemadrid.net/api/orders \
+curl -X GET https://josemadridsalsa.com/api/orders \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json"
 
 # Get paid orders with pagination
-curl -X GET "https://josemadrid.net/api/orders?paymentStatus=PAID&skip=0&take=10" \
+curl -X GET "https://josemadridsalsa.com/api/orders?paymentStatus=PAID&skip=0&take=10" \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json"
 ```
@@ -504,7 +504,7 @@ Retrieve detailed information about a specific order.
 
 **Example Request:**
 ```bash
-curl -X GET https://josemadrid.net/api/orders/cm5order789ghi \
+curl -X GET https://josemadridsalsa.com/api/orders/cm5order789ghi \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json"
 ```
@@ -574,7 +574,7 @@ Process payment for an existing order using Stripe. This endpoint:
 
 **Example Request:**
 ```bash
-curl -X POST https://josemadrid.net/api/payment \
+curl -X POST https://josemadridsalsa.com/api/payment \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -606,7 +606,7 @@ This example demonstrates a complete purchase flow from adding items to cart thr
 
 ```bash
 # Add first product
-curl -X POST https://josemadrid.net/api/cart \
+curl -X POST https://josemadridsalsa.com/api/cart \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -615,7 +615,7 @@ curl -X POST https://josemadrid.net/api/cart \
   }'
 
 # Add second product
-curl -X POST https://josemadrid.net/api/cart \
+curl -X POST https://josemadridsalsa.com/api/cart \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -627,7 +627,7 @@ curl -X POST https://josemadrid.net/api/cart \
 ### Step 2: Review Cart
 
 ```bash
-curl -X GET https://josemadrid.net/api/cart \
+curl -X GET https://josemadridsalsa.com/api/cart \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json"
 ```
@@ -635,7 +635,7 @@ curl -X GET https://josemadrid.net/api/cart \
 ### Step 3: Create Order
 
 ```bash
-curl -X POST https://josemadrid.net/api/orders \
+curl -X POST https://josemadridsalsa.com/api/orders \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -663,7 +663,7 @@ curl -X POST https://josemadrid.net/api/orders \
 ### Step 4: Process Payment
 
 ```bash
-curl -X POST https://josemadrid.net/api/payment \
+curl -X POST https://josemadridsalsa.com/api/payment \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -693,7 +693,7 @@ curl -X POST https://josemadrid.net/api/payment \
 ### Step 5: Get Order Details
 
 ```bash
-curl -X GET https://josemadrid.net/api/orders/cm5order789 \
+curl -X GET https://josemadridsalsa.com/api/orders/cm5order789 \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json"
 ```
@@ -706,17 +706,17 @@ Managing cart items:
 
 ```bash
 # Get current cart
-curl -X GET https://josemadrid.net/api/cart \
+curl -X GET https://josemadridsalsa.com/api/cart \
   -H "Cookie: next-auth.session-token=..."
 
 # Update quantity
-curl -X PUT https://josemadrid.net/api/cart/cm5cart123 \
+curl -X PUT https://josemadridsalsa.com/api/cart/cm5cart123 \
   -H "Cookie: next-auth.session-token=..." \
   -H "Content-Type: application/json" \
   -d '{"quantity": 5}'
 
 # Remove item
-curl -X DELETE https://josemadrid.net/api/cart/cm5cart456 \
+curl -X DELETE https://josemadridsalsa.com/api/cart/cm5cart456 \
   -H "Cookie: next-auth.session-token=..."
 ```
 
@@ -728,15 +728,15 @@ Retrieving order history with filtering:
 
 ```bash
 # Get all orders (most recent first)
-curl -X GET https://josemadrid.net/api/orders \
+curl -X GET https://josemadridsalsa.com/api/orders \
   -H "Cookie: next-auth.session-token=..."
 
 # Get only paid orders
-curl -X GET "https://josemadrid.net/api/orders?paymentStatus=PAID" \
+curl -X GET "https://josemadridsalsa.com/api/orders?paymentStatus=PAID" \
   -H "Cookie: next-auth.session-token=..."
 
 # Get pending orders with pagination
-curl -X GET "https://josemadrid.net/api/orders?status=PENDING&skip=0&take=10&sortOrder=asc" \
+curl -X GET "https://josemadridsalsa.com/api/orders?status=PENDING&skip=0&take=10&sortOrder=asc" \
   -H "Cookie: next-auth.session-token=..."
 ```
 
@@ -785,6 +785,6 @@ curl -X GET "https://josemadrid.net/api/orders?status=PENDING&skip=0&take=10&sor
 ## Support
 
 For API support or questions:
-- **Email:** support@josemadrid.net
-- **Documentation:** https://josemadrid.net/docs
+- **Email:** support@josemadridsalsa.com
+- **Documentation:** https://josemadridsalsa.com/docs
 - **Status Page:** https://status.josemadrid.net

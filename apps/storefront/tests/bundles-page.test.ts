@@ -27,7 +27,7 @@ describe('Bundles Page', () => {
 
       const ogImages = metadata.openGraph?.images as Array<{ url: string }>
       expect(ogImages?.[0]?.url).toBe(
-        'https://www.josemadrid.net/images/opengraph/josemadridhome.png'
+        'https://www.josemadridsalsa.com/images/opengraph/josemadridhome.png'
       )
     })
   })

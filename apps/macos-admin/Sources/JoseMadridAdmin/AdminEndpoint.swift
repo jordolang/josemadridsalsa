@@ -11,7 +11,7 @@ enum AdminEndpoint {
   /// route group supplies a sidebar and top bar this window draws itself.
   static let desktopPath = "/admin-desktop"
 
-  static let production = URL(string: "https://www.josemadrid.net\(desktopPath)")!
+  static let production = URL(string: "https://www.josemadridsalsa.com\(desktopPath)")!
 
   /// What the default used to be, before the desktop shell existed.
   ///
@@ -19,7 +19,7 @@ enum AdminEndpoint {
   /// `@AppStorage` and would never see the new one. `migratingLegacyDefault`
   /// moves exactly that value forward and leaves anything else — a localhost
   /// server, a hand-picked admin page — alone.
-  private static let legacyProduction = "https://www.josemadrid.net/admin"
+  private static let legacyProduction = "https://www.josemadridsalsa.com/admin"
 
   static func migratingLegacyDefault(_ endpoint: String) -> String {
     endpoint == legacyProduction ? production.absoluteString : endpoint

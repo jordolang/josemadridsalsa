@@ -9,7 +9,7 @@ import Foundation
 /// repository is private and its release assets answer 404 to an app with no
 /// GitHub session.
 enum UpdateFeed {
-  static let base = URL(string: "https://www.josemadrid.net/api/desktop/updates/")!
+  static let base = URL(string: "https://www.josemadridsalsa.com/api/desktop/updates/")!
 
   static var manifest: URL { base.appendingPathComponent("latest.yml") }
 

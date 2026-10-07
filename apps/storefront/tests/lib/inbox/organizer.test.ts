@@ -20,10 +20,10 @@ const base = { fromName: null, bulk: false }
 
 describe('classifyMail', () => {
   it.each([
-    [{ fromEmail: 'orders@josemadrid.net', subject: 'New Order #1042 - Jane Doe' }, 'Orders'],
-    [{ fromEmail: 'noreply@josemadrid.net', subject: 'New Fundraiser Signup: Granville Band' }, 'Fundraisers'],
-    [{ fromEmail: 'noreply@josemadrid.net', subject: 'FINAL fundraiser order: Granville — 120 jars' }, 'Fundraisers'],
-    [{ fromEmail: 'noreply@josemadrid.net', subject: 'Contact form submission from Pat' }, 'Contact'],
+    [{ fromEmail: 'orders@josemadridsalsa.com', subject: 'New Order #1042 - Jane Doe' }, 'Orders'],
+    [{ fromEmail: 'noreply@josemadridsalsa.com', subject: 'New Fundraiser Signup: Granville Band' }, 'Fundraisers'],
+    [{ fromEmail: 'noreply@josemadridsalsa.com', subject: 'FINAL fundraiser order: Granville — 120 jars' }, 'Fundraisers'],
+    [{ fromEmail: 'noreply@josemadridsalsa.com', subject: 'Contact form submission from Pat' }, 'Contact'],
     [{ fromEmail: 'buyer@grocer.com', subject: 'Wholesale pricing for our 3 stores' }, 'Wholesale'],
     [{ fromEmail: 'mcinfo@ups.com', subject: 'UPS Update: Package Scheduled for Delivery' }, 'Shipping'],
     [{ fromEmail: 'quickbooks@notification.intuit.com', subject: 'Your bill is ready' }, 'Finance'],
@@ -66,7 +66,7 @@ describe('organizeInbox', () => {
     ...extra,
   ]
   const threads: Record<string, unknown> = {
-    t1: { id: 't1', messages: [{ id: 'm1', labelIds: ['INBOX'], internalDate: old, payload: { headers: headers('orders@josemadrid.net', 'New Order #1') } }] },
+    t1: { id: 't1', messages: [{ id: 'm1', labelIds: ['INBOX'], internalDate: old, payload: { headers: headers('orders@josemadridsalsa.com', 'New Order #1') } }] },
     t2: { id: 't2', messages: [{ id: 'm2', labelIds: ['INBOX', 'STARRED'], internalDate: old, payload: { headers: headers('notifications@vercel.com', 'Deploy failed') } }] },
     t3: { id: 't3', messages: [{ id: 'm3', labelIds: ['INBOX'], internalDate: recent, payload: { headers: headers('Pat <pat@gmail.com>', 'Where is my order?') } }] },
     t4: { id: 't4', messages: [{ id: 'm4', labelIds: ['INBOX'], internalDate: old, payload: { headers: headers('aunt@gmail.com', 'Dinner') } }] },

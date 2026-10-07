@@ -1,19 +1,19 @@
 ---
 title: Fundraising Site
-description: fundraising.josemadrid.net — the replacement for josemadridsalsafundraising.com, served by its own app (apps/fundraising) and checking out through the BigCommerce fundraising store.
+description: fundraising.josemadridsalsa.com — the replacement for josemadridsalsafundraising.com, served by its own app (apps/fundraising) and checking out through the BigCommerce fundraising store.
 ---
 
 # Fundraising Site
 
 The fundraising site is the public home for groups raising money with salsa and for
 the people buying to support them. It replaces the old BigCommerce Stencil site at
-josemadridsalsafundraising.com with pages in the josemadrid.net design, while
+josemadridsalsafundraising.com with pages in the josemadridsalsa.com design, while
 **BigCommerce's fundraising store stays the system of record** for the catalog,
 checkout, payment and orders.
 
 | | |
 |---|---|
-| Live host | `fundraising.josemadrid.net` |
+| Live host | `fundraising.josemadridsalsa.com` |
 | Later host | `fundraising.josemadridsalsa.com` (add the domain to the fundraising Vercel project when ready) |
 | Code | `apps/fundraising/` — site pages in `app/(site)/`, plus `components/fundraising-site/`, `lib/fundraising-site/` |
 | Checkout | BigCommerce fundraising store (`BIGCOMMERCE_FUNDRAISING_*`), hosted checkout on josemadridsalsafundraising.com |
@@ -98,9 +98,8 @@ estimate; BigCommerce charges the real total.
 
 1. Add the domain to the fundraising Vercel project (Settings › Domains); see the
    [cutover runbook](/docs/deployment/bigcommerce-cutover#fundraising-app) for setting that project up.
-   `fundraising.josemadrid.net` needs no DNS change — josemadrid.net's DNS is
-   already on Vercel. `fundraising.josemadridsalsa.com` needs a CNAME to
-   `cname.vercel-dns.com` in that domain's DNS.
+   `fundraising.josemadridsalsa.com` needs a CNAME to `cname.vercel-dns.com` in that
+   domain's DNS (already in place).
 2. Make sure `BIGCOMMERCE_FUNDRAISING_STORE_HASH`, `_ACCESS_TOKEN`, `_CLIENT_ID`
    and `_CLIENT_SECRET` are set in Vercel production.
 3. When the canonical host changes, set `NEXT_PUBLIC_FUNDRAISING_SITE_URL` to it

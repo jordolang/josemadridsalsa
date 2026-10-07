@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { withSentryConfig } from '@sentry/nextjs'
 import { bigCommerceRedirects } from './bigcommerce-redirects.mjs'
+import { domainRedirects } from './domain-redirects.mjs'
 import {
   sharedHeaders,
   sharedImages,
@@ -32,6 +33,8 @@ const nextConfig = {
     return `build-${Date.now()}`
   },
   redirects: async () => [
+    // josemadrid.net and the bare domain land on www.josemadridsalsa.com
+    ...domainRedirects(),
     // Permanent redirect from the old La Perla page URL
     {
       source: '/la-perla-ave',

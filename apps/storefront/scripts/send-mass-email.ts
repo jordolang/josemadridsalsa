@@ -77,7 +77,7 @@ if (!csvPath || !htmlPath || !subjectTemplate) {
 }
 
 const FROM = fromOverride || process.env.FROM_EMAIL || 'Jose Madrid Salsa <mike@josemadridsalsa.com>'
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://josemadrid.net'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://josemadridsalsa.com'
 
 /* ── Footer variables (mirrors lib/email/transactional.ts footerVars) ── */
 

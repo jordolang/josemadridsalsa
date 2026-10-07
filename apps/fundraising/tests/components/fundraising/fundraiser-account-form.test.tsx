@@ -22,16 +22,16 @@ describe('FundraiserAccountForm', () => {
   it('sends the new account to the portal on the main site when rendered on another host', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }))
     vi.stubGlobal('location', { ...window.location, assign })
-    render(<FundraiserAccountForm siteUrl="https://www.josemadrid.net" />)
+    render(<FundraiserAccountForm siteUrl="https://www.josemadridsalsa.com" />)
 
-    expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', 'https://www.josemadrid.net/auth/signin')
+    expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', 'https://www.josemadridsalsa.com/auth/signin')
     fillAndSubmit()
 
     // Registering creates no session, so the next stop is sign-in, which then
     // continues to the pending page.
     await waitFor(() =>
       expect(assign).toHaveBeenCalledWith(
-        'https://www.josemadrid.net/auth/signin?callbackUrl=%2Ffundraiser-portal%2Fpending',
+        'https://www.josemadridsalsa.com/auth/signin?callbackUrl=%2Ffundraiser-portal%2Fpending',
       ),
     )
   })

@@ -8,7 +8,7 @@ import { autoUpdater } from 'electron-updater'
  * repository is private and its GitHub releases answer 404 to an app with no
  * GitHub session.
  */
-const DOWNLOAD_URL = 'https://www.josemadrid.net/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe'
+const DOWNLOAD_URL = 'https://www.josemadridsalsa.com/api/desktop/updates/JoseMadridSalsaAdmin-Setup-latest.exe'
 
 /** A dialog over whichever admin window is in front, or on its own if none is. */
 function ask(options: MessageBoxOptions) {

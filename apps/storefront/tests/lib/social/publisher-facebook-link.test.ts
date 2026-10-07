@@ -14,7 +14,7 @@ vi.mock('@/lib/social/platforms', () => ({ getValidAccessToken: getValidAccessTo
 
 import { publishToAccount } from '@/lib/social/publisher'
 
-const ARTICLE_URL = 'https://www.josemadrid.net/heat-index/big-e-2026'
+const ARTICLE_URL = 'https://www.josemadridsalsa.com/heat-index/big-e-2026'
 
 /** A Facebook page account and an article cross-post that links back to it. */
 function arrangeLinkPost(mediaUrls: string[] = []) {

@@ -6,7 +6,7 @@
  * link decision and the session cookies themselves are scoped to it.
  */
 
-export const PRODUCTION_ORIGIN = 'https://www.josemadrid.net'
+export const PRODUCTION_ORIGIN = 'https://www.josemadridsalsa.com'
 
 /**
  * The desktop shell — the admin data drawn as a native-feeling window rather

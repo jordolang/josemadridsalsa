@@ -20,7 +20,7 @@ import JSZip from 'jszip'
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const APP_ORIGIN = process.env.APP_ORIGIN ?? 'https://www.josemadrid.net'
+const APP_ORIGIN = process.env.APP_ORIGIN ?? 'https://www.josemadridsalsa.com'
 const OUTPUT_FILENAME = 'tiktok-shop-products.xlsx'
 
 // Optional split: when set, products are written to multiple xlsx files

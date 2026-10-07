@@ -29,12 +29,12 @@ describe('main-site pages', () => {
 
     expect(redirects).toContainEqual({
       source: `/${segment}`,
-      destination: `https://www.josemadrid.net/${segment}`,
+      destination: `https://www.josemadridsalsa.com/${segment}`,
       permanent: false,
     })
     expect(redirects).toContainEqual({
       source: `/${segment}/:path*`,
-      destination: `https://www.josemadrid.net/${segment}/:path*`,
+      destination: `https://www.josemadridsalsa.com/${segment}/:path*`,
       permanent: false,
     })
   })
@@ -107,7 +107,7 @@ describe('the Battle Arena game', () => {
     expect(game).toBeGreaterThan(siteWide)
 
     const policy = csp(headers[game])
-    expect(policy).toContain("connect-src 'self' https://www.josemadrid.net ")
+    expect(policy).toContain("connect-src 'self' https://www.josemadridsalsa.com ")
     expect(policy).toContain('https://d2ol7oe51mr4n9.cloudfront.net')
     expect(policy).toContain('wss://0.peerjs.com')
     expect(policy).toContain("frame-ancestors 'none'")

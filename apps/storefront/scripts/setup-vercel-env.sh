@@ -96,7 +96,7 @@ set_env_var \
 set_env_var \
     "NEXTAUTH_URL" \
     "Production domain URL (REQUIRED)" \
-    "https://www.josemadrid.net" \
+    "https://www.josemadridsalsa.com" \
     "false"
 
 # NEXTAUTH_SECRET
@@ -241,7 +241,7 @@ echo ""
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BOLD}Next Steps:${NC}"
 echo -e "${BLUE}1. Wait for deployment to complete (2-3 minutes)${NC}"
-echo -e "${BLUE}2. Test your website: https://www.josemadrid.net${NC}"
+echo -e "${BLUE}2. Test your website: https://www.josemadridsalsa.com${NC}"
 echo -e "${BLUE}3. Verify login works${NC}"
 echo -e "${BLUE}4. Check find-us page loads locations${NC}"
 echo -e "${BLUE}5. Run diagnostic: node scripts/diagnose-db-connection.cjs${NC}"

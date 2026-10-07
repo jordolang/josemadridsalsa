@@ -219,7 +219,7 @@ export function KioskApp() {
       tax: '$0.00',
       total: formatCents(paidQuote.totalCents),
       payment: 'Card - Square Terminal',
-      footer: ['Gracias from the Salsa Kings!', 'josemadrid.net'],
+      footer: ['Gracias from the Salsa Kings!', 'josemadridsalsa.com'],
     })
     setDone({
       orderNumber,

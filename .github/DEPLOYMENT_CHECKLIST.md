@@ -75,7 +75,7 @@ This comprehensive deployment checklist ensures consistent, safe deployments for
 
 - [ ] **Critical environment variables configured:**
   - [ ] `DATABASE_URL` - PostgreSQL connection string
-  - [ ] `NEXTAUTH_URL` - Application URL (production: https://www.josemadrid.net)
+  - [ ] `NEXTAUTH_URL` - Application URL (production: https://www.josemadridsalsa.com)
   - [ ] `NEXTAUTH_SECRET` - Authentication secret (32+ characters)
   - [ ] `ENCRYPTION_KEY` - 64-character base64 encryption key
   - [ ] `MASTER_KEY` - 64-character hex encryption key for admin panel
@@ -258,7 +258,7 @@ See [DEPLOYMENT_RUNBOOK.md](../docs/DEPLOYMENT_RUNBOOK.md#database-migration-dep
 
 - [ ] **Run Lighthouse audit**
   ```bash
-  npx lighthouse https://www.josemadrid.net --view
+  npx lighthouse https://www.josemadridsalsa.com --view
   ```
   Expected: Performance score > 80
 

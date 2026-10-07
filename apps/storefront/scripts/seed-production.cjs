@@ -88,11 +88,11 @@ function main() {
     
     log('\n✅ Production database seeded successfully!', 'green');
     log('\n📊 Next Steps:', 'blue');
-    log('   1. Verify data at: https://www.josemadrid.net');
+    log('   1. Verify data at: https://www.josemadridsalsa.com');
     log('   2. Test login with admin credentials');
     log('   3. Check API endpoints:\n');
-    log('      curl https://www.josemadrid.net/api/products/featured', 'blue');
-    log('      curl https://www.josemadrid.net/api/products\n', 'blue');
+    log('      curl https://www.josemadridsalsa.com/api/products/featured', 'blue');
+    log('      curl https://www.josemadridsalsa.com/api/products\n', 'blue');
     
   } catch (error) {
     log('\n❌ Error seeding database', 'red');

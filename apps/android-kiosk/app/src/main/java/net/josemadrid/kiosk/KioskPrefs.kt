@@ -29,7 +29,7 @@ class KioskPrefs(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_URL = "https://www.josemadrid.net/kiosk"
+        const val DEFAULT_URL = "https://www.josemadridsalsa.com/kiosk"
         private const val KEY_URL = "url"
         private const val KEY_TOKEN = "token"
         private const val KEY_PIN = "pin"

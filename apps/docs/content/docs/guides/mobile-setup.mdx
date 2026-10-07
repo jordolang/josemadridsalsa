@@ -185,7 +185,7 @@ const token = await SecureStore.getItemAsync('authToken')
 The mobile app communicates with the same backend as the web app. API calls go to the deployed API:
 
 ```typescript
-const API_BASE_URL = 'https://josemadrid.net/api'
+const API_BASE_URL = 'https://josemadridsalsa.com/api'
 
 const response = await fetch(`${API_BASE_URL}/products?featured=true`)
 const products = await response.json()

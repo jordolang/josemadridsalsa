@@ -519,7 +519,7 @@ export function DoneScreen({ portrait, orderNumber, lines, quote, secondsLeft, p
           <div className="h-[430px] w-[340px] overflow-hidden">
             <div className="k-print box-border flex w-[340px] flex-col gap-2 bg-white px-6 pb-[26px] pt-[22px] text-left font-mono text-[15px] font-semibold leading-[1.4] text-black shadow-[0_12px_24px_rgba(0,0,0,.35)]">
               <span className="text-center text-[20px] font-extrabold">JOSE MADRID SALSA</span>
-              <span className="text-center">Zanesville, OH · josemadrid.net</span>
+              <span className="text-center">Zanesville, OH · josemadridsalsa.com</span>
               <span className="border-t-2 border-dashed border-black" />
               <span className="flex justify-between"><span>Order</span><span className="font-extrabold">{orderNumber}</span></span>
               {lines.map(({ flavor, qty }) => (
