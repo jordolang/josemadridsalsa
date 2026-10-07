@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getProductBySlug } from '@/lib/db/products'
 import { formatPrice, getHeatLevelColor, getHeatLevelText } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,7 @@ import { buildProductSchema } from '@/lib/seo/schema-generator'
 import { buildTemplatedMeta } from '@/lib/seo/metadata'
 import { prisma } from '@/lib/prisma'
 import { Metadata } from 'next'
+import { legacyProductDestination } from '@/bigcommerce-redirects.mjs'
 
 export const revalidate = 900 // Revalidate every 15 minutes
 
@@ -126,6 +127,9 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = await getProductBySlug(slug)
 
   if (!product) {
+    // Old links (e.g. the Facebook Shop catalog) still carry the BigCommerce-era slugs.
+    const legacyDestination = legacyProductDestination(slug)
+    if (legacyDestination) permanentRedirect(legacyDestination)
     notFound()
   }
 

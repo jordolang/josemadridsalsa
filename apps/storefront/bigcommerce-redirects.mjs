@@ -115,6 +115,22 @@ const LEGACY_PATHS = {
 }
 
 /**
+ * Where an old product link under `/products/` should go when its slug is no
+ * longer a product here. Product slugs used to be the BigCommerce ones
+ * (`/products/cherry-mild`), and links built from them still live in places
+ * that are slow to refresh, such as the Meta (Facebook/Instagram Shop) catalog.
+ * Returns null for anything that is not an old product or catalog page.
+ *
+ * @param {string} slug
+ * @returns {string | null}
+ */
+export function legacyProductDestination(slug) {
+  const destination = LEGACY_PATHS[`/${slug}`]
+  if (!destination || destination === `/products/${slug}`) return null
+  return /^\/(products\/|salsas$|bundles$)/.test(destination) ? destination : null
+}
+
+/**
  * BigCommerce pages that stay BigCommerce's after cutover: customer sign-in,
  * account and order history, gift certificates, and wishlists. Once the old
  * storefront is moved to its own subdomain (`BIGCOMMERCE_STOREFRONT_URL`, e.g.

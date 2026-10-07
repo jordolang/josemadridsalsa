@@ -17,6 +17,13 @@ the root `package.json` is canonical.
 - **Order form packs and fliers on the fundraising home page.** The 25, 16 and 9 flavor kit
   downloads and both fliers now appear on the fundraising home page as well as `/start`, from one
   shared component.
+- **Battle Live in the masthead, and a Battle Arena section on the homepage.** The nav's Live tab is
+  now **Battle Live**: it opens the 3D game at `battle.josemadridsalsa.com` in a new tab, and its
+  green dot blinks while anyone is playing (new public `GET /api/arena/live`, counted from the
+  game's friends check-ins). The Facebook live stream page at `/live` stays, without a nav link. The
+  homepage gains a Battle Arena block below the fundraising pitch with the game's features, a
+  "playing now" count and a Play Now button (CMS key `battleArena`). `battle.josemadridsalsa.com`
+  is now a listed game origin for sign-in.
 - **Battle Arena online results come only from the match's host, and ranked matches carry a rating.**
   The host opens each online match (`POST /api/arena/hosted-matches`), every other player claims
   their seat with their own sign-in using a one-time ticket the host hands them, and the host
@@ -233,6 +240,10 @@ the root `package.json` is canonical.
   to 8.5.23, `source-map-js` to 1.2.2, `postcss-selector-parser` to 7.1.6, `katex` to 0.18.11,
   `smol-toml` to 1.9.0 and `deepmerge-ts` to 8.0.2 in the root lockfile, and `uuid` to 11.1.1 in
   the fundraiser app. `braces`, `sprintf-js` and `node-forge` have no patched release yet.
+- **Dependabot alerts (nodemailer, sharp, MCP SDK).** Overrides move every `nodemailer` below
+  10.0.6 (the 7.x copy pulled in by `next-auth`'s peer range) to 10.0.15 and `sharp` to 0.35.5
+  (librsvg CVE-2026-96889). The `@modelcontextprotocol/sdk` override to 1.31.0 drops the 1.27.1
+  copy that `@amplitude/ai` listed as optional; only that package's `amplitude-ai-mcp` CLI used it.
 
 ### Removed
 - **`packages/shared-types` and `packages/shared-utils`.** Three apps declared `@jose-madrid/shared-types` and none imported it; `shared-utils` exported nothing. Both packages, their Dockerfile copies and their version-bump entries are gone.
