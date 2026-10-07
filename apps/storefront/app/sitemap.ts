@@ -2,6 +2,7 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getSitemapLandingPages } from '@/lib/cms/queries'
 import { SITE_URL } from '@/lib/site-url'
+import { SALSA_CATEGORIES } from '@/lib/salsa-categories'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let baseUrl = SITE_URL
@@ -229,6 +230,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch products for sitemap:', error)
+  }
+
+  try {
+    const categories = await prisma.category.findMany({
+      where: {
+        isActive: true,
+        slug: { in: SALSA_CATEGORIES.map((category) => category.slug) },
+        products: { some: { isActive: true } },
+      },
+      select: { slug: true, updatedAt: true },
+    })
+
+    categories.forEach((category) => {
+      urls.push({
+        url: `${baseUrl}/salsas/category/${category.slug}`,
+        lastModified: category.updatedAt,
+        changeFrequency: 'weekly',
+        priority: priorities.products || 0.9,
+      })
+    })
+  } catch (error) {
+    console.error('Failed to fetch salsa categories for sitemap:', error)
   }
 
   try {
