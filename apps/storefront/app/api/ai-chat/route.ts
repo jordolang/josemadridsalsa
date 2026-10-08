@@ -146,6 +146,10 @@ async function callAnthropic(
 
     return NextResponse.json({ reply })
   } catch (error) {
+    // Handled API errors are returned to the widget, so without this the cause never reaches the logs.
+    if (error instanceof Anthropic.APIError) {
+      console.error('[AI_CHAT] Anthropic API error:', { status: error.status, message: error.message })
+    }
     if (error instanceof Anthropic.AuthenticationError) {
       return NextResponse.json(
         { error: 'The AI assistant is not configured correctly. Check ANTHROPIC_API_KEY.' },
@@ -394,8 +398,9 @@ export async function POST(request: Request) {
       rateLimitRemaining: rateLimitResult.remaining,
     })
 
-    // Return response with rate limit headers
+    // Return response with rate limit headers, keeping the provider's status so the widget sees errors
     return NextResponse.json(responseData, {
+      status: response.status,
       headers: rateLimitHeaders,
     })
   } catch (error) {

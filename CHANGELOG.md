@@ -226,6 +226,11 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Picante said "Sorry, I could not generate a response" instead of the real error.** The chat
+  route returned provider errors with a 200 status, so the widget never showed them. It now keeps
+  the provider's status and the widget shows the cause.
+- **Picante chat errors from the Anthropic API now reach the server logs.** The status and message
+  were only shown in the widget, so a rejected key or empty credit balance left no trace in Vercel.
 - **iPad kiosk declares the permissions Square and the receipt printer need.** `Info.plist` now
   carries the Bluetooth, local network, location and microphone usage strings, the Bonjour printer
   services and `SquareApplicationID`, and the project sets its development team. The fundraiser
