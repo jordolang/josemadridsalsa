@@ -1,305 +1,326 @@
-'use client';
-
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  Rocket,
-  Flame,
-  Globe,
-  Settings,
-  Cloud,
+  ArrowRight,
+  ArrowUpRight,
   BookOpen,
-  ShoppingCart,
-  CreditCard,
-  Truck,
+  Cloud,
+  Code2,
+  Layers,
+  LayoutDashboard,
+  Plug,
+  Rocket,
+  Settings,
+  ShoppingBag,
+  Trophy,
 } from 'lucide-react';
-import { AnimatedBackground } from '@/components/animated-background';
-import { FeatureCard } from '@/components/feature-card';
-import { StatsBar } from '@/components/stats-bar';
+import { source } from '@/lib/source';
+
+const serif = { fontFamily: 'var(--font-volkhov), Volkhov, Georgia, serif' };
 
 const sections = [
   {
     title: 'Getting Started',
-    description: 'Set up your development environment, install dependencies, and run the project locally in under five minutes.',
-    href: '/docs/getting-started',
+    description: 'Install the monorepo, connect a database, and run every app locally.',
+    slug: 'getting-started',
     icon: Rocket,
-    gradient: 'from-red-500 to-red-600',
   },
   {
     title: 'Features',
-    description: 'Deep-dive into checkout flows, payment processing, shipping logic, and the fundraiser battle arena.',
-    href: '/docs/features',
-    icon: Flame,
-    gradient: 'from-amber-500 to-orange-600',
-  },
-  {
-    title: 'API Reference',
-    description: 'REST API endpoints, authentication headers, request/response schemas, and rate limiting.',
-    href: '/docs/api',
-    icon: Globe,
-    gradient: 'from-emerald-500 to-green-600',
-  },
-  {
-    title: 'Configuration',
-    description: 'Environment variables, database connections, Stripe keys, and third-party service setup.',
-    href: '/docs/configuration',
-    icon: Settings,
-    gradient: 'from-blue-500 to-indigo-600',
-  },
-  {
-    title: 'Deployment',
-    description: 'Deploy to Vercel, manage preview and production environments, and configure CI/CD.',
-    href: '/docs/deployment',
-    icon: Cloud,
-    gradient: 'from-violet-500 to-purple-600',
+    description: 'Every product surface in the platform, and where its code lives.',
+    slug: 'features',
+    icon: Layers,
   },
   {
     title: 'Guides',
-    description: 'Step-by-step walkthroughs for common development tasks and operational workflows.',
-    href: '/docs/guides',
+    description: 'Step-by-step walkthroughs for common development and operations tasks.',
+    slug: 'guides',
     icon: BookOpen,
-    gradient: 'from-pink-500 to-rose-600',
+  },
+  {
+    title: 'API Reference',
+    description: 'REST endpoints, authentication, and request and response shapes.',
+    slug: 'api',
+    icon: Code2,
+  },
+  {
+    title: 'Integrations',
+    description: 'Every third-party service the platform talks to, and how each is wired.',
+    slug: 'integrations',
+    icon: Plug,
+  },
+  {
+    title: 'Configuration',
+    description: 'Environment variables, credentials, and service setup.',
+    slug: 'configuration',
+    icon: Settings,
+  },
+  {
+    title: 'Deployment',
+    description: 'Hosting on Vercel, environments, releases, and runbooks.',
+    slug: 'deployment',
+    icon: Cloud,
   },
 ];
 
-const highlights = [
+const platform = [
   {
-    title: 'E-Commerce Platform',
-    description: 'Full-featured online store with cart, checkout, and order management.',
-    icon: ShoppingCart,
+    title: 'Storefront & checkout',
+    description: 'Product catalog, customer accounts, cart, and multi-provider payments.',
+    icon: ShoppingBag,
   },
   {
-    title: 'Payment Integration',
-    description: 'Stripe, PayPal, and Square for flexible payment processing.',
-    icon: CreditCard,
+    title: 'Fundraising',
+    description: 'Campaigns for schools and groups, seller pages, and the battle arena.',
+    icon: Trophy,
   },
   {
-    title: 'Shipping & Fulfillment',
-    description: 'Calculated shipping rates, label generation, and tracking.',
-    icon: Truck,
+    title: 'Admin & operations',
+    description: 'Orders, inventory, email marketing, POS, and QuickBooks-synced financials.',
+    icon: LayoutDashboard,
   },
+];
+
+const quickStart = [
+  { comment: '# from the repository root' },
+  { command: 'npm install --legacy-peer-deps' },
+  { command: 'npx prisma migrate dev' },
+  { command: 'npm run dev' },
+  { comment: '# storefront on http://localhost:3000' },
 ];
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 overflow-hidden">
-      {/* ─── HERO ─── */}
-      <section className="relative min-h-[90vh] flex flex-col">
-        <AnimatedBackground />
+  const pages = source.getPages();
+  const countPages = (slug: string) => pages.filter((page) => page.slugs[0] === slug).length;
 
-        {/* Nav */}
-        <nav className="relative z-20 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto w-full">
+  return (
+    <div className="min-h-screen bg-white text-stone-900 dark:bg-stone-950 dark:text-stone-100">
+      {/* ─── NAV ─── */}
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-white/85 backdrop-blur dark:border-stone-800 dark:bg-stone-950/85">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/images/logo-image.png"
               alt="Jose Madrid Salsa"
-              width={44}
-              height={44}
-              className="rounded-xl shadow-md"
+              width={32}
+              height={32}
+              className="rounded-md"
             />
-            <span
-              className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-500"
-              style={{ fontFamily: 'var(--font-volkhov), Volkhov, Georgia, serif' }}
-            >
-              Jose Madrid Salsa
-            </span>
+            <div className="text-[15px] font-semibold tracking-tight">Jose Madrid Salsa</div>
+            <div className="hidden rounded-md border border-stone-200 px-1.5 py-0.5 text-[11px] font-medium text-stone-500 sm:inline dark:border-stone-700 dark:text-stone-400">
+              Docs
+            </div>
           </Link>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-6">
             <Link
               href="https://www.josemadridsalsa.com"
-              className="hidden md:inline text-sm text-stone-500 hover:text-red-600 transition-colors"
+              className="hidden text-sm text-stone-600 transition-colors hover:text-stone-900 md:inline dark:text-stone-400 dark:hover:text-white"
             >
-              Main Site
+              Main site
             </Link>
             <Link
               href="https://github.com/jordolang/josemadridsalsa"
-              className="hidden md:inline text-sm text-stone-500 hover:text-red-600 transition-colors"
+              className="hidden text-sm text-stone-600 transition-colors hover:text-stone-900 md:inline dark:text-stone-400 dark:hover:text-white"
             >
               GitHub
             </Link>
             <Link
               href="/docs"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-500 rounded-xl hover:from-red-700 hover:to-red-600 transition-all shadow-lg hover:shadow-xl hover:shadow-red-600/25 hover:-translate-y-0.5 active:translate-y-0"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
             >
-              <BookOpen className="w-4 h-4" />
-              Documentation
+              Read the docs
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-        </nav>
-
-        {/* Hero content */}
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pb-20 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 mb-8 text-xs font-bold tracking-widest text-red-700 dark:text-red-400 bg-red-100/80 dark:bg-red-900/30 border border-red-200 dark:border-red-800/40 rounded-full uppercase backdrop-blur-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-            </span>
-            Developer Documentation
-          </div>
-
-          {/* Title */}
-          <h1
-            className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-stone-900 dark:text-white mb-6 leading-[1.05]"
-            style={{ fontFamily: 'var(--font-volkhov), Volkhov, Georgia, serif' }}
-          >
-            Build with
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 animate-[gradient-shift_6s_ease_infinite] bg-[length:200%_auto]">
-              Jose Madrid Salsa
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-stone-500 dark:text-stone-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-            Feature guides, API reference, configuration blueprints, and deployment
-            workflows for the Jose Madrid Salsa e-commerce platform.
-          </p>
-
-          {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 mb-16">
-            <Link
-              href="/docs/getting-started"
-              className="inline-flex items-center gap-2 px-8 py-4 text-base font-bold text-white bg-gradient-to-r from-red-600 to-red-500 rounded-2xl hover:from-red-700 hover:to-red-600 transition-all shadow-xl hover:shadow-2xl hover:shadow-red-500/30 hover:-translate-y-1 active:translate-y-0"
-            >
-              <Rocket className="w-5 h-5" />
-              Get Started
-            </Link>
-            <Link
-              href="/docs/api"
-              className="inline-flex items-center gap-2 px-8 py-4 text-base font-bold text-stone-700 dark:text-stone-200 bg-white/80 dark:bg-stone-800/80 backdrop-blur-sm rounded-2xl border border-stone-200 dark:border-stone-700 hover:border-red-300 dark:hover:border-red-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 active:translate-y-0"
-            >
-              <Globe className="w-5 h-5" />
-              API Reference
-            </Link>
-          </div>
-
-          {/* Stats */}
-          <StatsBar />
         </div>
+      </header>
 
-        {/* Product image strip */}
-        <div className="relative z-10 max-w-5xl mx-auto px-6 -mb-24">
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-stone-900/20 dark:shadow-black/40 border border-stone-200/50 dark:border-stone-800/50">
-            <Image
-              src="/images/hero-image-10-jars-vegetables.png"
-              alt="Jose Madrid Salsa Products"
-              width={1200}
-              height={400}
-              className="w-full h-auto object-cover"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-stone-900/40 to-transparent" />
-            <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
-              <div>
-                <p className="text-white/90 text-sm font-semibold">Premium Gourmet Salsas</p>
-                <p className="text-white/60 text-xs">Handcrafted in Ohio with the finest ingredients</p>
-              </div>
+      {/* ─── HERO ─── */}
+      <section className="relative overflow-hidden border-b border-stone-200/80 dark:border-stone-800">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)] dark:opacity-10"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgb(231 229 228) 1px, transparent 1px), linear-gradient(to bottom, rgb(231 229 228) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 md:py-28 lg:grid-cols-[1.15fr_1fr]">
+          <div>
+            <div className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-red-700 dark:text-red-400">
+              Platform documentation
+            </div>
+            <h1
+              className="mb-6 text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl lg:text-[3.5rem]"
+              style={serif}
+            >
+              Everything you need to build and run Jose Madrid Salsa.
+            </h1>
+            <div className="mb-10 max-w-xl text-lg leading-relaxed text-stone-600 dark:text-stone-400">
+              Architecture, feature guides, API reference, integrations, and deployment
+              runbooks for the storefront, fundraising, and admin apps.
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href="https://www.josemadridsalsa.com/products"
-                className="text-xs text-white/80 hover:text-white border border-white/30 rounded-lg px-3 py-1.5 backdrop-blur-sm hover:bg-white/10 transition-all"
+                href="/docs/getting-started"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-800"
               >
-                View Products
+                Get started
+                <ArrowRight className="h-4 w-4" />
               </Link>
+              <Link
+                href="/docs/api"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-800 transition-colors hover:border-stone-400 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-stone-600"
+              >
+                API reference
+              </Link>
+            </div>
+          </div>
+
+          {/* Quick start */}
+          <div className="overflow-hidden rounded-xl border border-stone-200 bg-stone-950 shadow-xl shadow-stone-900/10 dark:border-stone-800">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div className="flex gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+                <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+                <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              </div>
+              <div className="text-xs text-stone-400">Quick start</div>
+            </div>
+            <div
+              className="overflow-x-auto px-5 py-5 text-[13px] leading-7"
+              style={{ fontFamily: 'var(--font-roboto-mono), ui-monospace, monospace' }}
+            >
+              {quickStart.map((line, i) =>
+                line.comment ? (
+                  <div key={i} className="text-stone-500">
+                    {line.comment}
+                  </div>
+                ) : (
+                  <div key={i} className="flex text-stone-100">
+                    <div className="select-none whitespace-pre text-red-400">$ </div>
+                    {line.command}
+                  </div>
+                ),
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── FEATURE CARDS ─── */}
-      <section className="relative pt-36 pb-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-14">
-            <h2
-              className="text-3xl md:text-4xl font-bold text-stone-900 dark:text-white mb-4"
-              style={{ fontFamily: 'var(--font-volkhov), Volkhov, Georgia, serif' }}
+      {/* ─── SECTIONS ─── */}
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl" style={serif}>
+                Browse the documentation
+              </h2>
+              <div className="text-stone-600 dark:text-stone-400">
+                {pages.length} pages across {sections.length} sections.
+              </div>
+            </div>
+            <Link
+              href="/docs"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-red-700 hover:text-red-800 dark:text-red-400"
             >
-              Explore the Documentation
-            </h2>
-            <p className="text-stone-500 dark:text-stone-400 max-w-lg mx-auto">
-              Everything you need to understand, build upon, and deploy the platform.
-            </p>
+              View all
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sections.map((section, i) => (
-              <FeatureCard key={section.href} {...section} index={i} />
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-stone-200 bg-stone-200 sm:grid-cols-2 lg:grid-cols-4 dark:border-stone-800 dark:bg-stone-800">
+            {sections.map((section, i) => {
+              const count = countPages(section.slug);
+              return (
+                <Link
+                  key={section.slug}
+                  href={`/docs/${section.slug}`}
+                  className={`group flex flex-col bg-white p-6 ${i === 0 ? 'sm:col-span-2' : ''} transition-colors hover:bg-stone-50 dark:bg-stone-950 dark:hover:bg-stone-900`}
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-red-700 dark:border-stone-700 dark:bg-stone-900 dark:text-red-400">
+                      <section.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    </div>
+                    {count > 0 && (
+                      <div className="text-xs text-stone-400">
+                        {count} {count === 1 ? 'page' : 'pages'}
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="mb-1.5 flex items-center gap-1.5 font-semibold">
+                    {section.title}
+                    <ArrowRight className="h-3.5 w-3.5 -translate-x-1 text-stone-400 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                  </h3>
+                  <div className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+                    {section.description}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── PLATFORM ─── */}
+      <section className="border-t border-stone-200/80 bg-stone-50 py-20 dark:border-stone-800 dark:bg-stone-900/40">
+        <div className="mx-auto max-w-6xl px-6">
+          <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl" style={serif}>
+            What the platform covers
+          </h2>
+          <div className="mb-10 max-w-2xl text-stone-600 dark:text-stone-400">
+            One Turborepo monorepo powers the online store, the fundraising program, and the
+            back office behind them.
+          </div>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            {platform.map((item) => (
+              <div key={item.title} className="border-l-2 border-red-700/80 pl-5">
+                <item.icon className="mb-3 h-5 w-5 text-stone-500" strokeWidth={1.75} />
+                <h3 className="mb-1.5 font-semibold">{item.title}</h3>
+                <div className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+                  {item.description}
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── HIGHLIGHTS ─── */}
-      <section className="relative py-20 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-red-600 to-red-800 dark:from-red-700 dark:to-red-900 p-10 md:p-16">
-            {/* Background pattern */}
-            <div
-              className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-                backgroundSize: '32px 32px',
-              }}
-            />
-
-            <div className="relative z-10">
-              <h2
-                className="text-3xl md:text-4xl font-bold text-white mb-3"
-                style={{ fontFamily: 'var(--font-volkhov), Volkhov, Georgia, serif' }}
-              >
-                Platform Capabilities
-              </h2>
-              <p className="text-red-200 mb-10 max-w-lg">
-                The Jose Madrid Salsa platform is a full-featured e-commerce system purpose-built for gourmet food sales.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {highlights.map((item) => (
-                  <div
-                    key={item.title}
-                    className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-6 hover:bg-white/15 transition-colors"
-                  >
-                    <item.icon className="w-8 h-8 text-amber-300 mb-4" strokeWidth={1.5} />
-                    <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
-                    <p className="text-sm text-red-100/80 leading-relaxed">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ─── FOOTER ─── */}
-      <footer className="border-t border-stone-200 dark:border-stone-800 bg-white/50 dark:bg-stone-900/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+      <footer className="border-t border-stone-200/80 dark:border-stone-800">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-8 md:flex-row">
           <div className="flex items-center gap-3">
             <Image
               src="/images/logo-image.png"
               alt="Jose Madrid Salsa"
-              width={28}
-              height={28}
-              className="rounded-lg opacity-70"
+              width={24}
+              height={24}
+              className="rounded"
             />
-            <div>
-              <p className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-                Jose Madrid Salsa
-              </p>
-              <p className="text-xs text-stone-400">Developer Documentation</p>
-            </div>
+            <div className="text-sm text-stone-500">Jose Madrid Salsa · Zanesville, Ohio</div>
           </div>
-          <div className="flex items-center gap-8 text-sm text-stone-500">
-            <Link href="https://www.josemadridsalsa.com" className="hover:text-red-600 transition-colors">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-stone-500">
+            <Link
+              href="https://www.josemadridsalsa.com"
+              className="inline-flex items-center gap-1 hover:text-stone-900 dark:hover:text-white"
+            >
               josemadridsalsa.com
+              <ArrowUpRight className="h-3 w-3" />
             </Link>
-            <Link href="https://github.com/jordolang/josemadridsalsa" className="hover:text-red-600 transition-colors">
-              GitHub
-            </Link>
-            <Link href="https://www.josemadridsalsa.com/products" className="hover:text-red-600 transition-colors">
-              Products
-            </Link>
-            <Link href="https://www.josemadridsalsa.com/fundraising" className="hover:text-red-600 transition-colors">
+            <Link
+              href="https://fundraising.josemadridsalsa.com"
+              className="inline-flex items-center gap-1 hover:text-stone-900 dark:hover:text-white"
+            >
               Fundraising
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+            <Link
+              href="https://github.com/jordolang/josemadridsalsa"
+              className="inline-flex items-center gap-1 hover:text-stone-900 dark:hover:text-white"
+            >
+              GitHub
+              <ArrowUpRight className="h-3 w-3" />
             </Link>
           </div>
         </div>
