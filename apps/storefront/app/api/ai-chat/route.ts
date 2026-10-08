@@ -398,8 +398,9 @@ export async function POST(request: Request) {
       rateLimitRemaining: rateLimitResult.remaining,
     })
 
-    // Return response with rate limit headers
+    // Return response with rate limit headers, keeping the provider's status so the widget sees errors
     return NextResponse.json(responseData, {
+      status: response.status,
       headers: rateLimitHeaders,
     })
   } catch (error) {
