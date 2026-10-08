@@ -226,6 +226,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **iPad kiosk declares the permissions Square and the receipt printer need.** `Info.plist` now
+  carries the Bluetooth, local network, location and microphone usage strings, the Bonjour printer
+  services and `SquareApplicationID`, and the project sets its development team. The fundraiser
+  app's `ios`/`android` scripts now run a native build (`expo run:*`) instead of Expo Go.
 - **Picante chat, inbox triage and form capture failed on every Claude call.** The Agent Analytics
   wrapper was handed the Anthropic SDK class where it expects the module, so it built the base
   client, which has no `messages`, and the chat showed "Something went wrong". It now gets the
