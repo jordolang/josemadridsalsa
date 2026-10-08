@@ -1,3 +1,5 @@
+// @vitest-environment node
+import AnthropicSDK from '@anthropic-ai/sdk'
 import { describe, expect, it, vi } from 'vitest'
 
 const { providerOptions } = vi.hoisted(() => ({ providerOptions: [] as Array<Record<string, unknown>> }))
@@ -32,5 +34,17 @@ describe('trackedAnthropic', () => {
     expect((metadata.privacyConfig as { options: { contentMode: string } }).options.contentMode).toBe('metadata_only')
     // null inherits the SDK-wide setting: full text with PII redaction.
     expect(full.privacyConfig).toBeNull()
+  })
+
+  it('hands the provider a module whose Anthropic export is the full client', () => {
+    trackedAnthropic('k')
+
+    // The provider constructs `anthropicModule.Anthropic`; the SDK class's static `.Anthropic` is
+    // the base client without `messages`, which broke every Claude call in production.
+    const anthropicModule = providerOptions[providerOptions.length - 1].anthropicModule as {
+      Anthropic: typeof AnthropicSDK
+    }
+    expect(anthropicModule.Anthropic).toBe(AnthropicSDK)
+    expect(new anthropicModule.Anthropic({ apiKey: 'k' }).messages.create).toBeTypeOf('function')
   })
 })

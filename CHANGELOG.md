@@ -226,6 +226,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Picante chat, inbox triage and form capture failed on every Claude call.** The Agent Analytics
+  wrapper was handed the Anthropic SDK class where it expects the module, so it built the base
+  client, which has no `messages`, and the chat showed "Something went wrong". It now gets the
+  full client.
 - **Fundraising preview builds no longer fail without a database.** The active fundraising teams
   grid now hides itself when the database can't be reached, as the featured products already do,
   instead of failing the `/fundraising` prerender.

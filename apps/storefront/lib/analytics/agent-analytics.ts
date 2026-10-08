@@ -47,8 +47,10 @@ export function trackedAnthropic(apiKeyForAnthropic: string | undefined, { metad
     amplitude: ai,
     apiKey: apiKeyForAnthropic,
     privacyConfig: metadataOnly ? METADATA_ONLY : null,
-    // The bundler has no `require`, so the SDK cannot find @anthropic-ai/sdk on its own.
-    anthropicModule: AnthropicSDK,
+    // The bundler has no `require`, so the SDK cannot find @anthropic-ai/sdk on its own. It reads
+    // `.Anthropic` off this as a module namespace; the class's own static `.Anthropic` is the
+    // base client, which has no `messages`, so the class is wrapped rather than passed directly.
+    anthropicModule: { Anthropic: AnthropicSDK },
   })
   return {
     // The wrapper returns the SDK's own response object for non-streaming calls and rethrows
