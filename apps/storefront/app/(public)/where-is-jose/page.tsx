@@ -140,8 +140,7 @@ export default async function WhereIsJosePage() {
               <h2 className="text-3xl font-serif font-bold text-foreground">On the Move Schedule</h2>
               <p className="mt-4 text-lg text-muted-foreground">
                 Track Jose&apos;s farmers markets, retail demos, and special events in real time.
-                The map syncs directly from our Google Calendar—once your credentials are in place,
-                every new booking will appear automatically.
+                New stops show up here as soon as they&apos;re booked.
               </p>
             </div>
             <GoogleScheduleMap initialEvents={calendarEvents} />

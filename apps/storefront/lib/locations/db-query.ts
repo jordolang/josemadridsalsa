@@ -11,7 +11,7 @@ import type {
   NormalizedLocationFilters,
   LocationsQueryResult,
 } from './shared'
-import { normalizeFilters } from './shared'
+import { normalizeFilters, normalizeWebsiteUrl } from './shared'
 
 // Type for location with photos included
 type LocationWithPhotos = Prisma.RetailLocationGetPayload<{
@@ -83,7 +83,7 @@ function transformLocation(
     state: loc.state,
     zipCode: loc.zipCode,
     phone: loc.phone,
-    website: loc.website,
+    website: normalizeWebsiteUrl(loc.website),
     photoUrl: loc.photoUrl,
     photoGallery,
     latitude,
