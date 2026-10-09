@@ -17,13 +17,17 @@ const merchOrder = {
 const paymentLinksCreate = vi.fn()
 const ordersGet = vi.fn()
 const createPrintifyOrder = vi.fn()
+const getPrintifyShopIds = vi.fn()
 const getMerchProduct = vi.fn()
 
 vi.mock('@/lib/prisma', () => ({ default: { merchOrder } }))
 vi.mock('@/lib/payments/providers/square', () => ({
   getSquareClient: () => ({ checkout: { paymentLinks: { create: paymentLinksCreate } }, orders: { get: ordersGet } }),
 }))
-vi.mock('@/lib/printify/client', () => ({ createPrintifyOrder: (...a: unknown[]) => createPrintifyOrder(...a) }))
+vi.mock('@/lib/printify/client', () => ({
+  createPrintifyOrder: (...a: unknown[]) => createPrintifyOrder(...a),
+  getPrintifyShopIds: () => getPrintifyShopIds(),
+}))
 vi.mock('@/lib/merchandise/catalog', () => ({ getMerchProduct: (...a: unknown[]) => getMerchProduct(...a) }))
 
 const {
@@ -41,6 +45,7 @@ const ORDER_ID = '7f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f'
 
 const product = {
   id: PRODUCT_ID,
+  shopId: 'ETSY_SHOP',
   title: 'Tour Shirt',
   variants: [{ id: 101, title: 'Black / M', priceCents: 2500, optionIds: [1, 10], isDefault: true }],
 }
@@ -80,7 +85,7 @@ const pendingRecord = {
   status: 'AWAITING_PAYMENT',
   totalCents: 3199,
   printifyOrderId: null,
-  items: [{ productId: PRODUCT_ID, variantId: 101, quantity: 2, title: 'Tour Shirt', variantTitle: 'Black / M', unitPriceCents: 2500 }],
+  items: [{ shopId: 'ETSY_SHOP', productId: PRODUCT_ID, variantId: 101, quantity: 2, title: 'Tour Shirt', variantTitle: 'Black / M', unitPriceCents: 2500 }],
 }
 
 beforeEach(() => {
@@ -119,7 +124,11 @@ describe('createMerchCheckout', () => {
     expect(request.checkoutOptions.askForShippingAddress).toBe(true)
     expect(request.checkoutOptions.redirectUrl).toMatch(/^https:\/\/www\.josemadrid\.net\/merchandise\/order-complete\?ref=/)
     expect(merchOrder.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ squareOrderId: 'SQ_ORDER', totalCents: 2500 * 2 + 949 }),
+      data: expect.objectContaining({
+        squareOrderId: 'SQ_ORDER',
+        totalCents: 2500 * 2 + 949,
+        items: [expect.objectContaining({ shopId: 'ETSY_SHOP', productId: PRODUCT_ID })],
+      }),
     })
   })
 
@@ -171,6 +180,7 @@ describe('fulfillMerchOrder', () => {
 
     await expect(fulfillMerchOrder(ORDER_ID)).resolves.toEqual({ status: 'submitted', printifyOrderId: 'PF1' })
     expect(createPrintifyOrder).toHaveBeenCalledWith(
+      'ETSY_SHOP',
       expect.objectContaining({
         external_id: 'SQ_ORDER',
         line_items: [{ product_id: PRODUCT_ID, variant_id: 101, quantity: 2 }],
@@ -180,6 +190,19 @@ describe('fulfillMerchOrder', () => {
     expect(merchOrder.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'SUBMITTED', printifyOrderId: 'PF1' }) })
     )
+  })
+
+  it('sends an order recorded before shops were tracked to the first shop', async () => {
+    const [legacyItem] = pendingRecord.items
+    const { shopId: _shopId, ...withoutShop } = legacyItem
+    merchOrder.findUnique.mockResolvedValue({ ...pendingRecord, items: [withoutShop] })
+    ordersGet.mockResolvedValue({ order: paidSquareOrder() })
+    merchOrder.updateMany.mockResolvedValue({ count: 1 })
+    getPrintifyShopIds.mockResolvedValue(['API_SHOP', 'ETSY_SHOP'])
+    createPrintifyOrder.mockResolvedValue({ id: 'PF2' })
+
+    await expect(fulfillMerchOrder(ORDER_ID)).resolves.toEqual({ status: 'submitted', printifyOrderId: 'PF2' })
+    expect(createPrintifyOrder).toHaveBeenCalledWith('API_SHOP', expect.anything())
   })
 
   it('does nothing until Square shows the order paid', async () => {

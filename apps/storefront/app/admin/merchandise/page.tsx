@@ -33,7 +33,7 @@ export default async function AdminMerchandisePage() {
           <p className="text-xs uppercase tracking-[0.35em] text-primary">Merchandise</p>
           <h1 className="text-3xl font-serif font-semibold text-foreground">Printify merch</h1>
           <p className="text-sm text-muted-foreground max-w-2xl">
-            Products, prices and photos come from the Printify shop. Edit them in Printify and the site picks up
+            Products, prices and photos come from every Printify shop on the account, including the one connected to Etsy. Edit them in Printify and the site picks up
             the change within five minutes. Paid orders are sent to Printify to print and ship.
           </p>
         </div>

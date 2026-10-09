@@ -26,6 +26,8 @@ export type MerchImage = { src: string; variantIds: number[]; isDefault: boolean
 
 export type MerchProduct = {
   id: string
+  /** The Printify shop the product lives in, which is where its orders go. */
+  shopId: string
   title: string
   description: string
   images: MerchImage[]
@@ -99,6 +101,7 @@ export function toMerchProduct(product: PrintifyProduct): MerchProduct | null {
   const prices = variants.map((variant) => variant.priceCents)
   return {
     id: product.id,
+    shopId: product.shop_id,
     title: product.title,
     description: toPlainText(product.description ?? ''),
     images,

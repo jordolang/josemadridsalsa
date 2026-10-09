@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { Order as SquareOrder } from 'square'
 import prisma from '@/lib/prisma'
 import { getSquareClient } from '@/lib/payments/providers/square'
-import { createPrintifyOrder, type PrintifyAddress } from '@/lib/printify/client'
+import { createPrintifyOrder, getPrintifyShopIds, type PrintifyAddress } from '@/lib/printify/client'
 import { getMerchProduct } from '@/lib/merchandise/catalog'
 import { MERCH_MAX_QUANTITY } from '@/lib/merchandise/shared'
 
@@ -32,6 +32,8 @@ export const merchCheckoutSchema = z.object({
 export type MerchCheckoutInput = z.infer<typeof merchCheckoutSchema>
 
 export type MerchOrderItem = {
+  /** Missing on orders placed before the site sold from more than one Printify shop. */
+  shopId?: string
   productId: string
   variantId: number
   quantity: number
@@ -75,6 +77,7 @@ export async function createMerchCheckout(input: MerchCheckoutInput, origin: str
 
   const locationId = squareLocationId()
   const item: MerchOrderItem = {
+    shopId: product.shopId,
     productId: product.id,
     variantId: variant.id,
     quantity: input.quantity,
@@ -205,7 +208,8 @@ export async function fulfillMerchOrder(merchOrderId: string): Promise<MerchFulf
   try {
     if (!address) throw new Error('Square order has no shipping address')
     const items = record.items as MerchOrderItem[]
-    const created = await createPrintifyOrder({
+    const shopId = items[0]?.shopId ?? (await getPrintifyShopIds())[0]
+    const created = await createPrintifyOrder(shopId, {
       external_id: record.squareOrderId,
       label: `Jose Madrid merch ${record.id.slice(0, 8)}`,
       line_items: items.map((item) => ({

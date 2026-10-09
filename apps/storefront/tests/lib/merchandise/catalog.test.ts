@@ -28,6 +28,7 @@ function tourShirt(overrides: Partial<PrintifyProduct> = {}): PrintifyProduct {
     updated_at: '2026-10-01 00:00:00+00:00',
     visible: false,
     is_locked: false,
+    shop_id: '123',
     ...overrides,
   }
 }
@@ -39,6 +40,10 @@ describe('toMerchProduct', () => {
     expect(product.options[0].values.map((value) => value.title)).toEqual(['Black'])
     expect(product.options[1].values.map((value) => value.title)).toEqual(['M', 'L'])
     expect(product.options[0].values[0].color).toBe('#000000')
+  })
+
+  it('keeps the shop the product came from, so its orders go there', () => {
+    expect(toMerchProduct(tourShirt({ shop_id: '456' }))!.shopId).toBe('456')
   })
 
   it('keeps only photos of buyable variants, default photo first', () => {

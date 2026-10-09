@@ -7,8 +7,9 @@
  *
  * - `PRINTIFY_API_TOKEN` (required): a personal access token from Printify, My Profile →
  *   Connections, with products and orders scopes.
- * - `PRINTIFY_SHOP_ID` (optional): which Printify shop to use. Without it the first shop on
- *   the account is used, which is right for an account with one shop.
+ * - `PRINTIFY_SHOP_ID` (optional): which Printify shops to sell from, comma-separated.
+ *   Without it every shop on the account is used (for example both an API shop and the
+ *   shop connected to Etsy).
  */
 
 const API_BASE = 'https://api.printify.com/v1'
@@ -134,6 +135,8 @@ export type PrintifyProduct = {
   is_locked: boolean
   /** Present once the product has been published to a sales channel. */
   external?: { id?: string; handle?: string } | null
+  /** The shop the product was read from. */
+  shop_id: string
 }
 
 type Paginated<T> = {
@@ -169,47 +172,62 @@ export type PrintifyOrderRequest = {
 // Calls
 // ---------------------------------------------------------------------------
 
-export async function getPrintifyShopId(): Promise<string> {
-  const configured = process.env.PRINTIFY_SHOP_ID?.trim()
-  if (configured) return configured
-
-  const shops = await printifyFetch<PrintifyShop[]>('/shops.json', { revalidate: 3600 })
-  const shop = shops[0]
-  if (!shop) {
-    throw new PrintifyError('The Printify account has no shops.', 404)
-  }
-  return String(shop.id)
+export async function listPrintifyShops(): Promise<PrintifyShop[]> {
+  return printifyFetch<PrintifyShop[]>('/shops.json', { revalidate: 3600 })
 }
 
-/** Every product in the shop, following pagination. */
-export async function listPrintifyProducts(revalidate = 300): Promise<PrintifyProduct[]> {
-  const shopId = await getPrintifyShopId()
+/** The shops the storefront sells from: PRINTIFY_SHOP_ID if set, else every shop on the account. */
+export async function getPrintifyShopIds(): Promise<string[]> {
+  const configured = (process.env.PRINTIFY_SHOP_ID ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+  if (configured.length > 0) return configured
+
+  const shops = await listPrintifyShops()
+  if (shops.length === 0) {
+    throw new PrintifyError('The Printify account has no shops.', 404)
+  }
+  return shops.map((shop) => String(shop.id))
+}
+
+async function listShopProducts(shopId: string, revalidate: number): Promise<PrintifyProduct[]> {
   const products: PrintifyProduct[] = []
-  let page = 1
   // Printify caps `limit` at 50. A hard page cap keeps a bad response from looping forever.
-  for (; page <= 20; page++) {
+  for (let page = 1; page <= 20; page++) {
     const result = await printifyFetch<Paginated<PrintifyProduct>>(
       `/shops/${shopId}/products.json?limit=50&page=${page}`,
       { revalidate }
     )
-    products.push(...result.data)
+    products.push(...result.data.map((product) => ({ ...product, shop_id: shopId })))
     if (result.current_page >= result.last_page) break
   }
   return products
 }
 
-export async function getPrintifyProduct(productId: string, revalidate = 300): Promise<PrintifyProduct | null> {
-  if (!/^[a-f0-9]{24}$/i.test(productId)) return null
-  const shopId = await getPrintifyShopId()
-  try {
-    return await printifyFetch<PrintifyProduct>(`/shops/${shopId}/products/${productId}.json`, { revalidate })
-  } catch (error) {
-    if (error instanceof PrintifyError && error.status === 404) return null
-    throw error
-  }
+/** Every product in every shop the storefront sells from, following pagination. */
+export async function listPrintifyProducts(revalidate = 300): Promise<PrintifyProduct[]> {
+  const shopIds = await getPrintifyShopIds()
+  const perShop = await Promise.all(shopIds.map((shopId) => listShopProducts(shopId, revalidate)))
+  return perShop.flat()
 }
 
-export async function createPrintifyOrder(order: PrintifyOrderRequest): Promise<{ id: string }> {
-  const shopId = await getPrintifyShopId()
+export async function getPrintifyProduct(productId: string, revalidate = 300): Promise<PrintifyProduct | null> {
+  if (!/^[a-f0-9]{24}$/i.test(productId)) return null
+  for (const shopId of await getPrintifyShopIds()) {
+    try {
+      const product = await printifyFetch<PrintifyProduct>(`/shops/${shopId}/products/${productId}.json`, {
+        revalidate,
+      })
+      return { ...product, shop_id: shopId }
+    } catch (error) {
+      if (error instanceof PrintifyError && error.status === 404) continue
+      throw error
+    }
+  }
+  return null
+}
+
+export async function createPrintifyOrder(shopId: string, order: PrintifyOrderRequest): Promise<{ id: string }> {
   return printifyFetch<{ id: string }>(`/shops/${shopId}/orders.json`, { method: 'POST', body: order })
 }

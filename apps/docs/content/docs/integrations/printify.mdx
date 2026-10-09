@@ -10,7 +10,7 @@ Merch (tour shirts, apparel, accessories) is printed and shipped on demand by Pr
 ## Setup
 
 1. In Printify, open **My Profile → Connections**, create a personal access token with the products and orders scopes.
-2. Add it to the storefront's Vercel project as `PRINTIFY_API_TOKEN`. Set `PRINTIFY_SHOP_ID` only if the account has more than one shop; otherwise the first shop is used.
+2. Add it to the storefront's Vercel project as `PRINTIFY_API_TOKEN`. The merch page sells the products of every shop on the account, such as an API shop and the shop connected to Etsy, and each order goes to the shop its product is in. Set `PRINTIFY_SHOP_ID` to a comma-separated list only to sell from some shops.
 3. Redeploy. `/admin/merchandise` shows **Connected** and lists the products for sale.
 
 Square must already be configured (`SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, `SQUARE_SANDBOX=false` in production), since merch is paid for through Square.
