@@ -96,6 +96,13 @@ export type DesktopCommand =
   /** The scan sheet: count or receive stock with a barcode scanner. */
   | { kind: 'scan' }
   /**
+   * The pack sheet: scan an order's jars into the box, then buy and print its
+   * postage. Without an order it starts by asking for the order ticket.
+   */
+  | { kind: 'pack'; orderId?: string }
+  /** Print an order's ticket again on the desktop app's receipt printer. */
+  | { kind: 'receipt'; orderId: string }
+  /**
    * A 4×6 shipping label. The desktop apps send it straight to the label
    * printer chosen in their settings; a browser tab opens it in a new tab.
    */

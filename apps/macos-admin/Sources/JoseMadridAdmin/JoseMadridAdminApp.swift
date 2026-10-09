@@ -157,12 +157,24 @@ private struct AdminWorkspace: View {
 private final class ConnectionDraft: ObservableObject {
   @Published var url = ""
   @Published var validationMessage: String?
+  @Published var receiptMessage: String?
 }
 
 private struct ConnectionSettings: View {
   @AppStorage("adminEndpoint") private var endpoint = AdminEndpoint.production.absoluteString
   /// Where shipping labels print without a panel. Empty means ask each time.
   @AppStorage("labelPrinter") private var labelPrinter = ""
+  /// `letter` draws the 4×6 label on a letter sheet, to cut out; `4x6` is label stock.
+  @AppStorage("labelPaper") private var labelPaper = "letter"
+  /// Where packing slips print without a panel. Empty means ask each time.
+  @AppStorage("documentPrinter") private var documentPrinter = ""
+  /// The receipt printer: `off`, `network` (host and port) or `printer` (installed, sent raw).
+  @AppStorage("receiptMode") private var receiptMode = "off"
+  @AppStorage("receiptHost") private var receiptHost = ""
+  @AppStorage("receiptPort") private var receiptPort = "9100"
+  @AppStorage("receiptPrinter") private var receiptPrinter = ""
+  /// When receipts were switched on. Orders placed before it are not printed.
+  @AppStorage("receiptsEnabledAt") private var receiptsEnabledAt = 0.0
   @StateObject private var draft = ConnectionDraft()
 
   var body: some View {
@@ -186,9 +198,46 @@ private struct ConnectionSettings: View {
           Text("\(labelPrinter) (not found)").tag(labelPrinter)
         }
       }
-      Text("Shipping labels print here at 4×6 without a dialog.")
+      Text("Shipping labels print here without a dialog.")
         .font(.caption)
         .foregroundStyle(.secondary)
+      Picker("Label paper", selection: $labelPaper) {
+        Text("Letter sheet (label printed 4×6 to cut out)").tag("letter")
+        Text("4×6 label stock").tag("4x6")
+      }
+      printerPicker("Packing slip printer", selection: $documentPrinter, empty: "Ask each time")
+
+      Divider()
+      Picker("Receipt printer", selection: $receiptMode) {
+        Text("Off").tag("off")
+        Text("Network (Ethernet)").tag("network")
+        Text("Installed printer (USB)").tag("printer")
+      }
+      .onChange(of: receiptMode) { previous, current in
+        // Switching receipts on starts the clock: orders already in are not printed.
+        if previous == "off" && current != "off" { receiptsEnabledAt = Date().timeIntervalSince1970 }
+      }
+      if receiptMode == "network" {
+        HStack {
+          TextField("IP address", text: $receiptHost, prompt: Text("192.168.1.87"))
+          TextField("Port", text: $receiptPort).frame(width: 70)
+        }
+        .textFieldStyle(.roundedBorder)
+      }
+      if receiptMode == "printer" {
+        printerPicker("Printer", selection: $receiptPrinter, empty: "Choose…")
+      }
+      Text("Every new order prints a ticket here (80mm ESC/POS). Orders already in when you switch it on are not printed.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      HStack {
+        Button("Print a Test Ticket") { testReceipt() }
+          .disabled(receiptMode == "off")
+        if let receiptMessage = draft.receiptMessage {
+          Text(receiptMessage).font(.caption).foregroundStyle(.secondary)
+        }
+      }
+
       HStack {
         Spacer()
         Button("Use Production") {
@@ -204,6 +253,33 @@ private struct ConnectionSettings: View {
     // Show what the app is actually pointed at, which may have been migrated
     // forward from the pre-shell default.
     .onAppear { draft.url = AdminEndpoint.migratingLegacyDefault(endpoint) }
+  }
+
+  /// Every installed printer, plus a saved one that is no longer installed so it is clear why printing asks.
+  private func printerPicker(_ title: String, selection: Binding<String>, empty: String) -> some View {
+    Picker(title, selection: selection) {
+      Text(empty).tag("")
+      ForEach(NSPrinter.printerNames, id: \.self) { name in
+        Text(name).tag(name)
+      }
+      if !selection.wrappedValue.isEmpty && !NSPrinter.printerNames.contains(selection.wrappedValue) {
+        Text("\(selection.wrappedValue) (not found)").tag(selection.wrappedValue)
+      }
+    }
+  }
+
+  private func testReceipt() {
+    let parsed = ReceiptConnection.parse(mode: receiptMode, host: receiptHost, port: receiptPort, printer: receiptPrinter)
+    switch parsed {
+    case .failure(let error):
+      draft.receiptMessage = error.message
+    case .success(let connection):
+      draft.receiptMessage = "Sending…"
+      Task { @MainActor in
+        let failure = await ReceiptPrinter.send(ReceiptLog.testTicket(at: Date()), to: connection)
+        draft.receiptMessage = failure ?? "Sent. If nothing printed, check the connection."
+      }
+    }
   }
 
   private func save() {

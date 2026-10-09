@@ -14,6 +14,14 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Order tickets on a receipt printer, and scan-to-ship, in the desktop apps.** Set up an 80mm
+  ESC/POS receipt printer (network or USB) in the Windows or macOS app's settings and every new
+  paid order prints a ticket for gathering it, once per order, with the order number as a barcode.
+  **Pack & ship** in the desktop window opens a pack sheet: scan the ticket, scan every jar into the
+  box (a wrong jar or one too many is refused), and on the last scan the postage is bought through
+  EasyPost and the label and a new price-free packing slip print. Labels can now print at 4×6 on a
+  letter sheet. New routes `/api/admin/desktop/receipts` and `/api/admin/desktop/pack`; no schema or
+  env changes.
 - **Order form packs and fliers on the fundraising home page.** The 25, 16 and 9 flavor kit
   downloads and both fliers now appear on the fundraising home page as well as `/start`, from one
   shared component.

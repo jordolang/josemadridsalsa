@@ -186,4 +186,39 @@ precondition(
   "the disk image sits beside the manifest"
 )
 
+// MARK: receipt printer
+
+if case .success(let connection) = ReceiptConnection.parse(mode: "network", host: " 192.168.1.87 ", port: "", printer: "") {
+  precondition(connection == .network(host: "192.168.1.87", port: 9100), "a network printer defaults to port 9100")
+} else {
+  preconditionFailure("a plain IP address should be accepted")
+}
+if case .success = ReceiptConnection.parse(mode: "network", host: "printer; rm -rf /", port: "9100", printer: "") {
+  preconditionFailure("a host with shell characters should be refused")
+}
+if case .success = ReceiptConnection.parse(mode: "network", host: "10.0.0.5", port: "70000", printer: "") {
+  preconditionFailure("a port past 65535 should be refused")
+}
+if case .success(let connection) = ReceiptConnection.parse(mode: "anything", host: "", port: "", printer: "") {
+  precondition(connection == .off, "an unknown mode is off")
+}
+
+let ticket = Data([0x1B, 0x40, 0x41, 0x0A]).base64EncodedString()
+let job: [String: Any] = ["orderId": "cmabc123", "orderNumber": "JMS-1", "createdAt": "2026-10-09T03:00:00.000Z", "data": ticket]
+precondition(ReceiptJob.parse(job)?.bytes == Data([0x1B, 0x40, 0x41, 0x0A]), "a ticket from the page should parse")
+precondition(ReceiptJob.parse(job.merging(["orderId": "../../x"]) { $1 }) == nil, "an odd order id should be refused")
+precondition(ReceiptJob.parse(job.merging(["createdAt": "yesterday"]) { $1 }) == nil, "a bad date should be refused")
+precondition(ReceiptJob.parse(job.merging(["data": "not base64!"]) { $1 }) == nil, "bad base64 should be refused")
+
+let enabledAt = Date(timeIntervalSince1970: 1_791_500_000)
+let fresh = ReceiptJob(orderId: "o1", orderNumber: nil, createdAt: enabledAt.addingTimeInterval(60), bytes: Data([1]), reprint: false)
+precondition(ReceiptLog.shouldPrint(fresh, printed: [], enabledAt: enabledAt), "a new order prints")
+precondition(!ReceiptLog.shouldPrint(fresh, printed: ["o1"], enabledAt: enabledAt), "an order prints once")
+let backlog = ReceiptJob(orderId: "o2", orderNumber: nil, createdAt: enabledAt.addingTimeInterval(-60), bytes: Data([1]), reprint: false)
+precondition(!ReceiptLog.shouldPrint(backlog, printed: [], enabledAt: enabledAt), "the backlog does not print")
+let reprint = ReceiptJob(orderId: "o1", orderNumber: nil, createdAt: .distantPast, bytes: Data([1]), reprint: true)
+precondition(ReceiptLog.shouldPrint(reprint, printed: ["o1"], enabledAt: enabledAt), "a reprint always prints")
+let remembered = ReceiptLog.remember((0..<ReceiptLog.memory).map { "o\($0)" }, "new")
+precondition(remembered.count == ReceiptLog.memory && remembered.last == "new", "the printed list keeps the newest")
+
 print("AdminEndpoint checks passed (\(AdminSections.all.count) sections)")

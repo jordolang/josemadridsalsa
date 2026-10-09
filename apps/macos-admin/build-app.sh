@@ -27,6 +27,7 @@ mkdir -p .build
 swiftc Sources/JoseMadridAdmin/AdminEndpoint.swift \
   Sources/JoseMadridAdmin/AdminSections.swift \
   Sources/JoseMadridAdmin/UpdateFeed.swift \
+  Sources/JoseMadridAdmin/ReceiptJob.swift \
   Tests/main.swift \
   -o .build/endpoint-check
 .build/endpoint-check
@@ -78,6 +79,9 @@ iconutil -c icns "$ICONSET_DIR" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
 # Downloads and printing both write outside the bundle, and the app talks to the
 # admin server over the network.
 /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string Copyright © Jose Madrid Salsa" "$APP_DIR/Contents/Info.plist"
+# A network receipt printer sits on the shop's own network, which macOS asks
+# permission to reach the first time a ticket goes to it.
+/usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string Order tickets print on the receipt printer on your network." "$APP_DIR/Contents/Info.plist"
 
 # Developer ID when MACOS_SIGN_IDENTITY names one (the Desktop Apps workflow
 # sets it from its certificate secrets): hardened runtime and a timestamp, which

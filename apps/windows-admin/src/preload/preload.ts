@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld('jmsDesktop', {
   notify: (alert: unknown) => ipcRenderer.send('desktop:notify', alert),
   setBadge: (count: unknown) => ipcRenderer.send('desktop:badge', count),
   printLabel: (url: unknown) => ipcRenderer.send('desktop:print-label', url),
+  printReceipt: (job: unknown) => ipcRenderer.send('desktop:print-receipt', job),
+  printDocument: (html: unknown) => ipcRenderer.send('desktop:print-document', html),
 })
 
 contextBridge.exposeInMainWorld('desktop', {
@@ -33,4 +35,6 @@ contextBridge.exposeInMainWorld('desktop', {
   closeSettings: () => ipcRenderer.invoke('window:close-settings'),
   listPrinters: () => ipcRenderer.invoke('printers:list'),
   saveLabelPrinter: (name: string) => ipcRenderer.invoke('settings:label-printer', name),
+  savePrinting: (printing: unknown) => ipcRenderer.invoke('settings:printing', printing),
+  testReceiptPrinter: (printer: unknown) => ipcRenderer.invoke('settings:test-receipt', printer),
 })

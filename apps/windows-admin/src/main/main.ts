@@ -2,8 +2,18 @@ import { BrowserWindow, Menu, Notification, app, ipcMain, nativeImage, nativeThe
 import { join } from 'node:path'
 import { isInternalUrl, isSafeExternalUrl, shouldOpenInApp, validateEndpoint } from '../shared/endpoint'
 import { isRepeat, parseAlert, parseBadge, parseLabelUrl } from '../shared/alerts'
+import {
+  RECEIPTS_OFF,
+  parseReceiptJob,
+  parseReceiptPrinter,
+  remember,
+  shouldPrint,
+  testTicket,
+  type ReceiptJob,
+} from '../shared/receipts'
+import { sendToReceiptPrinter } from './receipt-printer'
 import { stripAppTokens } from '../shared/user-agent'
-import { readSettings, writeSettings, type DesktopSettings } from './settings-store'
+import { readSettings, writeSettings, type DesktopSettings, type LabelPaper } from './settings-store'
 import { registerDownloadHandling } from './downloads'
 import { buildApplicationMenu } from './menu'
 import { initialiseUpdates } from './updates'
@@ -14,7 +24,16 @@ const RENDERER_DIR = join(__dirname, '../renderer')
 /** Every open admin window. The first one opened is the one a second launch raises. */
 const windows = new Set<BrowserWindow>()
 let settingsWindow: BrowserWindow | null = null
-let settings: DesktopSettings = { endpoint: '', zoomFactor: 1, labelPrinter: '' }
+let settings: DesktopSettings = {
+  endpoint: '',
+  zoomFactor: 1,
+  labelPrinter: '',
+  labelPaper: 'letter',
+  documentPrinter: '',
+  receiptPrinter: RECEIPTS_OFF,
+  receiptsEnabledAt: 0,
+  printedReceipts: [],
+}
 
 /**
  * Permissions the admin panel legitimately asks for. Everything else — camera,
@@ -171,7 +190,7 @@ function openSettingsWindow(): void {
 
   settingsWindow = new BrowserWindow({
     width: 560,
-    height: 470,
+    height: 860,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -233,6 +252,16 @@ function trustedSender(event: Electron.IpcMainEvent): string | null {
 /** A 4×6 label, in microns — what Electron's `pageSize` takes. */
 const LABEL_PAGE = { width: 101_600, height: 152_400 }
 
+/** The label drawn at 4×6 on a letter sheet, a quarter inch in from the top-left, to cut out. */
+const LABEL_HTML: Record<LabelPaper, string> = {
+  '4x6':
+    '<!doctype html><meta charset="utf-8"><style>@page{size:4in 6in;margin:0}html,body{margin:0}' +
+    'img{display:block;width:4in;height:6in;object-fit:contain}</style><img alt="">',
+  letter:
+    '<!doctype html><meta charset="utf-8"><style>@page{size:letter;margin:0.25in}html,body{margin:0}' +
+    'img{display:block;width:4in;height:6in;object-fit:contain;border:1px dashed #999}</style><img alt="">',
+}
+
 function tell(title: string, body: string): void {
   if (Notification.isSupported()) new Notification({ title, body }).show()
 }
@@ -254,13 +283,8 @@ async function printLabel(url: string): Promise<void> {
   })
 
   try {
-    await window.loadURL(
-      'data:text/html,' +
-        encodeURIComponent(
-          '<!doctype html><meta charset="utf-8"><style>@page{size:4in 6in;margin:0}html,body{margin:0}' +
-            'img{display:block;width:4in;height:6in;object-fit:contain}</style><img alt="">',
-        ),
-    )
+    const paper = settings.labelPaper
+    await window.loadURL('data:text/html,' + encodeURIComponent(LABEL_HTML[paper]))
     const width = (await window.webContents.executeJavaScript(
       `new Promise((resolve) => {
         const img = document.querySelector('img')
@@ -280,8 +304,8 @@ async function printLabel(url: string): Promise<void> {
         {
           silent: Boolean(printer),
           deviceName: printer || undefined,
-          margins: { marginType: 'none' },
-          pageSize: LABEL_PAGE,
+          margins: { marginType: paper === 'letter' ? 'default' : 'none' },
+          pageSize: paper === 'letter' ? 'Letter' : LABEL_PAGE,
           printBackground: true,
         },
         (ok, reason) => {
@@ -294,6 +318,83 @@ async function printLabel(url: string): Promise<void> {
     })
   } finally {
     if (!window.isDestroyed()) window.destroy()
+  }
+}
+
+/**
+ * Print a self-contained HTML page — the packing slip — on the document printer.
+ *
+ * Like the label, it is drawn in a hidden window of its own, never the admin
+ * window, with scripts off and no session or bridge, so the page can only be
+ * what it says it is. With a document printer set the job goes straight to it;
+ * without one the system print dialog opens.
+ */
+async function printDocument(html: string): Promise<void> {
+  const window = new BrowserWindow({
+    show: false,
+    width: 816,
+    height: 1056,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
+  })
+
+  try {
+    await window.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
+    const printer = settings.documentPrinter
+    await new Promise<void>((resolve) => {
+      window.webContents.print(
+        { silent: Boolean(printer), deviceName: printer || undefined, pageSize: 'Letter', printBackground: true },
+        (ok, reason) => {
+          if (!ok && reason !== 'cancelled') {
+            tell('Packing slip not printed', printer ? `${printer}: ${reason}` : reason)
+          }
+          resolve()
+        },
+      )
+    })
+  } finally {
+    if (!window.isDestroyed()) window.destroy()
+  }
+}
+
+/** A printer that is off or out of paper gets this many more tries, a minute apart. */
+const RECEIPT_RETRIES = 10
+const RECEIPT_RETRY_MS = 60_000
+
+/**
+ * Print one order ticket, once.
+ *
+ * The order is recorded as printed before the bytes go out, so a second window
+ * polling at the same moment cannot print it too. A printer that fails is
+ * tried again every minute for ten minutes; after that the order is taken off
+ * the list and the operator told to reprint it from the order.
+ */
+async function printReceipt(job: ReceiptJob, attempt = 0): Promise<void> {
+  if (attempt === 0) {
+    if (settings.receiptPrinter.mode === 'off') return
+    if (!shouldPrint(job, settings.printedReceipts, settings.receiptsEnabledAt)) return
+    settings = { ...settings, printedReceipts: remember(settings.printedReceipts, job.orderId) }
+    writeSettings(settings)
+  }
+
+  // Read again on a retry: the printer may have been switched off in settings meanwhile.
+  const printer = settings.receiptPrinter
+  if (printer.mode === 'off') return
+
+  try {
+    await sendToReceiptPrinter(printer, job.bytes)
+  } catch (error) {
+    const order = job.orderNumber || 'an order'
+    const reason = error instanceof Error ? error.message : 'The receipt printer did not answer.'
+    if (attempt === 0) tell('Receipt not printed', `${order}: ${reason} Trying again for ten minutes.`)
+    if (attempt < RECEIPT_RETRIES) {
+      setTimeout(() => void printReceipt(job, attempt + 1), RECEIPT_RETRY_MS)
+      return
+    }
+    if (!job.reprint) {
+      settings = { ...settings, printedReceipts: settings.printedReceipts.filter((id) => id !== job.orderId) }
+      writeSettings(settings)
+    }
+    tell('Receipt not printed', `Gave up on ${order}. Use Print receipt on the order once the printer is back.`)
   }
 }
 
@@ -357,6 +458,20 @@ function registerIpc(): void {
     if (url) void printLabel(url)
   })
 
+  ipcMain.on('desktop:print-receipt', (event, value: unknown) => {
+    const sender = trustedSender(event)
+    const job = sender ? parseReceiptJob(settings.endpoint, sender, value) : null
+    if (job) void printReceipt(job)
+  })
+
+  ipcMain.on('desktop:print-document', (event, value: unknown) => {
+    const sender = trustedSender(event)
+    // The packing slip is a few kilobytes; the cap only stops a runaway page.
+    if (!sender || !isInternalUrl(settings.endpoint, sender)) return
+    if (typeof value !== 'string' || value.length > 512 * 1024) return
+    void printDocument(value)
+  })
+
   // The printer list and the label-printer choice belong to the settings page
   // only, like the endpoint.
   ipcMain.handle('printers:list', async (event) => {
@@ -370,6 +485,40 @@ function registerIpc(): void {
     if (!event.senderFrame?.url.startsWith('file://') || typeof name !== 'string') return
     settings = { ...settings, labelPrinter: name.slice(0, 200) }
     writeSettings(settings)
+  })
+
+  ipcMain.handle('settings:printing', (event, value: unknown) => {
+    if (!event.senderFrame?.url.startsWith('file://') || typeof value !== 'object' || value === null) {
+      return { error: 'Not allowed.' }
+    }
+    const { labelPaper, documentPrinter, receiptPrinter } = value as Record<string, unknown>
+    const receipts = parseReceiptPrinter(receiptPrinter)
+    if ('error' in receipts) return receipts
+
+    // Switching receipts on starts the clock: orders already in are not printed.
+    const wasOff = settings.receiptPrinter.mode === 'off'
+    settings = {
+      ...settings,
+      labelPaper: labelPaper === '4x6' ? '4x6' : 'letter',
+      documentPrinter: typeof documentPrinter === 'string' ? documentPrinter.slice(0, 200) : '',
+      receiptPrinter: receipts,
+      receiptsEnabledAt: wasOff && receipts.mode !== 'off' ? Date.now() : settings.receiptsEnabledAt,
+    }
+    writeSettings(settings)
+    return { ok: true }
+  })
+
+  ipcMain.handle('settings:test-receipt', async (event, value: unknown) => {
+    if (!event.senderFrame?.url.startsWith('file://')) return { error: 'Not allowed.' }
+    const printer = parseReceiptPrinter(value)
+    if ('error' in printer) return printer
+    if (printer.mode === 'off') return { error: 'Choose how the receipt printer is connected first.' }
+    try {
+      await sendToReceiptPrinter(printer, testTicket(new Date()))
+      return { ok: true }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'The receipt printer did not answer.' }
+    }
   })
 
   ipcMain.on('desktop:badge', (event, value: unknown) => {

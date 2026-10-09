@@ -84,7 +84,7 @@ struct AdminBrowser: NSViewRepresentable {
   }
 
   /// Tells the desktop shell which frame it is running inside, and gives it
-  /// the two native calls it has: a notification and the dock badge.
+  /// its native calls: a notification, the dock badge, and the printers.
   ///
   /// The window has no title bar of its own, so the real traffic lights float
   /// over the top-left of the page and the shell has to leave that corner clear
@@ -103,7 +103,19 @@ struct AdminBrowser: NSViewRepresentable {
           post({ type: 'notify', title: String(alert.title || ''), body: String(alert.body || ''), path: String(alert.path || '') });
         },
         setBadge: function (count) { post({ type: 'badge', count: Number(count) || 0 }); },
-        printLabel: function (url) { post({ type: 'printLabel', url: String(url || '') }); }
+        printLabel: function (url) { post({ type: 'printLabel', url: String(url || '') }); },
+        printReceipt: function (job) {
+          job = job || {};
+          post({
+            type: 'printReceipt',
+            orderId: String(job.orderId || ''),
+            orderNumber: String(job.orderNumber || ''),
+            createdAt: String(job.createdAt || ''),
+            data: String(job.data || ''),
+            reprint: job.reprint === true
+          });
+        },
+        printDocument: function (html) { post({ type: 'printDocument', html: String(html || '') }); }
       }),
       writable: false, configurable: false
     });
@@ -185,6 +197,13 @@ struct AdminBrowser: NSViewRepresentable {
       case "printLabel":
         guard let value = body["url"] as? String, let url = AdminEndpoint.labelURL(value) else { return }
         Task { await LabelPrinter.print(url, in: controller.webView?.window) }
+      case "printReceipt":
+        guard let job = ReceiptJob.parse(body) else { return }
+        ReceiptPrinter.print(job)
+      case "printDocument":
+        // The packing slip is a few kilobytes; the cap only stops a runaway page.
+        guard let html = body["html"] as? String, !html.isEmpty, html.utf8.count <= 512 * 1024 else { return }
+        DocumentPrinter.print(html: html)
       default:
         return
       }
