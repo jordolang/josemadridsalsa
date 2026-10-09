@@ -5,7 +5,8 @@
  *   npm run email:upload-images --workspace @jose-madrid/storefront            # dry run
  *   npm run email:upload-images --workspace @jose-madrid/storefront -- --apply # upload
  *
- * Needs BLOB_READ_WRITE_TOKEN for the josemadridsalsa-blob store. Uploads keep
+ * Needs BLOB_READ_WRITE_TOKEN for the josemadridsalsa-blob store, read from the
+ * environment or apps/storefront/.env.local. Uploads keep
  * their filenames and overwrite, so re-running after adding an image is safe.
  * After uploading, run `npm run email:repair-images -- --apply` to point
  * templates already saved in the database at the store.
@@ -13,9 +14,14 @@
 import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { put } from '@vercel/blob'
+import { config as loadEnv } from 'dotenv'
 import { getErrorMessage } from '@/lib/errors'
 import { EMAIL_IMAGE_BLOB_BASE_URL } from '@/lib/email/shared/components'
 import { planEmailImageUploads } from '@/lib/email/image-upload-plan'
+
+// Load env the same way the app does (.env.local wins, then .env fills gaps).
+loadEnv({ path: path.join(process.cwd(), '.env.local') })
+loadEnv()
 
 const IMAGE_DIR = path.join(process.cwd(), 'public', 'email-templates')
 const apply = process.argv.includes('--apply')
