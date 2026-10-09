@@ -18,6 +18,7 @@ import { homeHeroPanels } from '@/lib/cms/home'
 import { FeaturedProductsSection } from '@/components/store/featured-products-section'
 import { FeaturedHeatIndexSection } from '@/components/store/featured-heat-index-section'
 import { BattleArenaSection } from '@/components/store/battle-arena-section'
+import { SiteFeedbackSection } from '@/components/store/site-feedback-section'
 import { getBigCommercePackOverrides } from '@/lib/bigcommerce/storefront'
 
 export const revalidate = 300
@@ -419,6 +420,18 @@ export default async function Home() {
 
         {/* Reviews Section — data pre-fetched server-side, zero client API calls */}
         <AnimatedTestimonials reviewsData={reviewsData} />
+
+        {/* Site feedback — visitors rate the new site 1–10 by category */}
+        {content.isVisible('siteFeedback') && (
+          <SiteFeedbackSection
+            heading={content.text('siteFeedback', 'heading', 'How Are We Doing?')}
+            body={content.text(
+              'siteFeedback',
+              'body',
+              'Our new website is live. Tell us what works and what doesn’t by rating the parts you used from 1 to 10.'
+            )}
+          />
+        )}
 
         {/* CTA — hero gradient, eyebrow, serif + text-gradient accent */}
         <section className="hero-gradient relative overflow-hidden py-12 sm:py-16 md:py-20 text-white">

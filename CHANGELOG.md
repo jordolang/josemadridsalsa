@@ -14,6 +14,19 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Site feedback.** Visitors pick the parts of the site they used (layout, accessibility,
+  functionality, user interface, finding what you need, ordering, mobile, fundraising, the Battle
+  Arena game, social sharing) and rate each from 1 to 10, with an optional comment. The form is a
+  new homepage section (hideable in the CMS as `siteFeedback`) and its own page at `/feedback`
+  (in the sitemap). Submissions go to `/api/site-feedback` (rate limited) and are read in
+  **Admin → Communications → Site Feedback** with per-category averages. New `SiteFeedback`
+  model and migration; no env changes.
+- **"Everything is live" launch email.** New `everything_is_live` marketing template announcing
+  the new storefront and fundraising site, inviting an order, and asking for Google and product
+  reviews and site feedback. `npm run email:launch-campaign --workspace @jose-madrid/storefront`
+  (dry run; `-- --apply` to write) creates it as a draft campaign addressed to every subscribed
+  contact on every mailing list, each address once. Nothing is sent until it is launched in the
+  admin.
 - **Order tickets on a receipt printer, and scan-to-ship, in the desktop apps.** Set up an 80mm
   ESC/POS receipt printer (network or USB) in the Windows or macOS app's settings and every new
   paid order prints a ticket for gathering it, once per order, with the order number as a barcode.
@@ -234,6 +247,9 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Campaign emails carry a working unsubscribe link.** The campaign queue now fills
+  `{{UNSUBSCRIBE_URL}}`, which the shared email footer prints; before, campaigns went out with an
+  empty unsubscribe link.
 - **Picante said "Sorry, I could not generate a response" instead of the real error.** The chat
   route returned provider errors with a 200 status, so the widget never showed them. It now keeps
   the provider's status and the widget shows the cause.
