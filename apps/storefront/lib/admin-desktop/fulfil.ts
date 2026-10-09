@@ -31,7 +31,7 @@ const TO_FULFIL = {
 export const RECEIPT_LOOKBACK_MS = 4 * 24 * 60 * 60 * 1000
 
 /** A burst bigger than this is printed over the next few polls rather than all at once. */
-const RECEIPT_BATCH = 25
+export const RECEIPT_BATCH = 25
 
 const ORDER_INCLUDE = {
   items: { orderBy: { createdAt: 'asc' }, include: { product: { select: { sku: true, barcode: true } } } },
@@ -111,8 +111,9 @@ export function receiptWindowStart(since: Date | null, now: Date): Date {
 /**
  * Orders to fulfil that changed after `since`, in the order they changed, and
  * where the next poll should start. A burst bigger than one batch hands back
- * the last one it reached, so the rest come out on the next poll rather than
- * being skipped.
+ * the last time it reached, so the rest come out on the next poll rather than
+ * being skipped. Every order sharing that last time comes out in this batch,
+ * since the next poll starts strictly after it.
  */
 export async function loadReceipts(
   since: Date | null,
@@ -125,7 +126,14 @@ export async function loadReceipts(
     take: RECEIPT_BATCH,
   })
   const more = orders.length === RECEIPT_BATCH
-  return { receipts: orders.map(receiptJob), next: more ? orders[orders.length - 1].updatedAt : now, more }
+  if (!more) return { receipts: orders.map(receiptJob), next: now, more }
+
+  const last = orders[orders.length - 1].updatedAt
+  const ties = await prisma.order.findMany({
+    where: { ...TO_FULFIL, updatedAt: last, id: { notIn: orders.map((order) => order.id) } },
+    include: ORDER_INCLUDE,
+  })
+  return { receipts: [...orders, ...ties].map(receiptJob), next: last, more }
 }
 
 /** One order's ticket, for a reprint. Any order — a reprint does not care whether it shipped. */
