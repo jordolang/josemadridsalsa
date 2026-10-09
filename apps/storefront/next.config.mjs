@@ -61,6 +61,8 @@ const nextConfig = {
       ...sharedImages.remotePatterns,
       { protocol: 'https', hostname: 'images-api.printify.com', port: '', pathname: '/**' },
       { protocol: 'https', hostname: 'images.printify.com', port: '', pathname: '/**' },
+      // Some Printify products (e.g. the woven blanket) serve their photos from this CDN.
+      { protocol: 'https', hostname: 'd123s6f1z9g2wk.cloudfront.net', port: '', pathname: '/files/**' },
     ],
   },
   serverExternalPackages: sharedServerExternalPackages,

@@ -18,7 +18,37 @@
       <label for="labelPrinter" style="margin-top: 18px">Label printer</label>
       <select id="labelPrinter"></select>
       <div class="hint" style="margin-top: 8px">
-        Shipping labels print here at 4×6 without a dialog. "Ask each time" shows the print dialog.
+        Shipping labels print here without a dialog. "Ask each time" shows the print dialog.
+      </div>
+      <label for="labelPaper" style="margin-top: 18px">Label paper</label>
+      <select id="labelPaper">
+        <option value="letter">Letter sheet (label printed 4×6 to cut out)</option>
+        <option value="4x6">4×6 label stock</option>
+      </select>
+      <label for="documentPrinter" style="margin-top: 18px">Packing slip printer</label>
+      <select id="documentPrinter"></select>
+      <label for="receiptMode" style="margin-top: 18px">Receipt printer</label>
+      <select id="receiptMode">
+        <option value="off">Off</option>
+        <option value="network">Network (Ethernet)</option>
+        <option value="printer">Installed printer (USB)</option>
+      </select>
+      <div id="receiptNetwork" hidden>
+        <label for="receiptHost" style="margin-top: 12px">Printer IP address and port</label>
+        <div style="display: flex; gap: 8px">
+          <input id="receiptHost" type="text" spellcheck="false" autocomplete="off" placeholder="192.168.1.87" />
+          <input id="receiptPort" type="text" spellcheck="false" autocomplete="off" value="9100" style="width: 90px" />
+        </div>
+      </div>
+      <div id="receiptInstalled" hidden>
+        <label for="receiptPrinter" style="margin-top: 12px">Printer</label>
+        <select id="receiptPrinter"></select>
+      </div>
+      <div class="hint" style="margin-top: 8px">
+        Every new order prints a ticket here (80mm ESC/POS). Orders already in when you switch it on are not printed.
+      </div>
+      <div class="actions" style="margin-top: 10px">
+        <button id="testReceipt" type="button">Print a test ticket</button>
       </div>
       <div class="message" id="message"></div>
       <div class="actions">

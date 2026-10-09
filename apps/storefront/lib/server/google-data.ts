@@ -248,6 +248,9 @@ function parseIcsFeed(icsText: string, limit: number): ScheduleEvent[] {
   return events
     .filter((e) => {
       if (!e.start) return false
+      // Online meetings (webinars, Zoom/Meet calls) that land on the calendar are
+      // not stops anyone can visit, so keep them off the public schedule.
+      if (isOnlineMeetingLocation(e.location)) return false
       const t = Date.parse(e.start)
       if (Number.isNaN(t)) return false
       return t >= now
@@ -258,6 +261,13 @@ function parseIcsFeed(icsText: string, limit: number): ScheduleEvent[] {
       return ta - tb
     })
     .slice(0, limit)
+}
+
+/** True when an event's location is a meeting link rather than a place. */
+export function isOnlineMeetingLocation(location: string | null | undefined): boolean {
+  const value = location?.trim()
+  if (!value) return false
+  return /^(https?:\/\/|www\.)/i.test(value) || /\b(zoom\.us|meet\.google\.com|teams\.microsoft\.com|webex\.com)\b/i.test(value)
 }
 
 /**

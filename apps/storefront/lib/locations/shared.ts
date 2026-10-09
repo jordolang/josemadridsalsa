@@ -46,6 +46,24 @@ export type LocationsQueryResult = {
 
 const normalizeString = (value?: string | null) => value?.trim() || undefined
 
+/**
+ * Cleans a stored store website into an absolute http(s) URL, or null.
+ * Imported data has leading/trailing spaces (and the odd missing scheme), which
+ * made the browser treat the link as relative to /find-us and land on a 404.
+ */
+export const normalizeWebsiteUrl = (value?: string | null): string | null => {
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/+/, '')}`
+  try {
+    const url = new URL(withScheme)
+    if (!url.hostname.includes('.')) return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
 const haversineMiles = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const toRad = (deg: number) => (deg * Math.PI) / 180
   const R = 3958.8
