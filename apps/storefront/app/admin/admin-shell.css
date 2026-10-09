@@ -464,3 +464,27 @@
     transition: none;
   }
 }
+
+/*
+ * Printable documents (invoice, packing slip) render inside the admin frame,
+ * so printing them would also print the sidebar and header. While one is on
+ * the page, print only the document, on white paper.
+ */
+@media print {
+  body:has(.print-document) * {
+    visibility: hidden;
+  }
+
+  body:has(.print-document) .print-document,
+  body:has(.print-document) .print-document * {
+    visibility: visible;
+  }
+
+  body:has(.print-document) .print-document {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+  }
+}

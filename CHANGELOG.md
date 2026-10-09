@@ -255,6 +255,20 @@ the root `package.json` is canonical.
   entry now shows its bold headline and unfolds to the full text on click; the Added, Changed and
   Fixed groups and each version fold too, with Unreleased folded by default and an Expand all
   button. Removed sections and nested bullets are shown as well.
+- **Print Invoice on an order replaced the page with "Unable to Load Orders — ie is not a
+  function".** The PDF link wrapped the invoice in `next/dynamic`, which react-pdf cannot render.
+  Print Invoice now opens the printable invoice page, and a separate Download Invoice PDF button
+  builds the PDF directly. The site's Content-Security-Policy now allows `'wasm-unsafe-eval'` and
+  `data:` connections, without which react-pdf could not start (the lead-generation PDF report uses
+  it too).
+- **The invoice and packing slip pages, and Clear Filters on gift certificates, failed to load.**
+  Each was a Server Component with an inline `onClick`; the print button is now a client component
+  and Clear Filters is a link. A test now fails if any admin Server Component passes an event
+  handler.
+- **Printing an invoice or packing slip printed the admin sidebar too, and asked twice.** Only the
+  document prints now, and the print dialog opens once.
+- **The cookie banner covered the bottom of admin pages**, including Print Packing Slip on an
+  order, until it was dismissed. It no longer shows under `/admin`.
 - **Picante said "Sorry, I could not generate a response" instead of the real error.** The chat
   route returned provider errors with a 200 status, so the widget never showed them. It now keeps
   the provider's status and the widget shows the cause.

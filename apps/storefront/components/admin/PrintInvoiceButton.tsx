@@ -1,21 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
-import { FileText } from 'lucide-react'
+import { Download, FileText } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-
-// @react-pdf/renderer is heavy and has known failures on mobile Safari when
-// loaded eagerly. Gate it behind a user click so the order detail page always
-// renders, and only pay the bundle/runtime cost when an invoice is requested.
-const PDFDownloadLink = dynamic(
-  () => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink),
-  { ssr: false, loading: () => null }
-)
-
-const InvoicePDF = dynamic(() => import('@/components/admin/InvoicePDF'), {
-  ssr: false,
-})
 
 interface PrintInvoiceButtonProps {
   order: {
@@ -76,38 +64,60 @@ function mapAddress(addr: PrintInvoiceButtonProps['order']['shippingAddress']) {
 }
 
 export default function PrintInvoiceButton({ order }: PrintInvoiceButtonProps) {
-  const [armed, setArmed] = useState(false)
-  const invoiceOrder = {
-    ...order,
-    shippingAddress: mapAddress(order.shippingAddress),
-    billingAddress: mapAddress(order.billingAddress),
+  const [generating, setGenerating] = useState(false)
+
+  // @react-pdf/renderer is heavy and has known failures on mobile Safari when
+  // loaded eagerly, so it is only imported once a PDF is asked for. The PDF is
+  // built with pdf().toBlob() rather than <PDFDownloadLink>: wrapping the
+  // document in next/dynamic put React.lazy inside react-pdf's renderer, which
+  // threw "ie is not a function" and took down the whole order page.
+  const downloadPdf = async () => {
+    setGenerating(true)
+    try {
+      const [{ pdf }, { default: InvoicePDF }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('@/components/admin/InvoicePDF'),
+      ])
+      const invoiceOrder = {
+        ...order,
+        shippingAddress: mapAddress(order.shippingAddress),
+        billingAddress: mapAddress(order.billingAddress),
+      }
+      const blob = await pdf(<InvoicePDF order={invoiceOrder} />).toBlob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `invoice-${order.orderNumber}.pdf`
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      toast.error('Could not create the invoice PDF', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setGenerating(false)
+    }
   }
 
-  if (!armed) {
-    return (
+  return (
+    <>
       <Button
         variant="outline"
         className="w-full"
-        onClick={() => setArmed(true)}
+        onClick={() => window.open(`/admin/orders/${order.id}/invoice`, '_blank')}
       >
         <FileText className="mr-2 h-4 w-4" />
         Print Invoice
       </Button>
-    )
-  }
-
-  return (
-    <PDFDownloadLink
-      document={<InvoicePDF order={invoiceOrder} />}
-      fileName={`invoice-${order.orderNumber}.pdf`}
-      style={{ width: '100%', display: 'block' }}
-    >
-      {({ loading }) => (
-        <Button variant="outline" className="w-full" disabled={loading}>
-          <FileText className="mr-2 h-4 w-4" />
-          {loading ? 'Generating...' : 'Download Invoice'}
-        </Button>
-      )}
-    </PDFDownloadLink>
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={downloadPdf}
+        disabled={generating}
+      >
+        <Download className="mr-2 h-4 w-4" />
+        {generating ? 'Generating...' : 'Download Invoice PDF'}
+      </Button>
+    </>
   )
 }

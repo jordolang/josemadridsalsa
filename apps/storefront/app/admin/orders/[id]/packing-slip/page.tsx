@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import AutoPrint from '@/components/admin/AutoPrint'
+import PrintPageButton from '@/components/admin/PrintPageButton'
 import { SITE_DOMAIN } from '@/lib/site-url'
 
 async function getOrder(id: string) {
@@ -33,7 +34,7 @@ export default async function PackingSlipPage({
   return (
     <>
       <AutoPrint />
-      <div className="print:block" style={{ fontFamily: 'Arial, sans-serif', color: '#111', maxWidth: 600, margin: '0 auto', padding: 32 }}>
+      <div className="print-document" style={{ fontFamily: 'Arial, sans-serif', color: '#111', maxWidth: 600, margin: '0 auto', padding: 32 }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #dc2626', paddingBottom: 16, marginBottom: 24 }}>
           <div>
@@ -140,12 +141,7 @@ export default async function PackingSlipPage({
 
         {/* Print button (hidden when printing) */}
         <div className="print:hidden" style={{ marginTop: 32, textAlign: 'center' }}>
-          <button
-            onClick={() => window.print()}
-            style={{ background: '#dc2626', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
-          >
-            Print Packing Slip
-          </button>
+          <PrintPageButton label="Print Packing Slip" />
         </div>
       </div>
     </>

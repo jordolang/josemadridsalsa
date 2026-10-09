@@ -13,10 +13,11 @@ export const sharedHeaders = async () => {
     // Allow inline styles for Tailwind
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
     // Next.js App Router requires 'unsafe-inline' for hydration scripts and RSC payloads.
-    // 'unsafe-eval' is also needed in dev for HMR.
+    // 'unsafe-eval' is also needed in dev for HMR. 'wasm-unsafe-eval' lets the
+    // admin's PDF invoices compile react-pdf's layout engine (WebAssembly).
     isProd
-      ? "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live"
-      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
+      ? "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
     "worker-src 'self' blob:",
     // Allow Google Maps iframes, GTM noscript, Stripe checkout iframes,
     // YouTube/Vimeo video embeds used in blog (Heat Index) posts, and the
@@ -27,7 +28,8 @@ export const sharedHeaders = async () => {
     "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com https://*.google-analytics.com https://*.googletagmanager.com",
     // Allow connections to self, external APIs used client-side, Sentry, and
     // the GA4 collect endpoints gtag uses (fundraiser pages load gtag.js).
-    "connect-src 'self' https://*.sentry.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com https://vercel.live wss://ws-us3.pusher.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+    // data: is react-pdf fetching its inlined WebAssembly and fonts.
+    "connect-src 'self' https://*.sentry.io https://api.stripe.com https://r.stripe.com https://amplitude.com https://*.amplitude.com https://calendar.google.com https://maps.googleapis.com https://vercel.live wss://ws-us3.pusher.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com data:",
     "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://assets.vercel.com",
     "object-src 'none'",
     "base-uri 'self'",

@@ -109,7 +109,7 @@ describe('Security Headers Configuration', () => {
       const csp = findHeader(headers, 'Content-Security-Policy')
 
       expect(csp).toContain("script-src 'self'")
-      expect(csp).not.toContain('unsafe-eval')
+      expect(csp).not.toContain("'unsafe-eval'") // 'wasm-unsafe-eval' is allowed: it permits WebAssembly only
     })
 
     it('should allow required image sources', async () => {
@@ -160,6 +160,17 @@ describe('Security Headers Configuration', () => {
       const csp = findHeader(headers, 'Content-Security-Policy')
 
       expect(csp).toContain("connect-src 'self' https://*.sentry.io")
+    })
+
+    it('should let react-pdf build admin invoice PDFs in production', async () => {
+      const headers = await getHeadersConfig('production')
+      const csp = findHeader(headers, 'Content-Security-Policy')
+
+      // react-pdf fetches its layout engine as a data: URL and compiles it as
+      // WebAssembly; without these the invoice PDF silently never downloads.
+      expect(getCspDirective(csp, 'script-src')).toContain("'wasm-unsafe-eval'")
+      expect(getCspDirective(csp, 'script-src')).not.toContain("'unsafe-eval'")
+      expect(getCspDirective(csp, 'connect-src')).toContain('data:')
     })
 
     it('should allow the fundraiser page embeds and GA4 collection', async () => {

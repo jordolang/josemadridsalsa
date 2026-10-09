@@ -150,14 +150,8 @@ export default async function GiftCertificatesPage({
               <Button type="submit">Apply Filters</Button>
             </div>
             {params.search || (params.status && params.status !== 'all') ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  window.location.href = '/admin/gift-certificates'
-                }}
-              >
-                Clear Filters
+              <Button asChild variant="outline">
+                <Link href="/admin/gift-certificates">Clear Filters</Link>
               </Button>
             ) : null}
           </form>
