@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **UPCs on every salsa product.** `npm run products:upcs --workspace @jose-madrid/storefront`
+  (dry run; add `-- --apply` to write) saves each single-jar salsa's label UPC to its product's
+  barcode, so the Google Customer Reviews survey and the shopping feeds send GTINs. Products that
+  already have a different barcode are reported and left alone.
 - **The merch page sells from every Printify shop.** It used to read only the first shop on the
   Printify account, so products in the shop connected to Etsy never appeared. It now lists the
   products of every shop, and each paid order goes to the shop its product is in.
