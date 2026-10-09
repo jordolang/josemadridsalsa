@@ -250,6 +250,11 @@ the root `package.json` is canonical.
 - **Campaign emails carry a working unsubscribe link.** The campaign queue now fills
   `{{UNSUBSCRIBE_URL}}`, which the shared email footer prints; before, campaigns went out with an
   empty unsubscribe link.
+- **The changelog on `/developer` shows whole entries, formatted.** Entries that wrap over several
+  lines were cut to their first line, and `**bold**` and `` `code` `` showed as raw markdown. Each
+  entry now shows its bold headline and unfolds to the full text on click; the Added, Changed and
+  Fixed groups and each version fold too, with Unreleased folded by default and an Expand all
+  button. Removed sections and nested bullets are shown as well.
 - **Picante said "Sorry, I could not generate a response" instead of the real error.** The chat
   route returned provider errors with a 200 status, so the widget never showed them. It now keeps
   the provider's status and the widget shows the cause.
