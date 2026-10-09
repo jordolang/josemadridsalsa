@@ -2,18 +2,36 @@ import { app } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { DEFAULT_ENDPOINT, migrateLegacyDefault, validateEndpoint } from '../shared/endpoint'
+import { PRINTED_MEMORY, RECEIPTS_OFF, parseReceiptPrinter, type ReceiptPrinter } from '../shared/receipts'
 
 export interface DesktopSettings {
   endpoint: string
   zoomFactor: number
   /** The printer shipping labels go to without a dialog. Empty means ask each time. */
   labelPrinter: string
+  /** A 4×6 label stock, or the label printed at 4×6 on a letter sheet. */
+  labelPaper: LabelPaper
+  /** The printer packing slips go to without a dialog. Empty means ask each time. */
+  documentPrinter: string
+  /** Where order tickets print. */
+  receiptPrinter: ReceiptPrinter
+  /** When the receipt printer was set up (ms). Orders placed before it are not printed. */
+  receiptsEnabledAt: number
+  /** Order ids already printed, newest last, so an order prints once. */
+  printedReceipts: string[]
 }
+
+export type LabelPaper = '4x6' | 'letter'
 
 const DEFAULTS: DesktopSettings = {
   endpoint: DEFAULT_ENDPOINT,
   zoomFactor: 1,
   labelPrinter: '',
+  labelPaper: 'letter',
+  documentPrinter: '',
+  receiptPrinter: RECEIPTS_OFF,
+  receiptsEnabledAt: 0,
+  printedReceipts: [],
 }
 
 function settingsPath(): string {
@@ -36,10 +54,23 @@ export function readSettings(): DesktopSettings {
         ? raw.zoomFactor
         : DEFAULTS.zoomFactor
 
+    const labelPrinter = typeof raw.labelPrinter === 'string' ? raw.labelPrinter.slice(0, 200) : ''
+    const receiptPrinter = parseReceiptPrinter(raw.receiptPrinter)
+
     return {
       endpoint: 'url' in endpoint ? migrateLegacyDefault(endpoint.url) : DEFAULTS.endpoint,
       zoomFactor,
-      labelPrinter: typeof raw.labelPrinter === 'string' ? raw.labelPrinter.slice(0, 200) : '',
+      labelPrinter,
+      // An install that chose a label printer before letter sheets were an
+      // option chose a 4×6 one, and keeps printing at 4×6.
+      labelPaper:
+        raw.labelPaper === '4x6' || raw.labelPaper === 'letter' ? raw.labelPaper : labelPrinter ? '4x6' : 'letter',
+      documentPrinter: typeof raw.documentPrinter === 'string' ? raw.documentPrinter.slice(0, 200) : '',
+      receiptPrinter: 'error' in receiptPrinter ? RECEIPTS_OFF : receiptPrinter,
+      receiptsEnabledAt: typeof raw.receiptsEnabledAt === 'number' ? raw.receiptsEnabledAt : 0,
+      printedReceipts: Array.isArray(raw.printedReceipts)
+        ? raw.printedReceipts.filter((id): id is string => typeof id === 'string').slice(-PRINTED_MEMORY)
+        : [],
     }
   } catch {
     return { ...DEFAULTS }

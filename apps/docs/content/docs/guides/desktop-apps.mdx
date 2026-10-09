@@ -252,11 +252,61 @@ edit sheet first.
 
 ### Printing shipping labels
 
-**Print label** on a shipping label sends the 4×6 label straight to the label printer chosen in
+**Print label** on a shipping label sends the label straight to the label printer chosen in
 the app's settings — **File → Server Settings…** on Windows, **Settings** on macOS — with no
 dialog. Set it to *Ask each time* (the default) to get the print dialog instead; a printer that
 has been removed shows as *not found*. A failed job raises a notification (Windows) or an alert
 (macOS). In a browser tab, the label opens in a new tab beside the shell.
+
+**Label paper** picks the stock: *Letter sheet* (the default for a new install) prints the label
+at 4×6 in the top-left corner of an ordinary sheet, outlined to cut out; *4×6 label stock* is for a
+thermal label printer. An install that already had a label printer chosen keeps 4×6.
+
+### Order tickets on the receipt printer
+
+With a receipt printer set up, every new order prints a ticket within half a minute of being paid — website,
+fundraiser, phone, wholesale, any channel — for gathering the jars. The ticket shows the order
+number large, who it ships to, every line with its quantity in big type and its SKU, the totals,
+the customer's note, and the order number as a barcode for the pack sheet.
+
+Set it up in the app's settings under **Receipt printer** (built for an 80mm ESC/POS printer such
+as the Rongta RP332):
+
+- **Network (Ethernet)** — the printer's IP address (print its self-test page to find it) and
+  port, nearly always 9100.
+- **Installed printer (USB)** — install the manufacturer's driver so the printer appears in the
+  system, then pick it. The app sends the ticket raw, so the driver passes it straight through.
+
+**Print a test ticket** checks the connection. Orders already in when receipts are switched on
+are not printed. Each order prints once per computer, however many windows are open or however
+often the order is saved afterwards; **Print receipt** on an order prints it again. A ticket that
+fails (printer off, out of paper) is retried every minute for ten minutes, with a notification;
+after that, use **Print receipt** once the printer is back. A desktop app left closed catches up on
+orders from the last four days when it opens. Only computers with a receipt printer set up print,
+and a browser tab never does.
+
+### Packing and shipping with the scanner
+
+**Pack & ship** on Orders (or **Pack & ship…** on a paid order that has not shipped) opens the pack
+sheet:
+
+1. Scan the barcode on the order's ticket, or type the order number.
+2. Scan every jar as it goes in the box. Each scan ticks one off its line. A jar that is not on the
+   order, or one too many, is refused with a low tone and a message — take it back out. Fix a
+   mistaken scan with −. A line whose product has no barcode on file takes its SKU typed by hand.
+3. When the last jar is scanned, postage is bought: the cheapest rate for the parcel the order's
+   own items make, from the same route as the order page's label button. The order is marked
+   shipped, and the label prints on the label printer and the packing slip on the **Packing slip
+   printer** (*Ask each time* shows the dialog).
+
+Nothing is bought until every jar is scanned, and an order that already has postage is never
+bought twice — the sheet offers to print its label and slip again instead. If the purchase fails
+(no shipping origin configured, a bad address), the sheet says why, nothing is charged, and
+**Try buying postage again** retries. Scan the next ticket to keep going. An order with no
+shipping address, unpaid, cancelled or already shipped cannot be packed here.
+
+The packing slip is the insert for the box: what is in it, the tracking number and the customer's
+note, with no prices. It prints in a window of its own with scripts off.
 
 ### Creating and editing, in the window
 

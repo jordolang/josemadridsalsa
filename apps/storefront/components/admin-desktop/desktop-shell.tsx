@@ -31,9 +31,11 @@ import { findForm } from '@/lib/admin-desktop/forms'
 import { filterRows, listSearch, MAX_LIST_LIMIT, ROW_LIMIT, searchQuery, type ListQuery } from '@/lib/admin-desktop/list'
 import { bulkActions, type BulkAction } from '@/lib/admin-desktop/bulk'
 import { attentionCount, badgeAlerts, type DesktopAlert } from '@/lib/admin-desktop/alerts'
+import type { ReceiptJob } from '@/lib/admin-desktop/fulfil'
 import { Icon, IconSprite } from './icons'
 import { RecordSheet, type SheetRequest } from './record-sheet'
 import { ScanSheet } from './scan-sheet'
+import { PackSheet } from './pack-sheet'
 import { MailView } from './mail-view'
 import {
   AnalyticsView,
@@ -73,6 +75,15 @@ declare global {
       setBadge?: (count: number) => void
       /** Print a 4×6 label image on the label printer set in the app's settings. */
       printLabel?: (url: string) => void
+      /**
+       * Send an order ticket to the receipt printer. The app prints each order
+       * once — it keeps the ids it has printed, and prints nothing placed
+       * before receipts were switched on — unless `reprint` says otherwise. An
+       * app with no receipt printer set up ignores it.
+       */
+      printReceipt?: (job: ReceiptJob & { reprint?: boolean }) => void
+      /** Print a self-contained HTML page (the packing slip) on the document printer. */
+      printDocument?: (html: string) => void
     }
   }
 }
@@ -97,6 +108,21 @@ const STALE_AFTER_MS = 30_000
  * running in the background for it.
  */
 const BADGE_POLL_MS = 60_000
+
+/**
+ * How often a desktop app with a receipt printer looks for new orders to print.
+ * Shorter than the badge poll: the ticket is how the kitchen hears of an order.
+ */
+const RECEIPT_POLL_MS = 30_000
+
+/** Where the receipt poll last read up to, shared by every window of the app. */
+const RECEIPT_CURSOR_KEY = 'jmsd.receipts.since'
+
+/**
+ * Overlap between one receipt poll and the next, so an order saved just as a
+ * poll ran is never between the two. The app's printed list stops it printing twice.
+ */
+const RECEIPT_OVERLAP_MS = 15_000
 
 /** How long the filter box waits for typing to stop before searching the server. */
 const SEARCH_DEBOUNCE_MS = 350
@@ -220,6 +246,8 @@ export function DesktopShell({
   const [frame, setFrame] = useState<FrameChrome>('browser')
   const [sheet, setSheet] = useState<SheetRequest | null>(null)
   const [scanning, setScanning] = useState(false)
+  /** The pack sheet, open on an order or (with no id) asking for one. */
+  const [packing, setPacking] = useState<{ orderId?: string } | null>(null)
   const [confirming, setConfirming] = useState<PendingConfirm | null>(null)
   const [working, setWorking] = useState(false)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
@@ -460,6 +488,61 @@ export function DesktopShell({
     bridge?.setBadge?.(attentionCount(badgeCounts, canSee))
   }, [badgeCounts, permitted])
 
+  // ------------------------------------------------------------ receipts
+
+  // In a desktop app, print a ticket for every order that comes in. The page
+  // finds the orders; the app owns the printer and the list of what it has
+  // already printed, so several open windows, a reload, or an order saved
+  // twice still print one ticket. The cursor starts at "now" the first time,
+  // so switching this on does not print the backlog.
+  useEffect(() => {
+    const print = window.jmsDesktop?.printReceipt
+    if (!print) return
+
+    const readCursor = () => {
+      try {
+        return window.localStorage.getItem(RECEIPT_CURSOR_KEY)
+      } catch {
+        return null
+      }
+    }
+    const writeCursor = (value: string) => {
+      try {
+        window.localStorage.setItem(RECEIPT_CURSOR_KEY, value)
+      } catch {
+        // Without storage each poll reads the whole lookback; the app still prints each order once.
+      }
+    }
+
+    if (!readCursor()) writeCursor(new Date().toISOString())
+
+    let busy = false
+    const poll = async () => {
+      if (busy) return
+      busy = true
+      try {
+        const since = readCursor()
+        const response = await fetch(`/api/admin/desktop/receipts${since ? `?since=${encodeURIComponent(since)}` : ''}`, {
+          credentials: 'same-origin',
+        })
+        if (!response.ok) return
+        const body = (await response.json()) as { now: string; more: boolean; receipts: ReceiptJob[] }
+        for (const receipt of body.receipts) print(receipt)
+        // Mid-burst, carry on exactly where this batch stopped; otherwise step
+        // back a little so an order saved while the poll ran is caught next time.
+        writeCursor(body.more ? body.now : new Date(Date.parse(body.now) - RECEIPT_OVERLAP_MS).toISOString())
+      } catch {
+        // The next poll tries again from the same cursor.
+      } finally {
+        busy = false
+      }
+    }
+
+    void poll()
+    const timer = setInterval(() => void poll(), RECEIPT_POLL_MS)
+    return () => clearInterval(timer)
+  }, [])
+
   // ------------------------------------------------------------ columns
 
   const sectionWidths = columnWidths[section.id]
@@ -595,6 +678,29 @@ export function DesktopShell({
         case 'scan':
           setScanning(true)
           return
+
+        case 'pack':
+          setPacking({ orderId: command.orderId })
+          return
+
+        case 'receipt': {
+          const print = window.jmsDesktop?.printReceipt
+          if (!print) {
+            flash('Receipts print from the desktop app, on the receipt printer set in its settings')
+            return
+          }
+          void fetch(`/api/admin/desktop/receipts?orderId=${encodeURIComponent(command.orderId)}`, {
+            credentials: 'same-origin',
+          })
+            .then(async (response) => {
+              const body = (await response.json()) as { receipt?: ReceiptJob; error?: string }
+              if (!body.receipt) throw new Error(body.error ?? 'Could not load the receipt')
+              print({ ...body.receipt, reprint: true })
+              flash('Sent to the receipt printer')
+            })
+            .catch((error: unknown) => flash(error instanceof Error ? error.message : 'Could not load the receipt'))
+          return
+        }
 
         case 'label': {
           const print = window.jmsDesktop?.printLabel
@@ -919,7 +1025,7 @@ export function DesktopShell({
   )
 
   /** True while a sheet or a confirmation owns the keyboard. */
-  const modalOpen = sheet !== null || confirming !== null || scanning
+  const modalOpen = sheet !== null || confirming !== null || scanning || packing !== null
 
   // Keep what is on screen current without anyone pressing F5: on a timer while
   // the window is visible, and at once when it comes back after a while away.
@@ -1518,6 +1624,18 @@ export function DesktopShell({
           onClose={() => setScanning(false)}
           onApplied={(message) => {
             setScanning(false)
+            flash(message)
+            void reload()
+          }}
+        />
+      ) : null}
+
+      {packing ? (
+        <PackSheet
+          orderId={packing.orderId}
+          onClose={() => setPacking(null)}
+          onShipped={(message) => {
+            setPacking(null)
             flash(message)
             void reload()
           }}

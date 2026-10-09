@@ -411,6 +411,11 @@ async function loadOrders(list: ListQuery = DEFAULT_LIST): Promise<TablePayload>
                   }),
                 },
               ]),
+          ...(['UNFULFILLED', 'PARTIALLY_FULFILLED'].includes(order.fulfillmentStatus) &&
+          (order.paymentStatus === 'PAID' || order.paymentStatus === 'SUCCEEDED')
+            ? [{ label: 'Pack & ship…', command: { kind: 'pack', orderId: order.id } as const }]
+            : []),
+          { label: 'Print receipt', command: { kind: 'receipt', orderId: order.id } as const },
           { label: 'Print packing slip…', command: link(`/admin/orders/${order.id}/packing-slip`), shortcut: '⌘I' },
           { label: 'Returns', command: page('orders.returns'), shortcut: '⌘⇧B' },
           { label: 'Customers', command: jump('customers'), shortcut: '⌘U' },
@@ -9642,6 +9647,7 @@ function meta(section: DesktopSection): SectionMeta {
         filters: ORDER_FILTERS,
         actions: [
           { label: 'New order', icon: 'i-plus', command: form('order.create'), primary: true },
+          { label: 'Pack & ship', icon: 'i-truck', command: { kind: 'pack' } },
           { label: 'Customers', icon: 'i-users', command: jump('customers') },
           open,
         ],
