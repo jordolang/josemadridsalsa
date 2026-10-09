@@ -981,6 +981,24 @@ model SiteReview {
   @@map("site_reviews")
 }
 
+/// Visitor ratings of the website itself (1-10 per category), from the
+/// homepage feedback section and /feedback. Read in /admin/site-feedback.
+model SiteFeedback {
+  id            String   @id @default(cuid())
+  ratings       Json
+  averageRating Float?
+  comment       String?
+  name          String?
+  email         String?
+  source        String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("site_feedback")
+}
+
 model ChatThread {
   id              String               @id @default(cuid())
   status          ChatThreadStatus     @default(WAITING)

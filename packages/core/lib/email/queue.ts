@@ -12,6 +12,7 @@
 import { prisma } from '@/lib/prisma'
 import { sendEmail, substituteVariables } from './sender'
 import { checkSuppression } from './suppression'
+import { buildUnsubscribeUrl } from './unsubscribe-url'
 
 // Time a single invocation spends sending before handing off. Kept well under
 // the 60s route maxDuration so the handoff always fires.
@@ -160,6 +161,9 @@ export async function processCampaign({
       firstName: recipient.name?.split(' ')[0] ?? '',
       lastName: recipient.name?.split(' ').slice(1).join(' ') ?? '',
       email: recipient.email,
+      // Templates built on the shared footer print {{UNSUBSCRIBE_URL}}; without
+      // it the footer's unsubscribe link renders empty.
+      UNSUBSCRIBE_URL: buildUnsubscribeUrl(recipient.email),
       ...((recipient.variables as Record<string, string>) ?? {}),
     }
 

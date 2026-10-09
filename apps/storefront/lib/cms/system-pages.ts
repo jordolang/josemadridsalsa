@@ -141,6 +141,12 @@ export const SYSTEM_PAGES: SystemPageDefinition[] = [
         label: 'Store locator map',
         description: 'Retailer map near the foot of the page.',
       },
+      {
+        key: 'siteFeedback',
+        block: 'richText',
+        label: 'Site feedback',
+        description: 'Heading and intro above the 1–10 website rating form.',
+      },
     ],
   },
   {

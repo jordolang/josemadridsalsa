@@ -55,6 +55,7 @@ import { orderConfirmationLightTemplate } from './order-confirmation-light'
 import { orderConfirmationDarkTemplate } from './order-confirmation-dark'
 import { fundraiserPlatformAnnouncementTemplate } from './fundraiser-platform-announcement'
 import { websiteLaunchAnnouncementTemplate } from './website-launch-announcement'
+import { everythingIsLiveTemplate } from './everything-is-live'
 import { mobileAppLaunchTemplate } from './mobile-app-launch'
 import { fundraiserReferralInviteTemplate } from './fundraiser-referral-invite'
 import { heatIndexDigestTemplate } from './heat-index-digest'
@@ -101,6 +102,7 @@ export {
   orderConfirmationDarkTemplate,
   fundraiserPlatformAnnouncementTemplate,
   websiteLaunchAnnouncementTemplate,
+  everythingIsLiveTemplate,
   mobileAppLaunchTemplate,
   fundraiserReferralInviteTemplate,
   heatIndexDigestTemplate,
@@ -148,6 +150,7 @@ export const emailTemplates = [
   orderConfirmationDarkTemplate,
   fundraiserPlatformAnnouncementTemplate,
   websiteLaunchAnnouncementTemplate,
+  everythingIsLiveTemplate,
   mobileAppLaunchTemplate,
   fundraiserReferralInviteTemplate,
   heatIndexDigestTemplate,

@@ -294,6 +294,7 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         pages: [
           { id: 'reviews', label: 'Reviews', path: '/admin/reviews' },
           { id: 'reviews.forms', label: 'Forms', path: '/admin/forms', permission: 'content:read' },
+          { id: 'reviews.site-feedback', label: 'Site Feedback', path: '/admin/site-feedback', permission: 'content:read' },
         ],
       },
     ],

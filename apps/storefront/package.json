@@ -35,6 +35,7 @@
     "dev": "next dev --turbo --port 3000",
     "dev:debug": "next dev --turbo --inspect",
     "dev:fast": "next dev --turbo --port 3000",
+    "email:launch-campaign": "tsx scripts/create-launch-campaign.ts",
     "email:mass-send": "tsx scripts/send-mass-email.ts",
     "email:repair-images": "tsx scripts/repair-email-template-images.ts",
     "fresh": "npm run clean && npm install && npm run dev",
