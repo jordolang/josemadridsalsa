@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **The merch page sells from every Printify shop.** It used to read only the first shop on the
+  Printify account, so products in the shop connected to Etsy never appeared. It now lists the
+  products of every shop, and each paid order goes to the shop its product is in.
+  `PRINTIFY_SHOP_ID` now takes a comma-separated list and defaults to every shop.
 - **Site feedback.** Visitors pick the parts of the site they used (layout, accessibility,
   functionality, user interface, finding what you need, ordering, mobile, fundraising, the Battle
   Arena game, social sharing) and rate each from 1 to 10, with an optional comment. The form is a
