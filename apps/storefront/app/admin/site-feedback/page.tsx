@@ -219,14 +219,16 @@ export default async function SiteFeedbackAdminPage({
             Page {page} of {totalPages}
           </p>
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm" disabled={page <= 1}>
-              <Link href={`/admin/site-feedback?page=${Math.max(1, page - 1)}`}>Previous</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" disabled={page >= totalPages}>
-              <Link href={`/admin/site-feedback?page=${Math.min(totalPages, page + 1)}`}>
-                Next
-              </Link>
-            </Button>
+            {page > 1 && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/admin/site-feedback?page=${page - 1}`}>Previous</Link>
+              </Button>
+            )}
+            {page < totalPages && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/admin/site-feedback?page=${page + 1}`}>Next</Link>
+              </Button>
+            )}
           </div>
         </div>
       )}
