@@ -247,6 +247,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Email images load from the Vercel Blob store.** Header, logo and footer images (including the
+  social icons, which were hotlinked from flaticon) now default to the josemadridsalsa-blob store
+  instead of the website. `npm run email:upload-images` uploads them; `npm run email:repair-images`
+  points templates already saved in the database at the store.
 - **Campaign emails carry a working unsubscribe link.** The campaign queue now fills
   `{{UNSUBSCRIBE_URL}}`, which the shared email footer prints; before, campaigns went out with an
   empty unsubscribe link.

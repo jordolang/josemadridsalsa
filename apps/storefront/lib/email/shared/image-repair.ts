@@ -7,12 +7,12 @@
  * written. Two faults are repaired: filenames that never existed in
  * public/email-templates, and image origins written while josemadridsalsa.com
  * still ran the old BigCommerce store (which served 404 for /email-templates).
- * Both render as a broken-image placeholder in the recipient's inbox. Now that
- * josemadridsalsa.com serves this site those origins resolve again, and rewriting
- * them to the configured base is harmless.
+ * Both render as a broken-image placeholder in the recipient's inbox. Every
+ * image is now served from the Vercel Blob store, so stored site-origin URLs and
+ * hotlinked third-party social icons are rewritten to it as well.
  */
 
-import { getImageBaseUrl, jmsFooter } from '@/lib/email/shared/components'
+import { getImageBaseUrl, jmsFooter, SOCIAL_ICON_SOURCES } from '@/lib/email/shared/components'
 
 /** Referenced filename → the asset that actually exists in public/email-templates. */
 export const FILENAME_REMAP: Record<string, string> = {
@@ -50,6 +50,9 @@ export function repairImageUrls(html: string): string {
   }
   for (const dead of DEAD_LOGO_URLS) {
     out = out.split(dead).join(`${base}/Jose-Madrid-Profile.png`)
+  }
+  for (const [name, source] of Object.entries(SOCIAL_ICON_SOURCES)) {
+    out = out.split(source).join(`${base}/${name}`)
   }
   for (const [oldName, newName] of Object.entries(FILENAME_REMAP)) {
     out = out.split(`${base}/${oldName}`).join(`${base}/${newName}`)
