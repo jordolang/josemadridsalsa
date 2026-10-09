@@ -1,18 +1,37 @@
-import { SITE_URL } from '@/lib/site-url'
 /**
  * Shared Email Components
  * Reusable HTML components and utilities for email templates
  */
 
 /**
+ * Where email images are hosted: the `email-templates/` folder of the
+ * josemadridsalsa-blob Vercel Blob store. `npm run email:upload-images` puts every
+ * file from `public/email-templates` (and the footer's social icons) there.
+ */
+export const EMAIL_IMAGE_BLOB_BASE_URL =
+  'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/email-templates'
+
+/**
  * Get the base URL for email template images.
  *
  * Email clients cannot resolve relative paths, so every image needs an absolute
- * URL. Set EMAIL_IMAGE_BASE_URL to serve the assets from the Vercel Blob store
- * instead of the storefront's own `public/email-templates` directory.
+ * URL. Images are served from the Vercel Blob store; EMAIL_IMAGE_BASE_URL
+ * overrides that (no trailing slash).
  */
 export function getImageBaseUrl(): string {
-  return process.env.EMAIL_IMAGE_BASE_URL || `${SITE_URL}/email-templates`
+  return process.env.EMAIL_IMAGE_BASE_URL || EMAIL_IMAGE_BLOB_BASE_URL
+}
+
+/**
+ * Footer social icons: filename in the image store → the third-party icon it was
+ * copied from. The upload script fetches each source once and stores it beside
+ * the other email images, so sent mail never hotlinks a third-party host.
+ */
+export const SOCIAL_ICON_SOURCES: Record<string, string> = {
+  'social-facebook.png': 'https://cdn-icons-png.flaticon.com/512/733/733547.png',
+  'social-instagram.png': 'https://cdn-icons-png.flaticon.com/512/2111/2111463.png',
+  'social-x.png': 'https://cdn-icons-png.flaticon.com/512/5968/5968830.png',
+  'social-linkedin.png': 'https://cdn-icons-png.flaticon.com/512/3536/3536505.png',
 }
 
 /**
@@ -88,10 +107,10 @@ export const jmsFooter = `
           <td align="center" style="padding: 0 0 24px 0;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="padding: 0 8px;"><a href="https://www.facebook.com/josemadridsalsa" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
-                <td style="padding: 0 8px;"><a href="https://www.instagram.com/josemadrid_salsa/" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
-                <td style="padding: 0 8px;"><a href="https://x.com/madridsalsa" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/5968/5968830.png" alt="X (Twitter)" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
-                <td style="padding: 0 8px;"><a href="https://www.linkedin.com/company/jose-madrid-salsa" target="_blank" style="text-decoration: none;"><img src="https://cdn-icons-png.flaticon.com/512/3536/3536505.png" alt="LinkedIn" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+                <td style="padding: 0 8px;"><a href="https://www.facebook.com/josemadridsalsa" target="_blank" style="text-decoration: none;"><img src="${getImageBaseUrl()}/social-facebook.png" alt="Facebook" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+                <td style="padding: 0 8px;"><a href="https://www.instagram.com/josemadrid_salsa/" target="_blank" style="text-decoration: none;"><img src="${getImageBaseUrl()}/social-instagram.png" alt="Instagram" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+                <td style="padding: 0 8px;"><a href="https://x.com/madridsalsa" target="_blank" style="text-decoration: none;"><img src="${getImageBaseUrl()}/social-x.png" alt="X (Twitter)" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
+                <td style="padding: 0 8px;"><a href="https://www.linkedin.com/company/jose-madrid-salsa" target="_blank" style="text-decoration: none;"><img src="${getImageBaseUrl()}/social-linkedin.png" alt="LinkedIn" width="28" height="28" style="display: block; border: 0; border-radius: 50%;" /></a></td>
               </tr>
             </table>
           </td>

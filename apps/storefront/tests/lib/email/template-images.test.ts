@@ -9,7 +9,12 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync } from 'fs'
 import path from 'path'
-import { baseStyles, jmsFooter } from '@/lib/email/shared/components'
+import {
+  baseStyles,
+  EMAIL_IMAGE_BLOB_BASE_URL,
+  jmsFooter,
+  SOCIAL_ICON_SOURCES,
+} from '@/lib/email/shared/components'
 import { emailTemplates } from '@/lib/email/templates/index'
 import { repairImageUrls, repairFooter, repairEmailHtml } from '@/lib/email/shared/image-repair'
 
@@ -60,8 +65,10 @@ describe('email template images', () => {
     expect(available.has(filename), `referenced by ${sources.join(', ')}`).toBe(true)
   })
 
-  it('builds absolute image URLs so email clients can resolve them', () => {
-    expect(jmsFooter).toContain('https://www.josemadridsalsa.com/email-templates/')
+  it('loads every footer image from the blob store', () => {
+    const srcs = [...jmsFooter.matchAll(/src="([^"]+)"/g)].map((m) => m[1])
+    expect(srcs.length).toBeGreaterThan(0)
+    for (const src of srcs) expect(src.startsWith(`${EMAIL_IMAGE_BLOB_BASE_URL}/`)).toBe(true)
   })
 })
 
@@ -81,24 +88,32 @@ describe('footer link layout', () => {
 })
 
 describe('stored HTML repair', () => {
-  it('rewrites dead filenames and the retired origin', () => {
+  const BLOB = EMAIL_IMAGE_BLOB_BASE_URL
+
+  it('moves site-hosted images to the blob store and fixes dead filenames', () => {
     const stored = [
       '<img src="https://www.josemadridsalsa.com/email-templates/cart-reminder.png" />',
-      '<img src="https://www.josemadridsalsa.com/email-templates/order-confirmed.png" />',
+      '<img src="https://josemadridsalsa.com/email-templates/order-confirmed.png" />',
       '<img src="https://josemadrid.net/images/logo.png" />',
     ].join('')
 
     expect(repairImageUrls(stored)).toBe(
       [
-        '<img src="https://www.josemadridsalsa.com/email-templates/abandoned-cart.png" />',
-        '<img src="https://www.josemadridsalsa.com/email-templates/order-confirmed.png" />',
-        '<img src="https://www.josemadridsalsa.com/email-templates/Jose-Madrid-Profile.png" />',
+        `<img src="${BLOB}/abandoned-cart.png" />`,
+        `<img src="${BLOB}/order-confirmed.png" />`,
+        `<img src="${BLOB}/Jose-Madrid-Profile.png" />`,
       ].join('')
     )
   })
 
+  it('moves hotlinked social icons to the blob store', () => {
+    const stored = Object.values(SOCIAL_ICON_SOURCES).map((url) => `<img src="${url}" />`).join('')
+    const expected = Object.keys(SOCIAL_ICON_SOURCES).map((name) => `<img src="${BLOB}/${name}" />`).join('')
+    expect(repairImageUrls(stored)).toBe(expected)
+  })
+
   it('leaves already-correct HTML untouched', () => {
-    const stored = '<img src="https://www.josemadridsalsa.com/email-templates/abandoned-cart.png" />'
+    const stored = `<img src="${BLOB}/abandoned-cart.png" />`
     expect(repairImageUrls(stored)).toBe(stored)
   })
 })

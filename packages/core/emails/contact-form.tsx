@@ -1,6 +1,7 @@
 import { Text, Section, Row, Column, Link, Img } from '@react-email/components';
 import { EmailLayout } from './components/EmailLayout';
 import { SITE_URL } from '@/lib/site-url'
+import { getLogoUrl } from '@/lib/email/shared/components'
 
 interface ContactFormEmailProps {
   name: string;
@@ -24,7 +25,7 @@ export const ContactFormEmail = ({
   <EmailLayout previewText={`A user has submitted the contact form on ${storeName}`}>
     <Section style={logoSection}>
       <Img
-        src={`${BASE_URL}/images/shared/jose-madrid-salsa-logo.png`}
+        src={getLogoUrl()}
         alt={storeName}
         width="200"
         style={logo}

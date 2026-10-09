@@ -123,7 +123,7 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass �
 | `NEXT_PUBLIC_FROM_EMAIL` | No | Sender for queued bulk email. Falls back to `FROM_EMAIL`. |
 | `EMAIL_CHUNK_BUDGET_MS` | No | Time budget per email-queue run, in ms. Defaults to `45000`. |
 | `EMAIL_SEND_DELAY_MS` | No | Delay between queued sends, in ms (keeps under Resend's rate limit). Defaults to `550`. |
-| `EMAIL_IMAGE_BASE_URL` | No | Absolute base URL for email header and footer images. Email clients cannot resolve relative paths, so every image needs a full URL. Defaults to `https://www.josemadridsalsa.com/email-templates`; point it at the Vercel Blob store to serve the assets from there instead. No trailing slash. |
+| `EMAIL_IMAGE_BASE_URL` | No | Absolute base URL for email header and footer images. Email clients cannot resolve relative paths, so every image needs a full URL. Defaults to the `email-templates` folder of the josemadridsalsa-blob Vercel Blob store, which `npm run email:upload-images --workspace @jose-madrid/storefront -- --apply` fills from `public/email-templates`. Leave it unset unless the images move to another host. No trailing slash. |
 
 ## Google Services
 
@@ -158,7 +158,7 @@ Every inbound webhook is verified. A missing secret is a refusal, not a bypass �
 | Variable | Required | Description |
 |---|---|---|
 | `UPLOADTHING_TOKEN` | For uploads | UploadThing v7 token (dashboard → API Keys → V7). The v6 `UPLOADTHING_SECRET` / `UPLOADTHING_APP_ID` pair is no longer read. |
-| `BLOB_READ_WRITE_TOKEN` | For image hosting | Read/write token for the `josemadridsalsa-blob` Vercel Blob store. Powers the Developer Console file explorer (`/admin/developer/files`), the product image uploader, and the `images:sync` / `images:migrate` scripts. Get it from **Vercel → Storage → josemadridsalsa-blob**. Without it, every blob upload path is disabled and returns 503. |
+| `BLOB_READ_WRITE_TOKEN` | For image hosting | Read/write token for the `josemadridsalsa-blob` Vercel Blob store. Powers the Developer Console file explorer (`/admin/developer/files`), the product image uploader, the `images:sync` / `images:migrate` scripts, and `email:upload-images`. Get it from **Vercel → Storage → josemadridsalsa-blob**. Without it, every blob upload path is disabled and returns 503. |
 
 ## QuickBooks Online
 

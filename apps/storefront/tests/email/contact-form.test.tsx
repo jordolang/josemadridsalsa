@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@react-email/render'
 import React from 'react'
 import { ContactFormEmail } from '@/emails/contact-form'
+import { EMAIL_IMAGE_BLOB_BASE_URL } from '@/lib/email/shared/components'
 
 describe('ContactFormEmail', () => {
   const baseProps = {
@@ -245,7 +246,7 @@ Symbols: © ® ™`
       const html = await render(<ContactFormEmail {...baseProps} />)
 
       expect(html).toContain('Jose Madrid Salsa')
-      expect(html).toContain('jose-madrid-salsa-logo.png')
+      expect(html).toContain(`${EMAIL_IMAGE_BLOB_BASE_URL}/Jose-Madrid-Profile.png`)
     })
 
     it('should have proper email structure', async () => {
