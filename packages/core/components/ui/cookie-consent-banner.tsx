@@ -74,7 +74,9 @@ export function CookieConsentBanner({ onConsentChange }: CookieConsentBannerProp
 
   // Don't render anything until mounted (prevents SSR mismatch)
   // The self-order kiosk is a shop till, not a browsing session; a banner there just blocks customers.
-  if (!isMounted || !isVisible || pathname?.startsWith('/kiosk')) {
+  // The admin is staff working, and the banner sat over the bottom of every admin page (on an order,
+  // over Print Packing Slip).
+  if (!isMounted || !isVisible || pathname?.startsWith('/kiosk') || pathname?.startsWith('/admin')) {
     return null
   }
 

@@ -88,7 +88,7 @@ export function OrderActionsDrawer({
               target="_blank"
               rel="noreferrer"
             >
-              View invoice (PDF)
+              Print invoice
             </Link>
           </Button>
           <PackingSlipButton orderId={order.id} />
