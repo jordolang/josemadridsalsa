@@ -14,6 +14,7 @@ const NAME_ALIASES: Record<string, string> = {
   'Garden Cilantro Mild': 'Garden Fresh Cilantro Mild',
   'Garden Cilantro Hot': 'Garden Fresh Cilantro Hot',
   'Black Bean Corn Pablano': 'Black Bean Corn Poblano',
+  'Black Bean Corn': 'Black Bean Corn Poblano',
   'Roasted Pineapple Habanero': 'Roasted Pineapple Habanero Hot',
 }
 

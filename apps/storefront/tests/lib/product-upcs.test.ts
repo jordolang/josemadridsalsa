@@ -24,6 +24,7 @@ describe('getProductUpc', () => {
     expect(getProductUpc('Roasted Garlic &amp; Olives')).toBe('093662452812')
     expect(getProductUpc('Clovis Medium (Original Medium Chunky)')).toBe('093662452638')
     expect(getProductUpc('Black Bean Corn Pablano')).toBe('093662452874')
+    expect(getProductUpc('Black Bean Corn Salsa')).toBe('093662452874')
     expect(getProductUpc('Garden Fresh Cilantro Salsa Mild')).toBe('093662452904')
     expect(getProductUpc('Spanish Verde XX Hot')).toBe('093662452676')
     expect(getProductUpc('Jose Madrid Mango Habanero Salsa')).toBe('093662452973')
