@@ -255,6 +255,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Clicking a merch product showed "404 page not found".** Printify answers 400 "Validation
+  failed", not 404, when a product id belongs to a different shop, so looking a product up
+  stopped at the first shop instead of moving on to the Etsy-connected one. Those products could
+  not be opened or bought. The lookup now tries the next shop on a 400 as well.
 - **Email images load from the Vercel Blob store.** Header, logo and footer images (including the
   social icons, which were hotlinked from flaticon) now default to the josemadridsalsa-blob store
   instead of the website. `npm run email:upload-images` uploads them; `npm run email:repair-images`
