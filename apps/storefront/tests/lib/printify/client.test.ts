@@ -77,6 +77,22 @@ describe('getPrintifyProduct', () => {
     expect(found).toMatchObject({ title: 'Tour Shirt', shop_id: '2' })
   })
 
+  it('skips a shop that answers 400 for a product it does not hold', async () => {
+    // What Printify actually returns when the product id belongs to another shop.
+    routes[`/shops/1/products/${PRODUCT_ID}.json`] = {
+      status: 400,
+      body: { status: 'error', code: 8104, message: 'Validation failed.' },
+    }
+    routes[`/shops/2/products/${PRODUCT_ID}.json`] = { body: product(PRODUCT_ID, 'Etsy Hoodie') }
+
+    await expect(getPrintifyProduct(PRODUCT_ID)).resolves.toMatchObject({ title: 'Etsy Hoodie', shop_id: '2' })
+  })
+
+  it('still throws when Printify fails for another reason', async () => {
+    routes[`/shops/1/products/${PRODUCT_ID}.json`] = { status: 500, body: { message: 'Server error' } }
+    await expect(getPrintifyProduct(PRODUCT_ID)).rejects.toThrow('500')
+  })
+
   it('returns null when no shop has it', async () => {
     await expect(getPrintifyProduct(PRODUCT_ID)).resolves.toBeNull()
   })
