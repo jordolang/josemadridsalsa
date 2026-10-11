@@ -221,7 +221,8 @@ export async function getPrintifyProduct(productId: string, revalidate = 300): P
       })
       return { ...product, shop_id: shopId }
     } catch (error) {
-      if (error instanceof PrintifyError && error.status === 404) continue
+      // Printify answers 400 "Validation failed" (not 404) for a product that is in another shop.
+      if (error instanceof PrintifyError && (error.status === 404 || error.status === 400)) continue
       throw error
     }
   }
