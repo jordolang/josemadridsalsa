@@ -1,71 +1,22 @@
 import { z } from 'zod'
+import { ORDER_KITS, KIT_IDS, type KitId } from '@/lib/fundraising/flavor-kits'
 
 /**
  * Final orders from community (order-form) fundraisers, submitted at the
- * fundraising site's /submit page. The flavor lists match the printed 2026
- * kits (public/fundraising/downloads/2026-Fundraiser-Kit-*.zip); change them
- * together.
+ * fundraising site's /submit page. The kits themselves live in
+ * `@/lib/fundraising/flavor-kits`.
  */
 
 export const PRICE_PER_JAR = 10
 export const DUE_PER_JAR = 5
 
-export type FlavorCategory = 'Fruit' | 'Specialty' | 'Verde' | 'Original'
-export type KitFlavor = { id: string; name: string; category: FlavorCategory }
-
-const ALL_FLAVORS: readonly KitFlavor[] = [
-  { id: 'raspberry', name: 'Raspberry – Mild', category: 'Fruit' },
-  { id: 'peach', name: 'Peach – Mild', category: 'Fruit' },
-  { id: 'strawberry', name: 'Strawberry – Mild', category: 'Fruit' },
-  { id: 'pineapple', name: 'Pineapple – Mild', category: 'Fruit' },
-  { id: 'mango', name: 'Mango – Mild', category: 'Fruit' },
-  { id: 'cherry', name: 'Cherry – Mild', category: 'Fruit' },
-  { id: 'cherry-chocolate', name: 'Cherry Chocolate – Hot', category: 'Fruit' },
-  { id: 'mango-habanero', name: 'Mango Habanero – Hot', category: 'Fruit' },
-  { id: 'roasted-pineapple-habanero', name: 'Roasted Pineapple Habanero – X-Hot', category: 'Fruit' },
-  { id: 'chipotle-con-queso', name: 'Chipotle Con Queso – Medium', category: 'Specialty' },
-  { id: 'black-bean-corn-poblano', name: 'Black Bean Corn Poblano – Medium', category: 'Specialty' },
-  { id: 'roasted-garlic-olives', name: 'Roasted Garlic & Olives – Medium', category: 'Specialty' },
-  { id: 'chipotle-hot', name: 'Chipotle – Hot', category: 'Specialty' },
-  { id: 'raspberry-bbq-chipotle', name: 'Raspberry BBQ Chipotle – Medium', category: 'Specialty' },
-  { id: 'garden-fresh-cilantro-mild', name: 'Garden Fresh Cilantro – Mild', category: 'Specialty' },
-  { id: 'garden-fresh-cilantro-hot', name: 'Garden Fresh Cilantro – Hot', category: 'Specialty' },
-  { id: 'jamaican-jerk', name: 'Jamaican Jerk – Medium', category: 'Specialty' },
-  { id: 'spanish-verde-mild', name: 'Spanish Verde – Mild', category: 'Verde' },
-  { id: 'spanish-verde-hot', name: 'Spanish Verde – Hot', category: 'Verde' },
-  { id: 'spanish-verde-xx-hot', name: 'Spanish Verde – XX-Hot ("Stupid Hot")', category: 'Verde' },
-  { id: 'original-mild', name: 'Original – Mild', category: 'Original' },
-  { id: 'clovis-medium', name: 'Clovis – Medium', category: 'Original' },
-  { id: 'original-hot', name: 'Original – Hot', category: 'Original' },
-  { id: 'original-x-hot', name: 'Original – X-Hot', category: 'Original' },
-  { id: 'ghost-of-clovis', name: 'Ghost of Clovis – X-Hot', category: 'Original' },
-]
-
-const pick = (ids: readonly string[]) => ALL_FLAVORS.filter((flavor) => ids.includes(flavor.id))
-
-export const ORDER_KITS = {
-  '25': { label: '25-flavor kit', flavors: ALL_FLAVORS },
-  '16': {
-    label: '16-flavor kit',
-    flavors: pick([
-      'raspberry', 'peach', 'pineapple', 'mango', 'roasted-pineapple-habanero',
-      'chipotle-con-queso', 'black-bean-corn-poblano', 'roasted-garlic-olives', 'raspberry-bbq-chipotle',
-      'garden-fresh-cilantro-mild', 'garden-fresh-cilantro-hot', 'jamaican-jerk',
-      'spanish-verde-mild', 'spanish-verde-xx-hot', 'original-mild', 'original-hot',
-    ]),
-  },
-  '9': {
-    label: '9-flavor kit',
-    flavors: pick([
-      'raspberry', 'mango', 'roasted-pineapple-habanero', 'chipotle-con-queso', 'black-bean-corn-poblano',
-      'garden-fresh-cilantro-mild', 'jamaican-jerk', 'original-mild', 'original-hot',
-    ]),
-  },
-} as const satisfies Record<string, { label: string; flavors: readonly KitFlavor[] }>
-
-export type KitId = keyof typeof ORDER_KITS
-export const KIT_IDS = Object.keys(ORDER_KITS) as [KitId, ...KitId[]]
-
+export {
+  ORDER_KITS,
+  KIT_IDS,
+  type FlavorCategory,
+  type KitFlavor,
+  type KitId,
+} from '@/lib/fundraising/flavor-kits'
 export const PAYMENT_METHODS = {
   'card-online': 'Credit card online',
   check: 'Check by mail',

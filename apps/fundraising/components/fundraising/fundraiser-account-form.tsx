@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { KIT_IDS, ORDER_KITS, type KitId } from '@/lib/fundraising/flavor-kits'
+import { FULFILLMENT_OPTIONS, ONLINE_LINK_NOTE, RESALE_NUMBER_NOTE } from '@/lib/fundraising/fulfillment'
+import { useUploadThing } from '@/lib/uploadthing-client'
+import type { FulfillmentMethod } from '@prisma/client'
 import {
   Card,
   CardContent,
@@ -21,6 +26,9 @@ type FundraiserRegisterState = {
   confirmPassword: string
   organizationName: string
   contactPhone: string
+  resaleNumber: string
+  missionStatement: string
+  bio: string
 }
 
 const initialState: FundraiserRegisterState = {
@@ -30,7 +38,16 @@ const initialState: FundraiserRegisterState = {
   confirmPassword: '',
   organizationName: '',
   contactPhone: '',
+  resaleNumber: '',
+  missionStatement: '',
+  bio: '',
 }
+
+const PACKAGE_ORDER = [...KIT_IDS].sort((a, b) => Number(a) - Number(b))
+
+/** A radio-card: the whole box is the click target, the ring shows the choice. */
+const CHOICE =
+  'block cursor-pointer rounded-lg border p-3 text-sm transition-colors has-[:checked]:border-salsa-500 has-[:checked]:bg-salsa-50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-salsa-500'
 
 /**
  * Fundraiser account sign-up (creates a PENDING account for review).
@@ -41,8 +58,24 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
   const [formState, setFormState] = useState<FundraiserRegisterState>(initialState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // No default package: it decides which salsas the store sells, so the group picks it.
+  const [flavorPackage, setFlavorPackage] = useState<KitId | null>(null)
+  // Most groups run the classic paper drive, so it starts selected.
+  const [fulfillment, setFulfillment] = useState<FulfillmentMethod>('ORDER_FORMS_AND_BULK')
+  const [brandColor, setBrandColor] = useState('#C8102E')
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null)
+  const logoUpload = useUploadThing('fundraiserSignupImage', {
+    onClientUploadComplete: (res) => res?.[0] && setLogoUrl(res[0].url),
+    onUploadError: (e) => setError(e.message),
+  })
+  const coverUpload = useUploadThing('fundraiserSignupImage', {
+    onClientUploadComplete: (res) => res?.[0] && setCoverPhotoUrl(res[0].url),
+    onUploadError: (e) => setError(e.message),
+  })
+  const collecting = fulfillment === 'ORDER_FORMS_AND_BULK'
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target
     setFormState((prev) => ({ ...prev, [name]: value }))
   }
@@ -53,6 +86,14 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
 
     if (formState.password !== formState.confirmPassword) {
       setError('Passwords do not match.')
+      return
+    }
+    if (!flavorPackage) {
+      setError('Please choose a 9, 16 or 25 flavor package.')
+      return
+    }
+    if (logoUpload.isUploading || coverUpload.isUploading) {
+      setError('Please wait for your images to finish uploading.')
       return
     }
 
@@ -68,6 +109,14 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
           password: formState.password,
           organizationName: formState.organizationName,
           contactPhone: formState.contactPhone || undefined,
+          flavorPackage,
+          fulfillmentMethod: fulfillment,
+          resaleNumber: collecting ? formState.resaleNumber || undefined : undefined,
+          brandColor,
+          logoUrl: logoUrl ?? undefined,
+          coverPhotoUrl: coverPhotoUrl ?? undefined,
+          missionStatement: formState.missionStatement || undefined,
+          bio: formState.bio || undefined,
         }),
       })
 
@@ -180,6 +229,143 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
               minLength={8}
             />
           </div>
+
+          <fieldset className="space-y-3 border-t pt-5">
+            <legend className="sr-only">Salsa package</legend>
+            <div>
+              <p className="font-semibold text-gray-900">Choose your salsa package *</p>
+              <p className="text-xs text-gray-600">
+                This is the line-up your supporters choose from, on your order forms and your web
+                page. Fewer flavors keeps sorting simple; more gives buyers more choice.
+              </p>
+            </div>
+            {PACKAGE_ORDER.map((id) => (
+              <label key={id} className={CHOICE}>
+                <span className="flex items-center gap-2 font-semibold">
+                  <input
+                    type="radio"
+                    name="flavorPackage"
+                    value={id}
+                    checked={flavorPackage === id}
+                    onChange={() => setFlavorPackage(id)}
+                    className="accent-salsa-500"
+                  />
+                  {id} flavors
+                </span>
+                <span className="mt-1 block pl-5 text-xs leading-relaxed text-gray-600">
+                  {ORDER_KITS[id].flavors.map((flavor) => flavor.name).join(' · ')}
+                </span>
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset className="space-y-3 border-t pt-5">
+            <legend className="sr-only">Fulfillment</legend>
+            <div>
+              <p className="font-semibold text-gray-900">How will you run your fundraiser? *</p>
+              <p className="text-xs text-gray-600">Most groups do one or the other.</p>
+            </div>
+            {FULFILLMENT_OPTIONS.map((opt) => (
+              <label key={opt.value} className={CHOICE}>
+                <span className="flex items-center gap-2 font-semibold">
+                  <input
+                    type="radio"
+                    name="fulfillment"
+                    value={opt.value}
+                    checked={fulfillment === opt.value}
+                    onChange={() => setFulfillment(opt.value)}
+                    className="accent-salsa-500"
+                  />
+                  {opt.value === 'ORDER_FORMS_AND_BULK' ? 'Order forms + bulk delivery' : 'Online only'}
+                </span>
+                <span className="mt-1 block pl-5 text-xs leading-relaxed text-gray-600">
+                  {opt.tagline}. {opt.tradeOff}
+                </span>
+              </label>
+            ))}
+            <p className="text-xs text-gray-500">{ONLINE_LINK_NOTE}</p>
+            {collecting && (
+              <div className="space-y-2">
+                <Label htmlFor="resaleNumber">Resale certificate number (optional for now)</Label>
+                <Input id="resaleNumber" name="resaleNumber" value={formState.resaleNumber} onChange={handleChange} maxLength={60} />
+                <p className="text-xs text-gray-500">{RESALE_NUMBER_NOTE}</p>
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset className="space-y-4 border-t pt-5">
+            <legend className="sr-only">Branding</legend>
+            <div>
+              <p className="font-semibold text-gray-900">Brand your page</p>
+              <p className="text-xs text-gray-600">
+                How your fundraiser page looks to supporters. All optional, and all changeable later
+                from your fundraiser portal.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="brandColor">Team color</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  id="brandColor"
+                  type="color"
+                  value={brandColor}
+                  onChange={(e) => setBrandColor(e.target.value)}
+                  className="h-9 w-12 cursor-pointer rounded border"
+                />
+                <span className="font-mono text-sm uppercase">{brandColor}</span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Pick your school or team&apos;s main color. It accents your page: the bar across the
+                top and the frame around your logo.
+              </p>
+            </div>
+            {([
+              ['logo', 'Logo', logoUrl, logoUpload, 'Square works best, up to 4MB.'],
+              ['cover', 'Cover photo', coverPhotoUrl, coverUpload, 'A wide photo for the top of your page, up to 4MB.'],
+            ] as const).map(([key, label, url, upload, hint]) => (
+              <div key={key} className="space-y-2">
+                <Label htmlFor={`${key}-upload`}>{label}</Label>
+                {url && (
+                  <img src={url} alt={`${label} preview`} className="h-20 w-full rounded border bg-gray-50 object-contain" />
+                )}
+                <Input
+                  id={`${key}-upload`}
+                  type="file"
+                  accept="image/*"
+                  disabled={upload.isUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) void upload.startUpload([file])
+                  }}
+                />
+                <p className="text-xs text-gray-500">{upload.isUploading ? 'Uploading…' : hint}</p>
+              </div>
+            ))}
+            <div className="space-y-2">
+              <Label htmlFor="missionStatement">Mission statement</Label>
+              <Textarea
+                id="missionStatement"
+                name="missionStatement"
+                value={formState.missionStatement}
+                onChange={handleChange}
+                maxLength={500}
+                rows={2}
+                placeholder="One or two sentences: what you are raising money for and why."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bio">About us</Label>
+              <Textarea
+                id="bio"
+                name="bio"
+                value={formState.bio}
+                onChange={handleChange}
+                maxLength={5000}
+                rows={5}
+                placeholder="Who you are, what your group does, and what this season looks like."
+              />
+            </div>
+          </fieldset>
 
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

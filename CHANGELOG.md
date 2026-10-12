@@ -14,6 +14,13 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Fundraiser sign-up sets up the whole store.** Groups signing up must choose a 9, 16 or 25
+  flavor package and how they will run the drive (order forms + bulk delivery, or online only).
+  They can also pick a team color and upload a logo and cover photo, and write a mission
+  statement and bio. Approving the account enables that package's salsas automatically, so they
+  no longer need adding one by one. The team color now accents the public campaign page.
+  Schema: `Fundraiser.brandColor` and `flavorPackage`, plus package and branding columns on
+  `FundraiserSignupRequest`.
 - **UPCs on every salsa product.** `npm run products:upcs --workspace @jose-madrid/storefront`
   (dry run; add `-- --apply` to write) saves each single-jar salsa's label UPC to its product's
   barcode, so the Google Customer Reviews survey and the shopping feeds send GTINs. Products that
