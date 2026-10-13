@@ -16,7 +16,10 @@ const SignupSchema = z.object({
   resaleNumber:         z.string().max(60).optional(),
   // Which kit the new store sells. Approval stocks the store with exactly these flavors.
   flavorPackage:        z.enum(KIT_IDS),
-  teamColor:            hexColor.optional(),
+  // The group's three colors: main (teamColor), secondary and accent.
+  teamColor:            hexColor,
+  secondaryColor:       hexColor,
+  accentColor:          hexColor,
   logoUrl:              uploadedImageUrl.optional(),
   coverPhotoUrl:        uploadedImageUrl.optional(),
   missionStatement:     z.string().trim().max(500).optional(),
@@ -52,7 +55,9 @@ export async function POST(req: NextRequest) {
       // asked for here; the admin settles it at approval.
       resaleNumber: data.requestedFulfillment === "ORDER_FORMS_AND_BULK" ? (data.resaleNumber ?? null) : null,
       flavorPackage:    data.flavorPackage,
-      teamColor:        data.teamColor ?? null,
+      teamColor:        data.teamColor,
+      secondaryColor:   data.secondaryColor,
+      accentColor:      data.accentColor,
       logoUrl:          data.logoUrl ?? null,
       coverPhotoUrl:    data.coverPhotoUrl ?? null,
       missionStatement: data.missionStatement || null,

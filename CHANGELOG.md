@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Fundraiser sign-up asks for three colors.** Both sign-up forms now require a main, secondary
+  and accent color, so each group matches its own school, team or business. They are the same three
+  colors the admin Branding tab edits, and saving that tab now updates them as well. Schema:
+  `secondaryColor` and `accentColor` on `Fundraiser` and `FundraiserSignupRequest`.
 - **Redesigned homepage, header and footer.** The homepage is a dark Western layout:
   - The hero loops a video of the rider at sunset and five jars on a smoldering log. A still image
     stands in while it loads, if it fails, and for visitors who ask for reduced motion.

@@ -43,6 +43,22 @@ const initialState: FundraiserRegisterState = {
   bio: '',
 }
 
+type ColorKey = 'brandColor' | 'secondaryColor' | 'accentColor'
+
+// What an unchosen picker shows. Not white or black: the native input only reports a change,
+// so a school picking the color already shown would never register its choice.
+const UNCHOSEN = '#808080'
+
+const COLOR_FIELDS: { key: ColorKey; label: string; hint: string }[] = [
+  {
+    key: 'brandColor',
+    label: 'Main color',
+    hint: "Your school, team or business's main color. It leads your page: the bar across the top and the frame around your logo.",
+  },
+  { key: 'secondaryColor', label: 'Secondary color', hint: 'Your second color, for badges and highlights.' },
+  { key: 'accentColor', label: 'Accent color', hint: 'A third color for buttons and milestones.' },
+]
+
 const PACKAGE_ORDER = [...KIT_IDS].sort((a, b) => Number(a) - Number(b))
 
 /** A radio-card: the whole box is the click target, the ring shows the choice. */
@@ -62,7 +78,12 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
   const [flavorPackage, setFlavorPackage] = useState<KitId | null>(null)
   // Most groups run the classic paper drive, so it starts selected.
   const [fulfillment, setFulfillment] = useState<FulfillmentMethod>('ORDER_FORMS_AND_BULK')
-  const [brandColor, setBrandColor] = useState('#C8102E')
+  // No default colors either: each group matches its own school, team or business.
+  const [colors, setColors] = useState<Record<ColorKey, string | null>>({
+    brandColor: null,
+    secondaryColor: null,
+    accentColor: null,
+  })
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null)
   const logoUpload = useUploadThing('fundraiserSignupImage', {
@@ -92,6 +113,10 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
       setError('Please choose a 9, 16 or 25 flavor package.')
       return
     }
+    if (COLOR_FIELDS.some(({ key }) => !colors[key])) {
+      setError('Please choose your main, secondary and accent colors.')
+      return
+    }
     if (logoUpload.isUploading || coverUpload.isUploading) {
       setError('Please wait for your images to finish uploading.')
       return
@@ -112,7 +137,7 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
           flavorPackage,
           fulfillmentMethod: fulfillment,
           resaleNumber: collecting ? formState.resaleNumber || undefined : undefined,
-          brandColor,
+          ...colors,
           logoUrl: logoUrl ?? undefined,
           coverPhotoUrl: coverPhotoUrl ?? undefined,
           missionStatement: formState.missionStatement || undefined,
@@ -298,27 +323,26 @@ export function FundraiserAccountForm({ siteUrl = '' }: { siteUrl?: string }) {
             <div>
               <p className="font-semibold text-gray-900">Brand your page</p>
               <p className="text-xs text-gray-600">
-                How your fundraiser page looks to supporters. All optional, and all changeable later
-                from your fundraiser portal.
+                How your fundraiser page looks to supporters. Your three colors are required; the
+                rest is optional. All of it can be changed later.
               </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="brandColor">Team color</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  id="brandColor"
-                  type="color"
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="h-9 w-12 cursor-pointer rounded border"
-                />
-                <span className="font-mono text-sm uppercase">{brandColor}</span>
+            {COLOR_FIELDS.map(({ key, label, hint }) => (
+              <div key={key} className="space-y-2">
+                <Label htmlFor={key}>{label}</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    id={key}
+                    type="color"
+                    value={colors[key] ?? UNCHOSEN}
+                    onChange={(e) => setColors((prev) => ({ ...prev, [key]: e.target.value }))}
+                    className="h-9 w-12 cursor-pointer rounded border"
+                  />
+                  <span className="font-mono text-sm uppercase">{colors[key] ?? 'Not chosen'}</span>
+                </div>
+                <p className="text-xs text-gray-500">{hint}</p>
               </div>
-              <p className="text-xs text-gray-500">
-                Pick your school or team&apos;s main color. It accents your page: the bar across the
-                top and the frame around your logo.
-              </p>
-            </div>
+            ))}
             {([
               ['logo', 'Logo', logoUrl, logoUpload, 'Square works best, up to 4MB.'],
               ['cover', 'Cover photo', coverPhotoUrl, coverUpload, 'A wide photo for the top of your page, up to 4MB.'],

@@ -101,6 +101,8 @@ export async function POST(req: NextRequest) {
             missionStatement: signup.missionStatement,
             bio: signup.bio,
             brandColor: teamColor,
+            secondaryColor: signup.secondaryColor,
+            accentColor: signup.accentColor,
             flavorPackage: signup.flavorPackage,
             products: { create: catalog },
           },

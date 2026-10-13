@@ -17,7 +17,10 @@ const FundraiserRegisterSchema = z.object({
   flavorPackage: z.enum(KIT_IDS),
   fulfillmentMethod: z.enum(['ORDER_FORMS_AND_BULK', 'ONLINE_ONLY']),
   resaleNumber: z.string().trim().max(60).optional(),
-  brandColor: hexColor.optional(),
+  // The group's three colors: main, secondary and accent.
+  brandColor: hexColor,
+  secondaryColor: hexColor,
+  accentColor: hexColor,
   logoUrl: uploadedImageUrl.optional(),
   coverPhotoUrl: uploadedImageUrl.optional(),
   missionStatement: z.string().trim().max(500).optional(),
@@ -137,7 +140,9 @@ export async function POST(request: Request) {
           // Only a drive that collects order forms buys wholesale and needs one.
           resaleNumber:
             setup.fulfillmentMethod === 'ORDER_FORMS_AND_BULK' ? setup.resaleNumber || null : null,
-          brandColor: setup.brandColor ?? null,
+          brandColor: setup.brandColor,
+          secondaryColor: setup.secondaryColor,
+          accentColor: setup.accentColor,
           logoUrl: setup.logoUrl ?? null,
           coverPhotoUrl: setup.coverPhotoUrl ?? null,
           missionStatement: setup.missionStatement || null,

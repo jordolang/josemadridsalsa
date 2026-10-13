@@ -30,6 +30,18 @@ const LABEL: React.CSSProperties = {
   fontFamily:"'Courier New',monospace", textTransform:"uppercase",
 };
 
+type ColorKey = "teamColor" | "secondaryColor" | "accentColor";
+
+// What an unchosen picker shows. Not white or black: the native input only reports a change,
+// so a school picking the color already shown would never register its choice.
+const UNCHOSEN = "#808080";
+
+const COLOR_FIELDS: { key: ColorKey; label: string; hint: string }[] = [
+  { key: "teamColor", label: "Main color", hint: "Your school, team or business's main color. It colors your page and your team in the Battle Arena; we generate a darker shade to go with it." },
+  { key: "secondaryColor", label: "Secondary color", hint: "Your second color, for badges and highlights." },
+  { key: "accentColor", label: "Accent color", hint: "A third color for buttons and milestones." },
+];
+
 export default function FundraiserSignupPage() {
   const [form, setForm] = useState({
     schoolName:"", teamName:"", contactName:"",
@@ -38,7 +50,10 @@ export default function FundraiserSignupPage() {
   });
   // No default: the package decides which salsas the store sells, so the group picks it.
   const [flavorPackage, setFlavorPackage] = useState<KitId | null>(null);
-  const [teamColor, setTeamColor] = useState("#9B7FFF");
+  // No default colors either: each group matches its own school, team or business.
+  const [colors, setColors] = useState<Record<ColorKey, string | null>>({
+    teamColor: null, secondaryColor: null, accentColor: null,
+  });
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null);
   const logoUpload = useUploadThing("fundraiserSignupImage", {
@@ -66,6 +81,9 @@ export default function FundraiserSignupPage() {
     if (!flavorPackage) {
       setErrorMsg("Please choose a 9, 16 or 25 flavor package."); return;
     }
+    if (COLOR_FIELDS.some(({ key }) => !colors[key])) {
+      setErrorMsg("Please choose your main, secondary and accent colors."); return;
+    }
     if (logoUpload.isUploading || coverUpload.isUploading) {
       setErrorMsg("Please wait for your images to finish uploading."); return;
     }
@@ -81,7 +99,7 @@ export default function FundraiserSignupPage() {
           // no wholesale purchase.
           resaleNumber: collecting ? form.resaleNumber || undefined : undefined,
           flavorPackage,
-          teamColor,
+          ...colors,
           logoUrl: logoUrl ?? undefined,
           coverPhotoUrl: coverPhotoUrl ?? undefined,
           missionStatement: form.missionStatement || undefined,
@@ -227,27 +245,26 @@ export default function FundraiserSignupPage() {
             )}
           </div>
 
-          {/* Branding, set up now so the page is ready the day it is approved. All optional:
-              anything skipped can be added later from the fundraiser portal. */}
+          {/* Branding, set up now so the page is ready the day it is approved. The three colors
+              are required; everything else can be added later from the fundraiser portal. */}
           <div style={{marginBottom:24,borderTop:`1px solid ${P.goldDim}`,paddingTop:20,display:"flex",flexDirection:"column",gap:16}}>
             <div>
               <div style={{fontSize:13,color:P.gold3,letterSpacing:2,fontWeight:700,marginBottom:6}}>BRAND YOUR PAGE</div>
               <div style={{fontSize:11,color:P.creamDim,lineHeight:1.7}}>
-                This is how your fundraiser page looks to supporters. Everything here is optional and
-                can be changed later from your fundraiser portal.
+                This is how your fundraiser page looks to supporters. Your three colors are required;
+                the rest is optional. All of it can be changed later.
               </div>
             </div>
-            <div>
-              <label style={LABEL}>Team color</label>
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <input type="color" value={teamColor} onChange={(e) => setTeamColor(e.target.value)} style={{width:48,height:36,background:"none",border:`1px solid ${P.goldDim}`,cursor:"pointer"}}/>
-                <span style={{fontSize:12,color:P.cream}}>{teamColor.toUpperCase()}</span>
+            {COLOR_FIELDS.map(({ key, label, hint }) => (
+              <div key={key}>
+                <label htmlFor={key} style={LABEL}>{label} *</label>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <input id={key} type="color" value={colors[key] ?? UNCHOSEN} onChange={(e) => setColors((c) => ({ ...c, [key]: e.target.value }))} style={{width:48,height:36,background:"none",border:`1px solid ${P.goldDim}`,cursor:"pointer"}}/>
+                  <span style={{fontSize:12,color:P.cream}}>{colors[key]?.toUpperCase() ?? "NOT CHOSEN"}</span>
+                </div>
+                <div style={{fontSize:9,color:P.goldDim,marginTop:4,lineHeight:1.7}}>{hint}</div>
               </div>
-              <div style={{fontSize:9,color:P.goldDim,marginTop:4,lineHeight:1.7}}>
-                Pick your school or team&apos;s main color. It colors your page and your team in the
-                Battle Arena; we generate a darker shade to go with it.
-              </div>
-            </div>
+            ))}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
               {([
                 ["Logo", logoUrl, logoUpload, "Square works best, up to 4MB"],

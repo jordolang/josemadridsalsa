@@ -68,7 +68,11 @@ store before anyone reviews it:
   `Product.slug`. The order-form submission page reads the same lists.
 - **Fulfillment (required).** Order forms + bulk delivery, or online only. The brochure choice is
   not asked at sign-up; an admin settles it on the fundraiser.
-- **Branding (optional).** Team color, logo, cover photo, mission statement and an about-us bio.
+- **Colors (required).** Main, secondary and accent, matched to the school, team or business.
+  They are stored in `Fundraiser.brandColor`, `secondaryColor` and `accentColor` (on the sign-up
+  request, `teamColor` is the main one). These are the same three colors the admin **Branding** tab
+  edits. The main color accents the public campaign page.
+- **Branding (optional).** Logo, cover photo, mission statement and an about-us bio.
   Images upload through `fundraiserSignupImage`, the one UploadThing route that needs no session
   (images only, 4MB, 10 uploads per IP per hour). The API accepts image URLs only from UploadThing
   hosts.
