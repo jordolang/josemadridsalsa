@@ -9,13 +9,13 @@ afterEach(() => {
   assign.mockReset()
 })
 
-function fillAndSubmit() {
+function fillAndSubmit({ pickPackage = true } = {}) {
   fireEvent.change(screen.getByLabelText('Your Name'), { target: { value: 'Jane Doe' } })
   fireEvent.change(screen.getByLabelText('Organization Name'), { target: { value: 'Band Boosters' } })
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@example.com' } })
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-pass' } })
   fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'secret-pass' } })
-  fireEvent.click(screen.getByRole('radio', { name: /^16 flavors/ }))
+  if (pickPackage) fireEvent.click(screen.getByRole('radio', { name: /^16 flavors/ }))
   fireEvent.click(screen.getByRole('button', { name: /create fundraiser account/i }))
 }
 
@@ -58,6 +58,16 @@ describe('FundraiserAccountForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /create fundraiser account/i }))
 
     expect(screen.getByText('Passwords do not match.')).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses to submit until a salsa package is chosen', () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    render(<FundraiserAccountForm />)
+    fillAndSubmit({ pickPackage: false })
+
+    expect(screen.getByText('Please choose a 9, 16 or 25 flavor package.')).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
