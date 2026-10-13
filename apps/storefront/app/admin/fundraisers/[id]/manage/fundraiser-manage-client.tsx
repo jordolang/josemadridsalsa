@@ -31,6 +31,7 @@ import Link from 'next/link'
 import { FundraiserStatus, FundraiserParticipantStatus } from '@prisma/client'
 import { ColorPalettePicker } from '@/components/fundraising/color-palette-picker'
 import { useUploadThing } from '@/lib/uploadthing-client'
+import { initialBrandColors } from '@/lib/fundraising/brand-colors'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -872,11 +873,7 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
     coverPhotoUrl: fundraiser.coverPhotoUrl ?? '',
     missionStatement: fundraiser.missionStatement ?? '',
     bio: fundraiser.bio ?? '',
-    // The columns hold what the group chose at sign-up; pageConfig holds palettes saved here
-    // before the columns existed.
-    primaryColor: fundraiser.brandColor ?? (existing.primaryColor as string | undefined) ?? '#B91C1C',
-    secondaryColor: fundraiser.secondaryColor ?? (existing.secondaryColor as string | undefined) ?? '#F59E0B',
-    accentColor: fundraiser.accentColor ?? (existing.accentColor as string | undefined) ?? '#16A34A',
+    ...initialBrandColors(fundraiser),
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
