@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
 import prisma from '@/lib/prisma'
+import { hexColor } from '@/lib/fundraising/signup-fields'
 
 const FundraiserUpdateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -20,6 +21,9 @@ const FundraiserUpdateSchema = z.object({
   missionStatement: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
   pageConfig: z.record(z.string(), z.unknown()).nullable().optional(),
+  brandColor: hexColor.nullable().optional(),
+  secondaryColor: hexColor.nullable().optional(),
+  accentColor: hexColor.nullable().optional(),
   commissionRate: z.number().min(0).max(100).optional(),
   // What this fundraiser's store charges per jar absent a per-product price.
   defaultUnitPrice: z.number().min(0).optional(),
@@ -153,6 +157,9 @@ export async function PUT(
     if (data.missionStatement !== undefined) updateData.missionStatement = data.missionStatement
     if (data.bio !== undefined) updateData.bio = data.bio
     if (data.pageConfig !== undefined) updateData.pageConfig = data.pageConfig
+    if (data.brandColor !== undefined) updateData.brandColor = data.brandColor
+    if (data.secondaryColor !== undefined) updateData.secondaryColor = data.secondaryColor
+    if (data.accentColor !== undefined) updateData.accentColor = data.accentColor
     if (data.defaultUnitPrice !== undefined) updateData.defaultUnitPrice = data.defaultUnitPrice
     if (data.fulfillmentMethod !== undefined) updateData.fulfillmentMethod = data.fulfillmentMethod
     if (data.brochureOption !== undefined) updateData.brochureOption = data.brochureOption

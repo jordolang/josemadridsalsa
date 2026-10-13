@@ -97,6 +97,9 @@ interface FundraiserData {
   coverPhotoUrl: string | null
   missionStatement: string | null
   bio: string | null
+  brandColor: string | null
+  secondaryColor: string | null
+  accentColor: string | null
   pageConfig: Record<string, unknown> | null
   products: FundraiserProductRecord[]
   participants: ParticipantRecord[]
@@ -869,9 +872,11 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
     coverPhotoUrl: fundraiser.coverPhotoUrl ?? '',
     missionStatement: fundraiser.missionStatement ?? '',
     bio: fundraiser.bio ?? '',
-    primaryColor: (existing.primaryColor as string | undefined) ?? '#B91C1C',
-    secondaryColor: (existing.secondaryColor as string | undefined) ?? '#F59E0B',
-    accentColor: (existing.accentColor as string | undefined) ?? '#16A34A',
+    // The columns hold what the group chose at sign-up; pageConfig holds palettes saved here
+    // before the columns existed.
+    primaryColor: fundraiser.brandColor ?? (existing.primaryColor as string | undefined) ?? '#B91C1C',
+    secondaryColor: fundraiser.secondaryColor ?? (existing.secondaryColor as string | undefined) ?? '#F59E0B',
+    accentColor: fundraiser.accentColor ?? (existing.accentColor as string | undefined) ?? '#16A34A',
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -917,6 +922,9 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
           coverPhotoUrl: form.coverPhotoUrl || null,
           missionStatement: form.missionStatement || null,
           bio: form.bio || null,
+          brandColor: form.primaryColor,
+          secondaryColor: form.secondaryColor,
+          accentColor: form.accentColor,
           pageConfig,
         }),
       })
@@ -1089,7 +1097,7 @@ function BrandingTab({ fundraiser }: { fundraiser: FundraiserData }) {
           />
           <ColorPalettePicker
             label="Accent Color"
-            description="Optional third color — calls to action, progress milestones."
+            description="Third color — calls to action, progress milestones."
             value={form.accentColor}
             onChange={(hex) => setForm(f => ({ ...f, accentColor: hex }))}
           />
