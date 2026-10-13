@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SignupActions } from './_components/signup-actions'
+import { ORDER_KITS, isKitId } from '@/lib/fundraising/flavor-kits'
 import { TeamActions } from './_components/team-actions'
 
 export const metadata: Metadata = {
@@ -110,6 +111,41 @@ export default async function FundraiserSignupsAdminPage() {
                       Goal ${s.goalAmount.toLocaleString()} · submitted{' '}
                       {s.createdAt.toLocaleDateString()}
                     </div>
+                    <div className="text-xs">
+                      {isKitId(s.flavorPackage) ? (
+                        <span className="font-medium">
+                          {ORDER_KITS[s.flavorPackage].label} — its salsas are
+                          enabled on approval
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          No package chosen — add salsas on the fundraiser
+                          after approving
+                        </span>
+                      )}
+                    </div>
+                    {(s.logoUrl || s.coverPhotoUrl || s.teamColor) && (
+                      <div className="flex items-center gap-2 pt-1">
+                        {s.teamColor && (
+                          <span
+                            className="size-5 rounded border"
+                            style={{ backgroundColor: s.teamColor }}
+                            title={`Brand color ${s.teamColor}`}
+                          />
+                        )}
+                        {s.logoUrl && (
+                          <img src={s.logoUrl} alt="Logo" className="h-10 w-10 rounded border object-contain" />
+                        )}
+                        {s.coverPhotoUrl && (
+                          <img src={s.coverPhotoUrl} alt="Cover photo" className="h-10 w-24 rounded border object-cover" />
+                        )}
+                      </div>
+                    )}
+                    {s.missionStatement && (
+                      <p className="max-w-2xl text-xs italic">
+                        “{s.missionStatement}”
+                      </p>
+                    )}
                     {s.message && (
                       <p className="mt-1 max-w-2xl whitespace-pre-wrap rounded bg-muted/40 p-2 text-xs">
                         {s.message}
@@ -122,6 +158,7 @@ export default async function FundraiserSignupsAdminPage() {
                     requestedFulfillment={s.requestedFulfillment}
                     requestedBrochure={s.requestedBrochure}
                     requestedResaleNumber={s.resaleNumber}
+                    requestedTeamColor={s.teamColor}
                   />
                 </div>
               </Card>

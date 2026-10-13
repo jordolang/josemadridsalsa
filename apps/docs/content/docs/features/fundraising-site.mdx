@@ -58,6 +58,26 @@ Local development: `npm run dev:fundraising` serves it on `http://localhost:3001
 Order-form packs and fliers are static files in
 `apps/fundraising/public/fundraising/downloads/`. Replace a file there to update it.
 
+## Signing up
+
+The organizer account form (`/sign-up` step 1, and `/auth/fundraiser-signup`) sets up the whole
+store before anyone reviews it:
+
+- **Salsa package (required).** 9, 16 or 25 flavors. The kits are defined once, in
+  `packages/core/lib/fundraising/flavor-kits.ts`, which also maps each flavor to its
+  `Product.slug`. The order-form submission page reads the same lists.
+- **Fulfillment (required).** Order forms + bulk delivery, or online only. The brochure choice is
+  not asked at sign-up; an admin settles it on the fundraiser.
+- **Branding (optional).** Team color, logo, cover photo, mission statement and an about-us bio.
+  Images upload through `fundraiserSignupImage`, the one UploadThing route that needs no session
+  (images only, 4MB, 10 uploads per IP per hour). The API accepts image URLs only from UploadThing
+  hosts.
+
+Approving the account at **Admin → Fundraisers → Accounts** activates the fundraiser and enables
+the package's salsas on its store (`kit-catalog.server.ts`). Salsas an admin has already set up
+are left as they are. The Battle Arena signup (`/fundraise/signup`, approved under **Signups**)
+asks the same questions and stocks its store the same way.
+
 Old josemadridsalsafundraising.com URLs (`/start-your-fundraiser/`,
 `/original-mild-salsa/`, `/cart.php`…) redirect permanently to their new paths
 (`lib/fundraising-site/legacy-redirects.ts`), so they keep working once that domain

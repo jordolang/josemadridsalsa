@@ -132,13 +132,27 @@ export default async function FundraiserPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40">
+      {/* The group's own color, picked at sign-up. A runtime value, so it is set as a custom
+          property rather than a Tailwind class. */}
+      {fundraiser.brandColor && (
+        <div
+          aria-hidden
+          className="h-2 w-full bg-[var(--brand)]"
+          style={{ '--brand': fundraiser.brandColor } as React.CSSProperties}
+        />
+      )}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           {/* Main column */}
           <main className="min-w-0 space-y-8">
             {/* Logo + status */}
             <div className="flex items-center gap-4">
-              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white shadow ring-1 ring-border">
+              <div
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white shadow ${
+                  fundraiser.brandColor ? 'ring-2 ring-[var(--brand)]' : 'ring-1 ring-border'
+                }`}
+                style={fundraiser.brandColor ? ({ '--brand': fundraiser.brandColor } as React.CSSProperties) : undefined}
+              >
                 <Image
                   src={logo}
                   alt={`${fundraiser.organizationName} logo`}

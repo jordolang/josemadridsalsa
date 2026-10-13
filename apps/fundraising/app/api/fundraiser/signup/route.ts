@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma as db } from "@/lib/prisma";
 import { z } from "zod";
+import { KIT_IDS } from "@/lib/fundraising/flavor-kits";
+import { hexColor, uploadedImageUrl } from "@/lib/fundraising/signup-fields";
 
 const SignupSchema = z.object({
   schoolName:   z.string().min(2).max(120),
@@ -10,11 +12,15 @@ const SignupSchema = z.object({
   contactPhone: z.string().optional(),
   goalAmount:   z.number().min(100).max(50000).default(1000),
   message:      z.string().max(1000).optional(),
-  // How they want to run the drive. Optional so an older client, or a form submitted before
-  // this existed, still applies — the admin picks at approval either way.
-  requestedFulfillment: z.enum(["ORDER_FORMS_AND_BULK", "ONLINE_ONLY"]).optional(),
-  requestedBrochure:    z.enum(["PRINT_YOUR_OWN", "PROFESSIONAL_100"]).optional(),
+  requestedFulfillment: z.enum(["ORDER_FORMS_AND_BULK", "ONLINE_ONLY"]),
   resaleNumber:         z.string().max(60).optional(),
+  // Which kit the new store sells. Approval stocks the store with exactly these flavors.
+  flavorPackage:        z.enum(KIT_IDS),
+  teamColor:            hexColor.optional(),
+  logoUrl:              uploadedImageUrl.optional(),
+  coverPhotoUrl:        uploadedImageUrl.optional(),
+  missionStatement:     z.string().trim().max(500).optional(),
+  bio:                  z.string().trim().max(5000).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -41,11 +47,16 @@ export async function POST(req: NextRequest) {
       contactPhone: data.contactPhone ?? null,
       goalAmount:   data.goalAmount,
       message:      data.message ?? null,
-      requestedFulfillment: data.requestedFulfillment ?? null,
-      // Both only mean anything on a drive that collects order forms; storing them against an
-      // online-only request would put a brochure choice on a campaign with nothing to print.
-      requestedBrochure: data.requestedFulfillment === "ORDER_FORMS_AND_BULK" ? (data.requestedBrochure ?? null) : null,
-      resaleNumber:      data.requestedFulfillment === "ORDER_FORMS_AND_BULK" ? (data.resaleNumber ?? null) : null,
+      requestedFulfillment: data.requestedFulfillment,
+      // Only means anything on a drive that collects order forms. The brochure is no longer
+      // asked for here; the admin settles it at approval.
+      resaleNumber: data.requestedFulfillment === "ORDER_FORMS_AND_BULK" ? (data.resaleNumber ?? null) : null,
+      flavorPackage:    data.flavorPackage,
+      teamColor:        data.teamColor ?? null,
+      logoUrl:          data.logoUrl ?? null,
+      coverPhotoUrl:    data.coverPhotoUrl ?? null,
+      missionStatement: data.missionStatement || null,
+      bio:              data.bio || null,
       status:       "PENDING",
     },
   });

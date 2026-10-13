@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { FundraiserAccountStatus } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
 import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
+import { resolveKitCatalog, shouldBlockApproval } from '@/lib/fundraising/kit-catalog.server'
 
 
 export async function GET(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         user: { select: { id: true, name: true, email: true, createdAt: true } },
-        fundraiser: { select: { id: true, name: true, organizationName: true, slug: true, subdomain: true, status: true } },
+        fundraiser: { select: { id: true, name: true, organizationName: true, slug: true, subdomain: true, status: true, flavorPackage: true, fulfillmentMethod: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -63,7 +64,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Account not found.' }, { status: 404 })
     }
 
-    if (action === 'approve') {
+    // The package chosen at sign-up stocks the store, so nobody ticks salsas one by one.
+    // Only on approval, and only rows that do not exist yet: a re-approval after a suspension
+    // must not undo salsas an admin has since switched off.
+    const kit = action === 'approve' ? await resolveKitCatalog(account.fundraiser.flavorPackage) : null
+    if (kit && shouldBlockApproval(kit.missingSlugs, kit.kitSize)) {
+      return NextResponse.json(
+        {
+          error: `These ${account.fundraiser.flavorPackage}-flavor kit salsas have no active product: ${kit.missingSlugs.join(', ')}`,
+        },
+        { status: 409 }
+      )
+    }
+
+    if (action === 'approve' && kit) {
       await prisma.$transaction([
         prisma.fundraiserAccount.update({
           where: { id: accountId },
@@ -77,6 +91,10 @@ export async function PATCH(request: Request) {
         prisma.fundraiser.update({
           where: { id: account.fundraiserId },
           data: { status: 'ACTIVE', isActive: true },
+        }),
+        prisma.fundraiserProduct.createMany({
+          data: kit.catalog.map((row) => ({ ...row, fundraiserId: account.fundraiserId })),
+          skipDuplicates: true,
         }),
       ])
     } else if (action === 'suspend') {
@@ -102,6 +120,11 @@ export async function PATCH(request: Request) {
         changes: {
           status: { from: account.status, to: action === 'approve' ? 'APPROVED' : 'SUSPENDED' },
           fundraiserId: account.fundraiserId,
+          ...(kit && {
+            flavorPackage: account.fundraiser.flavorPackage,
+            productsEnabled: kit.catalog.length,
+            missingSlugs: kit.missingSlugs,
+          }),
         },
       },
       request

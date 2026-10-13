@@ -30,6 +30,7 @@ export function SignupActions({
   requestedFulfillment,
   requestedBrochure,
   requestedResaleNumber,
+  requestedTeamColor,
 }: {
   signupId: string
   defaultPeriod: string
@@ -37,6 +38,8 @@ export function SignupActions({
   requestedFulfillment: FulfillmentMethod | null
   requestedBrochure: BrochureOption | null
   requestedResaleNumber: string | null
+  /** The brand color the group picked on the form, if any. */
+  requestedTeamColor: string | null
 }) {
   const router = useRouter()
   const [pending, setPending] = useState<Pending>('idle')
@@ -45,7 +48,7 @@ export function SignupActions({
   const [rejectOpen, setRejectOpen] = useState(false)
   const [issuedKey, setIssuedKey] = useState<string | null>(null)
 
-  const [teamColor, setTeamColor] = useState('#9B7FFF')
+  const [teamColor, setTeamColor] = useState(requestedTeamColor ?? '#9B7FFF')
   const [activePeriod, setActivePeriod] = useState(defaultPeriod)
   const [approveNotes, setApproveNotes] = useState('')
   const [rejectNotes, setRejectNotes] = useState('')

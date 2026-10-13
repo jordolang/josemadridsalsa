@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { ORDER_KITS, isKitId } from '@/lib/fundraising/flavor-kits'
 
 type FundraiserAccountStatus = 'PENDING' | 'APPROVED' | 'SUSPENDED'
 
@@ -23,6 +24,8 @@ type FundraiserAccountData = {
     slug: string
     subdomain: string | null
     status: string
+    flavorPackage: string | null
+    fulfillmentMethod: 'ORDER_FORMS_AND_BULK' | 'ONLINE_ONLY'
   }
 }
 
@@ -106,7 +109,10 @@ export default function FundraiserAccountsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountId, action }),
       })
-      if (!res.ok) throw new Error('Action failed')
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(data.error || 'Action failed')
+      }
       toast.success(action === 'approve' ? 'Account approved' : 'Account suspended')
       await reloadAccounts()
     } catch (error: unknown) {
@@ -166,6 +172,17 @@ export default function FundraiserAccountsPage() {
                     <span>
                       Signed up: {new Date(account.createdAt).toLocaleDateString()}
                     </span>
+                  </div>
+                  <div className="mt-1 text-sm">
+                    {isKitId(account.fundraiser.flavorPackage)
+                      ? `${ORDER_KITS[account.fundraiser.flavorPackage].label} · `
+                      : 'No package chosen · '}
+                    {account.fundraiser.fulfillmentMethod === 'ONLINE_ONLY'
+                      ? 'Online only'
+                      : 'Order forms + bulk delivery'}
+                    {account.status === 'PENDING' && isKitId(account.fundraiser.flavorPackage) && (
+                      <span className="text-muted-foreground"> — its salsas are enabled on approval</span>
+                    )}
                   </div>
                   <div className="mt-1">
                     <Link
