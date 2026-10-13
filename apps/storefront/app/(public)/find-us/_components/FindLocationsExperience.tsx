@@ -286,7 +286,7 @@ export function FindLocationsExperience({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1 shadow-sm">
+        <div className="flex items-center gap-2 rounded-full border border-border bg-card p-1 shadow-sm">
           <button
             type="button"
             className={cn(

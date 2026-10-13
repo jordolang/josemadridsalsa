@@ -72,30 +72,57 @@ const NAV_GROUPS: NavGroup[] = [
       { name: "Mild & Sweet", href: "/products?heatLevel=MILD", description: "Perfect for beginners and families" },
       { name: "Medium Heat", href: "/products?heatLevel=MEDIUM", description: "Just the right kick" },
       { name: "Hot & Spicy", href: "/products?heatLevel=HOT", description: "For the brave souls" },
+      { name: "Extra Hot", href: "/products?heatLevel=EXTRA_HOT", description: "Real fire for heat seekers" },
       { name: "Gourmet Fruit", href: "/products?heatLevel=FRUIT", description: "Unique fruit-infused flavors" },
       { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
-      { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
     ],
   },
   {
-    id: "about",
-    title: "About",
+    id: "our-story",
+    title: "Our Story",
     items: [
       { name: "Our Story", href: "/our-story", description: "From Clovis, NM to Zanesville, OH" },
+      { name: "About Jose", href: "/about", description: "The family behind the jar" },
       { name: "La Perla Tortilla Factory", href: "/laperla", description: "Our tortilla chip maker in Toledo, OH" },
-      { name: "The Heat Index", href: "/heat-index", description: "Stories, recipes, road notes, and salsa lore" },
       { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
       { name: "Find Us", href: "/find-us", description: "Retailers near you" },
       { name: "FAQ", href: "/faq", description: "Ordering, shipping, fundraising and wholesale answers" },
     ],
   },
   {
-    id: "for-you",
-    title: "For You",
+    id: "fundraising",
+    title: "Fundraising",
+    featured: {
+      href: "/fundraising",
+      label: "Start a Fundraiser",
+      hint: "Earn 50% profit on every jar your group sells",
+    },
     items: [
       { name: "Fundraising", href: "/fundraising", description: "Earn 50% profit" },
       { name: "Wholesale", href: "/wholesale", description: "Stock our jars" },
+    ],
+  },
+  {
+    id: "community",
+    title: "Community",
+    items: [
       { name: "Where Is Jose?", href: "/where-is-jose", description: "Catch us at events and markets" },
+      { name: "Battle Arena", href: "/battle-arena", description: "Play, earn, and win with your team" },
+      { name: "Polls", href: "/polls", description: "Vote on flavors and more" },
+      { name: "The Heat Index", href: "/heat-index", description: "Stories, recipes, road notes, and salsa lore" },
+    ],
+  },
+  {
+    id: "merch",
+    title: "Merch",
+    featured: {
+      href: "/merchandise",
+      label: "Shop Merch",
+      hint: "T-shirts, hats, and accessories",
+    },
+    items: [
+      { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
+      { name: "Gift Certificates", href: "/gift-certificates", description: "Give the gift of salsa" },
     ],
   },
 ];
@@ -169,7 +196,8 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
   const isSignedIn = status === "authenticated";
   const user = session?.user;
   const wishlistCount = useWishlistStore((state) => state.items.length);
-  const isHome = pathname === "/";
+  // The redesign carries the dark Night Earth header on every page, not only "/".
+  const isDark = true;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
@@ -308,7 +336,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
       onMouseLeave={scheduleClose}
       className={cn(
         "sticky top-0 z-50 w-full transition-[background-color,box-shadow,border-color] duration-300",
-        isHome
+        isDark
           ? "border-b border-[#8a5616]/70 bg-[#050505] text-white shadow-[0_1px_0_rgba(218,154,48,0.18)]"
           : cn(
               "text-foreground",
@@ -318,26 +346,26 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
             ),
       )}
     >
-      <div className={cn("mx-auto px-4 sm:px-6", isHome ? "max-w-none lg:px-12" : "max-w-[1400px]")}>
+      <div className={cn("mx-auto px-4 sm:px-6", isDark ? "max-w-none lg:px-12" : "max-w-[1400px]")}>
         <div
           className={cn(
             "grid grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]",
-            isHome ? "h-[103px]" : "h-[72px]",
+            isDark ? "h-[103px]" : "h-[72px]",
           )}
         >
           {/* Wordmark — always returns to the main marketing site, regardless of
              which app/domain (e.g. the fundraiser deployment) is serving this header. */}
           <Link
             href={SITE_URL}
-            className={cn("group flex items-center justify-self-start", isHome ? "gap-4" : "gap-3")}
+            className={cn("group flex items-center justify-self-start", isDark ? "gap-4" : "gap-3")}
             onClick={() => closeGroup()}
           >
-            <span className={cn("relative flex-shrink-0", isHome ? "h-[66px] w-[66px]" : "h-11 w-11")}>
+            <span className={cn("relative flex-shrink-0", isDark ? "h-[66px] w-[66px]" : "h-11 w-11")}>
               <Image
                 src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/logo-image.webp"
                 alt="Jose Madrid Salsa"
                 fill
-                sizes={isHome ? "66px" : "44px"}
+                sizes={isDark ? "66px" : "44px"}
                 className="object-contain transition-transform duration-300 group-hover:-rotate-[4deg]"
               />
             </span>
@@ -345,7 +373,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
               <span
                 className={cn(
                   "font-serif font-bold tracking-[-0.01em]",
-                  isHome ? "text-[32px] text-white" : "text-[20px] text-foreground",
+                  isDark ? "text-[26px] text-white 2xl:text-[32px]" : "text-[20px] text-foreground",
                 )}
               >
                 Jose Madrid
@@ -353,7 +381,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
               <span
                 className={cn(
                   "mt-[2px] font-semibold uppercase text-[#d9a235]",
-                  isHome ? "text-[13px] tracking-[0.33em]" : "text-[10px] tracking-[0.24em] text-salsa-600",
+                  isDark ? "text-[13px] tracking-[0.33em]" : "text-[10px] tracking-[0.24em] text-salsa-600",
                 )}
               >
                 Salsa · Est. 1987
@@ -362,7 +390,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
           </Link>
 
           {/* Center nav — editorial labels with underline-on-active */}
-          <nav className="hidden lg:flex items-center gap-1 justify-self-center">
+          <nav className="hidden xl:flex items-center gap-1 justify-self-center">
             {navGroups.map((group) => {
               const isOpen = openGroupId === group.id;
               const isActive = isGroupActive(group, pathname || "");
@@ -383,12 +411,12 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                     onClick={() => (isOpen ? closeGroup(group.id) : openGroup(group.id))}
                     onFocus={() => openGroup(group.id)}
                     onKeyDown={(e) => handleTriggerKeyDown(e, group.id)}
-                    className={cn("group relative py-3", isHome ? "px-8" : "px-5")}
+                    className={cn("group relative whitespace-nowrap py-3", isDark ? "px-2 2xl:px-5" : "px-5")}
                   >
                     <span
                       className={cn(
-                        "text-[12.5px] font-semibold uppercase tracking-[0.22em] transition-colors duration-200",
-                        isHome
+                        "text-[12.5px] font-semibold uppercase tracking-[0.16em] 2xl:tracking-[0.22em] transition-colors duration-200",
+                        isDark
                           ? "text-white group-hover:text-[#d9a235]"
                           : isActive || isOpen
                           ? "text-salsa-600"
@@ -401,14 +429,14 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                       aria-hidden
                       className={cn(
                         "pointer-events-none absolute bottom-1.5 left-1/2 h-[1.5px] -translate-x-1/2 bg-salsa-600 transition-all duration-300 ease-out",
-                        isHome ? "bg-[#d9a235]" : "bg-salsa-600",
+                        isDark ? "bg-[#d9a235]" : "bg-salsa-600",
                         isActive || isOpen ? "w-[22px]" : "w-0",
                       )}
                     />
                   </button>
                 </div>
                 {/* Battle Live tab sits immediately after Shop */}
-                {group.id === "shop" && <BattleLiveNavLink isHome={isHome} />}
+                {group.id === "shop" && <BattleLiveNavLink isHome={isDark} />}
                 </Fragment>
               );
             })}
@@ -450,7 +478,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
               onClick={() => setSearchOpen((open) => !open)}
                 className={cn(
                   "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-salsa-600",
-                  isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                  isDark && "text-white hover:bg-white/10 hover:text-[#d9a235]",
                   searchOpen && "bg-muted text-salsa-600",
                 )}
             >
@@ -460,7 +488,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
             <ThemeToggle
               className={cn(
                 "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
-                isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                isDark && "text-white hover:bg-white/10 hover:text-[#d9a235]",
               )}
             />
 
@@ -475,7 +503,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                     className={cn(
                       "relative h-10 w-10 min-h-[40px] min-w-[40px] p-0",
                       "bg-transparent hover:bg-transparent text-amber-400 hover:text-amber-200",
-                      isHome && "text-amber-300 hover:text-amber-100",
+                      isDark && "text-amber-300 hover:text-amber-100",
                     )}
                   >
                     <User
@@ -534,7 +562,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                 aria-label="Sign in"
                 className={cn(
                   "h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
-                  isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                  isDark && "text-white hover:bg-white/10 hover:text-[#d9a235]",
                 )}
               >
                 <Link href="/auth/signin">
@@ -549,7 +577,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
               asChild
               className={cn(
                 "hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] p-0 text-muted-foreground hover:text-salsa-600",
-                isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]",
+                isDark && "text-white hover:bg-white/10 hover:text-[#d9a235]",
               )}
             >
               <Link href="/gift-certificates/purchase" aria-label="Purchase Gift Certificate">
@@ -559,12 +587,12 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
 
             <span
               aria-hidden
-              className={cn("mx-1 hidden h-5 w-px bg-border lg:block", isHome && "bg-white/25")}
+              className={cn("mx-1 hidden h-5 w-px bg-border lg:block", isDark && "bg-white/25")}
             />
 
             {/* Cart */}
             <div className="flex-shrink-0">
-              <CartIcon className={cn(isHome && "text-white hover:bg-white/10 hover:text-[#d9a235]")} />
+              <CartIcon className={cn(isDark && "text-white hover:bg-white/10 hover:text-[#d9a235]")} />
             </div>
 
             {/* Mobile menu */}
@@ -573,7 +601,7 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                 <Button
                   variant="ghost"
                   aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                  className={cn("relative lg:hidden h-11 w-11 min-h-[44px] min-w-[44px] p-0 text-foreground", isHome && "text-white")}
+                  className={cn("relative xl:hidden h-11 w-11 min-h-[44px] min-w-[44px] p-0 text-foreground", isDark && "text-white")}
                 >
                   <Menu className="h-5 w-5" />
                   {isSignedIn && (

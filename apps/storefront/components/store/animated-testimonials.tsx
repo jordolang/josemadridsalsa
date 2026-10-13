@@ -156,27 +156,9 @@ export function AnimatedTestimonials({ reviewsData }: AnimatedTestimonialsProps)
 
   const { totalRating, totalReviews } = reviewsData
 
-  if (reviews.length === 0) {
-    return (
-      <section className="bg-background py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 font-serif text-4xl font-bold text-foreground">
-              What Our Customers Say
-            </h2>
-            <p className="mb-8 text-xl text-muted-foreground">
-              No reviews available at this time.
-            </p>
-            <Button asChild className="bg-salsa-500 hover:bg-salsa-600">
-              <a href={googleBusinessUrl} target="_blank" rel="noopener noreferrer">
-                Leave a Review
-              </a>
-            </Button>
-          </div>
-        </div>
-      </section>
-    )
-  }
+  // No reviews to show: leave the section out rather than announce an empty one.
+  if (reviews.length === 0) return null
+
 
   return (
     <section className="relative overflow-hidden bg-background py-20">

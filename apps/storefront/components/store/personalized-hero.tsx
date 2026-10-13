@@ -86,7 +86,7 @@ export function PersonalizedHero({ limit = 6 }: PersonalizedHeroProps) {
           <div className="mb-12 text-center">
             <Skeleton className="mx-auto mb-3 h-4 w-32" />
             <Skeleton className="mx-auto mb-3 h-12 w-96" />
-            <Skeleton className="mx-auto h-6 w-[600px]" />
+            <Skeleton className="mx-auto h-6 w-full max-w-[600px]" />
           </div>
           <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-6">
             {Array.from({ length: 6 }).map((_, i) => (

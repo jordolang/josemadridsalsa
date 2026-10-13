@@ -58,7 +58,7 @@ const getDifficultyColor = (difficulty: string) => {
     case 'Hard':
       return 'bg-red-100 text-red-800'
     default:
-      return 'bg-gray-100 text-gray-800'
+      return 'bg-muted text-foreground'
   }
 }
 
@@ -236,7 +236,7 @@ function RecipeGridCard({ recipe }: { recipe: Recipe }) {
   return (
     <div className="group card interactive-card overflow-hidden">
       <Link href={`/recipes/${recipe.slug}`}>
-        <div className="relative h-48 bg-gray-100 dark:bg-gray-800">
+        <div className="relative h-48 bg-muted">
           <Image
             src={recipe.featuredImage}
             alt={recipe.title}

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ShoppingCart, Plus, Minus, X, ChevronDown } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, X } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { offeredBundles, type OfferedSalsaBundle, type PackOverrides } from '@/lib/bundles'
 import { formatPrice } from '@/lib/utils'
@@ -25,6 +26,8 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
   const [selectedBox, setSelectedBox] = useState<OfferedSalsaBundle | null>(null)
   const [selections, setSelections] = useState<Record<number, Product | null>>({})
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [cartError, setCartError] = useState<string | null>(null)
   const addBundle = useCartStore((state) => state.addBundle)
   const openCart = useCartStore((state) => state.openCart)
 
@@ -37,6 +40,7 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
         setProducts(data)
       } catch (error) {
         console.error('Error fetching salsas:', error)
+        setLoadError(true)
       } finally {
         setLoading(false)
       }
@@ -55,6 +59,7 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
   }
 
   const handleSelectSalsa = (slotIndex: number, product: Product) => {
+    setCartError(null)
     setSelections((prev) => ({
       ...prev,
       [slotIndex]: product,
@@ -74,7 +79,7 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
     const selectedProducts = Object.values(selections).filter((p) => p !== null) as Product[]
 
     if (selectedProducts.length !== selectedBox.size) {
-      alert(`Please select all ${selectedBox.size} salsas before adding to cart.`)
+      setCartError(`Choose all ${selectedBox.size} salsas before adding this box to your cart.`)
       return
     }
 
@@ -95,7 +100,7 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
     )
 
     if (!added) {
-      alert('Sorry, this pack could not be added to your cart. Please try again.')
+      setCartError('This box could not be added to your cart. Please try again.')
       return
     }
 
@@ -118,6 +123,9 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
     <section className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
+          <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-salsa-600">
+            Gift Boxes
+          </span>
           <h2 className="text-4xl font-bold font-serif text-foreground mb-4">
             Create Your Perfect <span className="text-gradient">Gift Box</span>
           </h2>
@@ -133,24 +141,24 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
                 key={box.id}
                 className={
                   box.available
-                    ? 'card p-6 text-center group hover:scale-105 transition-transform duration-300 cursor-pointer'
+                    ? 'interactive-card card p-6 text-center cursor-pointer'
                     : 'card p-6 text-center opacity-60'
                 }
                 onClick={box.available ? () => handleSelectBox(box) : undefined}
                 aria-disabled={!box.available}
               >
-                <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-muted">
                   <Image
                     src={box.image}
                     alt={box.name}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
                   />
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-foreground">{box.name}</h3>
                 <p className="text-2xl font-bold text-salsa-600 mb-4">{formatPrice(box.price)}</p>
-                <Button className="w-full" disabled={!box.available}>
+                <Button className="w-full bg-salsa-500 text-white hover:bg-salsa-600" disabled={!box.available}>
                   {box.available ? 'Select This Box' : 'Out of Stock'}
                 </Button>
               </div>
@@ -158,6 +166,20 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
           </div>
         ) : (
           <div className="max-w-4xl mx-auto">
+            {(loadError || (!loading && products.length === 0)) && (
+              <p
+                role="alert"
+                className="mb-4 rounded-lg border border-salsa-200 bg-salsa-50 p-4 text-sm text-salsa-800 dark:border-salsa-900 dark:bg-salsa-950/40 dark:text-salsa-200"
+              >
+                {loadError
+                  ? <>We couldn&apos;t load the salsa list. Refresh the page to try again, or{' '}</>
+                  : <>No salsas are available for gift boxes right now. You can still{' '}</>}
+                <Link href="/products" className="font-semibold underline underline-offset-2">
+                  shop single jars
+                </Link>
+                .
+              </p>
+            )}
             <div className="card p-8 mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -188,12 +210,12 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
                       </div>
                       {selectedProduct ? (
                         <div className="flex-1 flex flex-col">
-                          <div className="relative w-full h-24 mb-3 rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
+                          <div className="relative w-full h-24 mb-3 rounded overflow-hidden bg-muted">
                             <Image
                               src={selectedProduct.featuredImage}
                               alt={selectedProduct.name}
                               fill
-                              className="object-cover"
+                              className="object-contain"
                               sizes="150px"
                             />
                           </div>
@@ -213,7 +235,9 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
                           </div>
                         </div>
                       ) : (
-                        <SalsaDropdown
+                        <SalsaSelect
+                          id={`gift-slot-${index}`}
+                          label={`Salsa for slot ${index + 1}`}
                           products={products}
                           onSelect={(product) => handleSelectSalsa(index, product)}
                         />
@@ -223,6 +247,11 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
                 })}
               </div>
 
+              {cartError && (
+                <p role="alert" className="mb-3 text-sm font-medium text-salsa-700 dark:text-salsa-300">
+                  {cartError}
+                </p>
+              )}
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 <div className="text-sm text-muted-foreground">
                   {selectedCount} of {selectedBox.size} selected
@@ -230,7 +259,7 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
                 <Button
                   onClick={handleAddToCart}
                   disabled={!isComplete}
-                  className="bg-salsa-600 hover:bg-salsa-700"
+                  className="min-h-11 bg-salsa-500 text-white hover:bg-salsa-600"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Add to Cart
@@ -238,14 +267,15 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
               </div>
             </div>
 
-            {/* Enhanced dropdown with icons */}
+            {/* Quick add: tapping a salsa fills the first empty slot */}
             <div className="card p-6">
               <h4 className="font-semibold text-foreground mb-4">Available Salsas</h4>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {products.map((product) => (
-                  <div
+                  <button
+                    type="button"
                     key={product.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted cursor-pointer"
+                    className="flex w-full items-center gap-3 p-3 rounded-lg border border-border text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500"
                     onClick={() => {
                       // Find first empty slot
                       const emptySlot = slots.findIndex(
@@ -256,12 +286,12 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
                       }
                     }}
                   >
-                    <div className="relative w-16 h-16 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+                    <div className="relative w-16 h-16 rounded overflow-hidden bg-muted flex-shrink-0">
                       <Image
                         src={product.featuredImage}
-                        alt={product.name}
+                        alt=""
                         fill
-                        className="object-cover"
+                        className="object-contain"
                         sizes="64px"
                       />
                     </div>
@@ -274,7 +304,7 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
                         Selected
                       </Badge>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -285,77 +315,43 @@ export function GiftBoxSelector({ packOverrides = {} }: { packOverrides?: PackOv
   )
 }
 
-// Custom dropdown component with icons
-function SalsaDropdown({
+// A native select: keyboard and screen-reader support for free, and phones open
+// their own picker instead of a 25-item custom list.
+function SalsaSelect({
+  id,
+  label,
   products,
   onSelect,
 }: {
+  id: string
+  label: string
   products: Product[]
   onSelect: (product: Product) => void
 }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
   return (
-    <div className="flex-1 relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-2 border border-border rounded bg-background text-foreground text-sm flex items-center justify-between hover:bg-muted transition-colors"
+    <div className="mt-auto">
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <select
+        id={id}
+        value=""
+        disabled={products.length === 0}
+        onChange={(event) => {
+          const product = products.find((p) => p.id === event.target.value)
+          if (product) onSelect(product)
+        }}
+        className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-salsa-500 disabled:opacity-60"
       >
-        <span className="text-muted-foreground">Select a salsa...</span>
-        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-          {products.length === 0 ? (
-            <div className="p-3 text-sm text-muted-foreground text-center">
-              No salsas available
-            </div>
-          ) : (
-            <div className="py-1">
-              {products.map((product) => (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => {
-                    onSelect(product)
-                    setIsOpen(false)
-                  }}
-                  className="w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors text-left"
-                >
-                  <div className="relative w-12 h-12 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
-                    <Image
-                      src={product.featuredImage}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-foreground truncate">{product.name}</div>
-                    <div className="text-xs text-muted-foreground">{formatPrice(product.price)}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        <option value="" disabled>
+          {products.length === 0 ? 'No salsas available' : 'Select a salsa…'}
+        </option>
+        {products.map((product) => (
+          <option key={product.id} value={product.id}>
+            {product.name}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }
-

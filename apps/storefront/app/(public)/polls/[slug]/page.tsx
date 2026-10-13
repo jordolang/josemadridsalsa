@@ -64,7 +64,7 @@ export default async function PollPage({ params, searchParams }: PageProps) {
   const results = poll.resultsVisibility === 'ALWAYS' ? await getPollResults(poll.id) : []
 
   return (
-    <main className="bg-stone-50 pb-16">
+    <main className="bg-muted/50 pb-16">
       <section className={`relative overflow-hidden bg-gradient-to-br ${accent.gradient} text-white`}>
         {poll.imageUrl && (
           <Image
@@ -120,7 +120,7 @@ export default async function PollPage({ params, searchParams }: PageProps) {
 
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-12">
         {poll.imageUrl && (
-          <div className="relative mb-8 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 shadow-sm">
+          <div className="relative mb-8 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
             <Image
               src={poll.imageUrl}
               alt={poll.imageAlt ?? poll.title}
@@ -132,7 +132,7 @@ export default async function PollPage({ params, searchParams }: PageProps) {
         )}
 
         {poll.description && (
-          <div className="mb-8 whitespace-pre-line text-lg leading-8 text-stone-700">
+          <div className="mb-8 whitespace-pre-line text-lg leading-8 text-foreground">
             {poll.description}
           </div>
         )}
@@ -171,11 +171,11 @@ export default async function PollPage({ params, searchParams }: PageProps) {
             }))}
           />
         ) : (
-          <div className="rounded-2xl border border-stone-200 bg-white p-6 text-center sm:p-8">
-            <h2 className="font-serif text-2xl font-bold text-stone-900">
+          <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
+            <h2 className="font-serif text-2xl font-bold text-foreground">
               {state === 'NOT_STARTED' ? 'This poll opens soon' : 'This poll has closed'}
             </h2>
-            <p className="mx-auto mt-2 max-w-xl text-stone-600">
+            <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
               {(state === 'CLOSED' ? poll.closedMessage : null) ??
                 (state === 'NOT_STARTED'
                   ? 'Come back when it opens — we would love to hear from you.'

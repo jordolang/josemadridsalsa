@@ -19,18 +19,20 @@ export function PicanteChatLauncher({
   const [direction, setDirection] = useState<Direction>('idle')
   const [isAtLeft, setIsAtLeft] = useState(false)
   const [frame, setFrame] = useState(0)
-  const [reduceMotion, setReduceMotion] = useState(true)
+  const [stayPut, setStayPut] = useState(true)
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const syncPreference = () => setReduceMotion(media.matches)
+    // Picante stays parked in the corner for reduced motion, and on phones, where
+    // pacing across the bottom of a narrow screen walks over the page content.
+    const media = window.matchMedia('(prefers-reduced-motion: reduce), (max-width: 767px)')
+    const syncPreference = () => setStayPut(media.matches)
     syncPreference()
     media.addEventListener('change', syncPreference)
     return () => media.removeEventListener('change', syncPreference)
   }, [])
 
   useEffect(() => {
-    if (isOpen || reduceMotion) {
+    if (isOpen || stayPut) {
       setDirection('idle')
       setIsAtLeft(false)
       setFrame(0)
@@ -48,7 +50,7 @@ export function PicanteChatLauncher({
     }, CROSSING_MS)
 
     return () => window.clearInterval(crossing)
-  }, [isOpen, reduceMotion])
+  }, [isOpen, stayPut])
 
   useEffect(() => {
     if (direction === 'idle') return

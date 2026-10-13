@@ -166,7 +166,7 @@ export default async function FundraiserDetailPage({
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">
               {fundraiser.name}
             </h1>
             <Badge className={statusColors[fundraiser.status]}>
@@ -227,8 +227,8 @@ export default async function FundraiserDetailPage({
           title="Total Orders"
           value={fundraiser.totalOrders}
           icon={Package}
-          iconColor="text-purple-600"
-          borderColor="border-l-purple-500"
+          iconColor="text-salsa-600"
+          borderColor="border-l-salsa-500"
         />
         <CampaignStatsCard
           title="Active Participants"
@@ -254,15 +254,15 @@ export default async function FundraiserDetailPage({
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-indigo-500">
+        <Card className="border-l-4 border-l-chile-500">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-indigo-600" />
+              <Calendar className="h-4 w-4 text-chile-700 dark:text-chile-400" />
               Campaign Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">
+            <div className="text-2xl font-bold text-chile-700 dark:text-chile-400">
               Day {daysElapsed} of {totalDays}
             </div>
           </CardContent>

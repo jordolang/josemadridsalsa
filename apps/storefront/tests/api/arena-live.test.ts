@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Prisma } from '@prisma/client'
 
 const db = vi.hoisted(() => ({ arenaPlayer: { count: vi.fn() } }))
 vi.mock('@/lib/prisma', () => ({ prisma: db, default: db }))
@@ -30,6 +31,18 @@ describe('GET /api/arena/live', () => {
     await expect(res.json()).resolves.toEqual({ playing: 2 })
     expect(res.headers.get('cache-control')).toMatch(/s-maxage=20/)
     expect(res.headers.get('access-control-allow-origin')).toBe('*')
+  })
+
+  it('reports zero players when the arena tables do not exist (P2021)', async () => {
+    db.arenaPlayer.count.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('The table `public.arena_players` does not exist', {
+        code: 'P2021',
+        clientVersion: 'test',
+      })
+    )
+    const res = await liveRoute.GET(new Request('https://www.josemadrid.net/api/arena/live'))
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ playing: 0 })
   })
 
   it('fails without leaking details when the database is down', async () => {

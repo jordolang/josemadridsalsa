@@ -14,6 +14,17 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Redesigned homepage, header and footer.** The homepage is a dark Western layout:
+  - The hero loops a video of the rider at sunset and five jars on a smoldering log. A still image
+    stands in while it loads, if it fails, and for visitors who ask for reduced motion.
+  - The hero also carries a laurel award seal and the family-tradition headline.
+  - Below it: three value cards, a barn-wood shop band with real jar cutouts linking to the
+    catalog, a booth video tile, the Battle Arena, and community tiles.
+  - The header is now dark on every page and has new Shop, Our Story, Fundraising, Community and
+    Merch menus. The full menu shows from 1280px wide.
+  - The footer is dark, with gold headings.
+  - Fonts: Oswald and Yellowtail.
+  - Many public pages moved from hard-coded colors to theme tokens.
 - **Fundraiser sign-up sets up the whole store.** Groups signing up must choose a 9, 16 or 25
   flavor package and how they will run the drive (order forms + bulk delivery, or online only).
   They can also pick a team color and upload a logo and cover photo, and write a mission

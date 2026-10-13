@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Montserrat, Volkhov, Roboto_Mono } from 'next/font/google'
+import { Montserrat, Volkhov, Roboto_Mono, Oswald, Yellowtail } from 'next/font/google'
 import Script from 'next/script'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Providers } from './providers'
@@ -22,6 +22,21 @@ const volkhov = Volkhov({
   variable: '--font-volkhov',
   display: 'swap',
   preload: true,
+})
+
+// Redesign display and script faces (measured from the approved homepage comp).
+const oswald = Oswald({
+  weight: ['500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-oswald',
+  display: 'swap',
+})
+
+const yellowtail = Yellowtail({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-yellowtail',
+  display: 'swap',
 })
 
 const robotoMono = Roboto_Mono({
@@ -91,7 +106,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable}`}>
+    <html lang="en" className={`${montserrat.variable} ${volkhov.variable} ${robotoMono.variable} ${oswald.variable} ${yellowtail.variable}`}>
       <head>
         <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
         <meta name="facebook-domain-verification" content="7kfb51qu3466hctngy2wldog2btpul" />

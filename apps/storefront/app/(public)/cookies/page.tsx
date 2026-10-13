@@ -80,29 +80,29 @@ export default function CookiePolicyPage() {
             </p>
 
             <h2>Types of Cookies We Use</h2>
-            <table className="w-full border-collapse border border-gray-300 dark:border-gray-700 my-4">
+            <table className="w-full border-collapse border border-border my-4">
               <thead>
-                <tr className="bg-gray-100 dark:bg-gray-800">
-                  <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Cookie Type</th>
-                  <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Purpose</th>
-                  <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Duration</th>
+                <tr className="bg-muted">
+                  <th className="border border-border p-2 text-left">Cookie Type</th>
+                  <th className="border border-border p-2 text-left">Purpose</th>
+                  <th className="border border-border p-2 text-left">Duration</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Session Cookies</td>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Maintain your login session</td>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Session</td>
+                  <td className="border border-border p-2">Session Cookies</td>
+                  <td className="border border-border p-2">Maintain your login session</td>
+                  <td className="border border-border p-2">Session</td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Preference Cookies</td>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Remember your settings and preferences</td>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Up to 1 year</td>
+                  <td className="border border-border p-2">Preference Cookies</td>
+                  <td className="border border-border p-2">Remember your settings and preferences</td>
+                  <td className="border border-border p-2">Up to 1 year</td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Analytics Cookies</td>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Help us understand website usage</td>
-                  <td className="border border-gray-300 dark:border-gray-700 p-2">Up to 2 years</td>
+                  <td className="border border-border p-2">Analytics Cookies</td>
+                  <td className="border border-border p-2">Help us understand website usage</td>
+                  <td className="border border-border p-2">Up to 2 years</td>
                 </tr>
               </tbody>
             </table>

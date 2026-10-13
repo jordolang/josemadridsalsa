@@ -66,7 +66,7 @@ const codeStats: readonly StatItem[] = [
     value: 125,
     icon: Database,
     description: 'Prisma schema with 22 production migrations',
-    accent: 'from-purple-500 to-purple-700',
+    accent: 'from-chile-600 to-salsa-700',
     format: 'number',
   },
   {
@@ -138,7 +138,7 @@ const costTiers: readonly CostTier[] = [
     high: 30000,
     description:
       'Everything at once — storefront, fundraising, admin, iOS app — scoped as one fixed-price project. A ceiling, not an expectation.',
-    accent: 'from-salsa-600 to-purple-700',
+    accent: 'from-salsa-600 to-chile-700',
   },
 ] as const
 

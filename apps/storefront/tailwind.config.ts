@@ -24,6 +24,14 @@ const config: Config = {
   				'900': '#7f1d1d',
   				'950': '#450a0a'
   			},
+  			// DESIGN.md: gold only on Night Earth / Night Ink grounds, hero-level moments only.
+  			'desert-sun-gold': {
+  				DEFAULT: '#d9a235',
+  				light: '#e6b54e',
+  				eyebrow: '#e0ae4f'
+  			},
+  			'night-earth': '#070503',
+  			'night-ink': '#140d06',
   			verde: {
   				'50': '#f0fdf4',
   				'100': '#dcfce7',

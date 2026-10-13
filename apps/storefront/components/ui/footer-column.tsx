@@ -7,6 +7,7 @@ import {
   Mail,
   Phone,
   MapPin,
+  Crown,
 } from 'lucide-react'
 import { FooterNewsletterSignup } from '@/components/store/footer-newsletter-signup'
 import { LeaveAReview } from '@/components/reviews/leave-a-review'
@@ -19,7 +20,7 @@ const googleBusinessUrl = process.env.NEXT_PUBLIC_GOOGLE_BUSINESS_URL ?? 'https:
 const company = {
   name: 'Jose Madrid Salsa',
   description:
-    'Handcrafted, small-batch salsas made in Ohio since 1989. We partner with families, fundraisers, and retail shops across the Midwest.',
+    'Handcrafted, small-batch salsas made in Ohio since 1987. We partner with families, fundraisers, and retail shops across the Midwest.',
   logo: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/logo-image.webp',
 }
 
@@ -38,7 +39,6 @@ const aboutLinks = [
   { text: 'Where is Jose?', href: '/where-is-jose' },
   { text: 'Recipes', href: '/recipes' },
   { text: 'Developer', href: '/developer' },
-  { text: 'Developer Documentation', href: 'https://salsadocs.vercel.app' },
 ]
 
 const serviceLinks = [
@@ -123,37 +123,30 @@ export function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
   ]
 
   return (
-    <footer className="bg-secondary dark:bg-secondary/20 mt-16 w-full place-self-end rounded-t-xl">
-      <div className="mx-auto max-w-screen-xl px-4 pt-16 pb-6 sm:px-6 lg:px-8 lg:pt-24">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div>
-            <div className="text-primary flex items-center justify-center gap-3 sm:justify-start" suppressHydrationWarning>
-              <div className="relative h-14 w-14 shrink-0">
+    <footer className="w-full place-self-end bg-night-earth text-white">
+      <div className="mx-auto max-w-screen-xl px-4 pt-14 pb-6 sm:px-6 lg:px-8 lg:pt-16">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
+          <div className="text-center sm:text-left">
+            <Link href="/" className="inline-flex items-center gap-3" suppressHydrationWarning>
+              <span className="relative h-16 w-16 shrink-0">
                 <Image
-                  src={company.logo}
+                  src="/images/home/redesign/logo.webp"
                   alt={`${company.name} logo`}
                   fill
                   className="object-contain"
-                  sizes="3.5rem"
-                  priority
+                  sizes="4rem"
                 />
-              </div>
-              <span className="text-2xl font-semibold">{company.name}</span>
-            </div>
-
-            <p className="text-foreground/50 mt-6 max-w-md text-center leading-relaxed sm:max-w-xs sm:text-left">
-              {description}
-            </p>
-
-            <ul className="mt-8 flex justify-center gap-6 sm:justify-start md:gap-8">
+              </span>
+              <span className="font-western text-2xl font-semibold uppercase tracking-wide">{company.name}</span>
+            </Link>
+            <p className="font-script mt-4 text-2xl text-desert-sun-gold">Good Food. Stronger Communities.</p>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-white/65 sm:max-w-xs">{description}</p>
+            <ul className="mt-6 flex justify-center gap-5 sm:justify-start">
               {social.map(({ icon: Icon, label, href }) => (
                 <li key={label}>
-                  <Link
-                    href={href}
-                    className="text-primary hover:text-primary/80 transition"
-                  >
+                  <Link href={href} className="text-white/80 transition-colors hover:text-desert-sun-gold">
                     <span className="sr-only">{label}</span>
-                    <Icon className="size-6" />
+                    <Icon className="size-5" />
                   </Link>
                 </li>
               ))}
@@ -167,32 +160,40 @@ export function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
           </div>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-8 border-t pt-12 md:grid-cols-3">
+        <div className="mt-12 grid grid-cols-1 gap-8 border-t border-white/10 pt-10 md:grid-cols-3">
           <ContactColumn items={contacts} />
-          <FooterNewsletterSignup source="footer:newsletter" />
+          <div id="join-our-family" className="scroll-mt-32 [&_*]:text-white [&_input]:text-foreground">
+            <FooterNewsletterSignup source="footer:newsletter" />
+          </div>
           <div className="text-center sm:text-left">
-            <p className="text-lg font-medium">Share your experience</p>
-            <p className="text-secondary-foreground/70 mt-3 text-sm">
+            <p className="font-western text-sm font-semibold uppercase tracking-[0.18em] text-desert-sun-gold">Share your experience</p>
+            <p className="mt-3 text-sm text-white/65">
               Loved the salsa? A quick review helps other families find us.
             </p>
-            <div className="mt-4">
+            <div className="mt-4 text-foreground">
               <LeaveAReview variant="compact" source="footer:gmb" triggerLabel="Leave a Google review" />
             </div>
           </div>
         </div>
 
-        <div className="mt-12 border-t pt-6">
-          <div className="text-center sm:flex sm:justify-between sm:text-left">
-            <p className="text-secondary-foreground/70 mt-4 text-sm transition sm:order-first sm:mt-0">
+        <div className="mt-10 border-t border-white/10 pt-5">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+            <p className="text-xs text-white/55">
               {overrides?.copyrightText ||
                 `\u00a9 ${currentYear} ${company.name}. All rights reserved.`}
             </p>
-            <p className="text-sm">
-              Crafted in Ohio • Fresh batches every week
+            <p className="font-script flex items-center gap-1.5 text-2xl text-desert-sun-gold">
+              Salsa Kings
+              <Crown aria-hidden className="h-4 w-4" />
             </p>
           </div>
         </div>
       </div>
+      <div
+        aria-hidden
+        className="h-[18px] w-full bg-repeat-x"
+        style={{ backgroundImage: "url('/images/home/redesign/border-pattern.webp')", backgroundSize: 'auto 18px' }}
+      />
     </footer>
   )
 }
@@ -204,8 +205,8 @@ type FooterColumnProps = {
 
 const FooterColumn = ({ title, links }: FooterColumnProps) => (
   <div className="text-center sm:text-left">
-    <p className="text-lg font-medium">{title}</p>
-    <ul className="mt-8 space-y-4 text-sm">
+    <p className="font-western text-sm font-semibold uppercase tracking-[0.18em] text-desert-sun-gold">{title}</p>
+    <ul className="mt-5 space-y-3 text-sm">
       {links.map(({ text, href }) => {
         const isHttp = href.startsWith('http')
         const isExternal = isHttp || href.startsWith('mailto:') || href.startsWith('tel:')
@@ -213,14 +214,14 @@ const FooterColumn = ({ title, links }: FooterColumnProps) => (
           <li key={text}>
             {isExternal ? (
               <a
-                className="text-secondary-foreground/70 transition hover:text-primary"
+                className="text-white/70 transition-colors hover:text-desert-sun-gold"
                 href={href}
                 {...(isHttp ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
               >
                 {text}
               </a>
             ) : (
-              <Link className="text-secondary-foreground/70 transition hover:text-primary" href={href}>
+              <Link className="text-white/70 transition-colors hover:text-desert-sun-gold" href={href}>
                 {text}
               </Link>
             )}
@@ -240,18 +241,18 @@ type ContactItem = {
 
 const ContactColumn = ({ items }: { items: ContactItem[] }) => (
   <div className="text-center sm:text-left">
-    <p className="text-lg font-medium">Contact Us</p>
-    <ul className="mt-8 space-y-4 text-sm">
+    <p className="font-western text-sm font-semibold uppercase tracking-[0.18em] text-desert-sun-gold">Contact Us</p>
+    <ul className="mt-5 space-y-3 text-sm">
       {items.map(({ icon: Icon, text, href, isAddress }) => (
         <li key={text}>
           {href ? (
-            <a className="flex items-center justify-center gap-1.5 sm:justify-start text-secondary-foreground/70 transition hover:text-primary" href={href}>
-              <Icon className="text-primary size-5 shrink-0 shadow-sm" />
+            <a className="flex items-center justify-center gap-1.5 sm:justify-start text-white/70 transition-colors hover:text-desert-sun-gold" href={href}>
+              <Icon className="size-4 shrink-0 text-desert-sun-gold" />
               <span className="flex-1">{text}</span>
             </a>
           ) : (
-            <div className="flex items-center justify-center gap-1.5 sm:justify-start text-secondary-foreground/70">
-              <Icon className="text-primary size-5 shrink-0 shadow-sm" />
+            <div className="flex items-center justify-center gap-1.5 sm:justify-start text-white/70">
+              <Icon className="size-4 shrink-0 text-desert-sun-gold" />
               {isAddress ? (
                 <address className="flex-1 not-italic">{text}</address>
               ) : (

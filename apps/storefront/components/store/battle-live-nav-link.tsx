@@ -34,11 +34,11 @@ export function BattleLiveNavLink({ isHome }: { isHome: boolean }) {
       rel="noopener"
       aria-label={playingLabel(playing)}
       title={live ? `${playing} playing now` : undefined}
-      className={cn('group relative flex items-center py-3', isHome ? 'px-8' : 'px-5')}
+      className={cn('group relative flex items-center whitespace-nowrap py-3', isHome ? 'px-2 2xl:px-5' : 'px-5')}
     >
       <span
         className={cn(
-          'flex items-center gap-2 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-[0.22em] transition-colors duration-200',
+          'flex items-center gap-2 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-[0.16em] 2xl:tracking-[0.22em] transition-colors duration-200',
           live
             ? 'text-green-500 group-hover:text-green-400'
             : isHome
