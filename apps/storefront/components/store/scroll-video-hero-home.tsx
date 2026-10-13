@@ -26,10 +26,10 @@ export interface HeroPanel {
 
 const PANELS: HeroPanel[] = [
   {
-    eyebrow: 'Award-winning since 1987',
+    eyebrow: 'Family-owned since 1987',
     title: 'Premium Gourmet',
     accent: 'Salsa',
-    body: 'Produced in Zanesville, Ohio — the Salsa Capital of the World. From mild to fiery hot, discover the perfect salsa for every taste, handcrafted in small batches.',
+    body: 'Handcrafted in small batches in Zanesville, Ohio. From mild to fiery hot, discover the perfect salsa for every taste.',
     cta: true,
   },
   {
@@ -64,9 +64,15 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
     const video = videoRef.current
     if (!section || !video) return
 
-    // Nudge the decoder awake so the first seek paints immediately (iOS Safari
-    // ignores currentTime on a video it has never started).
-    video.play().then(() => video.pause()).catch(() => {})
+    // Phones get the poster and a single panel: no scrubbing, and the several-MB
+    // clip is never downloaded. Larger screens buffer it so scrubbing stays smooth.
+    const isPhone = window.matchMedia('(max-width: 767px)').matches
+    if (!isPhone) {
+      video.preload = 'auto'
+      // Nudge the decoder awake so the first seek paints immediately (iOS Safari
+      // ignores currentTime on a video it has never started).
+      video.play().then(() => video.pause()).catch(() => {})
+    }
 
     const measureNav = () => {
       const nav = document.querySelector('header')
@@ -75,7 +81,7 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
     measureNav()
     window.addEventListener('resize', measureNav)
 
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (isPhone || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return () => window.removeEventListener('resize', measureNav)
     }
 
@@ -125,7 +131,7 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
     <section
       ref={sectionRef}
       aria-labelledby="home-hero-title"
-      className="relative isolate w-full max-w-[100vw] overscroll-x-none bg-[#070503] text-white"
+      className="relative isolate w-full max-w-[100vw] overscroll-x-none bg-night-earth text-white"
       style={{ ['--hero-nav-offset' as string]: `${DEFAULT_NAV_HEIGHT}px` }}
     >
       {/* Pinned video layer. The negative margin pulls the panels below back up
@@ -145,7 +151,7 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
           poster="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/home/hero-video-poster.webp"
           muted
           playsInline
-          preload="auto"
+          preload="none"
           aria-hidden
           tabIndex={-1}
           className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
@@ -155,35 +161,47 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
             clean. This is a partial left scrim, not a full-frame cover. */}
         <div
           aria-hidden
-          className="absolute inset-0"
+          className="absolute inset-0 hidden md:block"
           style={{
             background:
               'linear-gradient(to right, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.5) 22%, rgba(0,0,0,0) 52%)',
           }}
         />
+        {/* Phones: the copy spans the full width over the centred emblem, so a
+            bottom-up scrim carries it instead of the left-edge gradient. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/20 md:hidden"
+        />
         <div
           ref={cueRef}
           aria-hidden
-          className="absolute inset-x-0 top-8 text-center text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70"
+          className="absolute inset-x-0 top-8 hidden md:block text-center text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70"
           style={{ textShadow: COPY_SHADOW }}
         >
           Scroll
         </div>
       </div>
 
-      {/* Scrolling content — one full screen per panel, then a text-free outro
-          so the closing beats (pan out the window, the outdoor booth) play
-          full-screen after the last line of copy before the store section slides
-          up over them. The copy is a narrow left column so it clears the jar. */}
+      {/* Scrolling content — the opening panel fills the first screen; the
+          follow-up panels take about half a screen each, so the store section
+          arrives after roughly 1.5 screens of scrubbing instead of four. The copy
+          is a narrow left column so it clears the jar. */}
       <div className="relative z-10">
         {activePanels.map((panel, idx) => (
           <div
-            key={panel.title}
-            className="flex items-center px-5 sm:px-8 md:px-14"
-            style={{ minHeight: 'calc(100svh - var(--hero-nav-offset))' }}
+            key={idx}
+            className={
+              idx === 0
+                ? 'flex items-center px-5 py-12 sm:px-8 md:px-14'
+                : 'hidden items-center px-5 py-12 sm:px-8 md:flex md:px-14'
+            }
+            style={{
+              minHeight: idx === 0 ? 'calc(100svh - var(--hero-nav-offset))' : '55svh',
+            }}
           >
             <div className="max-w-sm md:max-w-md" style={{ textShadow: COPY_SHADOW }}>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#f0c46a]">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-desert-sun-gold-eyebrow">
                 {panel.eyebrow}
               </p>
               {idx === 0 ? (
@@ -191,21 +209,21 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
                   id="home-hero-title"
                   className="font-serif text-4xl font-bold leading-[0.96] text-white sm:text-5xl md:text-6xl"
                 >
-                  {panel.title} <span className="text-[#f0c46a]">{panel.accent}</span>
+                  {panel.title} <span className="text-desert-sun-gold-eyebrow">{panel.accent}</span>
                 </h1>
               ) : (
                 <h2 className="font-serif text-3xl font-bold leading-[1] text-white sm:text-4xl md:text-5xl">
-                  {panel.title} <span className="text-[#f0c46a]">{panel.accent}</span>
+                  {panel.title} <span className="text-desert-sun-gold-eyebrow">{panel.accent}</span>
                 </h2>
               )}
-              <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/90 md:max-w-sm md:text-base">
+              <p className="mt-4 max-w-xs text-base leading-relaxed text-white/90 md:mt-5 md:max-w-sm">
                 {panel.body}
               </p>
               {panel.cta && (
-                <p className="mt-7 flex flex-wrap gap-3">
+                <p className="mt-5 flex flex-wrap gap-3 md:mt-7">
                   <Link
                     href="/products"
-                    className="inline-flex min-h-12 items-center rounded-full bg-[#d9a235] px-7 py-3 text-sm font-bold uppercase tracking-wide text-[#140d06] shadow-lg transition-colors hover:bg-[#e6b54e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                    className="inline-flex min-h-12 items-center rounded-full bg-desert-sun-gold px-7 py-3 text-sm font-bold uppercase tracking-wide text-night-ink shadow-lg transition-colors hover:bg-desert-sun-gold-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
                     style={{ textShadow: 'none' }}
                   >
                     Shop salsas
@@ -222,9 +240,6 @@ export function ScrollVideoHeroHome({ panels }: { panels?: HeroPanel[] } = {}) {
             </div>
           </div>
         ))}
-        {/* Outro — one screen of scroll with no copy so the video runs out to its
-            final frame (the outdoor booth) full-screen before the store covers it. */}
-        <div aria-hidden style={{ height: 'calc(100svh - var(--hero-nav-offset))' }} />
       </div>
     </section>
   )

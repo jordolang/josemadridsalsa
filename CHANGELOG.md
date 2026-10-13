@@ -14,6 +14,17 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Redesigned homepage, header and footer.** The homepage is a dark Western layout:
+  - The hero loops a video of the rider at sunset and five jars on a smoldering log. A still image
+    stands in while it loads, if it fails, and for visitors who ask for reduced motion.
+  - The hero also carries a laurel award seal and the family-tradition headline.
+  - Below it: three value cards, a barn-wood shop band with real jar cutouts linking to the
+    catalog, a booth video tile, the Battle Arena, and community tiles.
+  - The header is now dark on every page and has new Shop, Our Story, Fundraising, Community and
+    Merch menus. The full menu shows from 1280px wide.
+  - The footer is dark, with gold headings.
+  - Fonts: Oswald and Yellowtail.
+  - Many public pages moved from hard-coded colors to theme tokens.
 - **UPCs on every salsa product.** `npm run products:upcs --workspace @jose-madrid/storefront`
   (dry run; add `-- --apply` to write) saves each single-jar salsa's label UPC to its product's
   barcode, so the Google Customer Reviews survey and the shopping feeds send GTINs. Products that

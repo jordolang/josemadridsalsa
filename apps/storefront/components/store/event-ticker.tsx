@@ -57,6 +57,10 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
+        .jms-ticker-track:hover { animation-play-state: paused !important; }
+        @media (prefers-reduced-motion: reduce) {
+          .jms-ticker-track { animation: none !important; }
+        }
       `
       document.head.appendChild(style)
     }
@@ -108,7 +112,7 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
       </div>
 
       <div style={{ flex: 1, overflow: 'hidden', height: '100%', position: 'relative' }}>
-        <div style={{
+        <div className="jms-ticker-track" style={{
           display: 'flex',
           alignItems: 'center',
           height: '100%',
@@ -117,7 +121,9 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
           willChange: 'transform',
         }}>
           {items.map((seg, i) => (
-            <span key={i} style={{
+            // The second copy only exists to loop the scroll seamlessly, and the
+            // separators are decoration; screen readers hear each event once.
+            <span key={i} aria-hidden={i >= formattedSegments.length || seg.includes('UPCOMING') || undefined} style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '10px',

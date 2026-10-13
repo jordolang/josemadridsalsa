@@ -107,30 +107,30 @@ export default async function FormDetailPage({ params }: FormPageProps) {
     : null
 
   return (
-    <main className="bg-slate-50 pb-16">
-      <section className="border-b border-slate-200 bg-white">
+    <main className="bg-muted/50 pb-16">
+      <section className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-10">
           <p className="text-xs uppercase tracking-[0.35em] text-salsa-500">Printable template</p>
           <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
-              <h1 className="font-serif text-3xl font-semibold text-slate-900 lg:text-4xl">{template.name}</h1>
-              <p className="max-w-2xl text-sm text-slate-600">{template.description}</p>
+              <h1 className="font-serif text-3xl font-semibold text-foreground lg:text-4xl">{template.name}</h1>
+              <p className="max-w-2xl text-sm text-muted-foreground">{template.description}</p>
               <div className="flex flex-wrap gap-2">
                 <Badge
                   variant="outline"
-                  className={`border-slate-200 text-xs capitalize ${
-                    template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-slate-500'
+                  className={`border-border text-xs capitalize ${
+                    template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-muted-foreground'
                   }`}
                 >
                   {template.source === 'saved' ? 'Saved template' : 'Library template'}
                 </Badge>
                 {updatedLabel ? (
-                  <Badge variant="outline" className="border-slate-200 text-xs text-slate-500">
+                  <Badge variant="outline" className="border-border text-xs text-muted-foreground">
                     {updatedLabel}
                   </Badge>
                 ) : null}
                 {template.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="border-slate-200 text-xs text-slate-600">
+                  <Badge key={tag} variant="outline" className="border-border text-xs text-muted-foreground">
                     {tag}
                   </Badge>
                 ))}
@@ -142,12 +142,12 @@ export default async function FormDetailPage({ params }: FormPageProps) {
       </section>
 
       <section className="container mx-auto px-4 py-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Sparkles className="h-4 w-4 text-slate-500" />
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Sparkles className="h-4 w-4 text-muted-foreground" />
             Recommended uses
           </h2>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-600">
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
             {template.recommendedUses.map((use) => (
               <li key={use}>{use}</li>
             ))}
@@ -156,14 +156,14 @@ export default async function FormDetailPage({ params }: FormPageProps) {
       </section>
 
       <section className="container mx-auto px-4">
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <iframe
             title={`${template.name} preview`}
             srcDoc={html}
             className="h-[900px] w-full border-0"
           />
         </div>
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-muted-foreground">
           Need edits or branded variations? Sign in to the admin panel to adjust sections, add blocks, and export updated HTML.
         </p>
       </section>

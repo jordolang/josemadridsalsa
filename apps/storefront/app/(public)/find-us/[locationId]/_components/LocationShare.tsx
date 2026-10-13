@@ -28,7 +28,7 @@ export function LocationShare({ location }: LocationShareProps) {
   }
 
   return (
-    <div className="border-t border-slate-100 pt-6">
+    <div className="border-t border-border pt-6">
       <SocialShare
         content={shareContent}
         size="md"

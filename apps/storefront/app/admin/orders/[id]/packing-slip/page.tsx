@@ -34,17 +34,17 @@ export default async function PackingSlipPage({
   return (
     <>
       <AutoPrint />
-      <div className="print-document" style={{ fontFamily: 'Arial, sans-serif', color: '#111', maxWidth: 600, margin: '0 auto', padding: 32 }}>
+      <div className="print-document" style={{ fontFamily: 'Arial, sans-serif', color: '#0c0a09', maxWidth: 600, margin: '0 auto', padding: 32 }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #dc2626', paddingBottom: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #d53030', paddingBottom: 16, marginBottom: 24 }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#dc2626', margin: 0 }}>Jose Madrid Salsa</h1>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 12 }}>{SITE_DOMAIN}</p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#d53030', margin: 0 }}>Jose Madrid Salsa</h1>
+            <p style={{ margin: '4px 0 0', color: '#78716c', fontSize: 12 }}>{SITE_DOMAIN}</p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>PACKING SLIP</h2>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 12 }}>Order #{order.orderNumber}</p>
-            <p style={{ margin: '2px 0 0', color: '#6b7280', fontSize: 12 }}>
+            <p style={{ margin: '4px 0 0', color: '#78716c', fontSize: 12 }}>Order #{order.orderNumber}</p>
+            <p style={{ margin: '2px 0 0', color: '#78716c', fontSize: 12 }}>
               {new Date(order.createdAt).toLocaleDateString()}
             </p>
           </div>
@@ -52,8 +52,8 @@ export default async function PackingSlipPage({
 
         {/* Ship To */}
         {order.shippingAddress && (
-          <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 6 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', margin: '0 0 10px' }}>Ship To</h3>
+          <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e7e5e4', borderRadius: 6 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#78716c', letterSpacing: '0.05em', margin: '0 0 10px' }}>Ship To</h3>
             <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>
               {order.shippingAddress.firstName} {order.shippingAddress.lastName}
             </p>
@@ -66,7 +66,7 @@ export default async function PackingSlipPage({
             </p>
             <p style={{ margin: '2px 0 0', fontSize: 13 }}>{order.shippingAddress.country}</p>
             {order.shippingAddress.phone && (
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#4b5563' }}>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#57534e' }}>
                 Phone: {order.shippingAddress.phone}
               </p>
             )}
@@ -84,30 +84,30 @@ export default async function PackingSlipPage({
         )}
 
         {/* Items Table */}
-        <h3 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 10 }}>Items to Pack</h3>
+        <h3 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#78716c', letterSpacing: '0.05em', marginBottom: 10 }}>Items to Pack</h3>
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
           <thead>
-            <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #d1d5db' }}>
-              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#374151' }}>Item</th>
-              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#374151' }}>SKU</th>
-              <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#374151' }}>Qty</th>
-              <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#374151' }}>Packed ✓</th>
+            <tr style={{ backgroundColor: '#f5f5f4', borderBottom: '2px solid #d6d3d1' }}>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#44403c' }}>Item</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#44403c' }}>SKU</th>
+              <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#44403c' }}>Qty</th>
+              <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#44403c' }}>Packed ✓</th>
             </tr>
           </thead>
           <tbody>
             {order.items.map((item, i) => (
-              <tr key={item.id} style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: i % 2 === 0 ? '#fff' : '#f9fafb' }}>
+              <tr key={item.id} style={{ borderBottom: '1px solid #e7e5e4', backgroundColor: i % 2 === 0 ? '#fff' : '#fafaf9' }}>
                 <td style={{ padding: '10px', fontSize: 13 }}>{item.productName}</td>
-                <td style={{ padding: '10px', fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>{item.productSku}</td>
+                <td style={{ padding: '10px', fontSize: 12, color: '#78716c', fontFamily: 'monospace' }}>{item.productSku}</td>
                 <td style={{ padding: '10px', textAlign: 'center', fontSize: 14, fontWeight: 700 }}>{item.quantity}</td>
                 <td style={{ padding: '10px', textAlign: 'center' }}>
-                  <span style={{ display: 'inline-block', width: 20, height: 20, border: '2px solid #9ca3af', borderRadius: 3 }}></span>
+                  <span style={{ display: 'inline-block', width: 20, height: 20, border: '2px solid #78716c', borderRadius: 3 }}></span>
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: '2px solid #111' }}>
+            <tr style={{ borderTop: '2px solid #0c0a09' }}>
               <td colSpan={2} style={{ padding: '8px 10px', fontWeight: 700, fontSize: 13 }}>Total Items</td>
               <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
                 {order.items.reduce((sum, item) => sum + item.quantity, 0)}
@@ -127,14 +127,14 @@ export default async function PackingSlipPage({
 
         {/* Shipping Method */}
         {order.shippingMethod && (
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 16px' }}>
-            Shipping Method: <strong style={{ color: '#111' }}>{order.shippingMethod}</strong>
+          <p style={{ fontSize: 12, color: '#78716c', margin: '0 0 16px' }}>
+            Shipping Method: <strong style={{ color: '#0c0a09' }}>{order.shippingMethod}</strong>
           </p>
         )}
 
         {/* Footer */}
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12, marginTop: 8 }}>
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, textAlign: 'center' }}>
+        <div style={{ borderTop: '1px solid #e7e5e4', paddingTop: 12, marginTop: 8 }}>
+          <p style={{ fontSize: 11, color: '#78716c', margin: 0, textAlign: 'center' }}>
             Packed by: _________________ &nbsp;&nbsp; Date: _________________
           </p>
         </div>

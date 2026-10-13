@@ -66,8 +66,8 @@ export default function GiftCertificateBalancePage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Check Gift Certificate Balance</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Check Gift Certificate Balance</h1>
+        <p className="text-muted-foreground">
           Enter your gift certificate code to check the current balance and view recent usage.
         </p>
       </div>
@@ -108,24 +108,24 @@ export default function GiftCertificateBalancePage() {
 
           {result && (
             <div className="mt-8 space-y-4">
-              <div className="rounded-md border border-gray-200 bg-gray-50 p-6">
+              <div className="rounded-md border border-border bg-muted/50 p-6">
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Gift Certificate Code:</span>
-                    <span className="text-sm font-mono font-semibold text-gray-900">{result.code}</span>
+                    <span className="text-sm font-medium text-foreground">Gift Certificate Code:</span>
+                    <span className="text-sm font-mono font-semibold text-foreground">{result.code}</span>
                   </div>
                   {result.recipientName && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Recipient:</span>
-                      <span className="text-sm text-gray-900">{result.recipientName}</span>
+                      <span className="text-sm font-medium text-foreground">Recipient:</span>
+                      <span className="text-sm text-foreground">{result.recipientName}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Original Amount:</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatPrice(result.originalAmount)}</span>
+                    <span className="text-sm font-medium text-foreground">Original Amount:</span>
+                    <span className="text-sm font-semibold text-foreground">{formatPrice(result.originalAmount)}</span>
                   </div>
                   <div className="flex justify-between items-center border-t pt-3">
-                    <span className="text-base font-semibold text-gray-900">Current Balance:</span>
+                    <span className="text-base font-semibold text-foreground">Current Balance:</span>
                     <span className="text-lg font-bold text-salsa-600">{formatPrice(result.balance)}</span>
                   </div>
                   {result.status === 'REDEEMED' && (
@@ -148,20 +148,20 @@ export default function GiftCertificateBalancePage() {
 
               {result.recentUsage && result.recentUsage.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent Usage</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Recent Usage</h3>
                   <div className="space-y-2">
                     {result.recentUsage.map((usage, index) => (
                       <div
                         key={index}
-                        className="flex justify-between items-center text-sm border-b border-gray-200 pb-2"
+                        className="flex justify-between items-center text-sm border-b border-border pb-2"
                       >
                         <div>
-                          <span className="text-gray-700">
+                          <span className="text-foreground">
                             Used {formatPrice(usage.amount)} on{' '}
                             {new Date(usage.usedAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <span className="text-gray-600">Balance: {formatPrice(usage.balanceAfter)}</span>
+                        <span className="text-muted-foreground">Balance: {formatPrice(usage.balanceAfter)}</span>
                       </div>
                     ))}
                   </div>

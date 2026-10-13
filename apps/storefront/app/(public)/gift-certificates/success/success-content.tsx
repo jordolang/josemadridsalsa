@@ -32,20 +32,20 @@ export function SuccessContent() {
         <CardContent className="space-y-6">
           <div className="text-center space-y-4">
             <div className="text-6xl">🎁</div>
-            <p className="text-lg text-gray-700">
+            <p className="text-lg text-foreground">
               Thank you for your purchase! Your gift certificate has been created and the recipient will receive it via email.
             </p>
           </div>
 
           {code && (
-            <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
-              <div className="text-sm font-medium text-gray-700 mb-1">Gift Certificate Code:</div>
-              <div className="text-xl font-mono font-semibold text-gray-900">{code}</div>
+            <div className="rounded-md border border-border bg-muted/50 p-4">
+              <div className="text-sm font-medium text-foreground mb-1">Gift Certificate Code:</div>
+              <div className="text-xl font-mono font-semibold text-foreground">{code}</div>
             </div>
           )}
 
           {orderId && (
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               Order Number: <span className="font-mono">{orderId}</span>
             </div>
           )}

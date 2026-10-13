@@ -67,31 +67,31 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
       </Link>
 
       <div className="grid gap-8 lg:grid-cols-[3fr,2fr]">
-        <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-lg">
+        <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
           <div className="relative h-80 w-full sm:h-[26rem]">
             <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority fallbackPlaceId={location.googlePlaceId} />
           </div>
           {gallery.length > 1 ? (
-            <div className="border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+            <div className="border-t border-border bg-muted/50 px-4 py-3 text-xs text-muted-foreground">
               Tap to swipe through {gallery.length} photos
             </div>
           ) : null}
         </div>
 
-        <div className="space-y-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+        <div className="space-y-6 rounded-3xl border border-border bg-card p-6 shadow-lg">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Retail partner</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">{location.businessName}</h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Retail partner</p>
+            <h1 className="mt-2 text-3xl font-semibold text-foreground">{location.businessName}</h1>
+            <p className="text-sm text-muted-foreground">
               {location.city}, {location.state}
             </p>
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-start gap-3 text-sm text-slate-700">
+            <div className="flex items-start gap-3 text-sm text-foreground">
               <MapPin className="mt-0.5 h-5 w-5 text-verde-600" />
               <div>
-                <p className="font-medium text-slate-900">{fullAddress}</p>
+                <p className="font-medium text-foreground">{fullAddress}</p>
                 {mapsUrl ? (
                   <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-salsa-600 underline">
                     View on Google Maps
@@ -111,7 +111,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
                 Call
               </a>
             ) : (
-              <span className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-center text-xs text-slate-400">
+              <span className="rounded-xl border border-dashed border-border px-4 py-3 text-center text-xs text-muted-foreground">
                 Phone unavailable
               </span>
             )}
@@ -127,7 +127,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
                 Website
               </a>
             ) : (
-              <span className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-center text-xs text-slate-400">
+              <span className="rounded-xl border border-dashed border-border px-4 py-3 text-center text-xs text-muted-foreground">
                 Website unavailable
               </span>
             )}
@@ -137,13 +137,13 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
                 href={directionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground hover:border-muted-foreground/40 hover:bg-muted"
               >
                 <Navigation2 className="h-4 w-4" />
                 Directions
               </a>
             ) : (
-              <span className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-center text-xs text-slate-400">
+              <span className="rounded-xl border border-dashed border-border px-4 py-3 text-center text-xs text-muted-foreground">
                 Directions unavailable
               </span>
             )}
@@ -164,13 +164,13 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
       {gallery.length > 1 ? (
         <div className="space-y-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Gallery</p>
-            <h2 className="text-2xl font-semibold text-slate-900">More views from Google</h2>
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Gallery</p>
+            <h2 className="text-2xl font-semibold text-foreground">More views from Google</h2>
           </div>
           <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
             {gallery.map((imageUrl, index) => (
               <div key={`${imageUrl}-${index}`} className="snap-start flex-shrink-0">
-                <div className="relative h-56 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 shadow">
+                <div className="relative h-56 w-80 overflow-hidden rounded-2xl border border-border bg-muted/50 shadow">
                   <LocationImage src={getLocationImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" fallbackPlaceId={location.googlePlaceId} />
                 </div>
               </div>
@@ -179,9 +179,9 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
         </div>
       ) : null}
 
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-        <h3 className="text-xl font-semibold text-slate-900">Need help finding this store?</h3>
-        <p className="mt-2 text-sm text-slate-600">
+      <div className="rounded-3xl border border-border bg-card p-6 shadow-lg">
+        <h3 className="text-xl font-semibold text-foreground">Need help finding this store?</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
           Share this page with friends or tap directions to open the route in Google Maps without leaving your current tab.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
@@ -198,7 +198,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
           ) : null}
           <Link
             href="/find-us"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-5 py-3 text-sm font-semibold text-foreground hover:border-muted-foreground/40 hover:bg-muted"
           >
             Explore other locations
           </Link>

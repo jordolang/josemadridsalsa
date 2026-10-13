@@ -41,6 +41,21 @@ describe('PicanteChatLauncher', () => {
     expect(launcher).toHaveAttribute('data-position', 'right')
   })
 
+  it('stays parked in the corner on phone-width screens', () => {
+    matchMedia.mockImplementation((query: string) => ({
+      matches: query.includes('(max-width: 767px)'),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+
+    render(<PicanteChatLauncher isOpen={false} onToggle={vi.fn()} />)
+    const launcher = screen.getByRole('button', { name: 'Chat with Picante' })
+    expect(launcher).toHaveAttribute('data-direction', 'idle')
+    expect(launcher).toHaveAttribute('data-position', 'right')
+    act(() => vi.advanceTimersByTime(8000))
+    expect(launcher).toHaveAttribute('data-direction', 'idle')
+  })
+
   it('stays idle when chat is open or reduced motion is requested', () => {
     matchMedia.mockReturnValue({
       matches: true,

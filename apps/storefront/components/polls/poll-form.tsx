@@ -249,15 +249,15 @@ export function PollForm({
       <div className="space-y-8">
         <div className="rounded-2xl border border-verde-200 bg-verde-50 p-6 text-center sm:p-8">
           <PartyPopper className="mx-auto h-10 w-10 text-verde-700" aria-hidden />
-          <h2 className="mt-3 font-serif text-2xl font-bold text-stone-900">
+          <h2 className="mt-3 font-serif text-2xl font-bold text-foreground">
             Thank you, {firstName.trim()}!
           </h2>
-          <p className="mx-auto mt-2 max-w-xl text-stone-700">
+          <p className="mx-auto mt-2 max-w-xl text-foreground">
             {thankYouMessage ??
               'Your answers are in. We read every single one — thank you for helping shape what we make next.'}
           </p>
           {anonymousRequested && (
-            <p className="mx-auto mt-4 inline-flex max-w-xl items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-stone-700">
+            <p className="mx-auto mt-4 inline-flex max-w-xl items-center gap-2 rounded-full bg-card px-4 py-2 text-sm text-foreground">
               <ShieldCheck className="h-4 w-4 text-verde-700" aria-hidden />
               We have noted that you would like to stay anonymous.
             </p>
@@ -277,8 +277,8 @@ export function PollForm({
       {questions.map((question, index) => (
         <fieldset
           key={question.id}
-          className={`rounded-2xl border bg-white p-5 shadow-sm transition sm:p-6 ${
-            fieldErrors[question.id] ? 'border-destructive' : 'border-stone-200'
+          className={`rounded-2xl border bg-card p-5 shadow-sm transition sm:p-6 ${
+            fieldErrors[question.id] ? 'border-destructive' : 'border-border'
           }`}
         >
           <legend className="sr-only">{question.prompt}</legend>
@@ -291,7 +291,7 @@ export function PollForm({
               {index + 1}
             </span>
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-semibold leading-snug text-stone-900" id={`q-${question.id}`}>
+              <h2 className="text-lg font-semibold leading-snug text-foreground" id={`q-${question.id}`}>
                 {question.prompt}
                 {question.isRequired && (
                   <span className="ml-1 text-destructive" aria-hidden>
@@ -300,10 +300,10 @@ export function PollForm({
                 )}
               </h2>
               {question.helpText && (
-                <p className="mt-1 text-sm leading-6 text-stone-600">{question.helpText}</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">{question.helpText}</p>
               )}
               {question.type === 'MULTI_CHOICE' && (
-                <p className="mt-1 text-sm font-medium text-stone-500">
+                <p className="mt-1 text-sm font-medium text-muted-foreground">
                   Select as many as apply to you
                   {question.maxSelections != null ? ` (up to ${question.maxSelections})` : ''}.
                 </p>
@@ -312,7 +312,7 @@ export function PollForm({
           </div>
 
           {question.imageUrl && (
-            <div className="relative mt-4 aspect-[16/9] w-full overflow-hidden rounded-xl bg-stone-100">
+            <div className="relative mt-4 aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
               <Image
                 src={question.imageUrl}
                 alt={question.imageAlt ?? ''}
@@ -338,7 +338,7 @@ export function PollForm({
                       className={`group inline-flex min-h-[3rem] cursor-pointer items-center gap-3 rounded-full border-2 px-4 py-2.5 text-base transition duration-200 active:scale-[0.98] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100 ${
                         selected
                           ? `${classes.pill} ${classes.border} shadow-md`
-                          : 'border-stone-200 bg-white text-stone-800 hover:border-stone-400 hover:bg-stone-50'
+                          : 'border-border bg-card text-foreground hover:border-muted-foreground/50 hover:bg-muted/50'
                       }`}
                     >
                       <input
@@ -351,13 +351,13 @@ export function PollForm({
                       <span
                         className={`flex h-5 w-5 shrink-0 items-center justify-center border-2 transition ${
                           question.type === 'SINGLE_CHOICE' ? 'rounded-full' : 'rounded-md'
-                        } ${selected ? 'border-white bg-white/25' : 'border-stone-300'}`}
+                        } ${selected ? 'border-white bg-white/25' : 'border-border'}`}
                         aria-hidden
                       >
                         {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
                       </span>
                       {option.imageUrl && (
-                        <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-stone-100">
+                        <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
                           <Image src={option.imageUrl} alt="" fill sizes="36px" className="object-cover" />
                         </span>
                       )}
@@ -366,7 +366,7 @@ export function PollForm({
                         {option.label}
                         {option.description && (
                           <span
-                            className={`block text-xs ${selected ? 'text-white/80' : 'text-stone-500'}`}
+                            className={`block text-xs ${selected ? 'text-white/80' : 'text-muted-foreground'}`}
                           >
                             {option.description}
                           </span>
@@ -388,7 +388,7 @@ export function PollForm({
                       className={`inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 text-base font-bold transition duration-200 active:scale-95 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100 ${
                         selected
                           ? `${classes.pill} ${classes.border} shadow-md`
-                          : 'border-stone-200 bg-white text-stone-800 hover:border-stone-400 hover:bg-stone-50'
+                          : 'border-border bg-card text-foreground hover:border-muted-foreground/50 hover:bg-muted/50'
                       }`}
                     >
                       <input
@@ -440,7 +440,7 @@ export function PollForm({
             {question.allowOther &&
               (question.type === 'SINGLE_CHOICE' || question.type === 'MULTI_CHOICE') && (
               <div className="mt-3">
-                <label className="text-sm font-medium text-stone-700" htmlFor={`other-${question.id}`}>
+                <label className="text-sm font-medium text-foreground" htmlFor={`other-${question.id}`}>
                   Something else? Tell us here
                 </label>
                 <Input
@@ -464,15 +464,15 @@ export function PollForm({
         </fieldset>
       ))}
 
-      <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="font-serif text-xl font-bold text-stone-900">Just your name, and you are done</h2>
-        <p className="mt-1 text-sm leading-6 text-stone-600">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <h2 className="font-serif text-xl font-bold text-foreground">Just your name, and you are done</h2>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">
           A first name is all we need. A last name is welcome but completely optional.
         </p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm font-medium text-stone-700" htmlFor="poll-first-name">
+            <label className="text-sm font-medium text-foreground" htmlFor="poll-first-name">
               First name <span className="text-destructive">*</span>
             </label>
             <Input
@@ -487,8 +487,8 @@ export function PollForm({
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-stone-700" htmlFor="poll-last-name">
-              Last name <span className="text-stone-400">(optional)</span>
+            <label className="text-sm font-medium text-foreground" htmlFor="poll-last-name">
+              Last name <span className="text-muted-foreground">(optional)</span>
             </label>
             <Input
               id="poll-last-name"
@@ -502,8 +502,8 @@ export function PollForm({
           </div>
           {collectEmail && (
             <div className="sm:col-span-2">
-              <label className="text-sm font-medium text-stone-700" htmlFor="poll-email">
-                Email <span className="text-stone-400">(optional — only if you want a reply)</span>
+              <label className="text-sm font-medium text-foreground" htmlFor="poll-email">
+                Email <span className="text-muted-foreground">(optional — only if you want a reply)</span>
               </label>
               <Input
                 id="poll-email"
@@ -531,7 +531,7 @@ export function PollForm({
           />
         </div>
 
-        <div className="mt-6 rounded-xl bg-stone-50 p-4 text-sm leading-6 text-stone-700">
+        <div className="mt-6 rounded-xl bg-muted/50 p-4 text-sm leading-6 text-foreground">
           <p>{consentNotice}</p>
         </div>
 
@@ -542,21 +542,21 @@ export function PollForm({
           className={`mt-4 inline-flex min-h-[3rem] w-full items-center justify-center gap-3 rounded-full border-2 px-5 py-3 text-base font-semibold transition duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100 sm:w-auto ${
             anonymousRequested
               ? `${classes.pill} ${classes.border} shadow-md`
-              : 'border-stone-300 bg-white text-stone-800 hover:border-stone-500 hover:bg-stone-50'
+              : 'border-border bg-card text-foreground hover:border-muted-foreground/50 hover:bg-muted/50'
           }`}
         >
           <ShieldCheck className="h-5 w-5" aria-hidden />
           {ANONYMOUS_REQUEST_LABEL}
           {anonymousRequested && <Check className="h-5 w-5" strokeWidth={3} aria-hidden />}
         </button>
-        <p className="mt-2 text-sm text-stone-500">{ANONYMOUS_REQUEST_HELP}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{ANONYMOUS_REQUEST_HELP}</p>
 
-        <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm leading-6 text-stone-700">
+        <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm leading-6 text-foreground">
           <input
             type="checkbox"
             checked={consentAcknowledged}
             onChange={(event) => setConsentAcknowledged(event.target.checked)}
-            className="mt-1 h-5 w-5 shrink-0 rounded border-stone-300 accent-salsa-700"
+            className="mt-1 h-5 w-5 shrink-0 rounded border-border accent-salsa-700"
           />
           <span>
             I have read the note above and understand my answers may be shared publicly or used
@@ -605,7 +605,7 @@ function CharacterCount({ used, max }: { used: number; max: number }) {
   const tight = remaining <= 100
   return (
     <p
-      className={`mt-1 text-right text-xs tabular-nums ${tight ? 'font-semibold text-amber-700' : 'text-stone-500'}`}
+      className={`mt-1 text-right text-xs tabular-nums ${tight ? 'font-semibold text-amber-700' : 'text-muted-foreground'}`}
       aria-live="polite"
     >
       {remaining} characters left of {max}

@@ -10,9 +10,9 @@ export const metadata = {
 
 export default function UnsubscribePage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-sm border p-8 space-y-6">
+        <div className="bg-card rounded-xl shadow-sm border p-8 space-y-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold">Email Preferences</h1>
             <p className="text-muted-foreground mt-2">

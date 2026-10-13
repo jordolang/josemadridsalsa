@@ -24,7 +24,7 @@ export default function GiftCertificateSuccessPage() {
           <CardContent className="space-y-6">
             <div className="text-center space-y-4">
               <div className="text-6xl">🎁</div>
-              <p className="text-lg text-gray-700">
+              <p className="text-lg text-foreground">
                 Loading your gift certificate details...
               </p>
             </div>

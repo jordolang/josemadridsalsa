@@ -69,7 +69,7 @@ export default async function FormsLibraryPage() {
   const totalForms = combinedTemplates.length
 
   return (
-    <main className="bg-slate-50 pb-16">
+    <main className="bg-muted/50 pb-16">
       <section className="relative overflow-hidden bg-gradient-to-br from-salsa-600 via-salsa-500 to-chile-500 py-20 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl space-y-6">
@@ -106,18 +106,18 @@ export default async function FormsLibraryPage() {
             return (
               <div
                 key={category.id}
-                className="rounded-2xl border border-white/70 bg-white p-6 shadow-sm"
+                className="rounded-2xl border border-border bg-card p-6 shadow-sm"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-salsa-50 text-salsa-500">
                     <FileText className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{category.label}</p>
-                    <p className="text-xs text-slate-500">{count} template{count === 1 ? '' : 's'}</p>
+                    <p className="text-sm font-semibold text-foreground">{category.label}</p>
+                    <p className="text-xs text-muted-foreground">{count} template{count === 1 ? '' : 's'}</p>
                   </div>
                 </div>
-                <p className="mt-3 text-sm text-slate-600">{category.description}</p>
+                <p className="mt-3 text-sm text-muted-foreground">{category.description}</p>
               </div>
             )
           })}
@@ -131,10 +131,10 @@ export default async function FormsLibraryPage() {
               <Sparkles className="h-4 w-4" />
               <span className="text-xs uppercase tracking-[0.35em]">Featured library</span>
             </div>
-            <h2 className="mt-2 font-serif text-3xl font-semibold text-slate-900">
+            <h2 className="mt-2 font-serif text-3xl font-semibold text-foreground">
               Download {totalForms}+ versatile business forms
             </h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Forms render in your browser for quick printing or editing. Use them for wholesale, fundraisers, and operations.
             </p>
           </div>
@@ -144,42 +144,42 @@ export default async function FormsLibraryPage() {
           {combinedTemplates.map((template) => (
             <article
               key={template.id}
-              className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
             >
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-xl font-semibold text-slate-900">{template.name}</h3>
+                  <h3 className="text-xl font-semibold text-foreground">{template.name}</h3>
                   <div className="flex flex-wrap gap-2">
                     {template.estimatedCompletion ? (
-                      <Badge variant="outline" className="border-slate-200 text-xs text-slate-600">
+                      <Badge variant="outline" className="border-border text-xs text-muted-foreground">
                         {template.estimatedCompletion}
                       </Badge>
                     ) : null}
                     <Badge
                       variant="outline"
-                      className={`border-slate-200 text-xs capitalize ${
-                        template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-slate-500'
+                      className={`border-border text-xs capitalize ${
+                        template.source === 'saved' ? 'text-emerald-600 border-emerald-200' : 'text-muted-foreground'
                       }`}
                     >
                       {template.source === 'saved' ? 'Saved' : 'Library'}
                     </Badge>
                   </div>
                 </div>
-                <p className="text-sm text-slate-600">{template.description}</p>
+                <p className="text-sm text-muted-foreground">{template.description}</p>
                 {template.updatedAt ? (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     Updated {new Date(template.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 ) : null}
               </div>
-              <ul className="space-y-1 text-xs text-slate-500">
+              <ul className="space-y-1 text-xs text-muted-foreground">
                 {template.recommendedUses.map((use) => (
                   <li key={use}>• {use}</li>
                 ))}
               </ul>
               <div className="flex flex-wrap gap-2">
                 {template.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="border-slate-200 text-xs text-slate-600">
+                  <Badge key={tag} variant="outline" className="border-border text-xs text-muted-foreground">
                     {tag}
                   </Badge>
                 ))}

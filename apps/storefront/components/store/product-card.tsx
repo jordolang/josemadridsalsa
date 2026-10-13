@@ -121,27 +121,32 @@ function ProductCardComponent({ product }: ProductCardProps) {
     <Dialog open={isQuickViewOpen} onOpenChange={setQuickViewOpen}>
       <Card className="group interactive-card overflow-hidden">
         <div className="relative">
-          <Link href={`/salsas/${product.slug}`}>
-            <div className="relative overflow-hidden bg-muted flex items-center justify-center min-h-[300px]">
+          <Link href={`/salsas/${product.slug}`} className="block">
+            <div className="relative overflow-hidden bg-muted flex items-center justify-center min-h-[180px] sm:min-h-[300px]">
               <Image
                 src={productImage}
                 alt={product.name}
                 width={400}
                 height={400}
                 className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                 onError={() => setImageError(true)}
               />
+            </div>
+          </Link>
+
+          {/* Overlays sit beside the link, not inside it, so no button is nested in an anchor. */}
+          <div className="pointer-events-none absolute inset-0">
               
               {/* Badges */}
               <div className="absolute top-3 left-3 flex flex-col gap-2">
                 {product.isFeatured && (
-                  <Badge className="bg-salsa-500 text-white hover:bg-salsa-600">
+                  <Badge variant="outline" className="border-border bg-card/95 text-foreground">
                     Featured
                   </Badge>
                 )}
                 {hasDiscount && (
-                  <Badge className="bg-green-500 text-white hover:bg-green-600">
+                  <Badge className="bg-salsa-500 text-white hover:bg-salsa-500">
                     {discountPercentage}% OFF
                   </Badge>
                 )}
@@ -160,7 +165,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
               </div>
 
               {/* Quick View Eye Icon - Center */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-10">
+              <div className="pointer-events-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 z-10 [@media(hover:none)]:hidden">
                 <Button
                   size="lg"
                   variant="secondary"
@@ -177,7 +182,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
               </div>
 
               {/* Quick Actions - Corner */}
-              <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="pointer-events-auto absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-300">
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -185,8 +190,8 @@ function ProductCardComponent({ product }: ProductCardProps) {
                     className={cn(
                       "h-9 w-9 rounded-full p-0 shadow-lg transition-colors",
                       inComparison
-                        ? "bg-blue-500 hover:bg-blue-600 text-white"
-                        : "bg-white/90 hover:bg-white text-blue-600"
+                        ? "bg-foreground hover:bg-foreground/90 text-background"
+                        : "bg-card/95 hover:bg-card text-foreground"
                     )}
                     onClick={(e) => {
                       e.preventDefault()
@@ -206,7 +211,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
                       "h-9 w-9 rounded-full p-0 shadow-lg transition-colors",
                       inWishlist
                         ? "bg-salsa-500 hover:bg-salsa-600 text-white"
-                        : "bg-white/90 hover:bg-white text-salsa-600"
+                        : "bg-card/95 hover:bg-card text-salsa-600"
                     )}
                     onClick={(e) => {
                       e.preventDefault()
@@ -219,16 +224,9 @@ function ProductCardComponent({ product }: ProductCardProps) {
                     <Heart className={cn("h-4 w-4", inWishlist && "fill-current")} />
                     <span className="sr-only">{inWishlist ? "Remove from wishlist" : "Add to wishlist"}</span>
                   </Button>
-                  {!isOutOfStock && (
-                    <AddToCartButton
-                      product={product}
-                      variant="icon"
-                    />
-                  )}
                 </div>
               </div>
-            </div>
-          </Link>
+          </div>
         </div>
 
         <CardContent className="p-4">
@@ -257,7 +255,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
             </div>
             
             {!isOutOfStock ? (
-              <AddToCartButton product={product} />
+              <AddToCartButton product={product} className="min-h-11" />
             ) : (
               <Button size="sm" disabled>
                 Out of Stock
@@ -267,8 +265,8 @@ function ProductCardComponent({ product }: ProductCardProps) {
 
           {/* Low stock warning */}
           {!isOutOfStock && product.inventory <= 5 && (
-            <div className="mt-2 text-sm text-orange-600 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-orange-600 animate-pulse motion-reduce:animate-none" />
+            <div className="mt-2 text-sm text-chile-800 dark:text-chile-300 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-chile-600 animate-pulse motion-reduce:animate-none" />
               Only {product.inventory} left in stock!
             </div>
           )}

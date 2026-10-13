@@ -7,7 +7,7 @@ export default function Loading() {
       <section className="py-16 bg-gradient-to-r from-salsa-500 to-chile-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Skeleton className="h-12 w-96 mx-auto mb-6 bg-white/20" />
-          <Skeleton className="h-6 w-[600px] mx-auto bg-white/20" />
+          <Skeleton className="h-6 w-full max-w-[600px] mx-auto bg-white/20" />
         </div>
       </section>
 
@@ -16,7 +16,7 @@ export default function Loading() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <Skeleton className="h-10 w-96 mx-auto mb-4" />
-            <Skeleton className="h-6 w-[500px] mx-auto" />
+            <Skeleton className="h-6 w-full max-w-[500px] mx-auto" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (

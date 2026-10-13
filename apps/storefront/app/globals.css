@@ -475,3 +475,90 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+
+/*
+ * Reduced motion. Unlayered so it outranks the component and utility layers.
+ * State changes still read (opacity, shadow, color, progress fills, loading spinners);
+ * travel, rotation, bounce, overshoot and endless decorative loops do not.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  /* Endless decorative loops and moving content stop (WCAG 2.2.2). */
+  .badge-float,
+  .pulse-glow,
+  .text-shine,
+  .gradient-shift,
+  .animate-bounce,
+  .animate-bounce-gentle,
+  .animate-pulse-slow,
+  .animate-spin-slow,
+  .animate-marquee,
+  .animate-progress-pulse,
+  .animate-progress-shimmer,
+  .bounce-hover:hover,
+  .interactive-card:hover::after {
+    animation: none;
+  }
+
+  /* Entrances keep a short fade but lose their travel and scale. */
+  .slide-in-bottom,
+  .fade-in-scale,
+  .animate-slide-up,
+  .animate-slide-in-left,
+  .animate-slide-in-right {
+    animation: reduced-motion-fade 0.2s ease-out both;
+  }
+
+  /* One-shot attention moves drop out entirely; the state they announce stays. */
+  .animate-wiggle,
+  .animate-swing,
+  .animate-bell-ring {
+    animation: none;
+  }
+
+  /* Hover and scroll lifts keep their shadow and opacity change, not the movement. */
+  .interactive-card,
+  .interactive-card:hover,
+  .interactive-card:focus-within,
+  .scale-rotate:hover,
+  .image-zoom-container:hover .image-zoom,
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .scroll-reveal,
+  .scroll-reveal-left,
+  .scroll-reveal-right,
+  .scroll-reveal-scale {
+    transform: none;
+  }
+
+  .scale-rotate,
+  .scroll-reveal,
+  .scroll-reveal-left,
+  .scroll-reveal-right,
+  .scroll-reveal-scale {
+    transition-property: opacity;
+  }
+
+  @keyframes reduced-motion-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* Redesign typefaces (2026-10 homepage): Oswald for condensed western display caps,
+   Yellowtail for the gold "Salsa Kings" script. */
+@layer utilities {
+  .font-western {
+    font-family: var(--font-oswald), 'Oswald', 'Arial Narrow', system-ui, sans-serif;
+  }
+  .font-script {
+    font-family: var(--font-yellowtail), 'Brush Script MT', cursive;
+  }
+}

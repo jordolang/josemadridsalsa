@@ -100,6 +100,14 @@
   transform: translateY(0);
 }
 
+/* Touch screens keep :hover stuck after a tap, which left the bubble sitting over
+   the page; the button's accessible name already says "Chat with Picante". */
+@media (hover: none) {
+  .prompt {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .track {
     right: max(0.35rem, env(safe-area-inset-right));
