@@ -15,6 +15,7 @@ function fillAndSubmit() {
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'jane@example.com' } })
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-pass' } })
   fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'secret-pass' } })
+  fireEvent.click(screen.getByRole('radio', { name: /^16 flavors/ }))
   fireEvent.click(screen.getByRole('button', { name: /create fundraiser account/i }))
 }
 
