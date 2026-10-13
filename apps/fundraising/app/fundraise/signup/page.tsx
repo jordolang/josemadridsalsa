@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import {
-  BROCHURE_OPTIONS,
   FULFILLMENT_OPTIONS,
   ONLINE_LINK_NOTE,
   RESALE_NUMBER_NOTE,
   needsBrochureChoice,
 } from "@/lib/fundraising/fulfillment";
-import type { BrochureOption, FulfillmentMethod } from "@prisma/client";
+import type { FulfillmentMethod } from "@prisma/client";
+import { KIT_IDS, ORDER_KITS, type KitId } from "@/lib/fundraising/flavor-kits";
+import { useUploadThing } from "@/lib/uploadthing-client";
 
 const P = {
   bg0:"#0a0603", bg1:"#140c05", bg2:"#1e1008",
@@ -33,12 +34,24 @@ export default function FundraiserSignupPage() {
   const [form, setForm] = useState({
     schoolName:"", teamName:"", contactName:"",
     contactEmail:"", contactPhone:"", goalAmount:"1000", message:"",
-    resaleNumber:"",
+    resaleNumber:"", missionStatement:"", bio:"",
+  });
+  // No default: the package decides which salsas the store sells, so the group picks it.
+  const [flavorPackage, setFlavorPackage] = useState<KitId | null>(null);
+  const [teamColor, setTeamColor] = useState("#9B7FFF");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null);
+  const logoUpload = useUploadThing("fundraiserSignupImage", {
+    onClientUploadComplete: (res) => { if (res?.[0]) setLogoUrl(res[0].url); },
+    onUploadError: (e) => setErrorMsg(e.message),
+  });
+  const coverUpload = useUploadThing("fundraiserSignupImage", {
+    onClientUploadComplete: (res) => { if (res?.[0]) setCoverPhotoUrl(res[0].url); },
+    onUploadError: (e) => setErrorMsg(e.message),
   });
   // Collecting order forms is what most groups do, so it starts selected rather than making
   // them choose blind. The online link is live either way — see lib/fundraising/fulfillment.
   const [fulfillment, setFulfillment] = useState<FulfillmentMethod>("ORDER_FORMS_AND_BULK");
-  const [brochure, setBrochure] = useState<BrochureOption>("PRINT_YOUR_OWN");
   const collecting = needsBrochureChoice(fulfillment);
   const [status, setStatus] = useState<"idle"|"submitting"|"success"|"error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -50,6 +63,12 @@ export default function FundraiserSignupPage() {
     if (!form.schoolName || !form.teamName || !form.contactName || !form.contactEmail) {
       setErrorMsg("Please fill in all required fields."); return;
     }
+    if (!flavorPackage) {
+      setErrorMsg("Please choose a 9, 16 or 25 flavor package."); return;
+    }
+    if (logoUpload.isUploading || coverUpload.isUploading) {
+      setErrorMsg("Please wait for your images to finish uploading."); return;
+    }
     setStatus("submitting"); setErrorMsg("");
     try {
       const res = await fetch("/api/fundraiser/signup", {
@@ -58,10 +77,15 @@ export default function FundraiserSignupPage() {
           ...form,
           goalAmount: parseFloat(form.goalAmount) || 1000,
           requestedFulfillment: fulfillment,
-          // Both only mean anything on a drive that collects forms; an online-only campaign
-          // has nothing to print and makes no wholesale purchase.
-          requestedBrochure: collecting ? brochure : undefined,
+          // Only means anything on a drive that collects forms; an online-only campaign makes
+          // no wholesale purchase.
           resaleNumber: collecting ? form.resaleNumber || undefined : undefined,
+          flavorPackage,
+          teamColor,
+          logoUrl: logoUrl ?? undefined,
+          coverPhotoUrl: coverPhotoUrl ?? undefined,
+          missionStatement: form.missionStatement || undefined,
+          bio: form.bio || undefined,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Submission failed");
@@ -106,6 +130,32 @@ export default function FundraiserSignupPage() {
             <label style={LABEL}>Fundraising Goal ($)</label>
             <input style={INPUT} type="number" min={100} step={50} value={form.goalAmount} onChange={set("goalAmount")}/>
             <div style={{fontSize:9,color:P.goldDim,marginTop:4}}>Your goal determines your warrior&apos;s HP in the Battle Arena</div>
+          </div>
+
+          {/* The package decides the store's shelves: approval enables exactly these salsas. */}
+          <div style={{marginBottom:24,borderTop:`1px solid ${P.goldDim}`,paddingTop:20}}>
+            <div style={{fontSize:13,color:P.gold3,letterSpacing:2,fontWeight:700,marginBottom:6}}>CHOOSE YOUR SALSA PACKAGE *</div>
+            <div style={{fontSize:11,color:P.creamDim,lineHeight:1.7,marginBottom:14}}>
+              Your package is the line-up your supporters choose from, on your order forms and on
+              your web page. Fewer flavors keeps sorting simple; more gives buyers more to choose from.
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {[...KIT_IDS].sort((a, b) => Number(a) - Number(b)).map((id) => {
+                const kit = ORDER_KITS[id];
+                const active = flavorPackage === id;
+                return (
+                  <label key={id} style={{display:"block",cursor:"pointer",padding:"14px 16px",background:active ? P.bg2 : P.bg0,border:`1px solid ${active ? P.gold : P.goldDim}`}}>
+                    <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:6}}>
+                      <input type="radio" name="flavorPackage" value={id} checked={active} onChange={() => setFlavorPackage(id)} style={{accentColor:P.gold,marginTop:2}}/>
+                      <span style={{fontSize:12,color:active ? P.gold3 : P.cream,fontWeight:700,letterSpacing:1}}>{id} FLAVORS</span>
+                    </div>
+                    <div style={{paddingLeft:24,fontSize:10,color:P.creamDim,lineHeight:1.7}}>
+                      {kit.flavors.map((flavor) => flavor.name).join(" · ")}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           {/* How they run the drive. Explained in full here rather than in a tooltip: a
@@ -169,31 +219,59 @@ export default function FundraiserSignupPage() {
             {collecting && (
               <div style={{marginTop:16,paddingLeft:16,borderLeft:`2px solid ${P.goldDim}`,display:"flex",flexDirection:"column",gap:16}}>
                 <div>
-                  <label style={LABEL}>Where will your brochures come from?</label>
-                  <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:6}}>
-                    {BROCHURE_OPTIONS.map((opt) => (
-                      <label key={opt.value} style={{display:"flex",gap:10,cursor:"pointer",alignItems:"flex-start"}}>
-                        <input
-                          type="radio" name="brochure" value={opt.value}
-                          checked={brochure === opt.value}
-                          onChange={() => setBrochure(opt.value)}
-                          style={{accentColor:P.gold,marginTop:3}}
-                        />
-                        <span>
-                          <span style={{fontSize:11,color:P.cream,display:"block"}}>{opt.label}</span>
-                          <span style={{fontSize:10,color:P.creamDim,lineHeight:1.7}}>{opt.detail}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
                   <label style={LABEL}>Resale certificate number</label>
                   <input style={INPUT} value={form.resaleNumber} onChange={set("resaleNumber")} placeholder="Optional for now"/>
                   <div style={{fontSize:9,color:P.goldDim,marginTop:4,lineHeight:1.7}}>{RESALE_NUMBER_NOTE}</div>
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Branding, set up now so the page is ready the day it is approved. All optional:
+              anything skipped can be added later from the fundraiser portal. */}
+          <div style={{marginBottom:24,borderTop:`1px solid ${P.goldDim}`,paddingTop:20,display:"flex",flexDirection:"column",gap:16}}>
+            <div>
+              <div style={{fontSize:13,color:P.gold3,letterSpacing:2,fontWeight:700,marginBottom:6}}>BRAND YOUR PAGE</div>
+              <div style={{fontSize:11,color:P.creamDim,lineHeight:1.7}}>
+                This is how your fundraiser page looks to supporters. Everything here is optional and
+                can be changed later from your fundraiser portal.
+              </div>
+            </div>
+            <div>
+              <label style={LABEL}>Team color</label>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <input type="color" value={teamColor} onChange={(e) => setTeamColor(e.target.value)} style={{width:48,height:36,background:"none",border:`1px solid ${P.goldDim}`,cursor:"pointer"}}/>
+                <span style={{fontSize:12,color:P.cream}}>{teamColor.toUpperCase()}</span>
+              </div>
+              <div style={{fontSize:9,color:P.goldDim,marginTop:4,lineHeight:1.7}}>
+                Pick your school or team&apos;s main color. It colors your page and your team in the
+                Battle Arena; we generate a darker shade to go with it.
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+              {([
+                ["Logo", logoUrl, logoUpload, "Square works best, up to 4MB"],
+                ["Cover photo", coverPhotoUrl, coverUpload, "Wide photo for the top of your page, up to 4MB"],
+              ] as const).map(([label, url, upload, hint]) => (
+                <div key={label}>
+                  <label style={LABEL}>{label}</label>
+                  {url && (
+                    <img src={url} alt={`${label} preview`} style={{width:"100%",height:80,objectFit:"contain",background:P.bg0,border:`1px solid ${P.goldDim}`,marginBottom:6}}/>
+                  )}
+                  <input type="file" accept="image/*" disabled={upload.isUploading} style={{...INPUT,padding:6}}
+                    onChange={(e) => { const file = e.target.files?.[0]; if (file) void upload.startUpload([file]); }}/>
+                  <div style={{fontSize:9,color:P.goldDim,marginTop:4}}>{upload.isUploading ? "Uploading..." : hint}</div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <label style={LABEL}>Mission statement</label>
+              <textarea style={{...INPUT,resize:"vertical",minHeight:60}} maxLength={500} value={form.missionStatement} onChange={set("missionStatement")} placeholder="One or two sentences: what you are raising money for and why."/>
+            </div>
+            <div>
+              <label style={LABEL}>About us</label>
+              <textarea style={{...INPUT,resize:"vertical",minHeight:100}} maxLength={5000} value={form.bio} onChange={set("bio")} placeholder="Tell supporters about your group: who you are, what you do, and what this season looks like."/>
+            </div>
           </div>
 
           <div style={{marginBottom:24}}><label style={LABEL}>Message to Admin (optional)</label><textarea style={{...INPUT,resize:"vertical",minHeight:80}} value={form.message} onChange={set("message")} placeholder="Tell us about your team..."/></div>

@@ -1103,6 +1103,11 @@ model Fundraiser {
   coverPhotoUrl        String?
   missionStatement     String?
   bio                  String?
+  /// The group's main color, chosen at sign-up; accents its public campaign page.
+  brandColor           String?
+  /// The salsa package chosen at sign-up: "9", "16" or "25" (`KitId` in
+  /// lib/fundraising/flavor-kits). Account approval stocks the store with that kit.
+  flavorPackage        String?
   enableSocialFeatures Boolean                 @default(true)
   /// The normalized fundraising-store checkout group this fundraiser was created from
   /// (`normalizeGroupName` in `lib/fundraising-site/checkout-fields.ts`). It is how mirrored
@@ -3524,6 +3529,16 @@ model FundraiserSignupRequest {
   requestedFulfillment FulfillmentMethod?
   requestedBrochure    BrochureOption?
   resaleNumber         String?
+  /// The salsa package asked for: "9", "16" or "25" flavors (`KitId` in
+  /// lib/fundraising/flavor-kits). Approval stocks the new store with that kit. Null on
+  /// applications made before the form asked.
+  flavorPackage        String?
+  /// Branding the group set up on the form, copied onto the fundraiser at approval.
+  teamColor            String?
+  logoUrl              String?
+  coverPhotoUrl        String?
+  missionStatement     String?
+  bio                  String?
   status               FundraiserSignupStatus @default(PENDING)
   reviewedBy           String?
   reviewedAt           DateTime?

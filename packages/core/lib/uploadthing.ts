@@ -2,6 +2,7 @@ import { createUploadthing, type FileRouter } from 'uploadthing/next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limiter'
 
 const f = createUploadthing()
 
@@ -86,6 +87,23 @@ export const ourFileRouter = {
    * 12MB and up to 10 at a time: a phone photo of a full show settlement sheet is large, and a
    * driver coming home from a weekend usually has a stack of them.
    */
+  // The one upload that takes no session: a group applying to fundraise has no account yet,
+  // and the form asks for its logo and cover photo up front. Images only, one at a time, and
+  // a per-IP cap so an open endpoint cannot be used as free file hosting.
+  fundraiserSignupImage: f({ image: { maxFileSize: '4MB', maxFileCount: 1 } })
+    .middleware(async ({ req }) => {
+      const limit = await checkRateLimit({
+        maxRequests: 10,
+        windowSeconds: 60 * 60,
+        identifier: `fundraiser-signup-upload:${getClientIdentifier(req)}`,
+      })
+      if (!limit.allowed) throw new Error('Too many uploads - try again later')
+      return {}
+    })
+    .onUploadComplete(async ({ file }) => {
+      return { url: file.url }
+    }),
+
   formCapture: f({ image: { maxFileSize: '16MB', maxFileCount: 10 } })
     .middleware(async () => {
       const session = await getServerSession(authOptions)

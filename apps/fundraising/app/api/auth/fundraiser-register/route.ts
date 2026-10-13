@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { logEngagementRequest } from '@/lib/engagements'
 import { ensureCustomerAccount, splitName } from '@/lib/customers/ensure-account'
+import { KIT_IDS } from '@/lib/fundraising/flavor-kits'
+import { hexColor, uploadedImageUrl } from '@/lib/fundraising/signup-fields'
 
 const FundraiserRegisterSchema = z.object({
   email: z.string().email(),
@@ -11,6 +13,15 @@ const FundraiserRegisterSchema = z.object({
   name: z.string().min(1).max(120),
   organizationName: z.string().min(2).max(200),
   contactPhone: z.string().optional(),
+  // Which kit the store sells; approving the account stocks the store with it.
+  flavorPackage: z.enum(KIT_IDS),
+  fulfillmentMethod: z.enum(['ORDER_FORMS_AND_BULK', 'ONLINE_ONLY']),
+  resaleNumber: z.string().trim().max(60).optional(),
+  brandColor: hexColor.optional(),
+  logoUrl: uploadedImageUrl.optional(),
+  coverPhotoUrl: uploadedImageUrl.optional(),
+  missionStatement: z.string().trim().max(500).optional(),
+  bio: z.string().trim().max(5000).optional(),
 })
 
 function generateSubdomain(orgName: string): string {
@@ -46,7 +57,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { email, password, name, organizationName, contactPhone } = parsed.data
+    const { email, password, name, organizationName, contactPhone, ...setup } = parsed.data
     const normalizedEmail = email.toLowerCase().trim()
 
     const existingUser = await prisma.user.findUnique({
@@ -121,6 +132,16 @@ export async function POST(request: Request) {
           commissionRate: 50,
           status: 'DRAFT',
           isActive: false,
+          flavorPackage: setup.flavorPackage,
+          fulfillmentMethod: setup.fulfillmentMethod,
+          // Only a drive that collects order forms buys wholesale and needs one.
+          resaleNumber:
+            setup.fulfillmentMethod === 'ORDER_FORMS_AND_BULK' ? setup.resaleNumber || null : null,
+          brandColor: setup.brandColor ?? null,
+          logoUrl: setup.logoUrl ?? null,
+          coverPhotoUrl: setup.coverPhotoUrl ?? null,
+          missionStatement: setup.missionStatement || null,
+          bio: setup.bio || null,
         },
       })
 

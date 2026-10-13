@@ -5,6 +5,7 @@ import { requireAdminSession } from "@/lib/admin-auth";
 import { logAuditWithRequest } from "@/lib/audit";
 import { z } from "zod";
 import { resolveFulfillmentTerms } from "@/lib/fundraising/fulfillment";
+import { resolveKitCatalog, shouldBlockApproval } from "@/lib/fundraising/kit-catalog.server";
 
 const DEFAULT_CHARACTERS = [
   { characterName:"Warrior",   characterClass:"warrior",   gender:"m", skinColor:"#8B5E3C", hairColor:"#1A0A00", position:0, quips:JSON.stringify(["HOLD THE LINE!","My shield has more dents than your dignity.","Bleed slower, I'm busy.","I've fought mountains scarier than you."]) },
@@ -14,7 +15,8 @@ const DEFAULT_CHARACTERS = [
 
 const Schema = z.object({
   signupId:      z.string(),
-  teamColor:     z.string().regex(/^#[0-9A-Fa-f]{6}$/).default("#9B7FFF"),
+  // Omitted means "use what the group picked on the form".
+  teamColor:     z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   teamColorDark: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   activePeriod:  z.string().regex(/^\d{4}-\d{2}$/),
   reviewNotes:   z.string().optional(),
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
   const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 422 });
 
-  const { signupId, teamColor, teamColorDark, activePeriod, reviewNotes } = parsed.data;
+  const { signupId, teamColorDark, activePeriod, reviewNotes } = parsed.data;
   const signup = await db.fundraiserSignupRequest.findUnique({ where: { id: signupId } });
   if (!signup) return NextResponse.json({ error: "Signup not found" }, { status: 404 });
   if (signup.status !== "PENDING") return NextResponse.json({ error: "Already reviewed" }, { status: 409 });
@@ -45,7 +47,17 @@ export async function POST(req: NextRequest) {
     .toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 
   const { raw: apiKey, hash: apiKeyHash } = generateFundraiserApiKey();
+  const teamColor = parsed.data.teamColor ?? signup.teamColor ?? "#9B7FFF";
   const dark = teamColorDark ?? darken(teamColor);
+
+  // The package the group chose stocks the store, so nobody ticks salsas one by one.
+  const { kitSize, catalog, missingSlugs } = await resolveKitCatalog(signup.flavorPackage);
+  if (shouldBlockApproval(missingSlugs, kitSize)) {
+    return NextResponse.json(
+      { error: `These ${signup.flavorPackage}-flavor kit salsas have no active product: ${missingSlugs.join(", ")}` },
+      { status: 409 }
+    );
+  }
 
   const { fulfillmentMethod, brochureOption, resaleNumber } = resolveFulfillmentTerms({
     adminChoice: {
@@ -84,6 +96,13 @@ export async function POST(req: NextRequest) {
             resaleNumber,
             status: "ACTIVE",
             isActive: true,
+            logoUrl: signup.logoUrl,
+            coverPhotoUrl: signup.coverPhotoUrl,
+            missionStatement: signup.missionStatement,
+            bio: signup.bio,
+            brandColor: teamColor,
+            flavorPackage: signup.flavorPackage,
+            products: { create: catalog },
           },
         },
         teamColor, teamColorDark: dark, goalAmount: signup.goalAmount,
@@ -121,6 +140,9 @@ export async function POST(req: NextRequest) {
         activePeriod,
         fulfillmentMethod,
         brochureOption,
+        flavorPackage: signup.flavorPackage,
+        productsEnabled: catalog.length,
+        missingSlugs,
         reviewNotes: reviewNotes ?? null,
       },
     },
@@ -136,5 +158,7 @@ export async function POST(req: NextRequest) {
     success: true, teamId: team.id, slug: team.slug,
     profileUrl: `${origin}/fundraise/${team.slug}`,
     apiKey,
+    productsEnabled: catalog.length,
+    missingSlugs,
   });
 }
