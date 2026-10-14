@@ -19,6 +19,7 @@ import { HomePageView } from '@/components/analytics/home-page-view'
 import { loadHomepageProducts } from '@/components/store/featured-products-section'
 import { HomeBoothTile } from '@/components/store/home-booth-tile'
 import { AwardSeal } from '@/components/store/award-seal'
+import { AwardsStrip } from '@/components/store/awards-strip'
 import { BATTLE_ARENA_URL } from '@/lib/arena-game/links'
 import { logger } from '@/lib/logger'
 
@@ -65,7 +66,7 @@ const VALUE_CARDS: Array<{
     icon: Trophy,
     title: 'Award Winning Recipes',
     body: 'Crafted with the finest ingredients. Recognized for exceptional flavor.',
-    link: { label: 'Our Awards', href: '/our-story' },
+    link: { label: 'Our Awards', href: '#awards' },
   },
   {
     photo: 'card-community-photo',
@@ -249,6 +250,9 @@ export default async function Home() {
             <span className="ml-8">Kings</span>
           </p>
         </section>
+
+        {/* The three confirmed national awards (PRODUCT.md); the seal is hidden on phones */}
+        <AwardsStrip />
 
         {/* Values — three photo cards on the night ground */}
         <section aria-label="What we stand for" className="border-t border-white/5 bg-night-earth py-10 sm:py-12">

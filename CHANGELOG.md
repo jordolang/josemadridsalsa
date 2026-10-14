@@ -22,6 +22,8 @@ the root `package.json` is canonical.
   - The hero loops a video of the rider at sunset and five jars on a smoldering log. A still image
     stands in while it loads, if it fails, and for visitors who ask for reduced motion.
   - The hero also carries a laurel award seal and the family-tradition headline.
+  - A dark "Recognized nationally" band under the hero lists all three confirmed awards, so
+    phones (where the seal is hidden) show them too. The Our Awards card link jumps to it.
   - Below it: three value cards, a barn-wood shop band with real jar cutouts linking to the
     catalog, a booth video tile, the Battle Arena, and community tiles.
   - The header is now dark on every page and has new Shop, Our Story, Fundraising, Community and
