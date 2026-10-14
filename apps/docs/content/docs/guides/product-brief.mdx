@@ -1,0 +1,76 @@
+---
+title: Product Brief
+description: Who the storefront serves, what the brand can truthfully claim, the evidence on hand, and the product principles behind every page
+---
+
+## Platform
+
+web
+
+The storefront, fundraising site, admin console, and docs are Next.js web apps. The Android/iPad kiosk shells and the macOS/Windows admin apps wrap or extend the same web product; they do not have a design language of their own.
+
+## Users
+
+**Primary: online shoppers.** These are salsa fans ordering jars to be shipped to them. Many met the brand in person at a show, festival, or local store and come back to reorder or send a gift. When a design tradeoff comes up, their buying experience wins.
+
+**Secondary audiences** (served, but they don't win tradeoffs by default):
+- Fundraiser organizers and student sellers. Schools and groups that sell jars through the fundraising site (`apps/fundraising`) and the portal.
+- Wholesale and retail accounts.
+- Staff and operators who run orders, events, the in-person POS/kiosk, email marketing, and the QuickBooks-synced back office through the admin console.
+
+## Product Purpose
+
+Jose Madrid Salsa is the production commerce, fundraising, and operations platform for a family-owned salsa company in Zanesville, Ohio. It sells jars online, runs group fundraisers, supports in-person sales at shows and events, and runs the business back office. For the shopper, success means finding a flavor they love, checking out without friction, and coming back to reorder.
+
+## Positioning
+
+What a neighboring salsa brand cannot truthfully copy:
+
+- **Family heritage.** The brand is named for José, a cowboy and family patriarch from Clovis, New Mexico. Its New Mexico-style recipes came out of the family's Zak's Restaurant, opened in Zanesville in 1942. The salsa company has been family-owned since 1987.
+- **Flavor range.** It makes 25+ small-batch flavors, from mild to fiery hot.
+- **Local Ohio presence.** Customers often meet the brand in person first, at shows, festivals, and local stores, before they order online.
+
+The fundraising program is a real business line, but it is not part of the brand's core claim.
+
+## Operating Context
+
+- Shoppers browse by flavor and heat level (`HeatLevel`), read recipes and the "Heat Index" editorial blog, use the store locator ("Find Us"), and check out with Stripe, PayPal, or Square. Orders ship through EasyPost.
+- In-person sales run through the POS and kiosk apps at shows and events.
+- Fundraisers sell at $10 per jar with a 50/50 split. A fundraiser's "goal" and "raised" figures are gross sales, not commission.
+- BigCommerce still runs headless behind the site, and its checkout lives on shop.josemadridsalsa.com.
+
+## Capabilities and Constraints
+
+- The platform is a Turborepo monorepo. `apps/storefront` (storefront, accounts, checkout, admin, POS) is the primary app. `apps/fundraising`, `apps/admin`, and `apps/docs` are separate deployments.
+- The stack is Next.js 16 / React 19, Tailwind CSS 4, Shadcn/Radix primitives in `components/ui`, and Prisma/PostgreSQL. Everything deploys on Vercel.
+- No fake implementations. Placeholder or mock functionality must never ship as if it were real.
+- Every new public URL needs a sitemap entry, a meta title of 30–60 characters, and a meta description of 160 characters or fewer (CLAUDE.md Part 18).
+
+## Brand Commitments
+
+- The name is **Jose Madrid Salsa**. Story copy writes it "José", with the accent.
+- The logo is `apps/storefront/public/logo.png`.
+- The heritage story is canonical: José of Clovis, NM; Zak's Restaurant, Zanesville, 1942; family-owned since 1987. Use it as written in `app/(public)/about` and `app/(public)/our-story`. Don't embellish it.
+
+## Evidence on Hand
+
+- **Customer reviews:** real reviews are stored in the `Review` and `SiteReview` tables. Quote them verbatim and attribute them as stored.
+- **Awards and press:** these are the confirmed awards (owner, 2026-10-12), shown on the homepage in `components/store/awards-strip.tsx`:
+  - Spanish Verde Hot / Spanish Verde: Best Green Salsa in the US and Best Tomatillo Salsa, National Salsa Shoot Out, Fort Worth, Texas, 2004.
+  - Raspberry Mild: national awards in two countries (the United States and Canada), as part of the fruit salsa line.
+  - The brand: national recognition for its fruit salsa line, and recognized as a top gourmet salsa fundraiser in the United States.
+  Fundraising figures confirmed by the owner (2026-10-12): "$3,500+ average raised" per fundraiser, "trusted by 500+ schools, teams, and nonprofits", and "500+ fundraisers". The founding year in copy is 1987 (family-owned since 1987).
+  Use only these. Never invent an award name, a year, or a publication, and never claim "Salsa Capital of the World" (the owner had it removed). Ask before adding press coverage.
+- **Product photography:** real jar and label photos exist in Vercel Blob and on the legacy BigCommerce CDN.
+- **Not on hand: show/event photography.** Do not fabricate or AI-generate photos that present themselves as real events, staff, or customers.
+
+## Product Principles
+
+1. The shopper's path to a jar comes first. Every surface should shorten the distance from "which flavor?" to "ordered".
+2. Heritage is told, not decorated. The family story is a true account to tell plainly, not a theme to costume the site in.
+3. Real over representative. Use real reviews, real product photos, and real numbers. Leave absences visible rather than filling them.
+4. Online should continue the in-person experience. A customer who tasted salsa at a festival should recognize the brand and find that flavor fast.
+
+## Accessibility & Inclusion
+
+Every surface must meet WCAG 2.2 AA.

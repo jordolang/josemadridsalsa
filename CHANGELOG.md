@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Design System and Product Brief docs.** The storefront's design rules (palette, type, components,
+  the Night Earth redesign) and its product brief (audience, positioning, confirmed awards and
+  figures, product principles) are now pages under Guides, replacing loose root `DESIGN.md` and
+  `PRODUCT.md` files.
 - **Fundraiser sign-up asks for three colors.** Both sign-up forms now require a main, secondary
   and accent color, so each group matches its own school, team or business. They are the same three
   colors the admin Branding tab edits, and saving that tab now updates them as well. Schema:
