@@ -3,13 +3,14 @@
 
 import { prisma } from '@/lib/prisma'
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
+import { getHelpArticles, helpArticleUrl } from '@/lib/help/articles'
 import { TrainingDocumentStatus } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
 
 export type IndexedContent = {
   id: string
-  type: 'product' | 'recipe' | 'page' | 'location' | 'general'
+  type: 'product' | 'recipe' | 'page' | 'location' | 'general' | 'documentation'
   title: string
   content: string
   metadata?: Record<string, any>
@@ -147,6 +148,125 @@ async function indexPublicMarkdownContent(): Promise<IndexedContent[]> {
   }
 
   return entries
+}
+
+/**
+ * Strip the parts of an MDX docs page that are not prose: the YAML
+ * frontmatter and the JSX component tags (Callout, Steps, Tabs...). The text
+ * inside components is kept.
+ */
+export function mdxToMarkdown(mdx: string): { title: string | null; description: string | null; body: string } {
+  const normalized = mdx.replace(/\r\n/g, '\n')
+  const frontmatter = normalized.match(/^---\n([\s\S]*?)\n---\n?/)
+  const readField = (name: string) => {
+    const match = frontmatter?.[1].match(new RegExp(`^${name}:\\s*(.+)$`, 'm'))
+    return match ? match[1].trim().replace(/^["']|["']$/g, '') : null
+  }
+
+  const body = normalized
+    .slice(frontmatter ? frontmatter[0].length : 0)
+    .replace(/<\/?[A-Z][\w.]*(\s[^>]*)?\/?>/g, '')
+
+  return { title: readField('title'), description: readField('description'), body }
+}
+
+/**
+ * Index the help and developer documentation (the Fumadocs site in
+ * apps/docs) so Picante can answer how-to questions about the website, the
+ * admin panel, and the platform. Each page is split into one entry per
+ * heading so a question retrieves the relevant section, not a whole page.
+ */
+export async function indexDocumentation(): Promise<IndexedContent[]> {
+  // The storefront runs with cwd = apps/storefront. Keep this path static:
+  // a computed root makes the bundler trace the whole repository into every
+  // route that builds the index.
+  const docsRoot = path.join(process.cwd(), '..', 'docs', 'content', 'docs')
+  const entries: IndexedContent[] = []
+
+  async function walk(dir: string): Promise<void> {
+    let items
+    try {
+      items = await fs.readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const item of items.sort((a, b) => a.name.localeCompare(b.name))) {
+      const fullPath = path.join(dir, item.name)
+      if (item.isDirectory()) {
+        await walk(fullPath)
+      } else if (item.isFile() && item.name.endsWith('.mdx')) {
+        await indexDocPage(fullPath)
+      }
+    }
+  }
+
+  async function indexDocPage(filePath: string): Promise<void> {
+    const raw = await fs.readFile(filePath, 'utf-8')
+    const { title, description, body } = mdxToMarkdown(raw)
+    const slug = path.relative(docsRoot, filePath).replace(/\\/g, '/').replace(/(\/index)?\.mdx$/, '')
+    const pageTitle = title ?? slug
+    const sections = splitMarkdownSections(normalizeMarkdownContent(body))
+
+    sections.forEach((section, index) => {
+      const heading = section.heading.trim()
+      const sectionTitle = heading === pageTitle || heading === 'Overview' ? pageTitle : `${pageTitle} — ${heading}`
+      entries.push({
+        id: `docs-${slugify(slug)}-${index}`,
+        type: 'documentation',
+        title: sectionTitle,
+        content: [sectionTitle, index === 0 ? description : null, section.body].filter(Boolean).join('\n').trim(),
+        metadata: { source: `docs/${slug}`, category: pageTitle },
+      })
+    })
+  }
+
+  await walk(docsRoot)
+  return entries
+}
+
+/**
+ * Index the customer Help Center articles shown at /help, one entry per
+ * section. They are written for customers, so they rank as store pages.
+ */
+export async function indexHelpArticles(): Promise<IndexedContent[]> {
+  const articles = await getHelpArticles()
+
+  return articles.flatMap((article) => {
+    const url = helpArticleUrl(article.slug)
+    const sections = splitMarkdownSections(normalizeMarkdownContent(mdxToMarkdown(article.body).body))
+
+    return sections.map((section, index) => {
+      const heading = section.heading.trim()
+      const title = heading === 'Overview' ? article.title : `${article.title} — ${heading}`
+      return {
+        id: `help-${article.slug}-${index}`,
+        type: 'page' as const,
+        title,
+        content: [title, index === 0 ? article.description : null, section.body].filter(Boolean).join('\n').trim(),
+        metadata: { path: url, category: article.title },
+      }
+    })
+  })
+}
+
+/**
+ * Index the published posts from the developer blog on /developer/blog.
+ */
+export async function indexDeveloperBlogPosts(): Promise<IndexedContent[]> {
+  const posts = await prisma.developerBlogPost.findMany({
+    where: { published: true },
+    orderBy: { publishedAt: 'desc' },
+  })
+
+  return posts.map((post) => ({
+    id: `developer-blog-${post.id}`,
+    type: 'documentation' as const,
+    title: post.title,
+    content: [`Developer blog: ${post.title}`, post.excerpt, normalizeMarkdownContent(post.content)]
+      .filter(Boolean)
+      .join('\n'),
+    metadata: { path: `/developer/blog/${post.slug}`, tags: post.tags },
+  }))
 }
 
 /**
@@ -370,14 +490,18 @@ async function indexTrainingDocuments(): Promise<IndexedContent[]> {
  * Index all content from the repository
  */
 export async function indexAllContent(): Promise<IndexedContent[]> {
-  const [products, recipes, pages, markdownPages, markdownLocations, trainingDocs] = await Promise.all([
-    safeIndex('index products', indexProducts, () => [] as IndexedContent[]),
-    safeIndex('index recipes', indexRecipes, () => [] as IndexedContent[]),
-    safeIndex('index static pages', indexPages, () => [] as IndexedContent[]),
-    safeIndex('index public markdown content', indexPublicMarkdownContent, () => [] as IndexedContent[]),
-    safeIndex('index markdown locations', indexMarkdownLocations, () => [] as IndexedContent[]),
-    safeIndex('index training documents', indexTrainingDocuments, () => [] as IndexedContent[]),
-  ])
+  const [products, recipes, pages, markdownPages, markdownLocations, trainingDocs, helpArticles, documentation, developerBlog] =
+    await Promise.all([
+      safeIndex('index products', indexProducts, () => [] as IndexedContent[]),
+      safeIndex('index recipes', indexRecipes, () => [] as IndexedContent[]),
+      safeIndex('index static pages', indexPages, () => [] as IndexedContent[]),
+      safeIndex('index public markdown content', indexPublicMarkdownContent, () => [] as IndexedContent[]),
+      safeIndex('index markdown locations', indexMarkdownLocations, () => [] as IndexedContent[]),
+      safeIndex('index training documents', indexTrainingDocuments, () => [] as IndexedContent[]),
+      safeIndex('index help articles', indexHelpArticles, () => [] as IndexedContent[]),
+      safeIndex('index documentation', indexDocumentation, () => [] as IndexedContent[]),
+      safeIndex('index developer blog posts', indexDeveloperBlogPosts, () => [] as IndexedContent[]),
+    ])
 
   let locations = await safeIndex('index database locations', indexLocations, () => [] as IndexedContent[])
 
@@ -394,5 +518,15 @@ export async function indexAllContent(): Promise<IndexedContent[]> {
     }
   }
 
-  return [...products, ...recipes, ...locations, ...pages, ...markdownPages, ...trainingDocs]
+  return [
+    ...products,
+    ...recipes,
+    ...locations,
+    ...pages,
+    ...markdownPages,
+    ...trainingDocs,
+    ...helpArticles,
+    ...documentation,
+    ...developerBlog,
+  ]
 }

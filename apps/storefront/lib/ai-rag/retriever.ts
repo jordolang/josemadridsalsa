@@ -2,6 +2,8 @@
 
 import type { IndexedContent } from './indexer'
 
+const DOCUMENTATION_WEIGHT = 0.5
+
 /**
  * Simple text-based search (can be upgraded to embeddings later)
  * Searches for relevant content based on keywords in the query
@@ -50,6 +52,12 @@ export function searchContent(
     }
     if (item.type === 'location' && (lowerQuery.includes('store') || lowerQuery.includes('where') || lowerQuery.includes('buy') || lowerQuery.includes('find'))) {
       score += 15
+    }
+
+    // The docs site is large and written for staff and developers, so its
+    // sections rank below store content that matches equally well.
+    if (item.type === 'documentation') {
+      score *= DOCUMENTATION_WEIGHT
     }
 
     return { item, score }

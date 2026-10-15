@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Picante knows the help and developer docs.** The AI chat's knowledge index now includes the
+  customer Help Center articles at `/help`, every page of the documentation site (`apps/docs`),
+  split by section, and the published developer blog posts. Docs rank below store content that matches equally well, and Picante leaves out
+  implementation details unless a staff member or developer asks.
 - **Google Merchant Center feed file.** `npm run products:feed --workspace @jose-madrid/storefront
   [-- --apply]` writes every active product to `public/merchant-center-feed.xml` (RSS 2.0, `g:`
   namespace) for a daily scheduled fetch: built titles with flavor, heat and jar size, padded
@@ -294,6 +298,8 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Picante's replies show formatting.** Bold, italics, lists, links, headings and tables in chat
+  replies now render as formatted text instead of raw `**` and `#` characters.
 - **Clicking a merch product showed "404 page not found".** Printify answers 400 "Validation
   failed", not 404, when a product id belongs to a different shop, so looking a product up
   stopped at the first shop instead of moving on to the Etsy-connected one. Those products could
