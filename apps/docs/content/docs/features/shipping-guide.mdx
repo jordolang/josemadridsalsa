@@ -33,7 +33,7 @@ The shipping system calculates real-time rates from carrier APIs (EasyPost or Sh
 
 1. **Never block checkout** - All errors fall back to estimate rates
 2. **Server-side truth** - Shipping cost is always recalculated server-side; client values are never trusted
-3. **No free shipping** - Shipping is charged on every order, without exception
+3. **No free-shipping threshold** - Shipping is charged on every storefront order; free shipping exists only for 96+ jar fundraiser orders and negotiated distributor/wholesale freight, arranged outside checkout
 4. **Configurable** - The warehouse origin address and enabled carriers are managed from the admin panel
 4. **PO Box aware** - Automatically filters to USPS-only options for PO Box addresses
 
@@ -61,7 +61,7 @@ Checkout Page                     Server
     |                    +----------+-----------+
     |                    |  calculateShipping() |
     |                    |                      |
-    |                    |  1. Free threshold?  |
+    |                    |  1. Rate config      |
     |                    |  2. Carrier API call |
     |                    |  3. Fallback rates   |
     |                    +----------+-----------+
