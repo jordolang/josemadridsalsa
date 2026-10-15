@@ -20,6 +20,10 @@ the root `package.json` is canonical.
   descriptions, GTIN from `Product.barcode`, Google category 1702 (Dips & Spreads > Salsa),
   `product_type` from the salsa category and heat in `custom_label_0`. Products missing a slug,
   price, barcode or image are listed and left out. Dry run by default.
+- **Design System and Product Brief docs.** The storefront's design rules (palette, type, components,
+  the Night Earth redesign) and its product brief (audience, positioning, confirmed awards and
+  figures, product principles) are now pages under Guides, replacing loose root `DESIGN.md` and
+  `PRODUCT.md` files.
 - **Customer Help Center at `/help`.** One page where customers search the knowledge base, jump to
   order tracking, shipping, returns or contact, and read the FAQ. Articles live in a new
   customer-only `help` section of salsadocs (`apps/docs/content/docs/help`), which now exposes a
