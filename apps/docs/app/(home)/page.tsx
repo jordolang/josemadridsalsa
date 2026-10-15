@@ -8,6 +8,7 @@ import {
   Code2,
   Layers,
   LayoutDashboard,
+  LifeBuoy,
   Plug,
   Rocket,
   Settings,
@@ -81,6 +82,27 @@ const platform = [
   },
 ];
 
+const audiences = [
+  {
+    eyebrow: 'For customers',
+    title: 'Customer Help Center',
+    description:
+      'Ordering, shipping, fundraisers, your account, and fixes for common problems, in plain English.',
+    href: '/help',
+    cta: 'Get help',
+    icon: LifeBuoy,
+  },
+  {
+    eyebrow: 'For developers',
+    title: 'Developer Documentation',
+    description:
+      'Architecture, feature guides, API reference, integrations, and deployment runbooks.',
+    href: '/docs',
+    cta: 'Read the docs',
+    icon: Code2,
+  },
+];
+
 const quickStart = [
   { comment: '# from the repository root' },
   { command: 'npm install --legacy-peer-deps' },
@@ -108,7 +130,7 @@ export default function Home() {
             />
             <div className="text-[15px] font-semibold tracking-tight">Jose Madrid Salsa</div>
             <div className="hidden rounded-md border border-stone-200 px-1.5 py-0.5 text-[11px] font-medium text-stone-500 sm:inline dark:border-stone-700 dark:text-stone-400">
-              Docs
+              Help &amp; Docs
             </div>
           </Link>
           <div className="flex items-center gap-6">
@@ -126,16 +148,22 @@ export default function Home() {
             </Link>
             <Link
               href="/docs"
+              className="hidden text-sm text-stone-600 transition-colors hover:text-stone-900 sm:inline dark:text-stone-400 dark:hover:text-white"
+            >
+              Developers
+            </Link>
+            <Link
+              href="/help"
               className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
             >
-              Read the docs
+              Get help
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* ─── HERO ─── */}
+      {/* ─── HERO: AUDIENCE CHOOSER ─── */}
       <section className="relative overflow-hidden border-b border-stone-200/80 dark:border-stone-800">
         <div
           aria-hidden
@@ -146,17 +174,62 @@ export default function Home() {
             backgroundSize: '48px 48px',
           }}
         />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 md:py-28 lg:grid-cols-[1.15fr_1fr]">
+        <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <div className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-red-700 dark:text-red-400">
+            Help Center &amp; documentation
+          </div>
+          <h1
+            className="mb-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl lg:text-[3.5rem]"
+            style={serif}
+          >
+            How can we help you?
+          </h1>
+          <div className="mb-12 max-w-xl text-lg leading-relaxed text-stone-600 dark:text-stone-400">
+            Shopping for salsa or running a fundraiser? Start with the Help Center. Building on
+            the platform? Head to the developer docs.
+          </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {audiences.map((a) => (
+              <Link
+                key={a.href}
+                href={a.href}
+                className="group flex flex-col rounded-xl border border-stone-200 bg-white p-7 shadow-sm transition-all hover:border-red-700/40 hover:shadow-md dark:border-stone-800 dark:bg-stone-950 dark:hover:border-red-400/40"
+              >
+                <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-red-700 dark:border-stone-700 dark:bg-stone-900 dark:text-red-400">
+                  <a.icon className="h-5 w-5" strokeWidth={1.75} />
+                </div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-stone-400">
+                  {a.eyebrow}
+                </div>
+                <h2 className="mb-2 text-2xl font-bold tracking-tight" style={serif}>
+                  {a.title}
+                </h2>
+                <div className="mb-6 leading-relaxed text-stone-600 dark:text-stone-400">
+                  {a.description}
+                </div>
+                <div className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-red-700 dark:text-red-400">
+                  {a.cta}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── DEVELOPER INTRO ─── */}
+      <section className="relative overflow-hidden border-b border-stone-200/80 dark:border-stone-800">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.15fr_1fr]">
           <div>
             <div className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-red-700 dark:text-red-400">
-              Platform documentation
+              For developers
             </div>
-            <h1
-              className="mb-6 text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl lg:text-[3.5rem]"
+            <h2
+              className="mb-6 text-3xl font-bold leading-[1.1] tracking-tight md:text-4xl"
               style={serif}
             >
               Everything you need to build and run Jose Madrid Salsa.
-            </h1>
+            </h2>
             <div className="mb-10 max-w-xl text-lg leading-relaxed text-stone-600 dark:text-stone-400">
               Architecture, feature guides, API reference, integrations, and deployment
               runbooks for the storefront, fundraising, and admin apps.

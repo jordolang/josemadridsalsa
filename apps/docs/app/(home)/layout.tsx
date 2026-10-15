@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Jose Madrid Salsa Documentation',
+  title: 'Jose Madrid Salsa Help Center & Docs',
   description:
-    'Technical documentation for Jose Madrid Salsa — features, API reference, deployment guides, and developer resources.',
+    'Customer help for ordering, shipping, fundraisers, and accounts, plus developer documentation for the Jose Madrid Salsa platform.',
 };
 
 export default function HomeLayout({

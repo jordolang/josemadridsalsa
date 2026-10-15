@@ -5,6 +5,10 @@ export const docs = defineDocs({
   dir: 'content/docs',
 });
 
+export const help = defineDocs({
+  dir: 'content/help',
+});
+
 export default defineConfig({
   mdxOptions: {
     remarkPlugins: [remarkMdxMermaid],

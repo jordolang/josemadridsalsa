@@ -141,7 +141,7 @@ The shipping calculator falls back to estimate rates when the carrier API fails.
 
 ### Shipping Shows as $0
 
-It should not. **There is no free shipping.** Shipping is charged on every order, without exception. A zero shipping line means the carrier returned no
+It should not. **There is no free-shipping threshold.** Shipping is charged on every storefront order. The only exceptions are fundraiser orders of 96 jars or more and freight negotiated with distributor/wholesale accounts, which are arranged outside storefront checkout. A zero shipping line means the carrier returned no
 rates *and* the estimate fallback produced nothing — check the warehouse origin is set:
 
 ```sql
