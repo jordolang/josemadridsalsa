@@ -61,7 +61,9 @@ export function toHelpResults(hits: DocsSearchHit[]): HelpArticleResult[] {
 export async function searchHelpArticles(query: string): Promise<HelpArticleResult[] | null> {
   try {
     const res = await fetch(`${SALSADOCS_URL}/api/search?query=${encodeURIComponent(query)}`, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 300 },
+      // A slow docs deploy must not stall the whole /help page; the catch turns it into "unavailable".
+      signal: AbortSignal.timeout(3000),
     })
     if (!res.ok) return null
     return toHelpResults((await res.json()) as DocsSearchHit[])
