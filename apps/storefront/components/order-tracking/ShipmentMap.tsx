@@ -24,7 +24,9 @@ export function ShipmentMap({ location, delivered }: { location: string | null; 
           src={src}
           className="size-full border-0"
           loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
+          // Origin only: the order page's query string carries the order access token, which
+          // must not reach Google in the Referer. The origin still satisfies key restrictions.
+          referrerPolicy="strict-origin"
           allowFullScreen
         />
       </div>
