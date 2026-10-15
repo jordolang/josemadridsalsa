@@ -1,55 +1,59 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  SALSADOCS_URL,
-  helpQuerySchema,
-  searchHelpArticles,
-  toHelpResults,
-  type DocsSearchHit,
-} from '@/lib/help/search'
+import { describe, expect, it } from 'vitest'
+import { getHelpArticles, getHelpNav } from '@/lib/help/articles'
+import { helpQuerySchema, searchArticles, searchHelpArticles, toSections } from '@/lib/help/search'
+import { slugify } from '@/lib/help/slugify'
+import type { HelpArticle } from '@/lib/help/articles'
 
-const hit = (type: DocsSearchHit['type'], url: string, content: string): DocsSearchHit => ({
-  id: `${url}-${content}`,
-  type,
-  url,
-  content,
+const article = (slug: string, title: string, body: string): HelpArticle => ({
+  slug,
+  title,
+  description: '',
+  body,
 })
 
-describe('toHelpResults', () => {
-  it('drops internal docs and look-alike paths', () => {
-    const results = toHelpResults([
-      hit('page', '/docs/configuration/environment-variables', 'Environment variables'),
-      hit('page', '/docs/helpers/thing', 'Helpers'),
-      hit('page', '/docs/help/returns-and-refunds', 'Returns and refunds'),
-    ])
-
-    expect(results).toEqual([
-      { title: 'Returns and refunds', url: `${SALSADOCS_URL}/docs/help/returns-and-refunds` },
-    ])
+describe('slugify', () => {
+  it('matches github-slugger anchors used by salsadocs links', () => {
+    expect(slugify('Our Return & Refund Policy')).toBe('our-return--refund-policy')
+    expect(slugify('Forgot your password?')).toBe('forgot-your-password')
   })
+})
 
-  it('keeps the help index page itself', () => {
-    expect(toHelpResults([hit('page', '/docs/help', 'Customer Help')])).toHaveLength(1)
-  })
-
-  it('groups a page with its first matching section as the snippet and anchor', () => {
-    const results = toHelpResults([
-      hit('page', '/docs/help/returns-and-refunds', 'Returns and refunds'),
-      hit('heading', '/docs/help/returns-and-refunds#who-pays-return-shipping', 'Who pays return shipping?'),
-      hit('text', '/docs/help/returns-and-refunds#when-do-i-get-my-refund', 'Once we receive…'),
-    ])
-
-    expect(results).toEqual([
+describe('toSections', () => {
+  it('splits at headings and keeps accordion questions searchable', () => {
+    const sections = toSections(
+      'Intro text\n\n## Who pays return shipping?\n\n<Accordion title="Can I swap flavors?">\nYes, **gladly**.\n</Accordion>',
+    )
+    expect(sections).toEqual([
+      { anchor: null, heading: null, text: 'Intro text' },
       {
-        title: 'Returns and refunds',
-        url: `${SALSADOCS_URL}/docs/help/returns-and-refunds#who-pays-return-shipping`,
-        snippet: 'Who pays return shipping?',
+        anchor: 'who-pays-return-shipping',
+        heading: 'Who pays return shipping?',
+        text: 'Can I swap flavors? Yes, gladly.',
       },
     ])
   })
+})
+
+describe('searchArticles', () => {
+  const articles = [
+    article('returns', 'Returns', '## Broken jars\n\nSend us a photo of the broken jar.\n\n## Refund timing\n\nRefunds take 5 days.'),
+    article('shipping', 'Shipping & Tracking', '## Tracking\n\nUse the tracking link in your email.'),
+  ]
+
+  it('links to the best matching section with a snippet', () => {
+    expect(searchArticles(articles, 'broken photo')).toEqual([
+      { title: 'Returns', url: '/help/returns#broken-jars', snippet: 'Send us a photo of the broken jar.' },
+    ])
+  })
+
+  it('requires every word and ranks title matches first', () => {
+    expect(searchArticles(articles, 'refund nonsense')).toEqual([])
+    expect(searchArticles(articles, 'tracking').map((r) => r.url)).toEqual(['/help/shipping#tracking'])
+  })
 
   it('caps the list at 8 articles', () => {
-    const hits = Array.from({ length: 12 }, (_, i) => hit('page', `/docs/help/a-${i}`, `A ${i}`))
-    expect(toHelpResults(hits)).toHaveLength(8)
+    const many = Array.from({ length: 12 }, (_, i) => article(`a-${i}`, `Salsa ${i}`, 'salsa'))
+    expect(searchArticles(many, 'salsa')).toHaveLength(8)
   })
 })
 
@@ -61,31 +65,16 @@ describe('helpQuerySchema', () => {
   })
 })
 
-describe('searchHelpArticles', () => {
-  afterEach(() => vi.unstubAllGlobals())
-
-  it('returns null when salsadocs is unreachable or errors', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-    expect(await searchHelpArticles('shipping')).toBeNull()
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('nope', { status: 500 })))
-    expect(await searchHelpArticles('shipping')).toBeNull()
+describe('content/help', () => {
+  it('loads every article listed in meta.json into the sidebar', async () => {
+    const [articles, nav] = await Promise.all([getHelpArticles(), getHelpNav()])
+    expect(articles.map((a) => a.slug)).toContain('index')
+    expect(nav.flatMap((s) => s.articles)).toHaveLength(articles.length - 1)
+    expect(nav.map((s) => s.title)).toEqual(['Shopping', 'Fundraisers', 'Your Account'])
   })
 
-  it('encodes the query and filters the response', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json([
-        hit('page', '/docs/help/shipping-and-tracking', 'Shipping and tracking'),
-        hit('page', '/docs/api/orders', 'Orders API'),
-      ]),
-    )
-    vi.stubGlobal('fetch', fetchMock)
-
-    const results = await searchHelpArticles('track & ship')
-
-    expect(fetchMock.mock.calls[0][0]).toBe(`${SALSADOCS_URL}/api/search?query=track%20%26%20ship`)
-    expect(results).toEqual([
-      { title: 'Shipping and tracking', url: `${SALSADOCS_URL}/docs/help/shipping-and-tracking` },
-    ])
+  it('finds real articles', async () => {
+    const [first] = await searchHelpArticles('broken jar')
+    expect(first.url).toMatch(/^\/help\/returns/)
   })
 })
