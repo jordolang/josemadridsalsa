@@ -32,6 +32,16 @@ the root `package.json` is canonical.
   explains that event travel can delay online orders and points customers to `/order-tracking`.
 
 ### Added
+- **Google Merchant Center feed file.** `npm run products:feed --workspace @jose-madrid/storefront
+  [-- --apply]` writes every active product to `public/merchant-center-feed.xml` (RSS 2.0, `g:`
+  namespace) for a daily scheduled fetch: built titles with flavor, heat and jar size, padded
+  descriptions, GTIN from `Product.barcode`, Google category 1702 (Dips & Spreads > Salsa),
+  `product_type` from the salsa category and heat in `custom_label_0`. Products missing a slug,
+  price, barcode or image are listed and left out. Dry run by default.
+- **Design System and Product Brief docs.** The storefront's design rules (palette, type, components,
+  the Night Earth redesign) and its product brief (audience, positioning, confirmed awards and
+  figures, product principles) are now pages under Guides, replacing loose root `DESIGN.md` and
+  `PRODUCT.md` files.
 - **Customer Help Center at `/help`.** One page where customers search the knowledge base, jump to
   order tracking, shipping, returns or contact, and read the FAQ. Articles live in a new
   customer-only `help` section of salsadocs (`apps/docs/content/docs/help`), which now exposes a

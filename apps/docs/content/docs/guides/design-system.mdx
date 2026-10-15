@@ -1,0 +1,263 @@
+---
+title: Design System
+description: "The storefront's visual language: Festival Booth direction, Salsa Red and Desert Sun Gold palette, Volkhov and Montserrat type, and component rules"
+---
+
+## Overview
+
+**Creative North Star: "The Festival Booth"**
+
+The storefront is the tent where most customers first tasted the salsa, put online. A booth is warm and lively. The jars sit up front where you can grab them, the signage is hand-confident, and there is a person behind the table who knows every flavor. On screen that becomes a single loud brand red, a serif voice that tells the family story with some swagger, and product cards that lift off the page as if you'd picked them up off the table. Gold arrives for the evening moments: the hero and premium calls to action, lit like string lights over the booth.
+
+Density is relaxed on marketing and catalog surfaces, with generous section rhythm and big product imagery. It tightens to standard shadcn proportions inside account, checkout, and admin. The booth's energy lives in color, type, and hover motion. Spacing and alignment stay disciplined, so the liveliness reads as craft rather than clutter.
+
+**Key Characteristics:**
+- One dominant brand accent (Salsa Red), with Desert Sun Gold as a secondary reserved for hero and premium moments.
+- Serif (Volkhov) for every headline and Montserrat for everything else, plus tracked uppercase eyebrows above section headlines.
+- Lifted, warm surfaces. Product cards glow orange and rise on hover.
+- Warm stone neutrals, never cool grey, as the base canvas.
+- Light mode is the storefront default for page bodies. The homepage, header, and footer use the Night Earth redesign (see below). A dark theme exists through the `.dark` class.
+
+## Colors
+
+The palette is a hot red and a sun-baked gold over warm stone, with amber and green held back for gradients and status.
+
+### Primary
+- **Salsa Red** (`salsa-red`): the brand. It fills primary buttons, sale badges, eyebrow text, link hovers, focus rings on brand inputs, and section accents. **Salsa Red Deep** (`salsa-red-deep`) is its hover/pressed state and the most-used red in the code. **Salsa Red Ink** (`salsa-red-ink`) is red text on tinted grounds. **Salsa Red Wash** (`salsa-red-wash`) is the tinted ground for highlighted rows, active mobile-nav items, and soft callouts.
+
+### Secondary
+- **Desert Sun Gold** (`desert-sun-gold`): the evening accent. It fills the hero's pill call to action on the dark hero ground. **Desert Sun Gold Light** is its hover state. **Desert Sun Gold Eyebrow** is the tracked eyebrow text above hero headlines on dark grounds. Gold always sits on Night Earth or Night Ink, never on white, where it fails contrast.
+
+### Tertiary
+- **Chile Amber** (`chile-amber`, deep `chile-amber-deep`): the warm end of the red-to-amber brand gradient (hero gradients, gradient headline text) and of the notification dot. It is not a standalone fill.
+- **Verde** (`verde`): in-stock, success, and "new" states only.
+
+### Neutral
+- **Canvas** (`canvas`): page and card ground.
+- **Ink** (`ink`): body and headline text. It is a near-black warm brown, not pure black.
+- **Stone Muted** (`stone-muted`): image wells behind product photos, input fills in the nav search, and quiet panels.
+- **Stone Muted Ink** (`stone-muted-ink`): secondary text, descriptions, and struck-through prices. It is the most-used text color after Ink.
+- **Stone Border** (`stone-border`): hairline borders and input strokes.
+- **Night Earth / Night Ink** (`night-earth`, `night-ink`): the dark hero ground, and text on gold.
+
+### Named Rules
+**The One Red Rule.** Salsa Red is the only color that says "act". Calls to action, sale badges, and brand emphasis use it. Don't introduce a second action color (blue links, green buy buttons).
+
+**The Gold After Dark Rule.** Desert Sun Gold appears only on Night Earth/Night Ink grounds, and only for hero-level moments. Gold on white is forbidden.
+
+**The Warm Stone Rule.** Neutrals come from the warm stone family. The cool `slate-*` and `gray-*` utilities scattered through older components are drift, not system.
+
+## Typography
+
+**Display Font:** Volkhov (with Georgia, serif)
+**Body Font:** Montserrat (with system-ui, sans-serif)
+**Label/Mono Font:** Montserrat for labels; Roboto Mono for order numbers, SKUs and codes
+
+**Character:** Volkhov is a sturdy slab-leaning serif with old-sign-painter confidence. It carries the heritage voice. Montserrat is geometric and friendly and does the selling and the reading. Every size is fluid (`clamp()`), so body text never drops below 16px on mobile.
+
+### Hierarchy
+- **Display** (Volkhov 700, `display` clamp, line-height 0.94): hero headlines only. Set tight, often capped near 9ch wide so it stacks into a poster.
+- **Headline** (Volkhov 700, `headline` clamp scaling up to the 5xl step on desktop, tracking -0.02em): section headlines ("Shop by heat", "Our story").
+- **Title** (Volkhov 700, `title` clamp): card and stat titles, numeric callouts in Salsa Red.
+- **Body** (Montserrat 400, `body` clamp, line-height 1.6): descriptions and story copy. Keep long-form copy to 65–75ch.
+- **Label** (Montserrat 600, `label` size, tracking 0.1–0.22em, uppercase): eyebrows above headlines in Salsa Red (or Desert Sun Gold Eyebrow on dark), stat captions, and nav section labels.
+
+### Named Rules
+**The Eyebrow-Then-Serif Rule.** Section openings pair an uppercase tracked Montserrat eyebrow in Salsa Red with a Volkhov headline. Don't stack two serif lines, and don't use a sans headline on a marketing section.
+
+## Layout
+
+Content sits in a centered container capped at 1280px (`max-w-7xl`), with gutters of 16px on mobile, 24px at `sm`, and 32px at `lg`. Marketing sections breathe on a vertical rhythm of 48px, 64px, and 80px (`py-12`, `py-16`, `py-20`), stepping up with the breakpoint. Product grids run one column on phones, then two, three, and four as width allows. Tailwind's default breakpoints (640/768/1024/1280) are in force. The header is a sticky 72px bar with a translucent, blurred canvas behind it. Desktop shows centered nav links; below `lg` they collapse into a mobile menu with 44px-minimum touch rows. Account, checkout, and admin surfaces drop to standard shadcn density: `h-9` controls, tighter cards.
+
+## Elevation & Depth
+
+This is a lifted system. Surfaces cast soft, wide, low-opacity shadows (deep slate at 8%), so cards sit just above the canvas. Product cards add a warm orange underglow and rise 12px on hover, like a jar being picked up off the booth table, with a one-pass light shimmer across the face. In dark mode the glows turn Salsa Red. Shadows grow on hover; they never appear from nothing.
+
+### Shadow Vocabulary
+- **Surface** (`box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08)`, hover `0 24px 55px rgba(15, 23, 42, 0.12)`): base cards and panels (`.card`, `.surface-shadow`).
+- **Booth Glow** (`box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 15px 30px rgba(234, 88, 12, 0.15)`): product cards at rest (`.interactive-card`).
+- **Booth Glow Lifted** (`box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18), 0 25px 50px rgba(234, 88, 12, 0.3)`, with `translateY(-12px)`): product cards on hover/focus-within.
+- **Red Press** (`box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4)`, with `translateY(-2px)`): primary button hover.
+
+### Named Rules
+**The Picked-Up Rule.** Hover lifts the thing you can buy. Cards and buttons rise on hover/focus and settle on press. Static informational panels get the Surface shadow but do not lift.
+
+## Shapes
+
+The shapes are softly rounded and friendly, never sharp. The base radius is 8px (`--radius`), with 6px and 4px derived steps for small controls. Cards use 12px. Feature panels and image frames step up to 16px (`rounded-2xl`, the most-used large radius). Pills (`rounded-full`) are reserved for the hero call to action, badges, the notification dot, and icon buttons. Borders are 1px Stone Border hairlines. Product photos sit `object-contain` in a Stone Muted well, so jars are never cropped.
+
+## Components
+
+The components are warm and grabbable: generous hit areas, rounded corners, a little lift, and you want to pick them up.
+
+### Buttons
+- **Shape:** gently rounded (8px) for standard buttons; full pill for the hero gold button.
+- **Primary:** Salsa Red fill, white text, 12px × 24px padding, Montserrat 500. Hover deepens to Salsa Red Deep, lifts 2px, and casts Red Press; it settles on active. The focus ring is a 2px Salsa Red ring with offset.
+- **Secondary:** Canvas fill, Stone Border hairline, Ink text, same shape and padding. Hover lifts 2px with a neutral shadow.
+- **Hero Gold:** Desert Sun Gold pill, Night Ink text, uppercase bold, 48px minimum height, on the dark hero only. Hover goes to Desert Sun Gold Light; focus is a white 2px outline offset 4px.
+- **Utility (shadcn `Button`):** the `h-9` stone-primary default stays in account, checkout, and admin. On marketing and catalog surfaces, override it to the Salsa Red primary.
+
+### Chips / Badges
+- **Style:** small pills over product imagery (top-left stack). Sale badges are Salsa Red with white text. "New" and in-stock badges are Verde with white text.
+
+### Cards / Containers
+- **Corner Style:** 12px (product card); 16px for feature panels.
+- **Background:** Canvas, with a Stone Muted image well at least 300px tall.
+- **Shadow Strategy:** Booth Glow, lifting to Booth Glow Lifted (see Elevation).
+- **Border:** none on product cards; a Stone Border hairline on `.card` panels.
+- **Internal Padding:** 16–24px. The title is Montserrat 600 `lg`, clamped to 2 lines, and turns Salsa Red Deep on hover. The price is bold `xl` Ink, with the compare-at price struck through in Stone Muted Ink.
+- **Hover affordances:** a 64px round white quick-view button fades in at the center of the image, ringed in Salsa Red at 50%. The image scales 105%.
+
+### Inputs / Fields
+- **Style:** Canvas fill, Stone Border stroke, 8px radius, 12px × 16px padding. The nav search is a compact `h-9` variant with a Stone Muted fill.
+- **Focus:** the border turns Salsa Red, plus a 1–2px Salsa Red ring; the search fill brightens to Canvas.
+- **Error / Disabled:** Destructive red text and stroke for errors; disabled controls drop to 50% opacity.
+
+### Navigation
+- **Style:** a sticky 72px bar with Canvas at 90% opacity and backdrop blur, finished by a Stone Border hairline at 60%. The logo tilts -4° on hover. Desktop links sit centered. Icon actions (search, account, cart) sit right, and an amber pulse dot signals new notifications.
+- **Mobile:** a drawer of 44px-minimum rows. The active or featured row is Salsa Red Wash with Salsa Red Ink text, and section labels are 11px uppercase Salsa Red tracked 0.22em. Rows scale to 98% on press.
+
+### Dark Hero (signature)
+A full-bleed Night Earth ground behind real product photography. A Desert Sun Gold Eyebrow sits above a Volkhov display headline in white, held to about 9ch, followed by the Hero Gold pill call to action. It is the one place gold leads.
+
+## Night Earth Redesign (2026-10)
+
+The owner's approved homepage comp (`.impeccable/mocks/home-approved.png`) replaces the light storefront look on the homepage and on the shared header and footer, which carry it to every page. Other page bodies keep the light system above until they are redesigned.
+
+- **Ground:** Night Earth (`night-earth`, #070503) for the header, hero, values band, and footer; a barn-wood texture (`/images/home/redesign/wood-texture.webp`) behind the shop band; warm parchment (`cream-band.webp`) behind the community tiles. A woven serape stripe (`border-pattern.webp`) closes the footer.
+- **Action color on dark grounds:** Desert Sun Gold (`desert-sun-gold`, hover `desert-sun-gold-light`) fills primary buttons and accents. This extends the Gold After Dark Rule: gold acts only on Night Earth, never on white. On light page bodies, Salsa Red is still the only action color.
+- **Display type:** Oswald (`.font-western`, `--font-oswald`), condensed bold uppercase with slight tracking, for headlines, section titles, nav labels, and button labels. Volkhov stays for serif subheads.
+- **Script:** Yellowtail (`.font-script`, `--font-yellowtail`) in gold for the "Salsa Kings" tagline and "Good Food. Stronger Communities." only.
+- **Buttons:** square-cornered (3px). Gold filled for the primary action; a 1px white or gold outline for secondary actions; 44px minimum height.
+- **Cards:** dark panels with a hairline warm border; a gold-ringed circular icon overlaps the photo's bottom edge.
+- **Imagery:** real jar cutouts (`/images/kiosk/jar-*.webp`) wherever a jar appears. Scene photography in `/images/home/redesign/` is generated stand-in art the owner approved on 2026-10-12, to be replaced with real photos when available.
+
+## Do's and Don'ts
+
+### Do:
+- **Do** use Salsa Red for every primary action and sale signal on customer-facing surfaces, with Salsa Red Deep for hover.
+- **Do** open marketing sections with a Salsa Red uppercase eyebrow over a Volkhov headline.
+- **Do** lift purchasable cards on hover (Booth Glow → Booth Glow Lifted, -12px) and settle them on press.
+- **Do** show jars whole: `object-contain` in a Stone Muted well, never cropped.
+- **Do** keep touch rows at least 44px and focus rings visible (Salsa Red ring, or a white outline on dark grounds) to hold WCAG 2.2 AA.
+- **Do** use the fluid type scale in `tailwind.config.ts`. Never hard-code a px font size for body copy.
+
+### Don't:
+- **Don't** put Desert Sun Gold on a white or light ground. It fails contrast and breaks the Gold After Dark Rule.
+- **Don't** add a second action color. Verde marks status, not "buy".
+- **Don't** reach for `slate-*` or `gray-*` in new work; use the warm stone tokens (Ink, Stone Muted, Stone Muted Ink, Stone Border).
+- **Don't** hard-code new hex values in `className` (the existing `[#d9a235]` hero literals are debt). Use the named tokens.
+- **Don't** set headlines in Montserrat on marketing surfaces, or body copy in Volkhov.
+- **Don't** apply the Booth Glow to non-purchasable panels. Informational cards get the plain Surface shadow.
+
+## Design Tokens
+
+The machine-readable token set. `{colors.x}` and `{rounded.x}` reference the tokens above them.
+
+```yaml
+colors:
+  salsa-red: "#e53e3e"
+  salsa-red-deep: "#d53030"
+  salsa-red-ink: "#b91c1c"
+  salsa-red-wash: "#fef2f2"
+  desert-sun-gold: "#d9a235"
+  desert-sun-gold-light: "#e6b54e"
+  desert-sun-gold-eyebrow: "#e0ae4f"
+  chile-amber: "#f59e0b"
+  chile-amber-deep: "#d97706"
+  verde: "#16a34a"
+  night-earth: "#070503"
+  night-ink: "#140d06"
+  canvas: "hsl(0 0% 100%)"
+  ink: "hsl(20 14.3% 4.1%)"
+  stone-muted: "hsl(60 4.8% 95.9%)"
+  stone-muted-ink: "hsl(25 5.3% 44.7%)"
+  stone-border: "hsl(20 5.9% 90%)"
+  destructive: "hsl(0 84.2% 60.2%)"
+typography:
+  display:
+    fontFamily: "Volkhov, Georgia, serif"
+    fontSize: "clamp(3rem, 2.55rem + 2.25vw, 3.75rem)"
+    fontWeight: 700
+    lineHeight: 0.94
+    letterSpacing: "-0.03em"
+  headline:
+    fontFamily: "Volkhov, Georgia, serif"
+    fontSize: "clamp(1.875rem, 1.65rem + 1.125vw, 2.25rem)"
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: "-0.02em"
+  title:
+    fontFamily: "Volkhov, Georgia, serif"
+    fontSize: "clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem)"
+    fontWeight: 700
+    lineHeight: 1.3
+  body:
+    fontFamily: "Montserrat, system-ui, -apple-system, sans-serif"
+    fontSize: "clamp(1rem, 0.95rem + 0.25vw, 1.125rem)"
+    fontWeight: 400
+    lineHeight: 1.6
+  label:
+    fontFamily: "Montserrat, system-ui, sans-serif"
+    fontSize: "clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)"
+    fontWeight: 600
+    lineHeight: 1.5
+    letterSpacing: "0.2em"
+  mono:
+    fontFamily: "Roboto Mono, Menlo, monospace"
+    fontSize: "clamp(0.875rem, 0.825rem + 0.25vw, 1rem)"
+    fontWeight: 400
+rounded:
+  sm: "4px"
+  md: "6px"
+  lg: "8px"
+  xl: "12px"
+  2xl: "16px"
+  full: "9999px"
+spacing:
+  gutter-mobile: "16px"
+  gutter-tablet: "24px"
+  gutter-desktop: "32px"
+  section-sm: "48px"
+  section-md: "64px"
+  section-lg: "80px"
+  container: "1280px"
+components:
+  button-primary:
+    backgroundColor: "{colors.salsa-red}"
+    textColor: "{colors.canvas}"
+    rounded: "{rounded.lg}"
+    padding: "12px 24px"
+  button-primary-hover:
+    backgroundColor: "{colors.salsa-red-deep}"
+  button-secondary:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "12px 24px"
+  button-hero-gold:
+    backgroundColor: "{colors.desert-sun-gold}"
+    textColor: "{colors.night-ink}"
+    rounded: "{rounded.full}"
+    padding: "12px 28px"
+    height: "48px"
+  button-hero-gold-hover:
+    backgroundColor: "{colors.desert-sun-gold-light}"
+  input:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "12px 16px"
+  nav-bar:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    height: "72px"
+  product-card:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.xl}"
+  badge-sale:
+    backgroundColor: "{colors.salsa-red}"
+    textColor: "{colors.canvas}"
+    rounded: "{rounded.full}"
+```
