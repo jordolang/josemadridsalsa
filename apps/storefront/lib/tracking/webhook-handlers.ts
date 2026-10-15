@@ -57,16 +57,21 @@ export async function handleTrackerUpdated(
     return { success: true, message: 'Missing tracking_code' }
   }
 
-  // Find order by tracking code via ShippingLabel
+  // Find the order by tracking code: a label bought through EasyPost, or else a tracking
+  // number recorded by hand (Pirate Ship, a counter), whose tracker the order-tracking page
+  // registers the first time it is viewed.
   const shippingLabel = await prisma.shippingLabel.findFirst({
     where: { trackingCode },
     include: { order: true },
   })
+  const order =
+    shippingLabel?.order ?? (await prisma.order.findFirst({ where: { trackingNumber: trackingCode } }))
 
-  if (!shippingLabel) {
+  if (!order) {
     console.warn('No order found for EasyPost tracking code:', trackingCode)
     return { success: true, message: 'Order not found' }
   }
+  const orderId = order.id
 
   // Update order with tracking information
   const trackingHistory = tracker.tracking_details || []
@@ -88,13 +93,13 @@ export async function handleTrackerUpdated(
 
   // Update shipped timestamp and move the order to SHIPPED on the first
   // in_transit event (idempotent via the shippedAt guard).
-  if (tracker.status === 'in_transit' && !shippingLabel.order.shippedAt) {
+  if (tracker.status === 'in_transit' && !order.shippedAt) {
     transition = 'shipped'
   }
 
   // Update delivered timestamp and move the order to DELIVERED on the first
   // delivered event (idempotent via the deliveredAt guard).
-  if (tracker.status === 'delivered' && !shippingLabel.order.deliveredAt) {
+  if (tracker.status === 'delivered' && !order.deliveredAt) {
     transition = 'delivered'
   }
 
@@ -106,59 +111,61 @@ export async function handleTrackerUpdated(
       updates,
       buildFulfillmentUpdate({
         transition,
-        current: shippingLabel.order,
+        current: order,
         now: carrierTime,
       })
     )
   }
 
   await prisma.order.update({
-    where: { id: shippingLabel.orderId },
+    where: { id: orderId },
     data: updates,
   })
 
   if (transition) {
     // in_transit means the carrier has the goods, so every item on the order has shipped.
     if (isDerivedTransition(transition)) {
-      await fulfillEntireOrder(prisma, shippingLabel.orderId, { via: 'webhook:easypost' })
+      await fulfillEntireOrder(prisma, orderId, { via: 'webhook:easypost' })
     }
 
     await recordFulfillmentEvent({
-      orderId: shippingLabel.orderId,
+      orderId,
       transition,
-      current: shippingLabel.order,
+      current: order,
       eventPayload: { carrierStatus: tracker.status, via: 'webhook:easypost' },
     })
   }
 
   // Update ShippingLabel status
-  await prisma.shippingLabel.update({
-    where: { id: shippingLabel.id },
-    data: { status: tracker.status || 'unknown' },
-  })
+  if (shippingLabel) {
+    await prisma.shippingLabel.update({
+      where: { id: shippingLabel.id },
+      data: { status: tracker.status || 'unknown' },
+    })
+  }
 
   console.log(
     'Order tracking updated via EasyPost webhook:',
-    shippingLabel.orderId,
+    orderId,
     'Status:',
     tracker.status
   )
 
   // Trigger notification emails based on status
   if (tracker.status === 'in_transit' && updates.shippedAt) {
-    sendOrderShippedEmail(shippingLabel.orderId).catch((error) => {
-      console.error('Failed to send shipped email', { orderId: shippingLabel.orderId, error })
+    sendOrderShippedEmail(orderId).catch((error) => {
+      console.error('Failed to send shipped email', { orderId, error })
     })
   }
 
   if (tracker.status === 'delivered' && updates.deliveredAt) {
-    sendOrderDeliveredEmail(shippingLabel.orderId).catch((error) => {
-      console.error('Failed to send delivered email', { orderId: shippingLabel.orderId, error })
+    sendOrderDeliveredEmail(orderId).catch((error) => {
+      console.error('Failed to send delivered email', { orderId, error })
     })
   }
 
   return {
     success: true,
-    message: `Tracking updated successfully for order ${shippingLabel.orderId}`,
+    message: `Tracking updated successfully for order ${orderId}`,
   }
 }

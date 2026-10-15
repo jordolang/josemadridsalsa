@@ -25,6 +25,7 @@ import RefundDialog from '@/components/admin/RefundDialog'
 import UpdateStatusDialog from '@/components/admin/UpdateStatusDialog'
 import TrackingDialog from '@/components/admin/TrackingDialog'
 import SendEmailDialog from '@/components/admin/SendEmailDialog'
+import { CustomerUpdateDialog } from '@/components/admin/CustomerUpdateDialog'
 import PrintInvoiceButton from '@/components/admin/PrintInvoiceButton'
 import PackingSlipButton from '@/components/admin/PackingSlipButton'
 import BuyShippingLabelDialog from '@/components/admin/BuyShippingLabelDialog'
@@ -534,6 +535,7 @@ export default async function OrderDetailPage({
                     currentTrackingNumber={order.trackingNumber}
                     currentStatus={order.status}
                   />
+                  <CustomerUpdateDialog orderId={order.id} orderNumber={order.orderNumber} />
                   <PirateShipDialog
                     orderId={order.id}
                     orderNumber={order.orderNumber}

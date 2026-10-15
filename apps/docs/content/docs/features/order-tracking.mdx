@@ -1,0 +1,41 @@
+---
+title: Order Tracking
+description: The public /order-tracking page, where customers look up an order and see its full history, carrier scans and a map.
+---
+
+# Order Tracking
+
+Customers check an order at **`/order-tracking`** without signing in. There are two ways to look one up:
+
+| Lookup | What it shows |
+|---|---|
+| Order number + the phone number on the order | Everything: the full order history, the shipment, the map, the items and the ship-to city |
+| Tracking number alone | The shipment only, at `/track/<number>`: carrier, scans and map. No emails, notes or items, because tracking numbers are printed on boxes and shared freely |
+
+The phone can match any phone on the order: the guest phone, the account phone, or the shipping or billing address phone. Formatting doesn't matter, but all ten digits must match. A wrong phone and a missing order return the same message, so the form can't be used to find out which order numbers exist. Lookups are rate-limited to 10 per IP every 10 minutes.
+
+A successful lookup goes to `/order-tracking/<orderNumber>?token=…`. The token is the same order access token checkout already uses (`lib/orders/access-token.ts`), so the link keeps working and can be shared with someone else in the household. The page is `noindex`.
+
+## Order history
+
+Newest first, built by `lib/order-tracking/timeline.ts` from:
+
+- **Order received**, from the order's creation time.
+- **Payment received**, for each payment that was paid.
+- **Status changes** (for example *Status: Processing*), from the audit log the admin status dialog writes. Only the new status is shown, never the admin note.
+- **Notes and delays** staff post with **Post Customer Update** on the admin order page. These are stored in `OrderCustomerUpdate` and kept apart from `Order.adminNotes`, which stays private.
+- **Emails from the customer**, from the inbound email sweep (see [Customer Email Triage](/docs/features/customer-email-triage)): anything linked to the order, plus anything from the order's email address since the order was placed. The page shows the subject and the first line the customer wrote.
+- **Emails we sent**, from the email log, when the subject names the order number.
+- **Shipped**, **carrier scans** (with city and state) and **delivered**.
+
+## Shipment, map and live updates
+
+The map is a Google Maps embed centred on the city of the most recent carrier scan. It needs `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. Carriers report a city, not exact coordinates, so the map shows the area the package was last scanned in.
+
+Carrier scans arrive through the EasyPost `tracker.updated` webhook (`app/api/webhooks/easypost`). Labels bought through EasyPost already have a tracker. A tracking number entered by hand gets one the first time its tracking page is viewed: the page registers an EasyPost tracker, saves the current scans, and the webhook keeps the order up to date from then on. This needs `SHIPPING_API_KEY` with EasyPost as the shipping provider.
+
+Both tracking pages refresh themselves every minute while the tab is open, and stop once the order is delivered, cancelled or refunded.
+
+## Text alerts
+
+The opt-in form is built but hidden until `ORDER_SMS_ALERTS_ENABLED=true`. Each opt-in is stored in `OrderSmsSubscription` with the exact consent text, time and IP, as carriers and the TCPA require. Sending isn't wired up yet; turn the flag on only once an SMS provider is connected.

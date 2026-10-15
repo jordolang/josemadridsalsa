@@ -672,6 +672,8 @@ model Order {
   shippingLabels          ShippingLabel[]
   fulfillments            Fulfillment[]
   returnRequests          ReturnRequest[]
+  customerUpdates         OrderCustomerUpdate[]
+  smsSubscriptions        OrderSmsSubscription[]
 
   /// Set when this order is a replacement raised by an exchange rather than a sale.
   ///
@@ -2851,6 +2853,51 @@ model GmailConnection {
 /// reads is written here before anything is sent, and `status` records what happened to
 /// it. `gmailMessageId` is unique, so a re-read of the same message updates one row
 /// rather than answering the customer twice.
+/// A note staff post to an order that the customer sees on the order-tracking page.
+///
+/// Kept apart from `Order.adminNotes`, which is internal and can hold anything. Only rows
+/// in this table are ever shown to a customer.
+model OrderCustomerUpdate {
+  id          String                  @id @default(cuid())
+  orderId     String
+  kind        OrderCustomerUpdateKind @default(NOTE)
+  message     String
+  createdById String?
+  createdAt   DateTime                @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_customer_updates")
+}
+
+enum OrderCustomerUpdateKind {
+  NOTE
+  DELAY
+}
+
+/// A customer's request for text alerts about one order, with the consent they agreed to.
+///
+/// The consent text and time are stored verbatim because carriers and the TCPA require
+/// proof of opt-in for every number we text.
+model OrderSmsSubscription {
+  id             String    @id @default(cuid())
+  orderId        String
+  /// E.164, e.g. +17405551234.
+  phone          String
+  consentText    String
+  consentedAt    DateTime  @default(now())
+  ipAddress      String?
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, phone])
+  @@index([phone])
+  @@map("order_sms_subscriptions")
+}
+
 model InboundEmail {
   id             String               @id @default(cuid())
   connectionId   String

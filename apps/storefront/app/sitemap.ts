@@ -82,6 +82,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${baseUrl}/order-tracking`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
     ...(await getHelpArticles())
       .filter((article) => article.slug !== 'index')
       .map((article) => ({
