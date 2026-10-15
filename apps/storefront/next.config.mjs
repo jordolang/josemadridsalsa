@@ -124,6 +124,9 @@ const nextConfig = {
     '/api/cron/inbox-triage': ['../docs/content/docs/**/*.mdx'],
     '/api/cron/mail-organizer': ['../docs/content/docs/**/*.mdx'],
     '/api/admin/mailbox/organize': ['../docs/content/docs/**/*.mdx'],
+    // /help (search) and the sitemap read the help articles at runtime
+    '/help': ['./content/help/**'],
+    '/sitemap.xml': ['./content/help/**'],
     // The public /developer page reads the monorepo-root CHANGELOG.md at runtime
     '/developer': [
       './CHANGELOG.md',

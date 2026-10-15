@@ -4,6 +4,7 @@ import { getSitemapLandingPages } from '@/lib/cms/queries'
 import { SITE_URL } from '@/lib/site-url'
 import { SALSA_CATEGORIES } from '@/lib/salsa-categories'
 import { getMerchCatalog } from '@/lib/merchandise/catalog'
+import { getHelpArticles, helpArticleUrl } from '@/lib/help/articles'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let baseUrl = SITE_URL
@@ -75,6 +76,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${baseUrl}/help`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    ...(await getHelpArticles())
+      .filter((article) => article.slug !== 'index')
+      .map((article) => ({
+        url: `${baseUrl}${helpArticleUrl(article.slug)}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.4,
+      })),
     {
       url: `${baseUrl}/laperla`,
       lastModified: new Date(),
