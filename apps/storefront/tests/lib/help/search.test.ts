@@ -47,6 +47,15 @@ describe('toHelpResults', () => {
     ])
   })
 
+  it('strips Fumadocs <mark> highlight tags', () => {
+    const [result] = toHelpResults([
+      hit('page', '/docs/help/returns-and-refunds', '<mark>Return</mark>s and refunds'),
+      hit('text', '/docs/help/returns-and-refunds#x', 'Full policy: <mark>Return</mark> Policy.'),
+    ])
+    expect(result.title).toBe('Returns and refunds')
+    expect(result.snippet).toBe('Full policy: Return Policy.')
+  })
+
   it('caps the list at 8 articles', () => {
     const hits = Array.from({ length: 12 }, (_, i) => hit('page', `/docs/help/a-${i}`, `A ${i}`))
     expect(toHelpResults(hits)).toHaveLength(8)
