@@ -5,6 +5,7 @@ import { Bot, CheckCircle2, Headphones, Loader2, Mail, Send, Sparkles, User, X }
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { ChatMarkdown } from '@/components/chat/chat-markdown'
 import { PicanteChatLauncher } from '@/components/chat/picante-chat-launcher'
 import { PICANTE_INITIAL_MESSAGE } from '@/lib/ai-chat/persona'
 import { getAmplitudeDeviceId } from '@/lib/analytics/amplitude'
@@ -420,7 +421,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             {message.senderLabel ?? 'Jose Madrid Salsa'}
           </div>
         ) : null}
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+        ) : (
+          <ChatMarkdown content={message.content} />
+        )}
       </div>
     </div>
   )
