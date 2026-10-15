@@ -21,21 +21,27 @@ export const AWARDS = [
 
 export function AwardsStrip() {
   return (
-    <section aria-labelledby="awards-heading" className="border-y border-border bg-muted/40 py-10 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section
+      id="awards"
+      aria-labelledby="awards-heading"
+      className="scroll-mt-20 border-y border-desert-sun-gold/25 bg-night-ink py-10 sm:py-12"
+    >
+      <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
         <h2
           id="awards-heading"
-          className="mb-6 text-center text-xs font-semibold uppercase tracking-widest text-salsa-600"
+          className="font-western mb-6 text-center text-xs font-semibold uppercase tracking-[0.25em] text-desert-sun-gold-eyebrow"
         >
           Recognized nationally
         </h2>
         <ul className="grid gap-6 sm:grid-cols-3 sm:gap-8">
           {AWARDS.map((award) => (
             <li key={award.title} className="flex gap-3">
-              <Award aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-salsa-600" />
+              <Award aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-desert-sun-gold" />
               <div>
-                <p className="font-serif text-lg font-bold leading-snug text-foreground">{award.title}</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{award.detail}</p>
+                <p className="font-western text-lg font-semibold uppercase leading-snug tracking-[0.04em] text-white">
+                  {award.title}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-white/70">{award.detail}</p>
               </div>
             </li>
           ))}
