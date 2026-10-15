@@ -118,6 +118,9 @@ const nextConfig = {
       '../../apps/*/*.md',
       '../../packages/**/*.md',
     ],
+    // /help (search) and the sitemap read the help articles at runtime
+    '/help': ['./content/help/**'],
+    '/sitemap.xml': ['./content/help/**'],
     // The public /developer page reads the monorepo-root CHANGELOG.md at runtime
     '/developer': [
       './CHANGELOG.md',
