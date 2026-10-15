@@ -7,7 +7,9 @@ vi.mock('@/lib/prisma', () => ({
   prisma: { developerBlogPost: { findMany: findManyBlogPosts } },
 }))
 
-const { indexDeveloperBlogPosts, indexDocumentation, mdxToMarkdown } = await import('@/lib/ai-rag/indexer')
+const { indexDeveloperBlogPosts, indexDocumentation, indexHelpArticles, mdxToMarkdown } = await import(
+  '@/lib/ai-rag/indexer'
+)
 const { searchContent } = await import('@/lib/ai-rag/retriever')
 
 describe('mdxToMarkdown', () => {
@@ -50,6 +52,25 @@ describe('indexDocumentation', () => {
     const [top] = searchContent('How do gift certificates work?', entries, 1)
 
     expect(top.metadata?.category).toBe('Gift Certificates')
+  })
+})
+
+describe('indexHelpArticles', () => {
+  it('indexes the customer Help Center articles as store pages linked to /help', async () => {
+    const entries = await indexHelpArticles()
+
+    expect(entries.every((entry) => entry.type === 'page')).toBe(true)
+    expect(entries.some((entry) => entry.metadata?.path === '/help/shipping')).toBe(true)
+    expect(entries.some((entry) => entry.metadata?.path === '/help/fundraising')).toBe(true)
+    expect(entries.every((entry) => !/<Callout|<\/Callout>/.test(entry.content))).toBe(true)
+  })
+
+  it('lets a customer question retrieve the matching help section', async () => {
+    const entries = await indexHelpArticles()
+
+    const [top] = searchContent('Is there free shipping?', entries, 1)
+
+    expect(top.metadata?.path).toBe('/help/shipping')
   })
 })
 

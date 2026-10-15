@@ -3,6 +3,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
+import { getHelpArticles, helpArticleUrl } from '@/lib/help/articles'
 import { TrainingDocumentStatus } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
@@ -221,6 +222,31 @@ export async function indexDocumentation(): Promise<IndexedContent[]> {
 
   await walk(docsRoot)
   return entries
+}
+
+/**
+ * Index the customer Help Center articles shown at /help, one entry per
+ * section. They are written for customers, so they rank as store pages.
+ */
+export async function indexHelpArticles(): Promise<IndexedContent[]> {
+  const articles = await getHelpArticles()
+
+  return articles.flatMap((article) => {
+    const url = helpArticleUrl(article.slug)
+    const sections = splitMarkdownSections(normalizeMarkdownContent(mdxToMarkdown(article.body).body))
+
+    return sections.map((section, index) => {
+      const heading = section.heading.trim()
+      const title = heading === 'Overview' ? article.title : `${article.title} — ${heading}`
+      return {
+        id: `help-${article.slug}-${index}`,
+        type: 'page' as const,
+        title,
+        content: [title, index === 0 ? article.description : null, section.body].filter(Boolean).join('\n').trim(),
+        metadata: { path: url, category: article.title },
+      }
+    })
+  })
 }
 
 /**
@@ -464,7 +490,7 @@ async function indexTrainingDocuments(): Promise<IndexedContent[]> {
  * Index all content from the repository
  */
 export async function indexAllContent(): Promise<IndexedContent[]> {
-  const [products, recipes, pages, markdownPages, markdownLocations, trainingDocs, documentation, developerBlog] =
+  const [products, recipes, pages, markdownPages, markdownLocations, trainingDocs, helpArticles, documentation, developerBlog] =
     await Promise.all([
       safeIndex('index products', indexProducts, () => [] as IndexedContent[]),
       safeIndex('index recipes', indexRecipes, () => [] as IndexedContent[]),
@@ -472,6 +498,7 @@ export async function indexAllContent(): Promise<IndexedContent[]> {
       safeIndex('index public markdown content', indexPublicMarkdownContent, () => [] as IndexedContent[]),
       safeIndex('index markdown locations', indexMarkdownLocations, () => [] as IndexedContent[]),
       safeIndex('index training documents', indexTrainingDocuments, () => [] as IndexedContent[]),
+      safeIndex('index help articles', indexHelpArticles, () => [] as IndexedContent[]),
       safeIndex('index documentation', indexDocumentation, () => [] as IndexedContent[]),
       safeIndex('index developer blog posts', indexDeveloperBlogPosts, () => [] as IndexedContent[]),
     ])
@@ -498,6 +525,7 @@ export async function indexAllContent(): Promise<IndexedContent[]> {
     ...pages,
     ...markdownPages,
     ...trainingDocs,
+    ...helpArticles,
     ...documentation,
     ...developerBlog,
   ]

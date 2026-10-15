@@ -14,9 +14,9 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
-- **Picante knows the help and developer docs.** The AI chat's knowledge index now includes every
-  page of the documentation site (`apps/docs`), split by section, and the published developer blog
-  posts. Docs rank below store content that matches equally well, and Picante leaves out
+- **Picante knows the help and developer docs.** The AI chat's knowledge index now includes the
+  customer Help Center articles at `/help`, every page of the documentation site (`apps/docs`),
+  split by section, and the published developer blog posts. Docs rank below store content that matches equally well, and Picante leaves out
   implementation details unless a staff member or developer asks.
 - **Google Merchant Center feed file.** `npm run products:feed --workspace @jose-madrid/storefront
   [-- --apply]` writes every active product to `public/merchant-center-feed.xml` (RSS 2.0, `g:`
