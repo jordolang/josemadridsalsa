@@ -3,7 +3,6 @@
 
 import { prisma } from '@/lib/prisma'
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
-import { findRepoRoot } from '@/lib/developer/repo-docs'
 import { TrainingDocumentStatus } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
@@ -177,7 +176,10 @@ export function mdxToMarkdown(mdx: string): { title: string | null; description:
  * heading so a question retrieves the relevant section, not a whole page.
  */
 export async function indexDocumentation(): Promise<IndexedContent[]> {
-  const docsRoot = path.join(findRepoRoot(), 'apps', 'docs', 'content', 'docs')
+  // The storefront runs with cwd = apps/storefront. Keep this path static:
+  // a computed root makes the bundler trace the whole repository into every
+  // route that builds the index.
+  const docsRoot = path.join(process.cwd(), '..', 'docs', 'content', 'docs')
   const entries: IndexedContent[] = []
 
   async function walk(dir: string): Promise<void> {
