@@ -118,6 +118,12 @@ const nextConfig = {
       '../../apps/*/*.md',
       '../../packages/**/*.md',
     ],
+    // Picante's knowledge index (lib/ai-rag/indexer.ts) reads the docs site's
+    // pages at runtime; these are the routes that build that index.
+    '/api/ai-chat': ['../docs/content/docs/**/*.mdx'],
+    '/api/cron/inbox-triage': ['../docs/content/docs/**/*.mdx'],
+    '/api/cron/mail-organizer': ['../docs/content/docs/**/*.mdx'],
+    '/api/admin/mailbox/organize': ['../docs/content/docs/**/*.mdx'],
     // The public /developer page reads the monorepo-root CHANGELOG.md at runtime
     '/developer': [
       './CHANGELOG.md',

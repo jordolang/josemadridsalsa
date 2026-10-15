@@ -19,6 +19,20 @@ The public storefront includes Picante, a playful pepper-penguin AI companion fo
 
 Picante introduces himself by name and responds with a concise, upbeat character voice that uses occasional pepper and penguin wordplay. Accuracy and clarity take priority over jokes, and Picante avoids mascot banter during sensitive support or human handoffs. Business-hours lookup and live-team handoff continue through the existing chat APIs. Closing the panel returns Picante to the launcher state.
 
+Replies from Picante and from the team render as Markdown (`components/chat/chat-markdown.tsx`): bold, italics, lists, links, headings, blockquotes, code and GFM tables show as formatted text. Raw HTML in a reply is never rendered, and the output passes through `rehype-sanitize`. Messages the visitor types are shown exactly as typed.
+
+## Knowledge sources
+
+Before each reply, `/api/ai-chat` searches Picante's knowledge index (`lib/ai-rag/indexer.ts`, cached for five minutes) and adds the five best matches to the system prompt. The index holds:
+
+- Active products, recipes, and retail locations from the database, plus the Find Us markdown.
+- A few built-in pages (fundraising, wholesale, shipping, contact).
+- Every document marked **Ready** under **Admin → Training data** (uploads, pasted text, and scraped URLs).
+- Every page of this documentation site (`apps/docs/content/docs`), split into one entry per heading.
+- Published posts from the developer blog (`/developer/blog`).
+
+Documentation entries rank at half weight (`lib/ai-rag/retriever.ts`), so a store page that matches equally well comes first. The system prompt tells Picante to use the docs to explain how features work and to leave out implementation details unless a staff member or developer asks. The `/api/ai-chat` route and the inbox-triage routes that share the index list `../docs/content/docs/**/*.mdx` in `outputFileTracingIncludes` so the pages ship with their serverless functions; add the same entry to any new route that calls `getIndexedContent()`.
+
 ## Contact form
 
 Below Picante's opening message sits an **"Or fill out a contact form by clicking here"** button, for visitors who would rather leave their details than have a conversation. It swaps the panel to a standard contact form:

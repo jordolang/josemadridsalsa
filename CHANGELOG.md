@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Picante knows the help and developer docs.** The AI chat's knowledge index now includes every
+  page of the documentation site (`apps/docs`), split by section, and the published developer blog
+  posts. Docs rank below store content that matches equally well, and Picante leaves out
+  implementation details unless a staff member or developer asks.
 - **Fundraiser sign-up asks for three colors.** Both sign-up forms now require a main, secondary
   and accent color, so each group matches its own school, team or business. They are the same three
   colors the admin Branding tab edits, and saving that tab now updates them as well. Schema:
@@ -277,6 +281,8 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Picante's replies show formatting.** Bold, italics, lists, links, headings and tables in chat
+  replies now render as formatted text instead of raw `**` and `#` characters.
 - **Clicking a merch product showed "404 page not found".** Printify answers 400 "Validation
   failed", not 404, when a product id belongs to a different shop, so looking a product up
   stopped at the first shop instead of moving on to the Etsy-connected one. Those products could
