@@ -39,14 +39,16 @@ export function toHelpResults(hits: DocsSearchHit[]): HelpArticleResult[] {
     // Exact match or a child path — '/docs/helpers' must not slip through.
     if (path !== HELP_DOCS_PREFIX && !path.startsWith(`${HELP_DOCS_PREFIX}/`)) continue
 
+    // Fumadocs wraps matched terms in <mark>; React would print the tags literally.
+    const content = hit.content.replace(/<\/?mark>/g, '')
     const existing = results.get(path)
     if (hit.type === 'page') {
-      if (existing) existing.title = hit.content
-      else results.set(path, { title: hit.content, url: `${SALSADOCS_URL}${hit.url}` })
+      if (existing) existing.title = content
+      else results.set(path, { title: content, url: `${SALSADOCS_URL}${hit.url}` })
     } else if (!existing) {
-      results.set(path, { title: hit.content, url: `${SALSADOCS_URL}${hit.url}`, snippet: hit.content })
+      results.set(path, { title: content, url: `${SALSADOCS_URL}${hit.url}`, snippet: content })
     } else if (!existing.snippet) {
-      existing.snippet = hit.content
+      existing.snippet = content
       existing.url = `${SALSADOCS_URL}${hit.url}`
     }
   }
