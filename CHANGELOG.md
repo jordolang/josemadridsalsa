@@ -13,6 +13,10 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Changed
+- **"When will my order ship?" FAQ answer.** The answer no longer promises same-day shipping; it
+  explains that event travel can delay online orders and points customers to `/order-tracking`.
+
 ### Added
 - **Customer Help Center at `/help`.** One page where customers search the knowledge base, jump to
   order tracking, shipping, returns or contact, and read the FAQ. Articles live in a new

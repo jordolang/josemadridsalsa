@@ -418,7 +418,9 @@ const faqCategories = [
       {
         question: 'When will my order ship?',
         answer:
-          'Orders placed before 2pm on a weekday usually go out the same day. Anything after 2pm Friday ships the following Monday.',
+          '<p>Here at Jose Madrid Salsa, we do everything in our power to ensure that every customer receives the most accurate information as possible, in that sense, it is not always easy to estimate when your order will go out. Please understand, as a company, we make it our priority to make you our priority, and chances are that you learned about our award winning salsa at a local event in your home state.</p>' +
+          '<p>While we do our best to bring our salsa to your hometown, that often leads to us being away from our own. This often leads to a delay in processing our online orders and getting them shipped right away, and if this has happened to you, please accept our sincerest apologies. We are committed to bringing our gourmet signature salsa to a zip code near you while maintaining an active fulfillment of orders online, and oftentimes the two factors don’t mesh well, so please keep in mind that if you haven’t received your order right away, we most certainly didn’t forget about you. We built this business on the road and that tradition carries us to bring you the best salsa year in and year round.</p>' +
+          '<p>We are implementing a new order status component to our web services in order to keep you up to date with the newest tracking and fulfillment information with each and every order. Please visit <a href="https://www.josemadridsalsa.com/order-tracking">https://www.josemadridsalsa.com/order-tracking</a> to check the status of your order now. Thank you!</p>',
       },
       {
         question: 'Can I track it?',
