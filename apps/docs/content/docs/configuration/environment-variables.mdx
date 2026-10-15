@@ -237,6 +237,7 @@ or store hash is wrong.
 | `SHIPPING_ORIGIN_COUNTRY` | No | Defaults to `US` |
 | `SHIP_FROM_NAME` | No | Sender name on labels. Defaults to `Jose Madrid Salsa` |
 | `SHIP_FROM_STREET`, `SHIP_FROM_CITY`, `SHIP_FROM_STATE`, `SHIP_FROM_ZIP`, `SHIP_FROM_COUNTRY` | No | Legacy aliases for the `SHIPPING_ORIGIN_*` variables above, still read as a fallback. Prefer `SHIPPING_ORIGIN_*` |
+| `ORDER_SMS_ALERTS_ENABLED` | No | Set to `"true"` to show the text-alert opt-in on `/order-tracking`. Leave unset until an SMS provider is wired up, or customers will sign up for texts that never arrive |
 
 <Callout type="warn" title="Set the warehouse address">
 Rate quoting and label purchase both read the warehouse address through

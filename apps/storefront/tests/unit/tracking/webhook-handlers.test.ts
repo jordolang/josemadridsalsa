@@ -11,6 +11,7 @@ vi.mock('@/lib/prisma', () => ({
       update: vi.fn(),
     },
     order: {
+      findFirst: vi.fn(),
       update: vi.fn(),
     },
     // An in_transit event now also writes the item fulfillment quantities and records the
@@ -175,8 +176,9 @@ describe('EasyPost Webhook Handlers', () => {
       expect(sendOrderDeliveredEmail).toHaveBeenCalledWith('order-1')
     })
 
-    it('does nothing when shipping label not found', async () => {
+    it('does nothing when neither a shipping label nor an order matches', async () => {
       prisma.shippingLabel.findFirst.mockResolvedValue(null)
+      prisma.order.findFirst.mockResolvedValue(null)
 
       const trackerData = {
         tracking_code: 'INVALID123',
@@ -192,8 +194,42 @@ describe('EasyPost Webhook Handlers', () => {
       })
 
       expect(prisma.shippingLabel.update).not.toHaveBeenCalled()
+      expect(prisma.order.update).not.toHaveBeenCalled()
       expect(sendOrderShippedEmail).not.toHaveBeenCalled()
       expect(sendOrderDeliveredEmail).not.toHaveBeenCalled()
+    })
+
+    it('updates an order whose tracking number was entered by hand (no label)', async () => {
+      prisma.shippingLabel.findFirst.mockResolvedValue(null)
+      prisma.order.findFirst.mockResolvedValue({
+        id: 'order-2',
+        orderNumber: 'ORD-002',
+        status: 'PROCESSING',
+        trackingNumber: 'PIRATE123',
+      })
+
+      await handleTrackerUpdated({
+        tracking_code: 'PIRATE123',
+        status: 'in_transit',
+        tracking_details: [
+          {
+            status: 'in_transit',
+            message: 'Accepted at USPS Origin Facility',
+            datetime: '2026-10-15T14:00:00Z',
+            tracking_location: { city: 'ZANESVILLE', state: 'OH' },
+          },
+        ],
+      })
+
+      expect(prisma.order.findFirst).toHaveBeenCalledWith({ where: { trackingNumber: 'PIRATE123' } })
+      expect(prisma.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'order-2' },
+          data: expect.objectContaining({ status: 'SHIPPED', trackingHistory: expect.any(Array) }),
+        })
+      )
+      expect(prisma.shippingLabel.update).not.toHaveBeenCalled()
+      expect(sendOrderShippedEmail).toHaveBeenCalledWith('order-2')
     })
 
     it('updates tracking history with event details', async () => {

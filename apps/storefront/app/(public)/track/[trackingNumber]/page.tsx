@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createMetadata } from "@/lib/metadata";
+import { ensureCarrierEvents } from "@/lib/order-tracking/load";
+import { latestCarrierLocation } from "@/lib/order-tracking/timeline";
+import { AutoRefresh } from "@/components/order-tracking/AutoRefresh";
+import { ShipmentMap } from "@/components/order-tracking/ShipmentMap";
 
 export const dynamic = 'force-dynamic'
 
@@ -83,22 +87,16 @@ export default async function TrackingPage({ params }: PageProps) {
   // Parse tracking history from JSON. The webhook stores EasyPost
   // tracking_details, so derive a flat `location` string from the nested
   // tracking_location object for display.
-  const rawTrackingHistory = order.trackingHistory as Array<{
-    status: string;
-    message: string;
-    datetime: string;
-    tracking_location?: {
-      city?: string;
-      state?: string;
-      country?: string;
-      zip?: string;
-    };
-  }> | null;
+  // Registers an EasyPost tracker the first time a hand-entered tracking number is viewed,
+  // so its scans appear here and keep arriving by webhook.
+  const carrierEvents = await ensureCarrierEvents(order);
+  const currentLocation = latestCarrierLocation(carrierEvents);
+  const delivered = order.status === "DELIVERED" || order.deliveredAt !== null;
 
-  const trackingHistory = rawTrackingHistory?.map((event) => ({
-    status: event.status,
-    message: event.message,
-    datetime: event.datetime,
+  const trackingHistory = carrierEvents.length === 0 ? null : carrierEvents.map((event) => ({
+    status: event.status ?? "unknown",
+    message: event.message ?? "",
+    datetime: event.datetime ?? "",
     location:
       [event.tracking_location?.city, event.tracking_location?.state, event.tracking_location?.country]
         .filter(Boolean)
@@ -107,6 +105,7 @@ export default async function TrackingPage({ params }: PageProps) {
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
+      <AutoRefresh enabled={!delivered} />
       <div className="grid gap-6">
         <div className="flex items-center justify-between">
           <div>
@@ -147,6 +146,8 @@ export default async function TrackingPage({ params }: PageProps) {
                 </div>
               )}
             </div>
+
+            <ShipmentMap location={currentLocation} delivered={delivered} />
 
             {trackingUrl && (
               <div className="pt-2">

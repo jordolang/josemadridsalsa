@@ -13,6 +13,20 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **Order tracking at `/order-tracking`.** Customers look up an order with its order number and
+  the phone number on it, or with a tracking number. The order page shows a full history, newest
+  first: order received, payment, every status change, notes and delays staff post from the admin
+  order page ("Post Customer Update"), emails the customer sent about the order (subject and first
+  line), and emails we sent them. Once shipped it shows the carrier, a map of the last scan, and
+  every carrier scan. The page refreshes itself every minute until the order is delivered. A
+  tracking number alone shows only the shipment. Tracking numbers entered by hand (Pirate Ship, a
+  counter) now get an EasyPost tracker the first time they're viewed, and the EasyPost webhook
+  updates those orders too; before, only labels bought through EasyPost received carrier updates.
+  `/track/<number>` gains the same map and auto-refresh. A text-alert opt-in is built but hidden
+  until `ORDER_SMS_ALERTS_ENABLED` is set. Schema: new `OrderCustomerUpdate` and
+  `OrderSmsSubscription` models.
+
 ### Changed
 - **"When will my order ship?" FAQ answer.** The answer no longer promises same-day shipping; it
   explains that event travel can delay online orders and points customers to `/order-tracking`.
