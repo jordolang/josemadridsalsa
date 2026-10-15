@@ -118,6 +118,13 @@ const nextConfig = {
       '../../apps/*/*.md',
       '../../packages/**/*.md',
     ],
+    // Picante's knowledge index (lib/ai-rag/indexer.ts) reads the docs site's
+    // pages and the /help articles at runtime; these are the routes that build
+    // that index.
+    '/api/ai-chat': ['../docs/content/docs/**/*.mdx', './content/help/**'],
+    '/api/cron/inbox-triage': ['../docs/content/docs/**/*.mdx', './content/help/**'],
+    '/api/cron/mail-organizer': ['../docs/content/docs/**/*.mdx', './content/help/**'],
+    '/api/admin/mailbox/organize': ['../docs/content/docs/**/*.mdx', './content/help/**'],
     // /help (search) and the sitemap read the help articles at runtime
     '/help': ['./content/help/**'],
     '/sitemap.xml': ['./content/help/**'],
