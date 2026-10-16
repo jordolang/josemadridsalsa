@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { MapPin, Phone, ExternalLink, Navigation2 } from 'lucide-react'
 import type { RetailLocationRecord } from '@/lib/locations/shared'
 import { cn } from '@/lib/utils'
-import { getLocationImageUrl, getFallbackImage } from '@/lib/utils/image'
+import { getLocationImageUrl, getFallbackImage, isGooglePlacesUrl } from '@/lib/utils/image'
 
 type LocationCardProps = {
   location: RetailLocationRecord
@@ -26,7 +26,8 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
   const [imageFailed, setImageFailed] = useState(false)
 
   const primaryImage = useMemo(() => {
-    const hero = (location.photoGallery ?? [])[0] ?? photoUrl
+    // Use the first photo that isn't from Google Places; those only render the placeholder
+    const hero = (location.photoGallery ?? []).find((url) => !isGooglePlacesUrl(url)) ?? photoUrl
     return imageFailed ? getFallbackImage() : getLocationImageUrl(hero)
   }, [location.photoGallery, photoUrl, imageFailed])
 

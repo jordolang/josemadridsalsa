@@ -84,7 +84,7 @@ import Image from 'next/image'
 
 ## Image Proxy
 
-The application includes an image proxy route at `app/api/image-proxy/` for cases where direct image URLs cannot be used (e.g., avoiding mixed content or CORS issues).
+`app/api/image-proxy/` used to proxy Google Places photos. It now only redirects old cached URLs to the placeholder image and makes no outside calls; Google Places photos are not displayed.
 
 <Callout type="warn">
 Do **not** add `public/images/**` to `outputFileTracingExcludes` -- this breaks Next.js Image Optimization for local images.
