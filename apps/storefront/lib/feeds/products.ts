@@ -43,6 +43,31 @@ function toAbsoluteUrl(path: string | null | undefined): string {
   return `${SITE_URL}${path.startsWith('/') ? '' : '/'}${path}`
 }
 
+/** Primary image plus up to 10 additional images, as absolute URLs. */
+function feedImageLinks(product: { featuredImage: string | null; images: string[] }) {
+  const imageLink = toAbsoluteUrl(product.featuredImage || product.images[0] || null) || null
+  const additionalImageLinks = product.images
+    .filter((image) => image && image !== product.featuredImage)
+    .map(toAbsoluteUrl)
+    .filter((url) => Boolean(url) && url !== imageLink)
+    .slice(0, 10)
+  return { imageLink, additionalImageLinks }
+}
+
+/**
+ * Feed images for one active product, in feed order: index 0 is the primary
+ * image, 1… the additional images. Null when no such active product exists.
+ */
+export async function getFeedProductImages(sku: string): Promise<string[] | null> {
+  const product = await prisma.product.findFirst({
+    where: { sku, isActive: true },
+    select: { featuredImage: true, images: true },
+  })
+  if (!product) return null
+  const { imageLink, additionalImageLinks } = feedImageLinks(product)
+  return imageLink ? [imageLink, ...additionalImageLinks] : []
+}
+
 /**
  * Load all active products normalized for feed export, in the same order the
  * storefront lists them.
@@ -62,12 +87,7 @@ export async function getFeedProducts(): Promise<FeedProduct[]> {
     // `price` and the discounted price in `sale_price`.
     const onSale = compareAtPrice !== null && compareAtPrice > price
 
-    const imageLink = toAbsoluteUrl(product.featuredImage || product.images[0] || null) || null
-    const additionalImageLinks = product.images
-      .filter((image) => image && image !== product.featuredImage)
-      .map(toAbsoluteUrl)
-      .filter((url) => Boolean(url) && url !== imageLink)
-      .slice(0, 10)
+    const { imageLink, additionalImageLinks } = feedImageLinks(product)
 
     return {
       sku: product.sku,

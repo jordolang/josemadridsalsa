@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { SITE_URL, type FeedProduct } from './products'
 
 /**
@@ -28,10 +29,14 @@ const COLUMNS = [
 
 /**
  * Meta only accepts JPEG/PNG images, and our product images are transparent
- * WebP. Route every image through the JPEG re-encoder (app/api/feeds/image).
+ * WebP. Point every image at the JPEG re-encoder (app/feed-images), which
+ * looks the source up by SKU and position — it lives outside /api/ because
+ * robots.txt disallows that tree. `v` changes when the source image does, so
+ * cached JPEGs are never stale.
  */
-export function toFeedJpegUrl(imageUrl: string): string {
-  return `${SITE_URL}/api/feeds/image?src=${encodeURIComponent(imageUrl)}`
+export function toFeedJpegUrl(sku: string, index: number, sourceUrl: string): string {
+  const version = createHash('sha1').update(sourceUrl).digest('hex').slice(0, 10)
+  return `${SITE_URL}/feed-images/${encodeURIComponent(sku)}/${index}.jpg?v=${version}`
 }
 
 /** Quote a field per RFC 4180: wrap in double-quotes, escape inner quotes. */
@@ -55,8 +60,10 @@ export function buildFacebookCatalogCsv(products: FeedProduct[]): string {
         price: `${product.regularPrice.toFixed(2)} USD`,
         sale_price: product.salePrice !== null ? `${product.salePrice.toFixed(2)} USD` : '',
         link: product.link,
-        image_link: toFeedJpegUrl(product.imageLink),
-        additional_image_link: product.additionalImageLinks.map(toFeedJpegUrl).join(','),
+        image_link: toFeedJpegUrl(product.sku, 0, product.imageLink),
+        additional_image_link: product.additionalImageLinks
+          .map((url, i) => toFeedJpegUrl(product.sku, i + 1, url))
+          .join(','),
         brand: product.brand,
         gtin: product.gtin ?? '',
         google_product_category: product.googleProductCategory,

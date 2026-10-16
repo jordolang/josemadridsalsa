@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SITE_URL, type FeedProduct } from '@/lib/feeds/products'
-import { buildFacebookCatalogCsv } from '@/lib/feeds/facebook'
+import { buildFacebookCatalogCsv, toFeedJpegUrl } from '@/lib/feeds/facebook'
 import { buildGoogleShoppingTsv, buildGoogleShoppingXml } from '@/lib/feeds/google'
 import { buildAmazonInventoryTsv } from '@/lib/feeds/amazon'
 
@@ -51,23 +51,29 @@ describe('buildFacebookCatalogCsv', () => {
     expect(csv).toContain('"12.99 USD","9.99 USD"')
   })
 
-  it('routes every image through the JPEG re-encoder, since Meta rejects WebP', () => {
+  it('points every image at the SKU-keyed JPEG re-encoder outside /api/', () => {
     const csv = buildFacebookCatalogCsv([
       makeProduct({
+        sku: 'JMS/1',
         imageLink: 'https://x.public.blob.vercel-storage.com/a.webp',
         additionalImageLinks: [
-          'https://x.public.blob.vercel-storage.com/b(2).webp',
+          'https://x.public.blob.vercel-storage.com/b.webp',
           'https://x.public.blob.vercel-storage.com/c.webp',
         ],
       }),
     ])
-    const encode = (url: string) =>
-      `${SITE_URL}/api/feeds/image?src=${encodeURIComponent(url)}`
-    expect(csv).toContain(`"${encode('https://x.public.blob.vercel-storage.com/a.webp')}"`)
-    expect(csv).toContain(
-      `"${encode('https://x.public.blob.vercel-storage.com/b(2).webp')},${encode('https://x.public.blob.vercel-storage.com/c.webp')}"`,
-    )
-    expect(csv).not.toMatch(/,"https:\/\/x\.public/)
+    const urls = [...csv.matchAll(/https?:\/\/[^",]+\/feed-images\/[^",]+/g)].map((m) => m[0])
+    expect(urls).toHaveLength(3)
+    urls.forEach((url, i) => {
+      expect(url).toMatch(new RegExp(`^${SITE_URL}/feed-images/JMS%2F1/${i}\\.jpg\\?v=[0-9a-f]{10}$`))
+    })
+    expect(csv).not.toContain('/api/')
+    expect(csv).not.toContain('.webp')
+  })
+
+  it('changes the image version when the source image changes', () => {
+    expect(toFeedJpegUrl('S', 0, 'https://a/1.webp')).not.toBe(toFeedJpegUrl('S', 0, 'https://a/2.webp'))
+    expect(toFeedJpegUrl('S', 0, 'https://a/1.webp')).toBe(toFeedJpegUrl('S', 0, 'https://a/1.webp'))
   })
 
   it('includes the gtin column, blank when unknown', () => {
