@@ -1,4 +1,5 @@
-import type { FeedProduct } from './products'
+import { createHash } from 'node:crypto'
+import { SITE_URL, type FeedProduct } from './products'
 
 /**
  * Meta (Facebook/Instagram) Commerce catalog feed — the standard
@@ -20,10 +21,35 @@ const COLUMNS = [
   'image_link',
   'additional_image_link',
   'brand',
+  'gtin',
   'google_product_category',
   'quantity_to_sell_on_facebook',
   'inventory',
 ] as const
+
+/**
+ * Meta only accepts JPEG/PNG images, and our product images are transparent
+ * WebP. Point every image at the JPEG re-encoder (app/feed-images), which
+ * looks the source up by SKU and position — it lives outside /api/ because
+ * robots.txt disallows that tree. `v` changes when the source image does, so
+ * cached JPEGs are never stale.
+ */
+/**
+ * SKUs may contain `/`, which routing would treat as a path separator even
+ * when percent-encoded, so the path carries the SKU as base64url.
+ */
+export function encodeFeedSku(sku: string): string {
+  return Buffer.from(sku, 'utf8').toString('base64url')
+}
+
+export function decodeFeedSku(segment: string): string {
+  return Buffer.from(segment, 'base64url').toString('utf8')
+}
+
+export function toFeedJpegUrl(sku: string, index: number, sourceUrl: string): string {
+  const version = createHash('sha1').update(sourceUrl).digest('hex').slice(0, 10)
+  return `${SITE_URL}/feed-images/${encodeFeedSku(sku)}/${index}.jpg?v=${version}`
+}
 
 /** Quote a field per RFC 4180: wrap in double-quotes, escape inner quotes. */
 function csvCell(value: string): string {
@@ -46,9 +72,12 @@ export function buildFacebookCatalogCsv(products: FeedProduct[]): string {
         price: `${product.regularPrice.toFixed(2)} USD`,
         sale_price: product.salePrice !== null ? `${product.salePrice.toFixed(2)} USD` : '',
         link: product.link,
-        image_link: product.imageLink,
-        additional_image_link: product.additionalImageLinks.join(','),
+        image_link: toFeedJpegUrl(product.sku, 0, product.imageLink),
+        additional_image_link: product.additionalImageLinks
+          .map((url, i) => toFeedJpegUrl(product.sku, i + 1, url))
+          .join(','),
         brand: product.brand,
+        gtin: product.gtin ?? '',
         google_product_category: product.googleProductCategory,
         quantity_to_sell_on_facebook: String(product.inventory),
         inventory: String(product.inventory),

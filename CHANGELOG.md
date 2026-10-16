@@ -22,6 +22,16 @@ the root `package.json` is canonical.
   Returns and Contact. The Help Center's first quick link is now Track your order. The old
   Community "Battle Arena" link pointed at `/battle-arena`, which 404s; Battle Live replaces it.
 
+### Removed
+- **Find Us no longer calls the Google Places API.** Every store card and store page loaded its
+  photo through `/api/image-proxy`, which made a billable Places API (New) "Place Details Photos"
+  request per image per uncached view (about 150 cards on `/find-us`). The stored photo names
+  expire, so most of those requests failed and the card then retried with a Place ID lookup,
+  making another Places request. Once billing went live on the Google Cloud project on
+  October 9, 2026, the same traffic started costing money. Google Places photos now show the
+  placeholder; non-Google photos still show. `/api/image-proxy` only redirects old cached URLs
+  to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
+
 ### Added
 - **Order tracking at `/order-tracking`.** Customers look up an order with its order number and
   the phone number on it, or with a tracking number. The order page shows a full history, newest
@@ -325,6 +335,11 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Facebook catalog feed images.** `/api/feeds/facebook` linked transparent WebP images, which
+  Meta Commerce does not accept. Every image link now points at `/feed-images/<encoded sku>/<n>.jpg`,
+  which looks the image up on the product and serves it as an opaque JPEG on white. It sits
+  outside `/api/` so robots.txt lets Meta fetch it. The feed also sends `gtin` from the product
+  barcode.
 - **Picante's replies show formatting.** Bold, italics, lists, links, headings and tables in chat
   replies now render as formatted text instead of raw `**` and `#` characters.
 - **Clicking a merch product showed "404 page not found".** Printify answers 400 "Validation

@@ -46,15 +46,6 @@ The codebase uses prefixed log messages for easy filtering:
 [Prisma] Failed to initialize client: <error>
 ```
 
-### Image Proxy
-
-```
-[image-proxy] Fetching image via Place ID: ChIJ...
-[image-proxy] Using cached photo URL for place: ChIJ...
-[image-proxy] Response status: 200
-[image-proxy] Rejected non-Google Places URL: ...
-```
-
 ### General Pattern
 
 When adding new log statements, follow this convention:
@@ -126,11 +117,11 @@ console.log('something happened')
 
 ## Log Redaction
 
-The image proxy demonstrates proper log redaction for sensitive values:
+Redact sensitive values before logging them, for example:
 
 ```ts
-console.log('[image-proxy] Rewritten URL:', rewrittenUrl.replace(/key=[^&]+/, 'key=***'))
-console.log('[image-proxy] API Key present:', !!GOOGLE_PLACES_API_KEY)
+console.log('[service] Request URL:', url.replace(/key=[^&]+/, 'key=***'))
+console.log('[service] API Key present:', !!API_KEY)
 ```
 
 Always redact:

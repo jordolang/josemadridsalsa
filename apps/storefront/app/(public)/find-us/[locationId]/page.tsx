@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, ExternalLink, Navigation2, ChevronLeft } from 'lucide-react'
 import { getLocationByIdFromDB } from '@/lib/locations/db-query'
-import { getLocationImageUrl } from '@/lib/utils/image'
+import { getLocationImageUrl, isGooglePlacesUrl } from '@/lib/utils/image'
 import { LocationImage } from './_components/LocationImage'
 import { LocationShare } from './_components/LocationShare'
 
@@ -50,9 +50,9 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
       : location.photoUrl
         ? [location.photoUrl]
         : []
-  const gallery = gallerySource as string[]
-  // Try stored photo URL first; Place ID is used as fallback if no stored URL exists
-  const heroImage = getLocationImageUrl(gallery[0] ?? location.photoUrl, location.googlePlaceId)
+  // Google Places photos are not shown (see getLocationImageUrl), so leave them out of the gallery
+  const gallery = (gallerySource as string[]).filter((url) => !isGooglePlacesUrl(url))
+  const heroImage = getLocationImageUrl(gallery[0] ?? location.photoUrl)
   const phone = location.phone
   const website = location.website
   const directionsUrl = location.directionsUrl
@@ -69,7 +69,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
       <div className="grid gap-8 lg:grid-cols-[3fr,2fr]">
         <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
           <div className="relative h-80 w-full sm:h-[26rem]">
-            <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority fallbackPlaceId={location.googlePlaceId} />
+            <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority />
           </div>
           {gallery.length > 1 ? (
             <div className="border-t border-border bg-muted/50 px-4 py-3 text-xs text-muted-foreground">
@@ -165,13 +165,13 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
         <div className="space-y-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Gallery</p>
-            <h2 className="text-2xl font-semibold text-foreground">More views from Google</h2>
+            <h2 className="text-2xl font-semibold text-foreground">More views</h2>
           </div>
           <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
             {gallery.map((imageUrl, index) => (
               <div key={`${imageUrl}-${index}`} className="snap-start flex-shrink-0">
                 <div className="relative h-56 w-80 overflow-hidden rounded-2xl border border-border bg-muted/50 shadow">
-                  <LocationImage src={getLocationImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" fallbackPlaceId={location.googlePlaceId} />
+                  <LocationImage src={getLocationImageUrl(imageUrl)} alt={`${location.businessName} photo ${index + 1}`} fill className="object-cover" />
                 </div>
               </div>
             ))}
