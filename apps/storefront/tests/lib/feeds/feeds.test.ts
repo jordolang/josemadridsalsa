@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { FeedProduct } from '@/lib/feeds/products'
-import { buildFacebookCatalogCsv } from '@/lib/feeds/facebook'
+import { SITE_URL, type FeedProduct } from '@/lib/feeds/products'
+import { buildFacebookCatalogCsv, decodeFeedSku, encodeFeedSku, toFeedJpegUrl } from '@/lib/feeds/facebook'
 import { buildGoogleShoppingTsv, buildGoogleShoppingXml } from '@/lib/feeds/google'
 import { buildAmazonInventoryTsv } from '@/lib/feeds/amazon'
 
@@ -49,6 +49,46 @@ describe('buildFacebookCatalogCsv', () => {
       makeProduct({ regularPrice: 12.99, salePrice: 9.99 }),
     ])
     expect(csv).toContain('"12.99 USD","9.99 USD"')
+  })
+
+  it('points every image at the SKU-keyed JPEG re-encoder outside /api/', () => {
+    const csv = buildFacebookCatalogCsv([
+      makeProduct({
+        sku: 'JMS/1',
+        imageLink: 'https://x.public.blob.vercel-storage.com/a.webp',
+        additionalImageLinks: [
+          'https://x.public.blob.vercel-storage.com/b.webp',
+          'https://x.public.blob.vercel-storage.com/c.webp',
+        ],
+      }),
+    ])
+    const urls = [...csv.matchAll(/https?:\/\/[^",]+\/feed-images\/[^",]+/g)].map((m) => m[0])
+    expect(urls).toHaveLength(3)
+    urls.forEach((url, i) => {
+      expect(url).toMatch(new RegExp(`^${SITE_URL}/feed-images/${encodeFeedSku('JMS/1')}/${i}\\.jpg\\?v=[0-9a-f]{10}$`))
+    })
+    expect(csv).not.toContain('/api/')
+    expect(csv).not.toContain('.webp')
+  })
+
+  it('encodes SKUs as a single slash-free path segment and decodes them back', () => {
+    for (const sku of ['JMS-MILD-001', 'JMS/1', 'a b+c?é']) {
+      expect(encodeFeedSku(sku)).toMatch(/^[A-Za-z0-9_-]+$/)
+      expect(decodeFeedSku(encodeFeedSku(sku))).toBe(sku)
+    }
+  })
+
+  it('changes the image version when the source image changes', () => {
+    expect(toFeedJpegUrl('S', 0, 'https://a/1.webp')).not.toBe(toFeedJpegUrl('S', 0, 'https://a/2.webp'))
+    expect(toFeedJpegUrl('S', 0, 'https://a/1.webp')).toBe(toFeedJpegUrl('S', 0, 'https://a/1.webp'))
+  })
+
+  it('includes the gtin column, blank when unknown', () => {
+    const [header, row] = buildFacebookCatalogCsv([makeProduct()]).split('\n')
+    expect(header).toContain(',brand,gtin,google_product_category,')
+    expect(row).toContain('"Jose Madrid Salsa","012345678905","Food')
+    const [, blankRow] = buildFacebookCatalogCsv([makeProduct({ gtin: null })]).split('\n')
+    expect(blankRow).toContain('"Jose Madrid Salsa","","Food')
   })
 })
 
