@@ -15,7 +15,7 @@ export const metadata: Metadata = createMetadata({
 })
 
 const QUICK_LINKS = [
-  { href: '/account/orders', title: 'Your orders', description: 'Order status and tracking' },
+  { href: '/order-tracking', title: 'Track your order', description: 'Order number and phone, or a tracking number' },
   { href: '/shipping', title: 'Shipping', description: 'Processing times, rates and carriers' },
   { href: '/returns', title: 'Returns', description: 'Unopened jars within 14 days' },
   { href: '/contact', title: 'Contact us', description: 'Still stuck? We will help' },

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 
-const { BattleLiveNavLink, BattleLiveNavMobileLink } = await import('@/components/store/battle-live-nav-link')
+const { BattleLivePanelLink, BattleLiveNavMobileLink } = await import('@/components/store/battle-live-nav-link')
 
 function stubCount(playing: number) {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ playing }) })
@@ -13,12 +13,12 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('BattleLiveNavLink', () => {
+describe('BattleLivePanelLink', () => {
   it('links to the game and blinks green while someone is playing', async () => {
     const fetchMock = stubCount(3)
-    render(<BattleLiveNavLink isHome={false} />)
+    render(<BattleLivePanelLink />)
 
-    const link = screen.getByRole('link')
+    const link = screen.getByRole('menuitem')
     expect(link).toHaveTextContent('Battle Live')
     expect(link).toHaveAttribute('href', 'https://battle.josemadridsalsa.com')
     expect(fetchMock).toHaveBeenCalledWith('/api/arena/live')
@@ -28,7 +28,7 @@ describe('BattleLiveNavLink', () => {
 
   it('shows a still, dim dot when nobody is playing', async () => {
     const fetchMock = stubCount(0)
-    render(<BattleLiveNavLink isHome />)
+    render(<BattleLivePanelLink />)
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     expect(screen.getByTestId('battle-dot')).toBeInTheDocument()
