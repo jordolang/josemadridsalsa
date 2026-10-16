@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { MapPin, Phone, ExternalLink, Navigation2 } from 'lucide-react'
 import type { RetailLocationRecord } from '@/lib/locations/shared'
 import { cn } from '@/lib/utils'
-import { getLocationImageUrl, getFallbackImage, isFaviconUrl } from '@/lib/utils/image'
+import { getLocationImageUrl, getFallbackImage } from '@/lib/utils/image'
 
 type LocationCardProps = {
   location: RetailLocationRecord
@@ -23,27 +23,12 @@ const formatWebsiteLabel = (url?: string | null) => {
 
 export function LocationCard({ location, isSelected = false, onSelect }: LocationCardProps) {
   const { businessName, address, city, state, zipCode, phone, website, distanceMiles, photoUrl, directionsUrl } = location
-  const [storedUrlFailed, setStoredUrlFailed] = useState(false)
-  const [placeIdFailed, setPlaceIdFailed] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
 
   const primaryImage = useMemo(() => {
-    const gallery = location.photoGallery ?? []
-    const hero = gallery[0] ?? photoUrl
-    const hasStoredUrl = Boolean(hero && !isFaviconUrl(hero))
-
-    // Stage 1: Try stored photo URL first (cheaper, no live API call)
-    if (hasStoredUrl && !storedUrlFailed) {
-      return getLocationImageUrl(hero)
-    }
-
-    // Stage 2: Fall back to Place ID for fresh photos from Google
-    if (location.googlePlaceId && !placeIdFailed) {
-      return getLocationImageUrl(null, location.googlePlaceId)
-    }
-
-    // Stage 3: Placeholder
-    return getFallbackImage()
-  }, [location.photoGallery, photoUrl, location.googlePlaceId, storedUrlFailed, placeIdFailed])
+    const hero = (location.photoGallery ?? [])[0] ?? photoUrl
+    return imageFailed ? getFallbackImage() : getLocationImageUrl(hero)
+  }, [location.photoGallery, photoUrl, imageFailed])
 
   const fullAddress = `${address}, ${city}, ${state}${zipCode ? ` ${zipCode}` : ''}`
 
@@ -64,15 +49,7 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
           fill
           className="object-cover transition duration-500 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 25vw"
-          onError={() => {
-            // Cascade: stored URL failed → try Place ID; Place ID failed → placeholder
-            if (primaryImage.includes('placeId=')) {
-              setPlaceIdFailed(true)
-            } else {
-              setStoredUrlFailed(true)
-            }
-          }}
-          unoptimized={primaryImage.startsWith('/api/image-proxy')}
+          onError={() => setImageFailed(true)}
         />
       </div>
 
