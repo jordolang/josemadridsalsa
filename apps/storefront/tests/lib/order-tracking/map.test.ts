@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/order-tracking/geocode', () => ({ geocode: vi.fn() }))
+vi.mock('@/lib/order-tracking/geocode', () => ({
+  geocode: vi.fn(),
+  geocodeBudget: () => ({ deadline: Number.MAX_SAFE_INTEGER, failed: false }),
+}))
 
 import { geocode } from '@/lib/order-tracking/geocode'
 import { buildShipmentRoute, HQ_ADDRESS, HQ_LABEL, loadShipmentMap } from '@/lib/order-tracking/map'

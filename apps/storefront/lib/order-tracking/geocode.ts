@@ -13,11 +13,27 @@ export interface LatLng {
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
 const USER_AGENT = 'josemadridsalsa.com order tracking (https://www.josemadridsalsa.com/contact)'
 const MIN_GAP_MS = 1100
-const TIMEOUT_MS = 8000
+const TIMEOUT_MS = 3000
+const DEFAULT_BUDGET_MS = 3000
 
 // Requests leave one at a time, a second apart, however many pages are geocoding at once.
 let queue: Promise<unknown> = Promise.resolve()
 let lastRequestAt = 0
+
+/**
+ * How long one page render may spend waiting on the geocoder. The page is rendered on the
+ * server, so uncached lookups hold up the response; once the budget is spent, or the geocoder
+ * has failed once, the remaining places are left for a later render (the tracking pages
+ * refresh every minute, and every answer is cached).
+ */
+export interface GeocodeBudget {
+  deadline: number
+  failed: boolean
+}
+
+export function geocodeBudget(ms = DEFAULT_BUDGET_MS): GeocodeBudget {
+  return { deadline: Date.now() + ms, failed: false }
+}
 
 /**
  * Coordinates for a place, from the `geocoded_places` cache or, the first time a place is
@@ -25,7 +41,7 @@ let lastRequestAt = 0
  * geocoder once. Returns null when the place is unknown or the geocoder can't be reached;
  * only a definite "no match" is cached, so an outage is retried on the next view.
  */
-export async function geocode(query: string): Promise<LatLng | null> {
+export async function geocode(query: string, budget?: GeocodeBudget): Promise<LatLng | null> {
   const normalized = query.replace(/\s+/g, ' ').trim()
   if (!normalized) return null
 
@@ -41,9 +57,13 @@ export async function geocode(query: string): Promise<LatLng | null> {
     throw error
   }
   if (cached) return cached.lat !== null && cached.lng !== null ? { lat: cached.lat, lng: cached.lng } : null
+  if (budget && (budget.failed || Date.now() >= budget.deadline)) return null
 
-  const result = await lookup(normalized)
-  if (result === undefined) return null
+  const result = await lookup(normalized, budget)
+  if (result === undefined) {
+    if (budget) budget.failed = true
+    return null
+  }
 
   await prisma.geocodedPlace.upsert({
     where: { query: normalized },
@@ -54,10 +74,12 @@ export async function geocode(query: string): Promise<LatLng | null> {
 }
 
 /** `undefined` when the geocoder could not be asked; `null` when it had no match. */
-async function lookup(query: string): Promise<LatLng | null | undefined> {
+async function lookup(query: string, budget?: GeocodeBudget): Promise<LatLng | null | undefined> {
   const run = queue.then(async () => {
     const wait = lastRequestAt + MIN_GAP_MS - Date.now()
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
+    // Other renders may have used up this one's time while it queued.
+    if (budget && Date.now() >= budget.deadline) return undefined
     lastRequestAt = Date.now()
     return fetchNominatim(query)
   })

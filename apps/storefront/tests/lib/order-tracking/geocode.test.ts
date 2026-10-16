@@ -6,7 +6,7 @@ vi.mock('@/lib/prisma', () => ({
   default: { geocodedPlace: { findUnique: (...args: unknown[]) => findUnique(...args), upsert: (...args: unknown[]) => upsert(...args) } },
 }))
 
-import { geocode } from '@/lib/order-tracking/geocode'
+import { geocode, geocodeBudget } from '@/lib/order-tracking/geocode'
 
 function nominatim(body: unknown, status = 200) {
   return vi.fn(async () => new Response(JSON.stringify(body), { status }))
@@ -73,6 +73,28 @@ describe('geocode', () => {
 
     await expect(geocode('Columbus, OH')).resolves.toBeNull()
     expect(upsert).not.toHaveBeenCalled()
+  })
+
+  it('stops asking the geocoder once the render budget is spent', async () => {
+    findUnique.mockResolvedValue(null)
+    const fetchMock = nominatim([{ lat: '1', lon: '1' }])
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(geocode('Columbus, OH', geocodeBudget(0))).resolves.toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(upsert).not.toHaveBeenCalled()
+  })
+
+  it('stops asking the geocoder for the rest of a render after it fails once', async () => {
+    findUnique.mockResolvedValue(null)
+    const fetchMock = nominatim({ error: 'busy' }, 503)
+    vi.stubGlobal('fetch', fetchMock)
+    const budget = geocodeBudget()
+
+    await expect(geocode('Columbus, OH', budget)).resolves.toBeNull()
+    await expect(geocode('Chicago, IL', budget)).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(budget.failed).toBe(true)
   })
 
   it('gives up quietly when the cache table has not been migrated', async () => {

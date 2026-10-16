@@ -1,4 +1,4 @@
-import { geocode, type LatLng } from '@/lib/order-tracking/geocode'
+import { geocode, geocodeBudget, type GeocodeBudget, type LatLng } from '@/lib/order-tracking/geocode'
 import { carrierLocation, type CarrierEvent } from '@/lib/order-tracking/timeline'
 
 export interface MapStop extends LatLng {
@@ -78,7 +78,9 @@ export interface ShippingAddress {
 
 /**
  * Geocode everything the map needs and build the route. Each place is geocoded once and
- * cached, so after the first view this is only database reads.
+ * cached, so after the first view this is only database reads. The first view of a new
+ * order gets a few seconds of geocoding; whatever doesn't fit is placed on a later refresh,
+ * so a slow geocoder can delay stops on the map but never the page.
  */
 export async function loadShipmentMap(input: {
   shippingAddress: ShippingAddress | null
@@ -86,25 +88,26 @@ export async function loadShipmentMap(input: {
   shipped: boolean
   delivered: boolean
 }): Promise<ShipmentMapData> {
-  const hq = { ...((await geocode(HQ_ADDRESS)) ?? HQ_FALLBACK), label: HQ_LABEL }
-  const destination = input.shippingAddress ? await geocodeDestination(input.shippingAddress) : null
+  const budget = geocodeBudget()
+  const hq = { ...((await geocode(HQ_ADDRESS, budget)) ?? HQ_FALLBACK), label: HQ_LABEL }
+  const destination = input.shippingAddress ? await geocodeDestination(input.shippingAddress, budget) : null
 
   const scans: ShipmentScan[] = []
   for (const event of input.carrierEvents) {
     const label = carrierLocation(event)
     const at = event.datetime ? new Date(event.datetime).getTime() : NaN
     if (!label || Number.isNaN(at)) continue
-    scans.push({ label, at, point: await geocode(scanQuery(event, label)) })
+    scans.push({ label, at, point: await geocode(scanQuery(event, label), budget) })
   }
 
   return buildShipmentRoute({ hq, destination, scans, shipped: input.shipped, delivered: input.delivered })
 }
 
 /** The full address first; if the geocoder doesn't know the street, the city will do. */
-async function geocodeDestination(address: ShippingAddress): Promise<MapStop | null> {
+async function geocodeDestination(address: ShippingAddress, budget: GeocodeBudget): Promise<MapStop | null> {
   const country = address.country || 'US'
   const cityLine = `${address.city}, ${address.state} ${address.zipCode}, ${country}`
-  const point = (await geocode(`${address.street}, ${cityLine}`)) ?? (await geocode(cityLine))
+  const point = (await geocode(`${address.street}, ${cityLine}`, budget)) ?? (await geocode(cityLine, budget))
   return point ? { ...point, label: `${address.city}, ${address.state}` } : null
 }
 
