@@ -56,6 +56,10 @@ export default async function OrderTrackingDetailPage({ params, searchParams }: 
         <Badge className="text-sm">Status: {statusLabel(view.status)}</Badge>
       </div>
 
+      <div className="mt-8">
+        <ShipmentMap data={view.map} />
+      </div>
+
       {view.trackingNumber && (
         <Card className="mt-8 space-y-4 p-6">
           <h2 className="text-lg font-semibold">Shipment</h2>
@@ -81,7 +85,6 @@ export default async function OrderTrackingDetailPage({ params, searchParams }: 
               </div>
             )}
           </dl>
-          <ShipmentMap location={view.currentLocation} delivered={delivered} />
           {view.trackingUrl && (
             <a
               href={view.trackingUrl}

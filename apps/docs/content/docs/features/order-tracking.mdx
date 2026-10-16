@@ -30,7 +30,13 @@ Newest first, built by `lib/order-tracking/timeline.ts` from:
 
 ## Shipment, map and live updates
 
-The map is a Google Maps embed centred on the city of the most recent carrier scan. It needs `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. Carriers report a city, not exact coordinates, so the map shows the area the package was last scanned in.
+Both tracking pages open with a map of where the salsa is (`components/order-tracking/ShipmentMap.tsx`, built with Leaflet on OpenStreetMap tiles; no Google, no API key, no per-request charge):
+
+- A **salsa bowl** marks where the package was last seen. Until the carrier scans it, that is Jose Madrid Salsa headquarters, 601 Putnam Ave, Zanesville, OH. The caption says whether the order is still being packed or is waiting for pickup.
+- A **red pin** marks the destination, on the order page only. The tracking-number page leaves it out, because anyone holding a tracking number can open that page.
+- A **blue line** traces the route so far: headquarters, then each place the carrier scanned the package, in order. Repeated scans in one place collapse into one stop. Once delivered, the line ends at the destination and the bowl moves there.
+
+Carriers report a city, state and zip, not coordinates, so each scan is placed at that zip or city. Places are geocoded with OpenStreetMap's Nominatim (`lib/order-tracking/geocode.ts`), which is free but allows one request a second, so every answer, including "no match", is cached forever in the `geocoded_places` table and a place is only ever sent to the geocoder once. Headquarters is geocoded the same way, with hard-coded coordinates as a fallback. If the table is missing (the migration has not been applied), the map still draws headquarters and skips the geocoder rather than calling it on every view.
 
 Carrier scans arrive through the EasyPost `tracker.updated` webhook (`app/api/webhooks/easypost`). Labels bought through EasyPost already have a tracker. A tracking number entered by hand gets one the first time its tracking page is viewed: the page registers an EasyPost tracker, saves the current scans, and the webhook keeps the order up to date from then on. This needs `SHIPPING_API_KEY` with EasyPost as the shipping provider.
 
