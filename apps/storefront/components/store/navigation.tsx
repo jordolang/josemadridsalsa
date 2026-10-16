@@ -42,8 +42,9 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { cn } from "@/lib/utils";
 import { CartIcon } from "@/components/store/cart-icon";
-import { BattleLiveNavLink, BattleLiveNavMobileLink } from "@/components/store/battle-live-nav-link";
+import { BattleLiveNavMobileLink, BattleLivePanelLink } from "@/components/store/battle-live-nav-link";
 import { SITE_URL } from '@/lib/site-url'
+import { getFundraisingSiteUrl } from '@/lib/fundraising-site/host'
 
 interface NavSubItem {
   name: string;
@@ -58,6 +59,9 @@ export interface NavGroup {
   featured?: { href: string; label: string; hint: string };
   items: NavSubItem[];
 }
+
+/** Fundraiser pages live on the fundraising site, its own app and domain. */
+const FUNDRAISING_SITE = getFundraisingSiteUrl();
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -75,55 +79,54 @@ const NAV_GROUPS: NavGroup[] = [
       { name: "Extra Hot", href: "/products?heatLevel=EXTRA_HOT", description: "Real fire for heat seekers" },
       { name: "Gourmet Fruit", href: "/products?heatLevel=FRUIT", description: "Unique fruit-infused flavors" },
       { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
-    ],
-  },
-  {
-    id: "our-story",
-    title: "Our Story",
-    items: [
-      { name: "Our Story", href: "/our-story", description: "From Clovis, NM to Zanesville, OH" },
-      { name: "About Jose", href: "/about", description: "The family behind the jar" },
-      { name: "La Perla Tortilla Factory", href: "/laperla", description: "Our tortilla chip maker in Toledo, OH" },
-      { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
-      { name: "Find Us", href: "/find-us", description: "Retailers near you" },
-      { name: "Help Center", href: "/help", description: "Search help articles, track orders, get support" },
-      { name: "FAQ", href: "/faq", description: "Ordering, shipping, fundraising and wholesale answers" },
+      { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
+      { name: "Gift Certificates", href: "/gift-certificates", description: "Give the gift of salsa" },
+      { name: "Wholesale", href: "/wholesale", description: "Stock our jars in your store" },
     ],
   },
   {
     id: "fundraising",
     title: "Fundraising",
     featured: {
-      href: "/fundraising",
+      href: `${FUNDRAISING_SITE}/start`,
       label: "Start a Fundraiser",
       hint: "Earn 50% profit on every jar your group sells",
     },
     items: [
-      { name: "Fundraising", href: "/fundraising", description: "Earn 50% profit" },
-      { name: "Wholesale", href: "/wholesale", description: "Stock our jars" },
+      { name: "Fundraising Home", href: `${FUNDRAISING_SITE}/`, description: "Earn 50% profit on every jar" },
+      { name: "Why Jose Madrid?", href: `${FUNDRAISING_SITE}/why-jose-madrid`, description: "How our fundraisers work" },
+      { name: "Find Your Group", href: `${FUNDRAISING_SITE}/groups`, description: "Support a group that's selling" },
+      { name: "Fundraiser Sign-Up", href: `${FUNDRAISING_SITE}/sign-up`, description: "Sign your group up in two steps" },
+      { name: "Create an Account", href: `${FUNDRAISING_SITE}/auth/fundraiser-signup`, description: "Set up your fundraiser login" },
+      { name: "Fundraiser Login", href: `${FUNDRAISING_SITE}/fundraiser-portal`, description: "Your dashboard, team and orders" },
+      { name: "Submit Final Order", href: `${FUNDRAISING_SITE}/submit`, description: "Send in your group's order" },
     ],
   },
   {
+    // The Battle Live link is drawn first in this panel (see SimplePanel).
     id: "community",
     title: "Community",
     items: [
       { name: "Where Is Jose?", href: "/where-is-jose", description: "Catch us at events and markets" },
-      { name: "Battle Arena", href: "/battle-arena", description: "Play, earn, and win with your team" },
-      { name: "Polls", href: "/polls", description: "Vote on flavors and more" },
+      { name: "Find Us", href: "/find-us", description: "Retailers near you" },
+      { name: "Recipes", href: "/recipes", description: "Cooking with our salsas" },
       { name: "The Heat Index", href: "/heat-index", description: "Stories, recipes, road notes, and salsa lore" },
+      { name: "Polls", href: "/polls", description: "Vote on flavors and more" },
+      { name: "Our Story", href: "/our-story", description: "From Clovis, NM to Zanesville, OH" },
+      { name: "About Jose", href: "/about", description: "The family behind the jar" },
+      { name: "La Perla Tortilla Factory", href: "/laperla", description: "Our tortilla chip maker in Toledo, OH" },
     ],
   },
   {
-    id: "merch",
-    title: "Merch",
-    featured: {
-      href: "/merchandise",
-      label: "Shop Merch",
-      hint: "T-shirts, hats, and accessories",
-    },
+    id: "support",
+    title: "Support",
     items: [
-      { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
-      { name: "Gift Certificates", href: "/gift-certificates", description: "Give the gift of salsa" },
+      { name: "Track Your Order", href: "/order-tracking", description: "See where your salsa is" },
+      { name: "Help Center", href: "/help", description: "Search help articles and get support" },
+      { name: "FAQ", href: "/faq", description: "Ordering, shipping, fundraising and wholesale answers" },
+      { name: "Shipping", href: "/shipping", description: "Processing times, rates and carriers" },
+      { name: "Returns", href: "/returns", description: "Unopened jars within 14 days" },
+      { name: "Contact Us", href: "/contact", description: "Still stuck? We will help" },
     ],
   },
 ];
@@ -436,8 +439,6 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                     />
                   </button>
                 </div>
-                {/* Battle Live tab sits immediately after Shop */}
-                {group.id === "shop" && <BattleLiveNavLink isHome={isDark} />}
                 </Fragment>
               );
             })}
@@ -656,6 +657,9 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                           {group.title}
                         </p>
                         <div className="space-y-0.5">
+                          {group.id === "community" && (
+                            <BattleLiveNavMobileLink onNavigate={() => setIsMobileMenuOpen(false)} />
+                          )}
                           {group.featured && (
                             <Link
                               href={group.featured.href}
@@ -678,9 +682,6 @@ function NavigationContent({ navGroups }: { navGroups: NavGroup[] }) {
                           ))}
                         </div>
                       </div>
-                      {group.id === "shop" && (
-                        <BattleLiveNavMobileLink onNavigate={() => setIsMobileMenuOpen(false)} />
-                      )}
                       </Fragment>
                     ))}
                   </nav>
@@ -947,10 +948,18 @@ function ShopPanel({ group, pathname, searchParams }: ShopPanelProps) {
   );
 }
 
-function SimplePanel({ group, pathname }: PanelProps) {
+export function SimplePanel({ group, pathname }: PanelProps) {
+  // The featured link (Fundraising's "Start a Fundraiser") is drawn first, like the mobile menu.
+  const items: NavSubItem[] = group.featured
+    ? [
+        { name: group.featured.label, href: group.featured.href, description: group.featured.hint },
+        ...group.items,
+      ]
+    : group.items;
   return (
     <div className="grid grid-cols-1 gap-1 p-3 sm:grid-cols-3">
-      {group.items.map((item) => {
+      {group.id === "community" && <BattleLivePanelLink />}
+      {items.map((item) => {
         const active = pathname.startsWith(item.href);
         return (
           <Link

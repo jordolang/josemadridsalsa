@@ -22,8 +22,8 @@ function playingLabel(playing: number): string {
   return `${playing} ${playing === 1 ? 'player is' : 'players are'} in the Battle Arena now. Join the fight`
 }
 
-/** Desktop "Battle Live" tab, next to Shop in the masthead. Opens the game in a new tab. */
-export function BattleLiveNavLink({ isHome }: { isHome: boolean }) {
+/** "Battle Live" entry in the Community dropdown, styled like its other links. Opens the game in a new tab. */
+export function BattleLivePanelLink() {
   const { playing } = useBattleLive()
   const live = playing > 0
 
@@ -32,23 +32,22 @@ export function BattleLiveNavLink({ isHome }: { isHome: boolean }) {
       href={BATTLE_ARENA_URL}
       target="_blank"
       rel="noopener"
+      role="menuitem"
       aria-label={playingLabel(playing)}
-      title={live ? `${playing} playing now` : undefined}
-      className={cn('group relative flex items-center whitespace-nowrap py-3', isHome ? 'px-2 2xl:px-5' : 'px-5')}
+      className="group rounded-lg px-5 py-4 transition-colors hover:bg-muted/70"
     >
-      <span
+      <div
         className={cn(
-          'flex items-center gap-2 whitespace-nowrap text-[12.5px] font-semibold uppercase tracking-[0.16em] 2xl:tracking-[0.22em] transition-colors duration-200',
-          live
-            ? 'text-green-500 group-hover:text-green-400'
-            : isHome
-            ? 'text-white group-hover:text-[#d9a235]'
-            : 'text-foreground group-hover:text-salsa-600',
+          'flex items-center gap-2 font-serif text-[18px] font-bold leading-tight transition-colors',
+          live ? 'text-green-600 group-hover:text-green-500' : 'text-foreground group-hover:text-salsa-600',
         )}
       >
         <BattleDot live={live} />
         Battle Live
-      </span>
+      </div>
+      <div className="mt-1 text-[12px] leading-snug text-muted-foreground">
+        {live ? `${playing} playing now. Join the fight` : 'Play the Battle Arena with your team'}
+      </div>
     </a>
   )
 }

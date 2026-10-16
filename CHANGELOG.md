@@ -13,6 +13,15 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Changed
+- **Main navigation is now Shop, Fundraising, Community and Support.** Merchandise, Gift
+  Certificates and Wholesale moved under Shop. Fundraising links straight to every fundraiser page
+  on the fundraising site: home, why Jose Madrid, find your group, sign-up, account creation,
+  fundraiser login and final order. Battle Live moved from its own tab into Community, along with
+  the Our Story pages. The new Support menu has Track Your Order, Help Center, FAQ, Shipping,
+  Returns and Contact. The Help Center's first quick link is now Track your order. The old
+  Community "Battle Arena" link pointed at `/battle-arena`, which 404s; Battle Live replaces it.
+
 ### Removed
 - **Find Us no longer calls the Google Places API.** Every store card and store page loaded its
   photo through `/api/image-proxy`, which made a billable Places API (New) "Place Details Photos"
