@@ -948,11 +948,18 @@ function ShopPanel({ group, pathname, searchParams }: ShopPanelProps) {
   );
 }
 
-function SimplePanel({ group, pathname }: PanelProps) {
+export function SimplePanel({ group, pathname }: PanelProps) {
+  // The featured link (Fundraising's "Start a Fundraiser") is drawn first, like the mobile menu.
+  const items: NavSubItem[] = group.featured
+    ? [
+        { name: group.featured.label, href: group.featured.href, description: group.featured.hint },
+        ...group.items,
+      ]
+    : group.items;
   return (
     <div className="grid grid-cols-1 gap-1 p-3 sm:grid-cols-3">
       {group.id === "community" && <BattleLivePanelLink />}
-      {group.items.map((item) => {
+      {items.map((item) => {
         const active = pathname.startsWith(item.href);
         return (
           <Link
