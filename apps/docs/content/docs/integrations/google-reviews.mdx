@@ -6,16 +6,11 @@ description: Google Business reviews integration via the Places API
 
 # Google Reviews Integration
 
-The platform displays Google Business reviews on the storefront by fetching them from the Google Places API (v1). Reviews are loaded server-side and cached via ISR to avoid client-side API calls.
+The platform displays Google Business reviews on the storefront by fetching them from the legacy Google Places API (Place Details). Reviews are loaded server-side and cached via ISR to avoid client-side API calls.
 
 ## Architecture
 
-Two data paths serve reviews:
-
-1. **Server component fetcher** (`lib/server/google-data.ts`) -- Used by server components with ISR caching (2-hour revalidation)
-2. **API route** (`app/api/reviews/google/route.ts`) -- Client-accessible endpoint with 2-hour cache
-
-Both call the same Google Places API endpoint.
+Reviews come from one server component fetcher, `lib/server/google-data.ts`, which calls the legacy Places API (Place Details) with ISR caching (2-hour revalidation). There is no client-accessible reviews endpoint; the former `/api/reviews/google` route was removed because it called the billable Places API (New) with no callers.
 
 ## Environment Variables
 
@@ -25,10 +20,9 @@ Both call the same Google Places API endpoint.
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Fallback if server key not set | Alternative |
 | `GOOGLE_PLACE_ID` | Google Place ID for the business | Recommended |
 | `NEXT_PUBLIC_GOOGLE_PLACE_ID` | Fallback public place ID | Alternative |
-| `GOOGLE_PLACE_NAME` | Business name for place search (defaults to "Jose Madrid Salsa") | No |
 
 <Callout type="info">
-If no Place ID is configured, the API route will attempt to find it by searching for the business name via the Places Text Search API.
+If no Place ID is configured, the fetcher returns empty reviews; set `GOOGLE_PLACE_ID`.
 </Callout>
 
 ## Setup
@@ -107,17 +101,15 @@ export const revalidate = 7200 // 2 hours
 
 ## Error Handling
 
-Both implementations return empty data on failure rather than throwing:
+The fetcher returns empty data on failure rather than throwing:
 
 ```ts
 return { reviews: [], totalRating: 0, totalReviews: 0 }
 ```
 
-The API route returns HTTP 200 with empty reviews and an error message in the response body to prevent UI breakage.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `lib/server/google-data.ts` | Server component data fetcher |
-| `app/api/reviews/google/route.ts` | Client-accessible reviews endpoint |

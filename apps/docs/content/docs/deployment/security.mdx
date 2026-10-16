@@ -38,13 +38,7 @@ Permissions are seeded on every build via `prisma/seed.permissions.ts` and check
 
 ### Image Proxy
 
-The image proxy at `/api/image-proxy` demonstrates the security model used across API routes:
-
-- **URL whitelisting** -- Only Google Places URLs are allowed (prevents SSRF)
-- **HTTPS enforcement** -- Non-HTTPS URLs are rejected
-- **Input validation** -- Zod schema validates all query parameters
-- **Timeout protection** -- 10-second `AbortSignal` prevents hanging requests
-- **Security headers** -- Responses include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`
+`/api/image-proxy` no longer fetches anything. It used to proxy Google Places photos, which made a billable Places API request per image view; it now only 308-redirects old cached URLs to the placeholder image. Location photos from Google are not shown (see `getLocationImageUrl` in `lib/utils/image.ts`).
 
 ### Server Actions
 

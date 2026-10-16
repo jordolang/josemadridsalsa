@@ -50,30 +50,9 @@ images: {
 }
 ```
 
-### Image Proxy Cache
+### Image Proxy
 
-The image proxy route (`/api/image-proxy`) sets explicit cache headers for Google Places photos:
-
-```ts
-headers: {
-  'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600',
-}
-```
-
-This caches proxied images for **24 hours** at both the CDN (`s-maxage`) and browser (`max-age`) levels, with a 1-hour stale-while-revalidate window.
-
-### In-Memory Photo Cache
-
-The image proxy also maintains a server-side in-memory cache for Place ID to photo URL mappings:
-
-```ts
-const placePhotoCache = new Map<string, { url: string; timestamp: number }>()
-const PHOTO_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
-```
-
-<Callout type="warn" title="Serverless Memory">
-In-memory caches in serverless functions are per-instance and ephemeral. Each cold start creates a fresh cache. This cache reduces repeat API calls within a single function instance's lifetime but is not shared across instances.
-</Callout>
+`/api/image-proxy` no longer proxies Google Places photos. It returns a 308 redirect to the placeholder image with `Cache-Control: public, max-age=31536000, immutable`, so pages cached with old proxy URLs still show an image without any call to Google.
 
 ## Prisma Accelerate Cache
 

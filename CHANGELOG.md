@@ -13,6 +13,16 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Removed
+- **Find Us no longer calls the Google Places API.** Every store card and store page loaded its
+  photo through `/api/image-proxy`, which made a billable Places API (New) "Place Details Photos"
+  request per image per uncached view (about 150 cards on `/find-us`). The stored photo names
+  expire, so most of those requests failed and the card then retried with a Place ID lookup,
+  making another Places request. Once billing went live on the Google Cloud project on
+  October 9, 2026, the same traffic started costing money. Google Places photos now show the
+  placeholder; non-Google photos still show. `/api/image-proxy` only redirects old cached URLs
+  to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
+
 ### Added
 - **Order tracking at `/order-tracking`.** Customers look up an order with its order number and
   the phone number on it, or with a tracking number. The order page shows a full history, newest
