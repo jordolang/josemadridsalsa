@@ -25,7 +25,7 @@ export const sharedHeaders = async () => {
     // a fundraiser's live stream on /f/[subdomain].
     "frame-src https://www.google.com/maps/ https://maps.google.com https://www.googletagmanager.com https://js.stripe.com https://hooks.stripe.com https://vercel.live https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com https://www.facebook.com https://web.facebook.com https://player.twitch.tv",
     // Images from multiple CDNs and data URIs
-    "img-src 'self' data: blob: https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com https://*.google-analytics.com https://*.googletagmanager.com",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://utfs.io https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://logo.clearbit.com https://www.google.com https://cdn11.bigcommerce.com https://www.nudgeprinting.com https://vercel.live https://vercel.com https://*.google-analytics.com https://*.googletagmanager.com",
     // Allow connections to self, external APIs used client-side, Sentry, and
     // the GA4 collect endpoints gtag uses (fundraiser pages load gtag.js).
     // data: is react-pdf fetching its inlined WebAssembly and fonts.

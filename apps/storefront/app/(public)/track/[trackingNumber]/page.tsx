@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createMetadata } from "@/lib/metadata";
 import { ensureCarrierEvents } from "@/lib/order-tracking/load";
-import { latestCarrierLocation } from "@/lib/order-tracking/timeline";
+import { loadShipmentMap } from "@/lib/order-tracking/map";
 import { AutoRefresh } from "@/components/order-tracking/AutoRefresh";
 import { ShipmentMap } from "@/components/order-tracking/ShipmentMap";
 
@@ -90,8 +90,14 @@ export default async function TrackingPage({ params }: PageProps) {
   // Registers an EasyPost tracker the first time a hand-entered tracking number is viewed,
   // so its scans appear here and keep arriving by webhook.
   const carrierEvents = await ensureCarrierEvents(order);
-  const currentLocation = latestCarrierLocation(carrierEvents);
   const delivered = order.status === "DELIVERED" || order.deliveredAt !== null;
+  // No destination pin: anyone holding the tracking number can open this page.
+  const map = await loadShipmentMap({
+    shippingAddress: null,
+    carrierEvents,
+    shipped: order.status === "SHIPPED" || order.shippedAt !== null,
+    delivered: delivered || carrierEvents.some((e) => e.status === "delivered"),
+  });
 
   const trackingHistory = carrierEvents.length === 0 ? null : carrierEvents.map((event) => ({
     status: event.status ?? "unknown",
@@ -114,6 +120,8 @@ export default async function TrackingPage({ params }: PageProps) {
           </div>
           <Badge>{order.status}</Badge>
         </div>
+
+        <ShipmentMap data={map} />
 
         <Card className="p-6">
           <h2 className="font-medium text-lg mb-4">Shipping Information</h2>
@@ -146,8 +154,6 @@ export default async function TrackingPage({ params }: PageProps) {
                 </div>
               )}
             </div>
-
-            <ShipmentMap location={currentLocation} delivered={delivered} />
 
             {trackingUrl && (
               <div className="pt-2">

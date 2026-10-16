@@ -2898,6 +2898,19 @@ model OrderSmsSubscription {
   @@map("order_sms_subscriptions")
 }
 
+/// One geocoder answer per place, so a shipping address or a carrier scan city is looked up
+/// once (the tracking map draws it on every view) and never sent to the geocoder again.
+/// Null coordinates mean the geocoder had no match for the place.
+model GeocodedPlace {
+  /// The exact text sent to the geocoder, e.g. "Columbus, OH 43215, US".
+  query     String   @id
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+
+  @@map("geocoded_places")
+}
+
 model InboundEmail {
   id             String               @id @default(cuid())
   connectionId   String

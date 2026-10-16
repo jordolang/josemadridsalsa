@@ -33,6 +33,15 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **The order tracker shows a map of where the salsa is.** Both tracking pages (`/order-tracking/<order>`
+  and `/track/<tracking number>`) now open with a map: a salsa bowl sits wherever the package was
+  last scanned, or at Jose Madrid Salsa headquarters (601 Putnam Ave, Zanesville) until the carrier
+  picks it up; a red pin marks the destination (order page only); and a blue line traces the route
+  from headquarters through every carrier stop. The map uses Leaflet with OpenStreetMap tiles and
+  geocodes places with OpenStreetMap's Nominatim, so there is no Google key and nothing billed per
+  request. Each place is geocoded once and cached in the new `geocoded_places` table (migration
+  `20261016000000_geocoded_places`). The previous Google Maps embed, which needed
+  `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and only appeared once the carrier had scanned the package, is gone.
 - **Order tracking at `/order-tracking`.** Customers look up an order with its order number and
   the phone number on it, or with a tracking number. The order page shows a full history, newest
   first: order received, payment, every status change, notes and delays staff post from the admin

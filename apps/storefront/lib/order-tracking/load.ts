@@ -6,6 +6,7 @@ import {
   type CarrierEvent,
   type CustomerTimelineEntry,
 } from '@/lib/order-tracking/timeline'
+import { loadShipmentMap, type ShipmentMapData } from '@/lib/order-tracking/map'
 
 /** Find an order by number for the phone-verified lookup, with every phone recorded on it. */
 export async function findOrderForLookup(orderNumber: string) {
@@ -50,6 +51,7 @@ export interface OrderTrackingView {
   shipTo: string | null
   timeline: CustomerTimelineEntry[]
   smsSubscribed: boolean
+  map: ShipmentMapData
 }
 
 /**
@@ -74,7 +76,7 @@ export async function loadOrderTrackingView(orderId: string): Promise<OrderTrack
       lastTrackingUpdate: true,
       trackingHistory: true,
       user: { select: { email: true } },
-      shippingAddress: { select: { city: true, state: true } },
+      shippingAddress: { select: { street: true, city: true, state: true, zipCode: true, country: true } },
       items: { select: { quantity: true, productName: true } },
       payments: { select: { paidAt: true } },
       customerUpdates: { select: { createdAt: true, kind: true, message: true } },
@@ -86,7 +88,16 @@ export async function loadOrderTrackingView(orderId: string): Promise<OrderTrack
   const carrierEvents = await ensureCarrierEvents(order)
   const email = (order.user?.email ?? order.guestEmail)?.toLowerCase() ?? null
 
-  const [statusLogs, inboundEmails, outboundEmails] = await Promise.all([
+  const [map, statusLogs, inboundEmails, outboundEmails] = await Promise.all([
+    loadShipmentMap({
+      shippingAddress: order.shippingAddress,
+      carrierEvents,
+      shipped: order.status === 'SHIPPED' || order.shippedAt !== null,
+      delivered:
+        order.status === 'DELIVERED' ||
+        order.deliveredAt !== null ||
+        carrierEvents.some((e) => e.status === 'delivered'),
+    }),
     prisma.auditLog.findMany({
       where: { entityType: 'order', entityId: order.id, action: 'update' },
       select: { createdAt: true, changes: true },
@@ -163,6 +174,7 @@ export async function loadOrderTrackingView(orderId: string): Promise<OrderTrack
     shipTo: [order.shippingAddress?.city, order.shippingAddress?.state].filter(Boolean).join(', ') || null,
     timeline,
     smsSubscribed: order.smsSubscriptions.length > 0,
+    map,
   }
 }
 
