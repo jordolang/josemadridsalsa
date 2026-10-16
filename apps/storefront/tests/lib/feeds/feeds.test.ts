@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SITE_URL, type FeedProduct } from '@/lib/feeds/products'
-import { buildFacebookCatalogCsv, toFeedJpegUrl } from '@/lib/feeds/facebook'
+import { buildFacebookCatalogCsv, decodeFeedSku, encodeFeedSku, toFeedJpegUrl } from '@/lib/feeds/facebook'
 import { buildGoogleShoppingTsv, buildGoogleShoppingXml } from '@/lib/feeds/google'
 import { buildAmazonInventoryTsv } from '@/lib/feeds/amazon'
 
@@ -65,10 +65,17 @@ describe('buildFacebookCatalogCsv', () => {
     const urls = [...csv.matchAll(/https?:\/\/[^",]+\/feed-images\/[^",]+/g)].map((m) => m[0])
     expect(urls).toHaveLength(3)
     urls.forEach((url, i) => {
-      expect(url).toMatch(new RegExp(`^${SITE_URL}/feed-images/JMS%2F1/${i}\\.jpg\\?v=[0-9a-f]{10}$`))
+      expect(url).toMatch(new RegExp(`^${SITE_URL}/feed-images/${encodeFeedSku('JMS/1')}/${i}\\.jpg\\?v=[0-9a-f]{10}$`))
     })
     expect(csv).not.toContain('/api/')
     expect(csv).not.toContain('.webp')
+  })
+
+  it('encodes SKUs as a single slash-free path segment and decodes them back', () => {
+    for (const sku of ['JMS-MILD-001', 'JMS/1', 'a b+c?é']) {
+      expect(encodeFeedSku(sku)).toMatch(/^[A-Za-z0-9_-]+$/)
+      expect(decodeFeedSku(encodeFeedSku(sku))).toBe(sku)
+    }
   })
 
   it('changes the image version when the source image changes', () => {

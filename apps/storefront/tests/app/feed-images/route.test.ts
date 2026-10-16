@@ -5,13 +5,14 @@ vi.mock('@/lib/feeds/products', () => ({ getFeedProductImages: vi.fn() }))
 
 const { getFeedProductImages } = await import('@/lib/feeds/products')
 const { GET } = await import('@/app/feed-images/[sku]/[file]/route')
+const { encodeFeedSku } = await import('@/lib/feeds/facebook')
 
 const PRIMARY = 'https://abc.public.blob.vercel-storage.com/products/salsa.webp'
 const EXTRA = 'https://cdn.example.com/salsa-2.webp'
 
-function get(sku: string, file: string) {
-  return GET(new Request(`https://www.josemadridsalsa.com/feed-images/${sku}/${file}`), {
-    params: Promise.resolve({ sku, file }),
+function get(sku: string, file: string, segment = encodeFeedSku(sku)) {
+  return GET(new Request(`https://www.josemadridsalsa.com/feed-images/${segment}/${file}`), {
+    params: Promise.resolve({ sku: segment, file }),
   })
 }
 
@@ -26,6 +27,7 @@ async function transparentWebp() {
 describe('GET /feed-images/[sku]/[file]', () => {
   beforeEach(() => {
     global.fetch = vi.fn()
+    vi.mocked(getFeedProductImages).mockReset()
     vi.mocked(getFeedProductImages).mockResolvedValue([PRIMARY, EXTRA])
   })
 
@@ -42,6 +44,18 @@ describe('GET /feed-images/[sku]/[file]', () => {
     expect((await sharp(out).metadata()).format).toBe('jpeg')
     const { data } = await sharp(out).raw().toBuffer({ resolveWithObject: true })
     expect(data[0]).toBeGreaterThan(250)
+  })
+
+  it('decodes SKUs that contain a slash', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(new Response(new Uint8Array(await transparentWebp())))
+    expect((await get('JMS/1', '0.jpg')).status).toBe(200)
+    expect(getFeedProductImages).toHaveBeenCalledWith('JMS/1')
+  })
+
+  it('returns 404 for a segment that is not base64url, without a lookup', async () => {
+    const res = await get('JMS-1', '0.jpg', 'JMS%2F1')
+    expect(res.status).toBe(404)
+    expect(getFeedProductImages).not.toHaveBeenCalled()
   })
 
   it('serves additional images from any host on the product record', async () => {

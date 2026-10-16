@@ -1,9 +1,10 @@
 import sharp from 'sharp'
 import { z } from 'zod'
+import { decodeFeedSku } from '@/lib/feeds/facebook'
 import { getFeedProductImages } from '@/lib/feeds/products'
 
 /**
- * GET /feed-images/<sku>/<n>.jpg
+ * GET /feed-images/<base64url sku>/<n>.jpg
  *
  * Serves image n of an active product (0 = primary, 1… = additional) as an
  * opaque JPEG for catalog feeds. Meta Commerce only accepts JPEG/PNG, while
@@ -20,7 +21,7 @@ const FETCH_TIMEOUT_MS = 10_000
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024
 
 const paramsSchema = z.object({
-  sku: z.string().min(1).max(100),
+  sku: z.string().regex(/^[A-Za-z0-9_-]{1,200}$/),
   file: z.string().regex(/^\d{1,2}\.jpg$/),
 })
 
@@ -35,7 +36,7 @@ export async function GET(
   const parsed = paramsSchema.safeParse(await params)
   if (!parsed.success) return error('Not found', 404)
 
-  const images = await getFeedProductImages(parsed.data.sku)
+  const images = await getFeedProductImages(decodeFeedSku(parsed.data.sku))
   const source = images?.[Number.parseInt(parsed.data.file, 10)]
   if (!source) return error('Not found', 404)
 

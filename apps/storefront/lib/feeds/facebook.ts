@@ -34,9 +34,21 @@ const COLUMNS = [
  * robots.txt disallows that tree. `v` changes when the source image does, so
  * cached JPEGs are never stale.
  */
+/**
+ * SKUs may contain `/`, which routing would treat as a path separator even
+ * when percent-encoded, so the path carries the SKU as base64url.
+ */
+export function encodeFeedSku(sku: string): string {
+  return Buffer.from(sku, 'utf8').toString('base64url')
+}
+
+export function decodeFeedSku(segment: string): string {
+  return Buffer.from(segment, 'base64url').toString('utf8')
+}
+
 export function toFeedJpegUrl(sku: string, index: number, sourceUrl: string): string {
   const version = createHash('sha1').update(sourceUrl).digest('hex').slice(0, 10)
-  return `${SITE_URL}/feed-images/${encodeURIComponent(sku)}/${index}.jpg?v=${version}`
+  return `${SITE_URL}/feed-images/${encodeFeedSku(sku)}/${index}.jpg?v=${version}`
 }
 
 /** Quote a field per RFC 4180: wrap in double-quotes, escape inner quotes. */

@@ -317,7 +317,7 @@ the root `package.json` is canonical.
 
 ### Fixed
 - **Facebook catalog feed images.** `/api/feeds/facebook` linked transparent WebP images, which
-  Meta Commerce does not accept. Every image link now points at `/feed-images/<sku>/<n>.jpg`,
+  Meta Commerce does not accept. Every image link now points at `/feed-images/<encoded sku>/<n>.jpg`,
   which looks the image up on the product and serves it as an opaque JPEG on white. It sits
   outside `/api/` so robots.txt lets Meta fetch it. The feed also sends `gtin` from the product
   barcode.
