@@ -35,7 +35,7 @@ export const FEED_BRAND = 'Jose Madrid Salsa'
 export const FEED_GOOGLE_PRODUCT_CATEGORY =
   'Food, Beverages & Tobacco > Food Items > Condiments & Sauces > Salsa'
 
-const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? DEFAULT_SITE_URL
+export const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? DEFAULT_SITE_URL
 
 function toAbsoluteUrl(path: string | null | undefined): string {
   if (!path) return ''

@@ -316,6 +316,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Facebook catalog feed images.** `/api/feeds/facebook` linked transparent WebP images, which
+  Meta Commerce does not accept. Every image link now goes through `/api/feeds/image`, which
+  serves an opaque JPEG on white (sources limited to the site and Vercel Blob). The feed also
+  sends `gtin` from the product barcode.
 - **Picante's replies show formatting.** Bold, italics, lists, links, headings and tables in chat
   replies now render as formatted text instead of raw `**` and `#` characters.
 - **Clicking a merch product showed "404 page not found".** Printify answers 400 "Validation

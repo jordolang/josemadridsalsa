@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { FeedProduct } from '@/lib/feeds/products'
+import { SITE_URL, type FeedProduct } from '@/lib/feeds/products'
 import { buildFacebookCatalogCsv } from '@/lib/feeds/facebook'
 import { buildGoogleShoppingTsv, buildGoogleShoppingXml } from '@/lib/feeds/google'
 import { buildAmazonInventoryTsv } from '@/lib/feeds/amazon'
@@ -49,6 +49,33 @@ describe('buildFacebookCatalogCsv', () => {
       makeProduct({ regularPrice: 12.99, salePrice: 9.99 }),
     ])
     expect(csv).toContain('"12.99 USD","9.99 USD"')
+  })
+
+  it('routes every image through the JPEG re-encoder, since Meta rejects WebP', () => {
+    const csv = buildFacebookCatalogCsv([
+      makeProduct({
+        imageLink: 'https://x.public.blob.vercel-storage.com/a.webp',
+        additionalImageLinks: [
+          'https://x.public.blob.vercel-storage.com/b(2).webp',
+          'https://x.public.blob.vercel-storage.com/c.webp',
+        ],
+      }),
+    ])
+    const encode = (url: string) =>
+      `${SITE_URL}/api/feeds/image?src=${encodeURIComponent(url)}`
+    expect(csv).toContain(`"${encode('https://x.public.blob.vercel-storage.com/a.webp')}"`)
+    expect(csv).toContain(
+      `"${encode('https://x.public.blob.vercel-storage.com/b(2).webp')},${encode('https://x.public.blob.vercel-storage.com/c.webp')}"`,
+    )
+    expect(csv).not.toMatch(/,"https:\/\/x\.public/)
+  })
+
+  it('includes the gtin column, blank when unknown', () => {
+    const [header, row] = buildFacebookCatalogCsv([makeProduct()]).split('\n')
+    expect(header).toContain(',brand,gtin,google_product_category,')
+    expect(row).toContain('"Jose Madrid Salsa","012345678905","Food')
+    const [, blankRow] = buildFacebookCatalogCsv([makeProduct({ gtin: null })]).split('\n')
+    expect(blankRow).toContain('"Jose Madrid Salsa","","Food')
   })
 })
 
