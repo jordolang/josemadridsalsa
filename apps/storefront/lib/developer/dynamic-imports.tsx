@@ -58,19 +58,6 @@ export const DeveloperContactForm = dynamic(
   }
 )
 
-export const DeveloperBlogPreview = dynamic(
-  () =>
-    import('@/components/developer/developer-blog-preview').then((mod) => ({
-      default: mod.DeveloperBlogPreview,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-96 animate-pulse rounded-lg bg-muted" />
-    ),
-  }
-)
-
 export const DeveloperBlogContent = dynamic(
   () =>
     import('@/components/developer/developer-blog-content').then((mod) => ({

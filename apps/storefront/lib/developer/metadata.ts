@@ -10,7 +10,7 @@ export const developerPageMetadata: Metadata = {
   ...createMetadata({
     title: 'Developer - Jordan Lang | Jose Madrid Salsa',
     description:
-      'Meet Jordan Lang, the developer behind Jose Madrid Salsa: 200,000+ lines of code across 1,500+ hours, delivered free as promised. Soli Deo Gloria.',
+      'Jordan Lang is the full-stack developer behind the Jose Madrid Salsa platform: online store, fundraising site, admin console and companion apps.',
     pathname: '/developer',
     keywords: [
       'Jordan Lang',

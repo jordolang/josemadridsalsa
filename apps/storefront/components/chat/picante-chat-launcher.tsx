@@ -78,7 +78,7 @@ export function PicanteChatLauncher({
         title={isOpen ? 'Close chat' : 'Chat with Picante'}
       >
         <span className={spriteClassName} aria-hidden="true" />
-        {!isOpen ? <span className={styles.prompt}>Need help?</span> : null}
+        {!isOpen ? <span className={styles.prompt} aria-hidden="true">Need help?</span> : null}
       </button>
     </div>
   )

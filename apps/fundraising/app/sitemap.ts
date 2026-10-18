@@ -3,6 +3,7 @@ import { getFundraisingProducts } from '@/lib/fundraising-site/catalog'
 import { getActiveFundraisingGroups } from '@/lib/fundraising-site/groups'
 import { getFundraisingSiteUrl } from '@/lib/fundraising-site/host'
 import { FUNDRAISING_STATIC_PAGES } from '@/lib/fundraising-site/pages'
+import { prisma } from '@/lib/prisma'
 
 export const revalidate = 3600
 
@@ -11,14 +12,19 @@ export const revalidate = 3600
  * rewrite. The main site's app/sitemap.ts covers www only. Product and group
  * pages come from the BigCommerce fundraising store, so a catalog or group
  * list that cannot be read leaves them out rather than failing the sitemap.
+ * Fundraiser pages come from the database and are listed only while active,
+ * the same rule /fundraisers/[slug] uses to serve them.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getFundraisingSiteUrl()
   const url = (path: string) => (path === '/' ? base : `${base}${path}`)
 
-  const [products, groups] = await Promise.all([
+  const [products, groups, fundraisers] = await Promise.all([
     getFundraisingProducts().catch(() => []),
     getActiveFundraisingGroups().catch(() => []),
+    prisma.fundraiser
+      .findMany({ where: { isActive: true }, select: { slug: true, updatedAt: true } })
+      .catch(() => []),
   ])
 
   return [
@@ -28,5 +34,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url('/battle-arena'), priority: 0.6 },
     ...products.map((product) => ({ url: url(`/shop/${product.slug}`), priority: 0.7 })),
     ...groups.map((group) => ({ url: url(`/groups/${group.slug}`), priority: 0.5 })),
+    ...fundraisers.map((fundraiser) => ({
+      url: url(`/fundraisers/${fundraiser.slug}`),
+      lastModified: fundraiser.updatedAt,
+      priority: 0.6,
+    })),
   ]
 }

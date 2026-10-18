@@ -7,7 +7,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Crown,
 } from 'lucide-react'
 import { FooterNewsletterSignup } from '@/components/store/footer-newsletter-signup'
 import { LeaveAReview } from '@/components/reviews/leave-a-review'
@@ -181,10 +180,6 @@ export function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
             <p className="text-xs text-white/55">
               {overrides?.copyrightText ||
                 `\u00a9 ${currentYear} ${company.name}. All rights reserved.`}
-            </p>
-            <p className="font-script flex items-center gap-1.5 text-2xl text-desert-sun-gold">
-              Salsa Kings
-              <Crown aria-hidden className="h-4 w-4" />
             </p>
           </div>
         </div>
