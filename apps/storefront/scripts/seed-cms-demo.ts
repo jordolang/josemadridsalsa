@@ -86,7 +86,7 @@ const reusableSections: Array<{
     name: `${DEMO_TAG} Our story`,
     type: 'imageText',
     data: {
-      heading: 'Made in Zanesville since 1989',
+      heading: 'Made in Zanesville since 1987',
       body: 'Every batch is cooked, tasted and jarred by hand in small runs. If a batch is not right, it does not leave the kitchen — which is the whole reason people keep ordering.',
       imageUrl: '/images/shared/logo-image.png',
       imageAlt: 'Jose Madrid Salsa',
@@ -523,7 +523,7 @@ const headerMenu = [
   {
     label: 'About',
     href: '/about',
-    description: 'Zanesville, Ohio, since 1989',
+    description: 'Zanesville, Ohio, since 1987',
     children: [
       { label: 'Our story', href: '/about', description: 'How this started' },
       { label: 'Where to find us', href: '/where-is-jose', description: 'Shops and shows' },
@@ -769,7 +769,7 @@ async function main() {
   const footerData = {
     tagline: 'Crafted in Ohio • Fresh batches every week',
     aboutText:
-      'Handcrafted, small-batch salsas made in Ohio since 1989. We partner with families, fundraisers, and retail shops across the Midwest.',
+      'Handcrafted, small-batch salsas made in Ohio since 1987. We partner with families, fundraisers, and retail shops across the Midwest.',
     copyrightText: `© ${new Date().getFullYear()} Jose Madrid Salsa. All rights reserved.`,
     newsletterHeading: 'Get the first taste',
     newsletterBody: 'New flavours and fundraiser openings. About one email a month.',

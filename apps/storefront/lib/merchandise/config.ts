@@ -10,7 +10,7 @@ export const merchMediaShowcase = [
   {
     id: 'apparel-drop',
     title: 'Seasonal apparel drop',
-    description: 'Garment-dyed tees with the 1982 Jose Madrid wordmark for superfans and team members.',
+    description: 'Garment-dyed tees with the 1987 Jose Madrid wordmark for superfans and team members.',
     image: '/images/merch/seasonal-apparel.png',
   },
   {

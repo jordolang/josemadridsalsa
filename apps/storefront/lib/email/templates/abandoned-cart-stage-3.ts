@@ -51,7 +51,7 @@ export const abandonedCartStage3Template: EmailTemplateDefinition = {
       <ul style="padding-left:20px;">
         <li style="margin-bottom:10px;"><strong>Keep your selections</strong> - your cart is saved right up until the link expires</li>
         <li style="margin-bottom:10px;"><strong>Lock in today's prices</strong> - prices subject to change</li>
-        <li style="margin-bottom:10px;"><strong>Enjoy fresh salsa</strong> - handcrafted in small batches since 1982</li>
+        <li style="margin-bottom:10px;"><strong>Enjoy fresh salsa</strong> - handcrafted in small batches since 1987</li>
       </ul>
       <p style="margin-top:30px;">Need help completing your order? Reply to this email or call us at <a href="tel:7405214304" style="color:#dc2626;">740-521-4304</a>. We're here to help!</p>
       <p style="margin-top:20px;"><strong>The José Madrid Salsa Team</strong></p>
@@ -72,7 +72,7 @@ One click and it's back in your checkout, exactly as you left it.
 🔥 This is your last chance to:
 - Keep your selections - your cart is saved right up until the link expires
 - Lock in today's prices - prices subject to change
-- Enjoy fresh salsa handcrafted in small batches since 1982
+- Enjoy fresh salsa handcrafted in small batches since 1987
 
 Claim your order now: {{cartUrl}}
 

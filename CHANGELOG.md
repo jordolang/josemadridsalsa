@@ -21,6 +21,11 @@ the root `package.json` is canonical.
   the Our Story pages. The new Support menu has Track Your Order, Help Center, FAQ, Shipping,
   Returns and Contact. The Help Center's first quick link is now Track your order. The old
   Community "Battle Arena" link pointed at `/battle-arena`, which 404s; Battle Live replaces it.
+- **The founding year is 1987 everywhere.** Emails said 1982, the merchandise copy called the
+  wordmark "1982", the Clovis product copy and seeded CMS content said 1989, and the seeded Heat
+  Index posts said 1986. All now say 1987. "First sales in 1988" and "fundraisers since 1988" are
+  unchanged.
+- **"Salsa Kings" is back under the footer copyright.**
 
 ### Removed
 - **The developer blog is off the public site.** `/developer/blog` and every post now 404 and
@@ -36,8 +41,7 @@ the root `package.json` is canonical.
   categories.** Fundraiser pages redirect to the fundraising site, so active fundraisers are
   now listed in the fundraising site's sitemap instead. A Heat Index category is listed only
   once it has a published post.
-- **Footer and Our Story cleanup.** The stray "Salsa Kings" line under the copyright is gone,
-  the chat button's hover label ("Need help?") is hidden from screen readers and text-only
+- **Footer and Our Story cleanup.** The chat button's hover label ("Need help?") is hidden from screen readers and text-only
   readers, and the unverified "First four-pepper salsa in the United States" line is off the
   Our Story achievements list.
 
