@@ -22,6 +22,10 @@ describe('getLocationImageUrl', () => {
     expect(getLocationImageUrl(url)).toBe(url)
   })
 
+  it('uses the out-of-business image as the placeholder', () => {
+    expect(getFallbackImage()).toMatch(/\/site\/images\/shared\/out-of-business\.webp$/)
+  })
+
   it('uses the placeholder when there is no URL', () => {
     expect(getLocationImageUrl(null)).toBe(getFallbackImage())
     expect(getLocationImageUrl(undefined)).toBe(getFallbackImage())

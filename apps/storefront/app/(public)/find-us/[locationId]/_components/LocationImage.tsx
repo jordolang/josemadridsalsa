@@ -7,6 +7,8 @@ import { getFallbackImage } from '@/lib/utils/image'
 type LocationImageProps = {
   src: string
   alt: string
+  /** Alt text used when the placeholder is shown instead of a store photo */
+  fallbackAlt?: string
   fill?: boolean
   className?: string
   priority?: boolean
@@ -17,13 +19,14 @@ type LocationImageProps = {
  * Image component with error handling for location images.
  * Falls back to the placeholder if the image fails to load.
  */
-export function LocationImage({ src, alt, fill, className, priority, sizes }: LocationImageProps) {
+export function LocationImage({ src, alt, fallbackAlt = 'Store photo not available', fill, className, priority, sizes }: LocationImageProps) {
   const [srcFailed, setSrcFailed] = useState(false)
+  const shownSrc = srcFailed ? getFallbackImage() : src
 
   return (
     <Image
-      src={srcFailed ? getFallbackImage() : src}
-      alt={alt}
+      src={shownSrc}
+      alt={shownSrc === getFallbackImage() ? fallbackAlt : alt}
       fill={fill}
       className={className}
       priority={priority}
