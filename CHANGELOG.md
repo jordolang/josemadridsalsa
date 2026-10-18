@@ -366,6 +366,11 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Find Us showed the placeholder instead of a photo of each store.** Location photos were
+  Google Places links, which the site stopped loading because every view was a billed request.
+  Each location now has its own storefront photo stored in Blob, fetched once with the new
+  `locations:cache-photos` script (Places photo when the address matches, Street View
+  otherwise).
 - **Facebook catalog feed images.** `/api/feeds/facebook` linked transparent WebP images, which
   Meta Commerce does not accept. Every image link now points at `/feed-images/<encoded sku>/<n>.jpg`,
   which looks the image up on the product and serves it as an opaque JPEG on white. It sits
