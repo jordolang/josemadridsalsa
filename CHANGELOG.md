@@ -26,6 +26,9 @@ the root `package.json` is canonical.
   Index posts said 1986. All now say 1987. "First sales in 1988" and "fundraisers since 1988" are
   unchanged.
 - **"Salsa Kings" is back under the footer copyright.**
+- **Find Us listings without a store photo now show an "image data not available" placeholder**
+  instead of the photo of Mike. The same image replaces Mike on store pages and in the image
+  fallback when a store photo fails to load.
 
 ### Removed
 - **The developer blog is off the public site.** `/developer/blog` and every post now 404 and

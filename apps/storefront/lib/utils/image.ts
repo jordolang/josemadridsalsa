@@ -4,7 +4,7 @@
 
 export const GOOGLE_PLACES_HOST = 'places.googleapis.com'
 const LEGACY_PLACES_HOST = 'maps.googleapis.com'
-const FALLBACK_IMAGE = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/Hero-Image-Mike.webp'
+const FALLBACK_IMAGE = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/out-of-business.webp'
 
 /**
  * Validates if a URL is a Google Places image URL (supports both new and legacy API)
