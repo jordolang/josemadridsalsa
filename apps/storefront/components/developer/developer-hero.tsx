@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ExternalLink, Code2, Heart } from 'lucide-react'
+import { ExternalLink, Code2 } from 'lucide-react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef, useState } from 'react'
 import type { DeveloperPageContentData } from '@/lib/developer/page-content'
@@ -62,30 +62,13 @@ export function DeveloperHero({ content }: DeveloperHeroProps) {
               </motion.h1>
 
               <motion.p
-                className="text-lg lg:text-xl text-salsa-100 mb-6 leading-relaxed max-w-lg mx-auto lg:mx-0"
+                className="text-lg lg:text-xl text-salsa-100 mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
               >
                 {hero.intro}
               </motion.p>
-
-              {/* Faith statement */}
-              {hero.showFaithStatement && hero.faithStatement && (
-                <motion.div
-                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-5 mb-8 max-w-lg mx-auto lg:mx-0"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
-                >
-                  <div className="flex items-start gap-3">
-                    <Heart className="w-5 h-5 text-chile-300 mt-0.5 shrink-0" />
-                    <p className="text-salsa-100 font-serif italic leading-relaxed">
-                      {hero.faithStatement}
-                    </p>
-                  </div>
-                </motion.div>
-              )}
 
               {/* CTA buttons */}
               <motion.div
@@ -133,8 +116,8 @@ export function DeveloperHero({ content }: DeveloperHeroProps) {
                     </div>
                   ) : (
                     <Image
-                      src="https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/developer/jordan-lang.webp"
-                      alt="Jordan Lang — Developer of Jose Madrid Salsa"
+                      src="/images/developer/jordan-lang-portrait.webp"
+                      alt="Portrait of Jordan Lang, developer of the Jose Madrid Salsa platform"
                       fill
                       className="object-cover object-center"
                       sizes="(max-width: 1024px) 256px, 320px"

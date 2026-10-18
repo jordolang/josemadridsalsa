@@ -72,7 +72,6 @@ const values = [
 ];
 
 const achievements = [
-  "First four-pepper salsa in the United States",
   "Award-winning fruit salsa line with national recognition",
   "35+ years of continuous family operation",
   "Hundreds of successful fundraising partnerships",

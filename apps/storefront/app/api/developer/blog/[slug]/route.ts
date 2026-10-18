@@ -4,6 +4,7 @@ import { requirePermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { developerBlogPostSchema } from '@/lib/developer/schemas'
 import prisma from '@/lib/prisma'
+import { DEVELOPER_BLOG_PUBLIC } from '@/lib/developer/visibility'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,6 +18,10 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    if (!DEVELOPER_BLOG_PUBLIC) {
+      return notFound('Blog post not found')
+    }
+
     const { slug } = await params
 
     const post = await prisma.developerBlogPost.findUnique({

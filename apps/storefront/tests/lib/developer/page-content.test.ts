@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import {
   DEFAULT_DEVELOPER_PAGE_CONTENT,
+  DEVELOPER_PAGE_CONTENT_REVISION,
   mergeDeveloperPageContent,
 } from '@/lib/developer/page-content'
 
@@ -12,8 +13,18 @@ describe('mergeDeveloperPageContent', () => {
     expect(mergeDeveloperPageContent('bogus')).toEqual(DEFAULT_DEVELOPER_PAGE_CONTENT)
   })
 
+  it('ignores content saved under an older revision', () => {
+    expect(
+      mergeDeveloperPageContent({
+        hero: { intro: 'Old personal intro', faithStatement: 'Old statement' },
+        about: { body: 'Old personal story' },
+      }),
+    ).toEqual(DEFAULT_DEVELOPER_PAGE_CONTENT)
+  })
+
   it('overlays stored values onto the defaults', () => {
     const merged = mergeDeveloperPageContent({
+      revision: DEVELOPER_PAGE_CONTENT_REVISION,
       hero: { heading: 'Custom Heading', showPhoto: false },
       sections: { changelog: false },
     })
@@ -27,6 +38,7 @@ describe('mergeDeveloperPageContent', () => {
 
   it('ignores stored values of the wrong type', () => {
     const merged = mergeDeveloperPageContent({
+      revision: DEVELOPER_PAGE_CONTENT_REVISION,
       hero: { heading: 42, showPhoto: 'yes' },
     })
     expect(merged.hero.heading).toBe(DEFAULT_DEVELOPER_PAGE_CONTENT.hero.heading)

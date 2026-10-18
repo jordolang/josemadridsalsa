@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DeveloperBlogContent } from '@/components/developer/developer-blog-content'
 import prisma from '@/lib/prisma'
+import { DEVELOPER_BLOG_PUBLIC } from '@/lib/developer/visibility'
 
 export const revalidate = 3600
 
@@ -26,8 +27,8 @@ export async function generateMetadata({
   const { slug } = await params
   const post = await getPost(slug)
 
-  if (!post || !post.published) {
-    return { title: 'Post Not Found' }
+  if (!DEVELOPER_BLOG_PUBLIC || !post || !post.published) {
+    return { title: 'Post Not Found', robots: { index: false, follow: false } }
   }
 
   return {
@@ -47,7 +48,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { slug } = await params
   const post = await getPost(slug)
 
-  if (!post || !post.published) {
+  if (!DEVELOPER_BLOG_PUBLIC || !post || !post.published) {
     notFound()
   }
 

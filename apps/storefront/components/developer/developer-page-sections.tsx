@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Clock, BookOpen, Wrench, FileText, BarChart3 } from 'lucide-react'
+import { Layers, Store, Wrench, FileText, BarChart3 } from 'lucide-react'
 import { DeveloperScrollSection } from './developer-scroll-section'
 import type { ChangelogVersion } from '@/lib/developer/parse-changelog'
 import type { DeveloperPageContentData } from '@/lib/developer/page-content'
@@ -21,11 +21,6 @@ const DeveloperStats = dynamic(
 const DeveloperSkills = dynamic(
   () => import('./developer-skills').then((mod) => ({ default: mod.DeveloperSkills })),
   { ssr: false, loading: () => <div className="h-80 animate-pulse rounded-lg bg-muted" /> }
-)
-
-const DeveloperBlogPreview = dynamic(
-  () => import('./developer-blog-preview').then((mod) => ({ default: mod.DeveloperBlogPreview })),
-  { ssr: false, loading: () => <div className="h-96 animate-pulse rounded-lg bg-muted" /> }
 )
 
 const DeveloperContactForm = dynamic(
@@ -79,12 +74,13 @@ export function DeveloperPageSections({ changelogVersions, content }: DeveloperP
               <DeveloperScrollSection delay={0.15}>
                 <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm hover:shadow-md transition-shadow">
                   <div className="w-14 h-14 bg-gradient-to-br from-chile-500 to-chile-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-chile-500/20">
-                    <Clock className="w-7 h-7 text-white" />
+                    <Layers className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mb-2">1,500+ Hours</h3>
+                  <h3 className="text-lg font-bold text-foreground mb-2">One Codebase</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Across 200 days and 14 versioned releases — design, development, testing,
-                    and deployment of a production e-commerce, fundraising, and mobile platform.
+                    The storefront, fundraising site, admin console and companion apps share one
+                    monorepo, one database and one release process, so a change ships everywhere
+                    at once.
                   </p>
                 </div>
               </DeveloperScrollSection>
@@ -92,12 +88,12 @@ export function DeveloperPageSections({ changelogVersions, content }: DeveloperP
               <DeveloperScrollSection delay={0.3}>
                 <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm hover:shadow-md transition-shadow">
                   <div className="w-14 h-14 bg-gradient-to-br from-verde-500 to-verde-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-verde-500/20">
-                    <BookOpen className="w-7 h-7 text-white" />
+                    <Store className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mb-2">100% Free</h3>
+                  <h3 className="text-lg font-bold text-foreground mb-2">Built for the Business</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Replacing it would run somewhere under $30,000. Delivered at no cost — as
-                    originally promised.
+                    Orders, fundraisers, wholesale, events, inventory and bookkeeping are handled
+                    in tools designed around how Jose Madrid Salsa actually works.
                   </p>
                 </div>
               </DeveloperScrollSection>
@@ -118,11 +114,10 @@ export function DeveloperPageSections({ changelogVersions, content }: DeveloperP
                   <BarChart3 className="w-7 h-7 text-white" />
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
-                  The Real Scope of This Project
+                  Project Scope
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  Hard numbers from the codebase — what was built, how long it took, and what
-                  it would have cost if commissioned from a professional firm.
+                  Measured from the codebase and its release history.
                 </p>
               </div>
             </DeveloperScrollSection>
@@ -133,31 +128,7 @@ export function DeveloperPageSections({ changelogVersions, content }: DeveloperP
       </section>
       )}
 
-      {/* Blog preview section */}
-      {content.sections.blog && (
-      <section className="py-16 lg:py-24 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <DeveloperScrollSection>
-              <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4">
-                  Developer Blog
-                </h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Behind-the-scenes stories, technical deep-dives, and lessons learned while building this platform.
-                </p>
-              </div>
-            </DeveloperScrollSection>
-
-            <DeveloperScrollSection delay={0.2}>
-              <DeveloperBlogPreview />
-            </DeveloperScrollSection>
-          </div>
-        </div>
-      </section>
-      )}
-
-      {/* Feature Timeline placeholder section — populated by separate task */}
+      {/* Feature timeline */}
       {content.sections.timeline && (
       <section id="timeline" className="py-16 lg:py-24 bg-muted/50">
         <div className="container mx-auto px-4">
@@ -228,7 +199,7 @@ export function DeveloperPageSections({ changelogVersions, content }: DeveloperP
       </section>
       )}
 
-      {/* Contact form placeholder section — populated by separate task */}
+      {/* Contact form */}
       {content.sections.contact && (
       <section className="py-16 lg:py-24 bg-gradient-to-br from-salsa-600 via-salsa-700 to-chile-700 text-white">
         <div className="container mx-auto px-4">
@@ -252,26 +223,6 @@ export function DeveloperPageSections({ changelogVersions, content }: DeveloperP
       </section>
       )}
 
-      {/* Closing faith statement */}
-      {content.sections.closing && (
-      <section className="py-16 lg:py-20">
-        <div className="container mx-auto px-4">
-          <DeveloperScrollSection>
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-chile-400 to-salsa-500 rounded-full mb-6 shadow-lg shadow-salsa-500/20">
-                <span className="text-white text-2xl font-serif font-bold">+</span>
-              </div>
-              <blockquote className="text-xl lg:text-2xl font-serif text-foreground leading-relaxed mb-4">
-                &ldquo;{content.closing.quote}&rdquo;
-              </blockquote>
-              <cite className="text-muted-foreground text-sm">
-                {content.closing.cite}
-              </cite>
-            </div>
-          </DeveloperScrollSection>
-        </div>
-      </section>
-      )}
     </>
   )
 }

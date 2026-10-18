@@ -1,10 +1,19 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 
-const { findManyBlogPosts } = vi.hoisted(() => ({ findManyBlogPosts: vi.fn() }))
+const { findManyBlogPosts, developerVisibility } = vi.hoisted(() => ({
+  findManyBlogPosts: vi.fn(),
+  developerVisibility: { isPublic: true },
+}))
 
 vi.mock('@/lib/prisma', () => ({
   prisma: { developerBlogPost: { findMany: findManyBlogPosts } },
+}))
+
+vi.mock('@/lib/developer/visibility', () => ({
+  get DEVELOPER_BLOG_PUBLIC() {
+    return developerVisibility.isPublic
+  },
 }))
 
 const { indexDeveloperBlogPosts, indexDocumentation, indexHelpArticles, mdxToMarkdown } = await import(
@@ -75,6 +84,18 @@ describe('indexHelpArticles', () => {
 })
 
 describe('indexDeveloperBlogPosts', () => {
+  it('indexes nothing while the developer blog is taken off the site', async () => {
+    developerVisibility.isPublic = false
+    findManyBlogPosts.mockClear()
+
+    try {
+      expect(await indexDeveloperBlogPosts()).toEqual([])
+      expect(findManyBlogPosts).not.toHaveBeenCalled()
+    } finally {
+      developerVisibility.isPublic = true
+    }
+  })
+
   it('indexes only published developer blog posts', async () => {
     findManyBlogPosts.mockResolvedValueOnce([
       {

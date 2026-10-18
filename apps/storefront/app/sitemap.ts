@@ -205,12 +205,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/developer/blog`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.4,
-    },
-    {
       url: `${baseUrl}/heat-index`,
       lastModified: new Date(),
       changeFrequency: 'daily',
@@ -300,24 +294,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
-    const blogPosts = await prisma.developerBlogPost.findMany({
-      where: { published: true },
-      select: { slug: true, updatedAt: true },
-    })
-
-    blogPosts.forEach((post) => {
-      urls.push({
-        url: `${baseUrl}/developer/blog/${post.slug}`,
-        lastModified: post.updatedAt,
-        changeFrequency: 'monthly',
-        priority: 0.4,
-      })
-    })
-  } catch (error) {
-    console.error('Failed to fetch developer blog posts for sitemap:', error)
-  }
-
-  try {
     const heatIndexPosts = await prisma.blogPost.findMany({
       where: { status: 'PUBLISHED' },
       select: { slug: true, updatedAt: true },
@@ -374,7 +350,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
+    // A category with no published posts renders "Nothing here yet".
     const categories = await prisma.blogCategory.findMany({
+      where: { posts: { some: { status: 'PUBLISHED' } } },
       select: { slug: true, updatedAt: true },
     })
     categories.forEach((c) => {
@@ -387,24 +365,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   } catch (error) {
     console.error('Failed to fetch heat-index categories for sitemap:', error)
-  }
-
-  try {
-    const fundraisers = await prisma.fundraiser.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-    })
-
-    fundraisers.forEach((fundraiser) => {
-      urls.push({
-        url: `${baseUrl}/fundraisers/${fundraiser.slug}`,
-        lastModified: fundraiser.updatedAt,
-        changeFrequency: 'weekly',
-        priority: 0.6,
-      })
-    })
-  } catch (error) {
-    console.error('Failed to fetch fundraisers for sitemap:', error)
   }
 
   try {

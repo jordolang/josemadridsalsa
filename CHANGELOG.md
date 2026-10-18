@@ -23,6 +23,24 @@ the root `package.json` is canonical.
   Community "Battle Arena" link pointed at `/battle-arena`, which 404s; Battle Live replaces it.
 
 ### Removed
+- **The developer blog is off the public site.** `/developer/blog` and every post now 404 and
+  are marked noindex, the public blog API answers 404, and the AI chat no longer indexes the
+  posts. The posts stay in the database and are still managed in `/admin/developer`;
+  `DEVELOPER_BLOG_PUBLIC` in `lib/developer/visibility.ts` brings them back.
+- **The /developer page is rewritten as a professional profile.** It has a new portrait and
+  new copy, and the faith statement, closing quote, blog preview, hours count and "what it
+  would cost / $0 charged" section are gone. Page content saved in the Developer Console
+  before this change is ignored (content revision 2), so the old copy cannot come back from
+  the database.
+- **The www sitemap no longer lists the developer blog, fundraiser pages or empty Heat Index
+  categories.** Fundraiser pages redirect to the fundraising site, so active fundraisers are
+  now listed in the fundraising site's sitemap instead. A Heat Index category is listed only
+  once it has a published post.
+- **Footer and Our Story cleanup.** The stray "Salsa Kings" line under the copyright is gone,
+  the chat button's hover label ("Need help?") is hidden from screen readers and text-only
+  readers, and the unverified "First four-pepper salsa in the United States" line is off the
+  Our Story achievements list.
+
 - **Find Us no longer calls the Google Places API.** Every store card and store page loaded its
   photo through `/api/image-proxy`, which made a billable Places API (New) "Place Details Photos"
   request per image per uncached view (about 150 cards on `/find-us`). The stored photo names

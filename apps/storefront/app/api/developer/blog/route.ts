@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server'
-import { ok, fail, serverError, parsePagination, paginated } from '@/lib/api'
+import { ok, fail, notFound, serverError, parsePagination, paginated } from '@/lib/api'
 import { requirePermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { developerBlogPostSchema } from '@/lib/developer/schemas'
 import prisma from '@/lib/prisma'
+import { DEVELOPER_BLOG_PUBLIC } from '@/lib/developer/visibility'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,10 @@ export const dynamic = 'force-dynamic'
  * Public endpoint — returns published blog posts with pagination and optional tag filter.
  */
 export async function GET(req: NextRequest) {
+  if (!DEVELOPER_BLOG_PUBLIC) {
+    return notFound('Developer blog is not public')
+  }
+
   try {
     const { skip, limit, page } = parsePagination(req)
     const { searchParams } = new URL(req.url)

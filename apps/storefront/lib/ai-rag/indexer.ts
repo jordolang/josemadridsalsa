@@ -4,6 +4,7 @@
 import { prisma } from '@/lib/prisma'
 import { parseFindUsMarkdown, readFindUsMarkdownAbsolute } from '@/lib/find-us-parser'
 import { getHelpArticles, helpArticleUrl } from '@/lib/help/articles'
+import { DEVELOPER_BLOG_PUBLIC } from '@/lib/developer/visibility'
 import { TrainingDocumentStatus } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
@@ -253,6 +254,9 @@ export async function indexHelpArticles(): Promise<IndexedContent[]> {
  * Index the published posts from the developer blog on /developer/blog.
  */
 export async function indexDeveloperBlogPosts(): Promise<IndexedContent[]> {
+  // The chat must not quote posts that are no longer on the site.
+  if (!DEVELOPER_BLOG_PUBLIC) return []
+
   const posts = await prisma.developerBlogPost.findMany({
     where: { published: true },
     orderBy: { publishedAt: 'desc' },

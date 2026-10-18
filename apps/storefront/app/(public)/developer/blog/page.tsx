@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
 import { DeveloperBlogCard } from '@/components/developer/developer-blog-card'
 import prisma from '@/lib/prisma'
 import { SITE_URL } from '@/lib/site-url'
+import { DEVELOPER_BLOG_PUBLIC } from '@/lib/developer/visibility'
 
 export const revalidate = 3600
 
@@ -20,6 +22,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${SITE_URL}/developer/blog`,
   },
+  robots: { index: DEVELOPER_BLOG_PUBLIC, follow: DEVELOPER_BLOG_PUBLIC },
 }
 
 interface BlogListItem {

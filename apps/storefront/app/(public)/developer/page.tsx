@@ -18,7 +18,7 @@ const jsonLd = {
     url: 'https://jlang.dev',
     jobTitle: 'Full-Stack Developer',
     description:
-      'Builder of the Jose Madrid Salsa digital platform — designed, developed, and delivered completely free.',
+      'Lead developer of the Jose Madrid Salsa platform: the online store, fundraising site, admin console and companion apps.',
     sameAs: ['https://jlang.dev'],
   },
 }

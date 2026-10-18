@@ -21,12 +21,10 @@ import type { DeveloperPageContentData } from '@/lib/developer/page-content'
 const SECTION_LABELS: Record<keyof DeveloperPageContentData['sections'], string> = {
   about: 'About / Mission',
   stats: 'Project Stats',
-  blog: 'Blog Preview',
   timeline: 'Project Timeline',
   skills: 'Tech Stack',
   changelog: 'Changelog',
   contact: 'Contact Form',
-  closing: 'Closing Statement',
 }
 
 export function DeveloperPageContentEditor({
@@ -39,7 +37,7 @@ export function DeveloperPageContentEditor({
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
 
-  const update = <K extends keyof DeveloperPageContentData>(
+  const update = <K extends Exclude<keyof DeveloperPageContentData, 'revision'>>(
     section: K,
     patch: Partial<DeveloperPageContentData[K]>,
   ) => {
@@ -176,15 +174,6 @@ export function DeveloperPageContentEditor({
               onChange={(e) => update('hero', { intro: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="hero-faith">Faith statement</Label>
-            <Textarea
-              id="hero-faith"
-              rows={3}
-              value={content.hero.faithStatement}
-              onChange={(e) => update('hero', { faithStatement: e.target.value })}
-            />
-          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="hero-cta-label">Primary CTA label</Label>
@@ -204,14 +193,6 @@ export function DeveloperPageContentEditor({
             </div>
           </div>
           <div className="flex flex-wrap gap-6">
-            <div className="flex items-center gap-3">
-              <Switch
-                id="hero-show-faith"
-                checked={content.hero.showFaithStatement}
-                onCheckedChange={(checked) => update('hero', { showFaithStatement: checked })}
-              />
-              <Label htmlFor="hero-show-faith">Show faith statement</Label>
-            </div>
             <div className="flex items-center gap-3">
               <Switch
                 id="hero-show-photo"
@@ -251,7 +232,7 @@ export function DeveloperPageContentEditor({
 
       <Card>
         <CardHeader>
-          <CardTitle>Contact &amp; Closing</CardTitle>
+          <CardTitle>Contact</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -271,23 +252,6 @@ export function DeveloperPageContentEditor({
                 onChange={(e) => update('contact', { description: e.target.value })}
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="closing-quote">Closing quote</Label>
-            <Textarea
-              id="closing-quote"
-              rows={2}
-              value={content.closing.quote}
-              onChange={(e) => update('closing', { quote: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="closing-cite">Closing citation</Label>
-            <Input
-              id="closing-cite"
-              value={content.closing.cite}
-              onChange={(e) => update('closing', { cite: e.target.value })}
-            />
           </div>
         </CardContent>
       </Card>
