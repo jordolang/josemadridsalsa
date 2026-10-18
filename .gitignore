@@ -199,6 +199,7 @@ apps/storefront/public/images/home/hero-video.mp4
 # Per-machine cache of what has been uploaded to Vercel Blob by `npm run images:sync`.
 # Content-hash keyed, so losing it only causes a harmless re-upload.
 .image-sync-manifest.json
+.location-photos/
 .image-migration-map.json
 
 # Source images staged for `npm run images:sync`. They belong in Vercel Blob, not git.

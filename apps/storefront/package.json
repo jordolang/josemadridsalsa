@@ -45,6 +45,7 @@
     "images:sync": "tsx scripts/sync-images.ts",
     "ledger:backfill": "tsx scripts/backfill-ledger.ts",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "locations:cache-photos": "tsx scripts/cache-location-photos.ts",
     "locations:geocode": "tsx scripts/backfill-location-coordinates.ts",
     "locations:import": "tsx scripts/import-locations-from-markdown.ts",
     "locations:photos": "node scripts/generate-location-photos.cjs",
