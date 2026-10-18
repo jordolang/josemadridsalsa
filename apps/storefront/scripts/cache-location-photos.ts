@@ -146,15 +146,17 @@ async function processLocation(loc: RetailLocation): Promise<ReportEntry> {
 
   const place = await getPlace(loc)
   if (place) {
-    placeId = place.id
     entry.googleName = place.displayName?.text
     entry.googleAddress = place.formattedAddress
     entry.addressMatches = addressesMatch(loc.address, place.formattedAddress)
-    const photo = pickBestPlacePhoto(place.photos)
-    // Only trust Google's photo when the place is the store we asked about.
-    if (photo && entry.addressMatches) {
-      image = await downloadPlacePhoto(photo)
-      entry.source = 'places'
+    // Only trust the place, its ID and its photo, when it is the store we asked about.
+    if (entry.addressMatches) {
+      placeId = place.id
+      const photo = pickBestPlacePhoto(place.photos)
+      if (photo) {
+        image = await downloadPlacePhoto(photo)
+        entry.source = 'places'
+      }
     }
   }
 
