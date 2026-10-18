@@ -91,7 +91,7 @@ export async function seedDatabase() {
     {
       name: 'Clovis Medium Salsa',
       slug: 'clovis-medium-salsa',
-      description: 'The Clovis brand introduced Jose Madrid Salsa in 1989. The Clovis Medium salsa originated to serve in Zak\'s Restaurant in Zanesville, Ohio in 1989. It quickly became our flagship salsa, so Clovis Mild and Medium were hence born. The Clovis series of salsas is named after Clovis, New Mexico, the actual birthplace of Jose Madrid.',
+      description: 'The Clovis brand introduced Jose Madrid Salsa in 1987. The Clovis Medium salsa originated to serve in Zak\'s Restaurant in Zanesville, Ohio in 1987. It quickly became our flagship salsa, so Clovis Mild and Medium were hence born. The Clovis series of salsas is named after Clovis, New Mexico, the actual birthplace of Jose Madrid.',
       heatLevel: HeatLevel.MILD,
       ingredients: ['Tomatoes', 'Onions', 'Garlic', 'Cilantro', 'Lime', 'Spices'],
       price: 8.00,
@@ -106,7 +106,7 @@ export async function seedDatabase() {
     {
       name: 'Original Hot',
       slug: 'original-hot',
-      description: 'The Clovis brand introduced Jose Madrid Salsa in 1989. The Clovis Medium salsa originated to serve in Zak\'s Restaurant in Zanesville, Ohio in 1989. It quickly became our flagship salsa, so Clovis Mild and Medium were hence born. The Clovis series of salsas is named after Clovis, New Mexico, the actual birthplace of Jose Madrid.',
+      description: 'The Clovis brand introduced Jose Madrid Salsa in 1987. The Clovis Medium salsa originated to serve in Zak\'s Restaurant in Zanesville, Ohio in 1987. It quickly became our flagship salsa, so Clovis Mild and Medium were hence born. The Clovis series of salsas is named after Clovis, New Mexico, the actual birthplace of Jose Madrid.',
       heatLevel: HeatLevel.HOT,
       ingredients: ['Tomatoes', 'Jalapeño Peppers', 'Habanero', 'Onions', 'Garlic', 'Spices'],
       price: 8.00,

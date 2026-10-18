@@ -249,7 +249,7 @@ export const newsletterTemplates: NewsletterTemplate[] = [
     sections: [
       {
         heading: 'Signature apparel',
-        copy: 'Crewnecks, aprons, and caps featuring our 1982 mark. Choose from comfort colors or premium tri-blend fabrics.',
+        copy: 'Crewnecks, aprons, and caps featuring our 1987 mark. Choose from comfort colors or premium tri-blend fabrics.',
       },
       {
         heading: 'Event-ready kits',

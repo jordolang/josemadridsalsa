@@ -170,7 +170,7 @@ That's it. That's the recipe.
 
 ## Why it travelled
 
-It travelled with my dad when he left Clovis. It travelled to **Zanesville, Ohio**, when the family business started in 1986. It went into the rotation because customers kept asking *what is that one* — the green one, with the olives, that doesn't taste like anything else.
+It travelled with my dad when he left Clovis. It travelled to **Zanesville, Ohio**, when the family business started in 1987. It went into the rotation because customers kept asking *what is that one* — the green one, with the olives, that doesn't taste like anything else.
 
 We never changed it. The jar is the porch.
 
@@ -264,7 +264,7 @@ He runs this place. He also packs your jars.
 
 ## The long version
 
-Mike grew up in the family business — Jose Madrid Salsa was founded by his father in 1986 in Zanesville, Ohio, with recipes from Clovis, New Mexico. Mike's been around the kettles since he was a kid.
+Mike grew up in the family business — Jose Madrid Salsa was founded by his father in 1987 in Zanesville, Ohio, with recipes from Clovis, New Mexico. Mike's been around the kettles since he was a kid.
 
 He has been offered, more than once, to **scale this thing up**. National grocery chain distribution. White-label deals. The whole "exit" pitch. Every time, he says no.
 
