@@ -6,13 +6,17 @@
  *   npm run locations:cache-photos -- --apply         # upload to Blob and update the database
  *   npm run locations:cache-photos -- --force --apply # redo locations that already have one
  *   npm run locations:cache-photos -- --only <id,id>  # limit to some locations
+ *   npm run locations:cache-photos -- --from-site https://www.josemadridsalsa.com --apply
+ *       # read locations from the public API and leave the database alone; report.json then
+ *       # holds each blobUrl and placeId for someone with database access to save
  *
  * This is a one-off backfill, not a runtime path: each location costs about three Google
  * requests (place details, photo, or the Street View fallback), once. Photos are written to
  * `--out` (default ./.location-photos) with a report.json so every one can be checked by eye
  * against the store's name and address before or after applying.
  *
- * Needs GOOGLE_PLACES_API_KEY, DATABASE_URL and, with --apply, BLOB_READ_WRITE_TOKEN.
+ * Needs GOOGLE_PLACES_API_KEY, DATABASE_URL (not with --from-site) and, with --apply,
+ * BLOB_READ_WRITE_TOKEN.
  */
 
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -40,6 +44,11 @@ type Place = {
   photos?: PlacePhoto[]
 }
 
+type LocationInput = Pick<
+  RetailLocation,
+  'id' | 'businessName' | 'address' | 'city' | 'state' | 'zipCode' | 'googlePlacesId' | 'photoUrl'
+>
+
 type ReportEntry = {
   id: string
   businessName: string
@@ -50,6 +59,7 @@ type ReportEntry = {
   addressMatches?: boolean
   file?: string
   blobUrl?: string
+  placeId?: string
   reason?: string
 }
 
@@ -62,14 +72,15 @@ const argValue = (flag: string) => {
 }
 const only = argValue('--only')?.split(',').map((id) => id.trim()).filter(Boolean)
 const outDir = path.resolve(argValue('--out') ?? '.location-photos')
+const fromSite = argValue('--from-site')
 
 const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-const prisma = new PrismaClient()
+const prisma = fromSite ? null : new PrismaClient()
 
-const fullAddress = (loc: RetailLocation) =>
+const fullAddress = (loc: LocationInput) =>
   `${loc.address}, ${loc.city}, ${loc.state}${loc.zipCode ? ` ${loc.zipCode}` : ''}`
 
-async function getPlace(loc: RetailLocation): Promise<Place | null> {
+async function getPlace(loc: LocationInput): Promise<Place | null> {
   const fieldMask = 'id,displayName,formattedAddress,photos'
   if (loc.googlePlacesId) {
     const res = await fetch(`${PLACES_API}/places/${loc.googlePlacesId}`, {
@@ -106,7 +117,7 @@ async function downloadPlacePhoto(photo: PlacePhoto): Promise<Buffer> {
   return Buffer.from(await image.arrayBuffer())
 }
 
-async function downloadStreetView(loc: RetailLocation): Promise<Buffer | null> {
+async function downloadStreetView(loc: LocationInput): Promise<Buffer | null> {
   const location = encodeURIComponent(fullAddress(loc))
   // The metadata call is free and says whether there is imagery at the address.
   const meta = await fetch(`${STREET_VIEW_API}/metadata?location=${location}&source=outdoor&key=${apiKey}`)
@@ -122,8 +133,8 @@ async function toWebp(original: Buffer): Promise<Buffer> {
   return sharp(original).rotate().resize({ width: PHOTO_WIDTH, withoutEnlargement: true }).webp({ quality: WEBP_QUALITY }).toBuffer()
 }
 
-async function saveToLocation(loc: RetailLocation, blobUrl: string, placeId: string | null) {
-  await prisma.$transaction(async (tx) => {
+async function saveToLocation(db: PrismaClient, loc: LocationInput, blobUrl: string, placeId: string | null) {
+  await db.$transaction(async (tx) => {
     await tx.retailLocation.update({
       where: { id: loc.id },
       data: { photoUrl: blobUrl, ...(placeId ? { googlePlacesId: placeId } : {}) },
@@ -139,7 +150,7 @@ async function saveToLocation(loc: RetailLocation, blobUrl: string, placeId: str
   })
 }
 
-async function processLocation(loc: RetailLocation): Promise<ReportEntry> {
+async function processLocation(loc: LocationInput): Promise<ReportEntry> {
   const entry: ReportEntry = { id: loc.id, businessName: loc.businessName, address: fullAddress(loc), source: 'none' }
   let image: Buffer | null = null
   let placeId: string | null = null
@@ -182,7 +193,8 @@ async function processLocation(loc: RetailLocation): Promise<ReportEntry> {
       allowOverwrite: true,
     })
     entry.blobUrl = blob.url
-    await saveToLocation(loc, blob.url, placeId)
+    entry.placeId = placeId ?? undefined
+    if (prisma) await saveToLocation(prisma, loc, blob.url, placeId)
   }
   return entry
 }
@@ -192,10 +204,7 @@ async function main() {
   if (apply && !process.env.BLOB_READ_WRITE_TOKEN) throw new Error('BLOB_READ_WRITE_TOKEN is not set')
   await mkdir(outDir, { recursive: true })
 
-  const locations = await prisma.retailLocation.findMany({
-    where: { isActive: true, ...(only ? { id: { in: only } } : {}) },
-    orderBy: [{ state: 'asc' }, { city: 'asc' }, { businessName: 'asc' }],
-  })
+  const locations = (await loadLocations()).filter((loc) => !only || only.includes(loc.id))
   const todo = locations.filter((loc) => force || !isBlobPhotoUrl(loc.photoUrl))
   console.log(`${todo.length} of ${locations.length} locations to process${apply ? '' : ' (dry run)'}`)
 
@@ -218,9 +227,23 @@ async function main() {
   console.log(`Photos and report.json are in ${outDir}`)
 }
 
+async function loadLocations(): Promise<LocationInput[]> {
+  if (prisma) {
+    return prisma.retailLocation.findMany({
+      where: { isActive: true },
+      orderBy: [{ state: 'asc' }, { city: 'asc' }, { businessName: 'asc' }],
+    })
+  }
+  // The public locations API lists every active location; it exposes the Place ID as googlePlaceId.
+  const res = await fetch(new URL('/api/locations', fromSite))
+  if (!res.ok) throw new Error(`Locations API failed: ${res.status}`)
+  const { data } = (await res.json()) as { data: Array<Omit<LocationInput, 'googlePlacesId'> & { googlePlaceId: string | null }> }
+  return data.map(({ googlePlaceId, ...loc }) => ({ ...loc, googlePlacesId: googlePlaceId }))
+}
+
 main()
   .catch((error) => {
     console.error(error)
     process.exitCode = 1
   })
-  .finally(() => prisma.$disconnect())
+  .finally(() => prisma?.$disconnect())

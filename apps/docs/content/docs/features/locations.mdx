@@ -58,7 +58,9 @@ converts it to WebP, uploads it to Blob at `site/images/locations/<id>.webp` and
 URL as `photoUrl` and in the gallery. It is a dry run without `--apply`, skips locations
 that already have a Blob photo unless `--force`, and writes every photo plus `report.json`
 to `.location-photos/` so each one can be checked. It needs `GOOGLE_PLACES_API_KEY`,
-`DATABASE_URL` and `BLOB_READ_WRITE_TOKEN`.
+`DATABASE_URL` and `BLOB_READ_WRITE_TOKEN`. With `--from-site <origin>` it reads the
+locations from the public `/api/locations` API instead of the database, leaves the database
+alone, and records each `blobUrl` and `placeId` in `report.json` for saving separately.
 
 Query helpers live in `lib/locations/` (`query.ts`, `db-query.ts`, `shared.ts`,
 `import.ts`).
