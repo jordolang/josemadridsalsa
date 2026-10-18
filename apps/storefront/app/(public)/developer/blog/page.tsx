@@ -52,6 +52,8 @@ async function getPublishedPosts(): Promise<BlogListItem[]> {
 }
 
 export default async function DeveloperBlogPage() {
+  if (!DEVELOPER_BLOG_PUBLIC) notFound()
+
   const posts = await getPublishedPosts()
 
   return (
