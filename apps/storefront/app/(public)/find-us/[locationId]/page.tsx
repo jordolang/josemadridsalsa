@@ -69,7 +69,7 @@ export default async function LocationDetailPage({ params }: LocationPageProps) 
       <div className="grid gap-8 lg:grid-cols-[3fr,2fr]">
         <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
           <div className="relative h-80 w-full sm:h-[26rem]">
-            <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fill className="object-cover" priority />
+            <LocationImage src={heroImage} alt={`${location.businessName} storefront`} fallbackAlt={`${location.businessName} photo not available`} fill className="object-cover" priority />
           </div>
           {gallery.length > 1 ? (
             <div className="border-t border-border bg-muted/50 px-4 py-3 text-xs text-muted-foreground">

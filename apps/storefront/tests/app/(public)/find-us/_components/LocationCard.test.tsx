@@ -31,7 +31,7 @@ const location = (overrides: Partial<RetailLocationRecord>): RetailLocationRecor
   ...overrides,
 })
 
-const imageSrc = () => screen.getByAltText('Test Market storefront').getAttribute('src')
+const imageSrc = () => screen.getByRole('img').getAttribute('src')
 
 describe('LocationCard', () => {
   it('shows the first non-Google gallery photo when a Google photo comes first', () => {
@@ -44,5 +44,17 @@ describe('LocationCard', () => {
     render(<LocationCard location={location({ photoUrl: GOOGLE_PHOTO, photoGallery: [GOOGLE_PHOTO] })} />)
 
     expect(imageSrc()).toBe(getFallbackImage())
+  })
+
+  it('describes the placeholder in the alt text instead of calling it a storefront', () => {
+    render(<LocationCard location={location({ photoUrl: GOOGLE_PHOTO, photoGallery: [GOOGLE_PHOTO] })} />)
+
+    expect(screen.getByRole('img').getAttribute('alt')).toBe('Test Market photo not available')
+  })
+
+  it('keeps the storefront alt text for a real store photo', () => {
+    render(<LocationCard location={location({ photoGallery: [BLOB_PHOTO] })} />)
+
+    expect(screen.getByRole('img').getAttribute('alt')).toBe('Test Market storefront')
   })
 })

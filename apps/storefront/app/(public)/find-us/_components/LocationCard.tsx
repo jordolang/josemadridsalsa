@@ -46,7 +46,7 @@ export function LocationCard({ location, isSelected = false, onSelect }: Locatio
       <div className="relative aspect-video sm:aspect-[4/3] w-full max-h-[250px] sm:max-h-none bg-muted overflow-hidden rounded-t-xl">
         <Image
           src={primaryImage}
-          alt={`${businessName} storefront`}
+          alt={primaryImage === getFallbackImage() ? `${businessName} photo not available` : `${businessName} storefront`}
           fill
           className="object-cover transition duration-500 group-hover:scale-[1.02]"
           sizes="(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 25vw"
