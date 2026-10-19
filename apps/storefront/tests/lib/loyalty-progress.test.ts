@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { pointsForAmount, tierForLifetimePoints, tierLabel, tierProgress } from '@/lib/loyalty-progress'
+import { hasRedemptionsLeft, pointsForAmount, tierForLifetimePoints, tierLabel, tierProgress } from '@/lib/loyalty-progress'
 
 describe('pointsForAmount', () => {
   it('earns 10 points per dollar, rounded down like the purchase credit', () => {
@@ -43,5 +43,13 @@ describe('tierProgress', () => {
 describe('tierLabel', () => {
   it('title-cases tier names', () => {
     expect(tierLabel('PLATINUM')).toBe('Platinum')
+  })
+})
+
+describe('hasRedemptionsLeft', () => {
+  it('drops rewards that have reached their redemption cap', () => {
+    expect(hasRedemptionsLeft({ maxRedemptions: null, usedCount: 900 })).toBe(true)
+    expect(hasRedemptionsLeft({ maxRedemptions: 10, usedCount: 9 })).toBe(true)
+    expect(hasRedemptionsLeft({ maxRedemptions: 10, usedCount: 10 })).toBe(false)
   })
 })

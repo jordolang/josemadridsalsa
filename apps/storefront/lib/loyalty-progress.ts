@@ -1,10 +1,11 @@
 /**
  * Display helpers for the storefront's loyalty surfaces: the public `/rewards` page, the
  * product page and the cart. Pure and synchronous so client components can use them.
- * The earning and tier rules themselves live in `@/lib/loyalty`.
+ * The earning and tier rules themselves live in `@/lib/loyalty`; this imports only
+ * `@/lib/loyalty-rules`, which has no server code, to keep Prisma out of client bundles.
  */
 import type { LoyaltyTier } from '@prisma/client'
-import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty'
+import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty-rules'
 
 export const LOYALTY_TIERS: LoyaltyTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']
 
@@ -60,4 +61,9 @@ export function tierProgress(lifetimePoints: number): TierProgress {
     pointsToNextTier: ceiling - points,
     percent: Math.floor(((points - floor) / (ceiling - floor)) * 100),
   }
+}
+
+/** Whether a reward can still be redeemed; `redeemRewardInTx` refuses one that has hit its cap. */
+export function hasRedemptionsLeft(reward: { maxRedemptions: number | null; usedCount: number }): boolean {
+  return reward.maxRedemptions === null || reward.usedCount < reward.maxRedemptions
 }
