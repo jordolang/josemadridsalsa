@@ -7,14 +7,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { createMetadata } from '@/lib/metadata'
 import { prisma } from '@/lib/prisma'
 import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty'
-import { LOYALTY_TIERS, tierLabel } from '@/lib/loyalty-progress'
+import { LOYALTY_TIERS, hasRedemptionsLeft, tierLabel } from '@/lib/loyalty-progress'
 import { formatPrice } from '@/lib/utils'
 import { RewardsStatusPanel } from './rewards-status-panel'
 
 export const revalidate = 3600
 
 export const metadata: Metadata = createMetadata({
-  title: 'Salsa Rewards Program - Jose Madrid Salsa',
+  title: 'Salsa Rewards Program',
   description: `Earn ${POINTS_PER_DOLLAR} points for every $1 you spend on Jose Madrid Salsa, climb from Bronze to Platinum, and trade points for money off your next order.`,
   pathname: '/rewards',
 })
@@ -23,7 +23,7 @@ const steps = [
   {
     icon: ShoppingBag,
     title: 'Shop signed in',
-    description: `Every $1 of salsa and merchandise earns ${POINTS_PER_DOLLAR} points. Points post to your account as soon as your payment goes through.`,
+    description: `Every $1 of salsa earns ${POINTS_PER_DOLLAR} points. Points post to your account as soon as your payment goes through.`,
   },
   {
     icon: TrendingUp,
@@ -39,11 +39,21 @@ const steps = [
 
 async function getActiveRewards() {
   try {
-    return await prisma.loyaltyReward.findMany({
+    const rewards = await prisma.loyaltyReward.findMany({
       where: { isActive: true, rewardType: 'DISCOUNT' },
       orderBy: { pointsCost: 'asc' },
-      select: { id: true, name: true, description: true, pointsCost: true, rewardValue: true, minimumTier: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        pointsCost: true,
+        rewardValue: true,
+        minimumTier: true,
+        maxRedemptions: true,
+        usedCount: true,
+      },
     })
+    return rewards.filter(hasRedemptionsLeft)
   } catch (error) {
     // A build without a database still renders the program; the catalog fills in on revalidate.
     console.warn('Rewards catalog unavailable:', error instanceof Error ? error.message : 'Unknown error')
@@ -158,7 +168,8 @@ export default async function RewardsPage() {
             <div>
               <dt className="font-semibold text-foreground">What counts toward points?</dt>
               <dd className="mt-1 text-muted-foreground">
-                The products in your order after any discount. Shipping and sales tax do not earn points.
+                The salsa in your order after any discount. Shipping and sales tax do not earn points, and
+                merchandise from the merch shop does not earn points yet.
               </dd>
             </div>
             <div>
