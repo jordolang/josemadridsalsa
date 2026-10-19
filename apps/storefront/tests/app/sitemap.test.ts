@@ -39,6 +39,12 @@ describe('storefront sitemap', () => {
     expect(prismaMock.developerBlogPost.findMany).not.toHaveBeenCalled()
   })
 
+  it('lists the public rewards page', async () => {
+    const urls = (await sitemap()).map((entry) => entry.url)
+
+    expect(urls).toContain('https://www.josemadridsalsa.com/rewards')
+  })
+
   it('lists no fundraiser pages, which redirect to the fundraising site', async () => {
     const urls = (await sitemap()).map((entry) => entry.url)
 

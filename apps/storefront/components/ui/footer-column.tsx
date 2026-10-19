@@ -45,6 +45,7 @@ const serviceLinks = [
   { text: 'Shop All Salsas', href: '/salsas' },
   { text: 'Merchandise', href: '/merchandise' },
   { text: 'Gift Certificates', href: '/gift-certificates/purchase' },
+  { text: 'Salsa Rewards', href: '/rewards' },
   { text: 'Fundraising Program', href: '/fundraising' },
 ]
 
