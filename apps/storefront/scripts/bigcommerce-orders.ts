@@ -10,18 +10,23 @@
  * (created on first sight). Run with BIGCOMMERCE_* (or BIGCOMMERCE_FUNDRAISING_*)
  * and DATABASE_URL set for the target environment. Safe to re-run: an order
  * already copied is brought up to date, never duplicated.
+ *
+ * `--dry-run` writes nothing: it counts the store's orders since the date,
+ * how many are already copied, and lists the ones a real run would add.
  */
-import { syncBigCommerceOrders } from '../lib/bigcommerce/orders'
+import { auditBigCommerceOrders, syncBigCommerceOrders } from '../lib/bigcommerce/orders'
 
-const USAGE = 'Usage: bigcommerce-orders <since, e.g. 2026-09-01> [--store main|fundraising]'
+const USAGE = 'Usage: bigcommerce-orders <since, e.g. 2026-09-01> [--store main|fundraising] [--dry-run]'
 
-function parseArgs(argv: string[]): { since: Date; store: 'main' | 'fundraising' } | null {
-  const storeFlag = argv.indexOf('--store')
-  const store = storeFlag === -1 ? 'main' : argv[storeFlag + 1]
-  const positional = argv.filter((_, index) => storeFlag === -1 || (index !== storeFlag && index !== storeFlag + 1))
+function parseArgs(argv: string[]): { since: Date; store: 'main' | 'fundraising'; dryRun: boolean } | null {
+  const dryRun = argv.includes('--dry-run')
+  const rest = argv.filter((arg) => arg !== '--dry-run')
+  const storeFlag = rest.indexOf('--store')
+  const store = storeFlag === -1 ? 'main' : rest[storeFlag + 1]
+  const positional = rest.filter((_, index) => storeFlag === -1 || (index !== storeFlag && index !== storeFlag + 1))
   const since = new Date(positional[0] ?? '')
   if (Number.isNaN(since.getTime()) || (store !== 'main' && store !== 'fundraising')) return null
-  return { since, store }
+  return { since, store, dryRun }
 }
 
 async function main() {
@@ -29,6 +34,13 @@ async function main() {
   if (!args) {
     console.error(USAGE)
     process.exit(1)
+  }
+
+  if (args.dryRun) {
+    const audit = await auditBigCommerceOrders(args.since, args.store)
+    console.log({ ...audit, missing: audit.missing.length })
+    if (audit.missing.length) console.log(`Not copied yet: ${audit.missing.join(', ')}`)
+    return
   }
 
   const fundraisers = new Set<string>()

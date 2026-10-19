@@ -57,7 +57,8 @@ export function extractFundraisingAttribution(
   return { group: fieldValue(addresses, GROUP_FIELD), seller: fieldValue(addresses, SELLER_FIELD) }
 }
 
-function isUniqueViolation(error: unknown): boolean {
+/** Prisma's unique-constraint failure (P2002). */
+export function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
 }
 

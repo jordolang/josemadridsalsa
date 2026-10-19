@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { allocateCents } from '@/lib/bundles'
 import { deriveFulfillmentStatus } from '@/lib/orders/fulfillment'
 import { calculateFundraiserCommission, commissionBase } from '@/lib/fundraising/commission'
-import { bigCommerceFetch } from '@/lib/bigcommerce/client'
+import { bigCommerceFetch, type BigCommerceRequestOptions } from '@/lib/bigcommerce/client'
 import type { BigCommerceStoreKey } from '@/lib/bigcommerce/config'
 import {
   findProductForJarLabel,
@@ -16,6 +16,7 @@ import {
   dealBigCommerceArenaDamage,
   ensureBigCommerceFundraiser,
   extractFundraisingAttribution,
+  isUniqueViolation,
   recomputeFundraiserTotals,
   type BigCommerceArenaSale,
   type BigCommerceFundraiserRef,
@@ -57,6 +58,18 @@ export function isBigCommerceOrderSource(importSource: string | null | undefined
 /** The mirror's order number; also what makes mirroring idempotent. */
 export function bigCommerceOrderNumber(bigCommerceOrderId: number, store: BigCommerceStoreKey = 'main'): string {
   return `${store === 'fundraising' ? 'BCF' : 'BC'}-${bigCommerceOrderId}`
+}
+
+/**
+ * Order reads run in the background (webhook `after`, the hourly sweep, the backfill), so they
+ * wait out more of BigCommerce's 429s than a page render would. The fundraising store's quota
+ * runs out partway through a sweep, and with the default retries the same orders failed hour
+ * after hour.
+ */
+const ORDER_RATE_LIMIT_RETRIES = 5
+
+function fetchOrderData<T>(store: BigCommerceStoreKey, path: string, options: BigCommerceRequestOptions = {}) {
+  return bigCommerceFetch<T>(store, path, { rateLimitRetries: ORDER_RATE_LIMIT_RETRIES, ...options })
 }
 
 // ---- Raw v2 shapes (only the fields read here) ----
@@ -294,6 +307,8 @@ export type MirrorContext = {
    * recomputed per order, so a backfill of thousands of orders recomputes each campaign once.
    */
   staleFundraisers?: Set<string>
+  /** Set on the second pass after another delivery created the copy first; internal. */
+  lostCreateRace?: boolean
 }
 
 const STORE_LABEL: Record<BigCommerceStoreKey, string> = {
@@ -312,14 +327,14 @@ export async function mirrorBigCommerceOrder(
 ): Promise<MirrorResult> {
   const store = context?.store ?? 'main'
   const fundraising = store === 'fundraising'
-  const order = await bigCommerceFetch<RawBigCommerceOrder>(store, `v2/orders/${bigCommerceOrderId}`)
+  const order = await fetchOrderData<RawBigCommerceOrder>(store, `v2/orders/${bigCommerceOrderId}`)
   const orderNumber = bigCommerceOrderNumber(order.id, store)
   const existing = await prisma.order.findUnique({
     where: { orderNumber },
     select: { id: true, fundraiserId: true, _count: { select: { fulfillments: true, returnRequests: true } } },
   })
 
-  const lines = await bigCommerceFetch<RawBigCommerceOrderProduct[]>(store, `v2/orders/${order.id}/products`)
+  const lines = await fetchOrderData<RawBigCommerceOrderProduct[]>(store, `v2/orders/${order.id}/products`)
   const itemsShipped = (lines ?? []).reduce((sum, line) => sum + line.quantity_shipped, 0)
   const mapped = mapBigCommerceStatus(order.status_id, itemsShipped)
   if (!mapped && !existing) return { action: 'skipped' }
@@ -337,7 +352,7 @@ export async function mirrorBigCommerceOrder(
 
   const shipments =
     itemsShipped > 0
-      ? ((await bigCommerceFetch<RawShipment[] | null>(store, `v2/orders/${order.id}/shipments`)) ?? [])
+      ? ((await fetchOrderData<RawShipment[] | null>(store, `v2/orders/${order.id}/shipments`)) ?? [])
       : []
   const tracking = shipments.find((shipment) => shipment.tracking_number)
   const shipped = order.date_shipped ? new Date(order.date_shipped) : null
@@ -347,7 +362,7 @@ export async function mirrorBigCommerceOrder(
   // since the checkout answers have been stored on either address over the years.
   const shipping =
     !existing || fundraising
-      ? (await bigCommerceFetch<RawShippingAddress[] | null>(store, `v2/orders/${order.id}/shipping_addresses`))?.[0]
+      ? (await fetchOrderData<RawShippingAddress[] | null>(store, `v2/orders/${order.id}/shipping_addresses`))?.[0]
       : undefined
 
   // Fundraising-store orders are credited to the group the buyer chose. The commission is
@@ -439,26 +454,35 @@ export async function mirrorBigCommerceOrder(
     ? await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, select: { id: true } })
     : null
 
-  const created = await prisma.order.create({
-    data: {
-      ...header,
-      ...(attributionFields ?? {}),
-      ...(fundraiser ? { fundraiser: { connect: { id: fundraiser.id } } } : {}),
-      orderNumber,
-      createdAt: orderDate,
-      salesChannel: fundraising ? 'FUNDRAISER' : 'WEBSITE',
-      paymentChannel: 'ONLINE',
-      paymentProvider: null,
-      importSource: ORDER_SOURCE[store],
-      importedAt: new Date(),
-      shippingMethod: shipping?.shipping_method || null,
-      ...(user ? { user: { connect: { id: user.id } } } : { guestEmail: email, guestPhone: order.billing_address.phone || null }),
-      billingAddress: { create: { ...toAddress(order.billing_address, user?.id ?? null), type: 'BILLING' } },
-      ...(shipping ? { shippingAddress: { create: { ...toAddress(shipping, user?.id ?? null), type: 'SHIPPING' } } } : {}),
-      items: { create: items },
-    },
-    select: { id: true },
-  })
+  let created: { id: string }
+  try {
+    created = await prisma.order.create({
+      data: {
+        ...header,
+        ...(attributionFields ?? {}),
+        ...(fundraiser ? { fundraiser: { connect: { id: fundraiser.id } } } : {}),
+        orderNumber,
+        createdAt: orderDate,
+        salesChannel: fundraising ? 'FUNDRAISER' : 'WEBSITE',
+        paymentChannel: 'ONLINE',
+        paymentProvider: null,
+        importSource: ORDER_SOURCE[store],
+        importedAt: new Date(),
+        shippingMethod: shipping?.shipping_method || null,
+        ...(user ? { user: { connect: { id: user.id } } } : { guestEmail: email, guestPhone: order.billing_address.phone || null }),
+        billingAddress: { create: { ...toAddress(order.billing_address, user?.id ?? null), type: 'BILLING' } },
+        ...(shipping ? { shippingAddress: { create: { ...toAddress(shipping, user?.id ?? null), type: 'SHIPPING' } } } : {}),
+        items: { create: items },
+      },
+      select: { id: true },
+    })
+  } catch (error) {
+    // BigCommerce sends an order's created and status-updated hooks moments apart, so two
+    // deliveries can both find no copy and both create one. The loser brings the winner's copy
+    // up to date instead of failing, so the later status is not lost until the next sweep.
+    if (!isUniqueViolation(error) || context?.lostCreateRace) throw error
+    return mirrorBigCommerceOrder(bigCommerceOrderId, { ...context, lostCreateRace: true })
+  }
   return { action: 'created', ...(await refreshTotals(created.id)) }
 }
 
@@ -500,7 +524,7 @@ async function syncPages(
 ): Promise<void> {
   for (let page = 1; ; page++) {
     const orders =
-      (await bigCommerceFetch<Array<{ id: number }> | null>(store, 'v2/orders', {
+      (await fetchOrderData<Array<{ id: number }> | null>(store, 'v2/orders', {
         query: { min_date_modified: since.toISOString(), sort: 'id:asc', limit: 250, page },
       })) ?? []
 
@@ -521,5 +545,52 @@ async function syncPages(
     }
     await Promise.all(Array.from({ length: SYNC_CONCURRENCY }, worker))
     if (orders.length < 250) return
+  }
+}
+
+export type OrderMirrorAudit = {
+  /** Orders BigCommerce lists for the period, sales or not. */
+  inBigCommerce: number
+  /** Incomplete, pending, awaiting payment or a custom status: not copied until they become sales. */
+  notSales: number
+  /** Sales that already have a copy here. */
+  copied: number
+  /** Sales with no copy here yet: what a real run would create. */
+  missing: number[]
+}
+
+/**
+ * Read-only check of how complete the copy is: every order BigCommerce has
+ * created since `since`, against the copies in this database. Writes nothing,
+ * so it is safe to run against production before (or instead of) a backfill.
+ */
+export async function auditBigCommerceOrders(
+  since: Date,
+  store: BigCommerceStoreKey = 'main',
+): Promise<OrderMirrorAudit> {
+  const audit: OrderMirrorAudit = { inBigCommerce: 0, notSales: 0, copied: 0, missing: [] }
+  for (let page = 1; ; page++) {
+    const orders =
+      (await fetchOrderData<Array<{ id: number; status_id: number }> | null>(store, 'v2/orders', {
+        query: { min_date_created: since.toISOString(), sort: 'id:asc', limit: 250, page },
+      })) ?? []
+
+    const sales = orders.filter((order) => mapBigCommerceStatus(order.status_id) !== null)
+    const copies = new Set(
+      (
+        await prisma.order.findMany({
+          where: { orderNumber: { in: sales.map((order) => bigCommerceOrderNumber(order.id, store)) } },
+          select: { orderNumber: true },
+        })
+      ).map((row) => row.orderNumber),
+    )
+
+    audit.inBigCommerce += orders.length
+    audit.notSales += orders.length - sales.length
+    for (const order of sales) {
+      if (copies.has(bigCommerceOrderNumber(order.id, store))) audit.copied++
+      else audit.missing.push(order.id)
+    }
+    if (orders.length < 250) return audit
   }
 }
