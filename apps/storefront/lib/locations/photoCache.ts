@@ -68,7 +68,7 @@ const STREET_SUFFIXES: Record<string, string> = {
 }
 
 const DIRECTIONS = new Set(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
-const STREET_TYPES = new Set(['st', 'ave', 'rd', 'dr', 'blvd', 'ln', 'ct', 'hwy', 'pkwy', 'pl'])
+const STREET_TYPES = new Set(['st', 'ave', 'rd', 'dr', 'blvd', 'ln', 'ct', 'hwy', 'pkwy', 'pl', 'pike'])
 
 const normalizeStreet = (value: string) =>
   value
@@ -90,8 +90,9 @@ export function addressesMatch(stored: string, googleFormatted?: string | null):
   const storedWords = normalizeStreet(stored)
   const googleWords = normalizeStreet(googleFormatted.split(',')[0] ?? '')
 
-  const storedNumber = storedWords[0]?.match(/^\d+$/)?.[0]
-  const googleNumber = googleWords[0]?.match(/^\d+$/)?.[0]
+  // Compare the digits that lead the house number, so "5211-B" is still 5211.
+  const storedNumber = storedWords[0]?.match(/^\d+/)?.[0]
+  const googleNumber = googleWords[0]?.match(/^\d+/)?.[0]
   if (storedNumber && googleNumber && storedNumber !== googleNumber) return false
 
   for (const set of [DIRECTIONS, STREET_TYPES]) {
@@ -100,8 +101,18 @@ export function addressesMatch(stored: string, googleFormatted?: string | null):
     if (storedPart && googlePart && storedPart !== googlePart) return false
   }
 
-  const storedNames = storedWords.filter((word) => !/^\d+$/.test(word) && !DIRECTIONS.has(word) && !STREET_TYPES.has(word))
+  const storedNames = storedWords
+    .slice(storedNumber ? 1 : 0)
+    .filter((word) => !DIRECTIONS.has(word) && !STREET_TYPES.has(word))
   if (storedNames.length === 0) return Boolean(storedNumber && storedNumber === googleNumber)
   const googleSet = new Set(googleWords)
   return storedNames.some((word) => googleSet.has(word))
+}
+
+/**
+ * True when the stored address looks like a street address (a number and a word), not a
+ * blank or a placeholder such as "OH". Street View of anything less is a guess.
+ */
+export function hasStreetAddress(address?: string | null): boolean {
+  return Boolean(address && /\d/.test(address) && /[a-z]{2,}/i.test(address))
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addressesMatch,
+  hasStreetAddress,
   isBlobPhotoUrl,
   locationPhotoPathname,
   pickBestPlacePhoto,
@@ -75,7 +76,29 @@ describe('addressesMatch', () => {
     expect(addressesMatch('100 Main', '100 Main St, Zanesville, OH, USA')).toBe(true)
   })
 
+  it('compares the leading digits of an alphanumeric house number', () => {
+    expect(addressesMatch('5211-B Johnstown Road', '5221 Johnstown Rd, Columbus, OH, USA')).toBe(false)
+    expect(addressesMatch('5211-B Johnstown Road', '5211 Johnstown Rd, Columbus, OH, USA')).toBe(true)
+  })
+
+  it('treats pike as a street type', () => {
+    expect(addressesMatch('5400 Alexandria Pike', '5400 Alexandria Rd, Cold Spring, KY, USA')).toBe(false)
+  })
+
   it('flags a missing Google address', () => {
     expect(addressesMatch('100 Main St', null)).toBe(false)
+  })
+})
+
+describe('hasStreetAddress', () => {
+  it('accepts a numbered street', () => {
+    expect(hasStreetAddress('4990 Houston Road')).toBe(true)
+    expect(hasStreetAddress('State Route 60')).toBe(true)
+  })
+
+  it('rejects blanks and placeholders', () => {
+    expect(hasStreetAddress('')).toBe(false)
+    expect(hasStreetAddress(null)).toBe(false)
+    expect(hasStreetAddress('OH')).toBe(false)
   })
 })

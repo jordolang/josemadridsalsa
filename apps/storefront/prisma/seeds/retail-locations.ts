@@ -4,7 +4,7 @@ import {
   retailLocationsData,
   type RetailLocationSeedData,
 } from '../../lib/data/retail-locations'
-import { isBlobPhotoUrl } from '../../lib/locations/photoCache'
+import { isBlobPhotoUrl } from '@/lib/locations/photoCache'
 
 const prisma = new PrismaClient()
 
@@ -38,8 +38,8 @@ async function main() {
       ? new Decimal(location.longitude)
       : null
 
-    // Keep a storefront photo cached in Blob by `locations:cache-photos`; the seed data
-    // only has the old Google URLs.
+    // Keep a storefront photo cached in Blob by `locations:cache-photos`, and the Place ID
+    // it verified alongside it; the seed data only has the old Google URLs and IDs.
     const existing = await prisma.retailLocation.findUnique({
       where: {
         businessName_address: {
@@ -47,7 +47,7 @@ async function main() {
           address: location.address,
         },
       },
-      select: { photoUrl: true },
+      select: { photoUrl: true, googlePlacesId: true },
     })
     const keepCachedPhoto = isBlobPhotoUrl(existing?.photoUrl)
 
@@ -65,8 +65,9 @@ async function main() {
         zipCode: location.zipCode,
         phone: location.phone,
         website: location.website,
-        ...(keepCachedPhoto ? {} : { photoUrl: location.photoUrl }),
-        googlePlacesId: location.googlePlacesId,
+        ...(keepCachedPhoto
+          ? {}
+          : { photoUrl: location.photoUrl, googlePlacesId: location.googlePlacesId }),
         latitude,
         longitude,
         county: location.county,

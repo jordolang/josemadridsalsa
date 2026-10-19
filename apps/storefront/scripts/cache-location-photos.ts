@@ -28,6 +28,7 @@ import { config as loadEnv } from 'dotenv'
 import { isGooglePlacesUrl } from '@/lib/utils/image'
 import {
   addressesMatch,
+  hasStreetAddress,
   isBlobPhotoUrl,
   locationPhotoPathname,
   pickBestPlacePhoto,
@@ -182,7 +183,7 @@ async function processLocation(loc: LocationInput): Promise<ReportEntry> {
   }
 
   // Without a street address Street View would return whatever panorama is near the city centre.
-  if (!image && !loc.address?.trim()) {
+  if (!image && !hasStreetAddress(loc.address)) {
     entry.reason = 'No matching Google photo and no street address for Street View'
     return entry
   }
