@@ -369,6 +369,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Black Bean Corn Salsa and Jose Madrid Original Mild were left out of the salsa categories.**
+  `npm run products:salsa-categories` matches products by name, and neither production name was on
+  the flavor list, so applying the categories would have left both in their old category. Black
+  Bean Corn now goes to Medium and Original Mild to Mild.
 - **Find Us showed the placeholder instead of a photo of each store.** Location photos were
   Google Places links, which the site stopped loading because every view was a billed request.
   Each location now has its own storefront photo stored in Blob, fetched once with the new

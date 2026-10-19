@@ -45,6 +45,17 @@ describe('getSalsaCategorySlug', () => {
     expect(getSalsaCategorySlug('Garden Fresh Cilantro Salsa Hot')).toBe('hot-salsa')
   })
 
+  it('maps the product names used in production', () => {
+    expect(getSalsaCategorySlug('Black Bean Corn Salsa')).toBe('medium-salsa')
+    expect(getSalsaCategorySlug('Jose Madrid Original Mild')).toBe('mild-salsa')
+    expect(getSalsaCategorySlug('Blueberry Mild Salsa')).toBe('fruit-mild-salsa')
+    expect(getSalsaCategorySlug('Cherry Mild Salsa')).toBe('fruit-mild-salsa')
+    expect(getSalsaCategorySlug('Cherry Chocolate Hot')).toBe('fruit-hot-salsa')
+    expect(getSalsaCategorySlug('Chipotle Con Queso')).toBe('medium-salsa')
+    expect(getSalsaCategorySlug('Chipotle Hot')).toBe('hot-salsa')
+    expect(getSalsaCategorySlug('Garden Cilantro Salsa Mild')).toBe('mild-salsa')
+  })
+
   it('does not confuse flavors that share words', () => {
     expect(getSalsaCategorySlug('Cherry Hot')).toBe('fruit-hot-salsa')
     expect(getSalsaCategorySlug('Cherry Mild')).toBe('fruit-mild-salsa')
