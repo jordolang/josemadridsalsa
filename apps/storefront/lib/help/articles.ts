@@ -52,6 +52,19 @@ export function helpArticleUrl(slug: string): string {
   return slug === 'index' ? '/help' : `/help/${slug}`
 }
 
+/** Length of the ` | Jose Madrid Salsa` suffix the root layout's title template adds. */
+const TITLE_TEMPLATE_SUFFIX_LENGTH = ' | Jose Madrid Salsa'.length
+const MAX_TITLE_LENGTH = 60
+
+/**
+ * Page title for an article, before the root layout's template adds the brand. Keeps
+ * "- Help Center" only when the full title still fits in 60 characters.
+ */
+export function helpArticleTitle(title: string): string {
+  const withSection = `${title} - Help Center`
+  return withSection.length + TITLE_TEMPLATE_SUFFIX_LENGTH <= MAX_TITLE_LENGTH ? withSection : title
+}
+
 /** Sidebar sections; the `index` article is the hub itself, so it is left out. */
 export async function getHelpNav(): Promise<HelpNavSection[]> {
   const [pages, articles] = await Promise.all([readPages(), getHelpArticles()])

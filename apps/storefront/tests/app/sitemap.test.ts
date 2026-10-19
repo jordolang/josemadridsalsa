@@ -6,7 +6,7 @@ const { prismaMock } = vi.hoisted(() => {
   return {
     prismaMock: {
       seoConfiguration: { findFirst: vi.fn(async () => ({ siteUrl: 'https://www.josemadridsalsa.com', sitemapPriorities: {} })) },
-      product: { findMany: empty() },
+      product: { findMany: vi.fn(async () => [{ slug: 'cherry-mild', updatedAt: new Date() }]) },
       category: { findMany: empty() },
       recipe: { findMany: empty() },
       developerBlogPost: { findMany: vi.fn(async () => [{ slug: 'the-real-cost-of-building-this-platform', updatedAt: new Date() }]) },
@@ -22,7 +22,10 @@ const { prismaMock } = vi.hoisted(() => {
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock, default: prismaMock }))
 vi.mock('@/lib/cms/queries', () => ({ getSitemapLandingPages: vi.fn(async () => []) }))
-vi.mock('@/lib/help/articles', () => ({ getHelpArticles: vi.fn(async () => []), helpArticleUrl: (slug: string) => `/help/${slug}` }))
+vi.mock('@/lib/help/articles', () => ({
+  getHelpArticles: vi.fn(async () => [{ slug: 'index' }, { slug: 'shipping' }]),
+  helpArticleUrl: (slug: string) => (slug === 'index' ? '/help' : `/help/${slug}`),
+}))
 vi.mock('@/lib/merchandise/catalog', () => ({ getMerchCatalog: vi.fn(async () => ({ status: 'unavailable' })) }))
 
 const { default: sitemap } = await import('@/app/sitemap')
@@ -55,5 +58,15 @@ describe('storefront sitemap', () => {
       expect.objectContaining({ where: { posts: { some: { status: 'PUBLISHED' } } } }),
     )
     expect(urls).toContain('https://www.josemadridsalsa.com/heat-index/category/road-notes')
+  })
+
+  it('lists active products, the help center and its articles, and order tracking', async () => {
+    const urls = (await sitemap()).map((entry) => entry.url)
+
+    expect(prismaMock.product.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { isActive: true } }))
+    expect(urls).toContain('https://www.josemadridsalsa.com/products/cherry-mild')
+    expect(urls).toContain('https://www.josemadridsalsa.com/help/shipping')
+    expect(urls).toContain('https://www.josemadridsalsa.com/order-tracking')
+    expect(urls.filter((url) => url === 'https://www.josemadridsalsa.com/help')).toHaveLength(1)
   })
 })
