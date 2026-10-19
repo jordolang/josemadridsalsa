@@ -20,6 +20,7 @@ interface AccountSummary {
 export function RewardsStatusPanel() {
   const { status } = useSession()
   const [account, setAccount] = useState<AccountSummary | null>(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -27,9 +28,13 @@ export function RewardsStatusPanel() {
     fetch('/api/loyalty')
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { data?: AccountSummary } | null) => {
-        if (!cancelled && body?.data) setAccount(body.data)
+        if (cancelled) return
+        if (body?.data) setAccount(body.data)
+        else setFailed(true)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setFailed(true)
+      })
     return () => {
       cancelled = true
     }
@@ -54,6 +59,17 @@ export function RewardsStatusPanel() {
             <Link href="/auth/signin?callbackUrl=/rewards">Sign in</Link>
           </Button>
         </div>
+      </div>
+    )
+  }
+
+  if (failed) {
+    return (
+      <div className="rounded-2xl bg-white/10 p-6 text-left backdrop-blur-sm">
+        <p className="text-lg font-semibold">Your points are on your account page</p>
+        <Button className="mt-4 bg-white font-semibold text-salsa-700 hover:bg-salsa-50" asChild>
+          <Link href="/account/rewards">View your rewards</Link>
+        </Button>
       </div>
     )
   }
