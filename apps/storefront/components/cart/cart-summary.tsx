@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent } from '@/components/ui/card'
+import { LoyaltyPointsHint } from '@/components/store/LoyaltyPointsHint'
 import { useCartStore } from '@/lib/store/cart'
 
 export function CartSummary() {
@@ -34,6 +35,8 @@ export function CartSummary() {
           <p className="text-xs text-muted-foreground">
             Shipping and taxes calculated at checkout
           </p>
+
+          <LoyaltyPointsHint amount={totalPrice} callbackUrl="/cart" subject="this order" />
         </div>
       </CardContent>
     </Card>

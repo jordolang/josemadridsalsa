@@ -119,6 +119,7 @@ export const SALSA_CATEGORY_FLAVORS: Record<SalsaCategorySlug, string[]> = {
   ],
   'mild-salsa': [
     'Original Mild',
+    'Jose Madrid Original Mild', // the production product name
     'Garden Fresh Cilantro Mild',
     'Garden Cilantro Mild',
     'Spanish Verde Mild',
@@ -128,6 +129,7 @@ export const SALSA_CATEGORY_FLAVORS: Record<SalsaCategorySlug, string[]> = {
     'Clovis Medium',
     'Black Bean Corn Poblano', // site rates 5.5; the Amazon copy calls it mild
     'Black Bean Corn Pablano',
+    'Black Bean Corn', // production names it "Black Bean Corn Salsa"
     'Chipotle Con Queso', // site rates 5; the Amazon copy calls it mild
   ],
   'hot-salsa': [

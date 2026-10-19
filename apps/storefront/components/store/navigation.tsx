@@ -81,6 +81,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: "Bundle Deals", href: "/bundles", description: "Mix & match your favorites" },
       { name: "Merchandise", href: "/merchandise", description: "T-shirts, hats, and accessories" },
       { name: "Gift Certificates", href: "/gift-certificates", description: "Give the gift of salsa" },
+      { name: "Salsa Rewards", href: "/rewards", description: "Earn points on every order" },
       { name: "Wholesale", href: "/wholesale", description: "Stock our jars in your store" },
     ],
   },

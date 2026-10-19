@@ -6,6 +6,7 @@ import { ImageGallery } from '@/components/products/ImageGallery'
 import { NutritionalInfo } from '@/components/products/NutritionalInfo'
 import { ProductReviews } from '@/components/reviews/product-reviews'
 import { AddToCartButton } from '@/components/store/add-to-cart-button'
+import { LoyaltyPointsHint } from '@/components/store/LoyaltyPointsHint'
 import { YouMayAlsoLike } from '@/components/store/product-recommendations'
 import { buildProductSchema } from '@/lib/seo/schema-generator'
 import { buildTemplatedMeta } from '@/lib/seo/metadata'
@@ -297,6 +298,14 @@ export default async function ProductDetailPage({ params }: Props) {
               size="lg"
               className="w-full"
             />
+
+            {!isOutOfStock && (
+              <LoyaltyPointsHint
+                amount={product.price}
+                callbackUrl={`/products/${product.slug}`}
+                subject="every jar"
+              />
+            )}
 
             {/* Low stock warning */}
             {isLowStock && (

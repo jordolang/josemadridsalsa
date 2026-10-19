@@ -58,6 +58,10 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **Salsa Rewards on the storefront.** A public `/rewards` page explains the loyalty program,
+  lists the live reward catalog and tiers, and shows signed-in customers their points and progress
+  to the next tier. Product pages and the cart now say how many points a purchase earns, and ask
+  guests to sign in so the order counts. Linked from the Shop menu and footer, and in the sitemap.
 - **The order tracker shows a map of where the salsa is.** Both tracking pages (`/order-tracking/<order>`
   and `/track/<tracking number>`) now open with a map: a salsa bowl sits wherever the package was
   last scanned, or at Jose Madrid Salsa headquarters (601 Putnam Ave, Zanesville) until the carrier
@@ -378,6 +382,10 @@ the root `package.json` is canonical.
   imagery", and the command exits non-zero when any location fails. It now reads
   `apps/storefront/.env.local`, and re-running the retail-location seed no longer replaces the
   cached Blob photos, or the Place IDs verified with them, with the old Google values.
+- **Black Bean Corn Salsa and Jose Madrid Original Mild were left out of the salsa categories.**
+  `npm run products:salsa-categories` matches products by name, and neither production name was on
+  the flavor list, so applying the categories would have left both in their old category. Black
+  Bean Corn now goes to Medium and Original Mild to Mild.
 - **Help Center and order tracking titles named the brand twice.** Their titles already ended in
   "- Jose Madrid Salsa", and the site's title template added "| Jose Madrid Salsa" again, so every
   help article ran past 60 characters, e.g. "Shipping & Tracking - Help Center - Jose Madrid Salsa | Jose Madrid Salsa".

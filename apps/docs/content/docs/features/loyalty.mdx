@@ -18,6 +18,10 @@ through `/api/loyalty` and the customer page `/account/rewards`.
 | Writing a review | 50 |
 | Birthday | 250 |
 
+Only purchase points are awarded today, by `creditPurchaseLoyaltyPoints` when an order is paid.
+The referral, review and birthday amounts are constants in `lib/loyalty.ts` that nothing calls
+yet, so the storefront advertises purchase points only.
+
 ## Tiers
 
 Tier is derived from **lifetime** points, so it never goes down when points are
@@ -52,6 +56,19 @@ enters it at checkout.
 
 A reward that has been redeemed cannot be deleted — redemptions and issued codes point at it —
 so switch it off instead. Its limit also cannot be lowered below the number already redeemed.
+
+## On the storefront
+
+- **`/rewards`** is the public program page: how earning works, the live reward catalog (active
+  `DISCOUNT` rewards), the tier ladder with what each tier unlocks, and a short FAQ. A signed-in
+  visitor also sees their balance, tier and progress to the next tier, fetched in the browser
+  from `GET /api/loyalty` so the page itself stays cached. It is in the sitemap and linked from
+  the Shop menu and the footer.
+- **Product pages and the cart** show how many points the jar or the cart subtotal earns
+  (`components/store/LoyaltyPointsHint.tsx`). Guests are asked to sign in, since guest orders
+  earn nothing.
+- The display math (points for an amount, tier progress) is in `lib/loyalty-progress.ts` and
+  rounds the same way as the purchase credit.
 
 ## Data model
 
