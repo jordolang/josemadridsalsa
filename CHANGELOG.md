@@ -373,6 +373,15 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **`locations:cache-photos` is stricter about which photo it trusts.** Address matching now
+  rejects the opposite direction (N vs S Main St), a different street type (Main St vs Main
+  Ave, Pike vs Road) and a different house number written as "5211-B". Locations with no
+  street address, or a placeholder such as "OH", no longer fall back to a city-wide Street View
+  shot.
+  Street View key, quota and server errors now fail the location instead of reading as "no
+  imagery", and the command exits non-zero when any location fails. It now reads
+  `apps/storefront/.env.local`, and re-running the retail-location seed no longer replaces the
+  cached Blob photos, or the Place IDs verified with them, with the old Google values.
 - **Black Bean Corn Salsa and Jose Madrid Original Mild were left out of the salsa categories.**
   `npm run products:salsa-categories` matches products by name, and neither production name was on
   the flavor list, so applying the categories would have left both in their old category. Black
