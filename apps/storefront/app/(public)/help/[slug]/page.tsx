@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { createMetadata } from '@/lib/metadata'
 import { HelpMdx } from '@/components/help/help-mdx'
 import { HelpSidebar } from '@/components/help/help-sidebar'
-import { getHelpArticle, getHelpArticles, getHelpNav, helpArticleUrl } from '@/lib/help/articles'
+import { getHelpArticle, getHelpArticles, getHelpNav, helpArticleTitle, helpArticleUrl } from '@/lib/help/articles'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getHelpArticle((await params).slug)
   if (!article) return {}
   return createMetadata({
-    title: `${article.title} - Help Center - Jose Madrid Salsa`,
+    title: helpArticleTitle(article.title),
     description: article.description,
     pathname: helpArticleUrl(article.slug),
   })

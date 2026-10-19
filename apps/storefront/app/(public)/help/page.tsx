@@ -8,7 +8,7 @@ import { getHelpArticle } from '@/lib/help/articles'
 import { helpQuerySchema, searchHelpArticles } from '@/lib/help/search'
 
 export const metadata: Metadata = createMetadata({
-  title: 'Help Center - Jose Madrid Salsa',
+  title: 'Help Center',
   description:
     'Search our knowledge base, track an order, read shipping and return policies, or get in touch with Jose Madrid Salsa.',
   pathname: '/help',
