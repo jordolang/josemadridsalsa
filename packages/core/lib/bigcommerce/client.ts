@@ -27,6 +27,12 @@ export type BigCommerceRequestOptions = {
    */
   revalidate?: number
   tags?: string[]
+  /**
+   * How many 429s to wait out before giving up. Page renders keep the default
+   * so a busy store fails fast; background jobs such as the order sweep pass
+   * more, since the fundraising store's quota runs out mid-sweep.
+   */
+  rateLimitRetries?: number
 }
 
 type NextFetchInit = RequestInit & { next?: { revalidate?: number; tags?: string[] } }
@@ -75,10 +81,11 @@ export async function bigCommerceFetch<T = unknown>(
     init.cache = 'no-store'
   }
 
+  const maxRetries = options.rateLimitRetries ?? MAX_RATE_LIMIT_RETRIES
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(url, init)
 
-    if (res.status === 429 && attempt < MAX_RATE_LIMIT_RETRIES) {
+    if (res.status === 429 && attempt < maxRetries) {
       const resetMs = Number(res.headers.get('X-Rate-Limit-Time-Reset-Ms'))
       await sleep(Number.isFinite(resetMs) && resetMs > 0 ? Math.min(resetMs, MAX_RATE_LIMIT_WAIT_MS) : 1000)
       continue

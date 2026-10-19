@@ -126,8 +126,19 @@ revenue and commission are recomputed from its copies.
    It prints how many orders were created, updated, skipped (not paid yet) and failed, how many
    fundraisers were created, and how many orders named no group.
 
+   To check how complete the copy is without writing anything, add `--dry-run`. It prints how many
+   orders BigCommerce has since the date, how many are not sales yet, how many are already copied,
+   and the BigCommerce order numbers a real run would add:
+
+   ```bash
+   npm run bigcommerce:orders -- 2020-01-01 --store fundraising --dry-run
+   ```
+
 The hourly `/api/cron/bigcommerce-orders` job sweeps the fundraising store too whenever its
-credentials are set, whether or not the retail storefront has switched over. After the domain moves
+credentials are set, whether or not the retail storefront has switched over. Order reads wait out
+more of BigCommerce's rate-limit responses than page renders do, because the fundraising store's
+quota runs out partway through a sweep. When an order's created and updated webhooks arrive
+together, the second delivery updates the first one's copy instead of failing. After the domain moves
 (Phase 3), re-run the registration command with the new origin.
 
 ### Purchase tracking
