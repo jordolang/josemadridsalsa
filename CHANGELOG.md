@@ -373,6 +373,11 @@ the root `package.json` is canonical.
   `npm run products:salsa-categories` matches products by name, and neither production name was on
   the flavor list, so applying the categories would have left both in their old category. Black
   Bean Corn now goes to Medium and Original Mild to Mild.
+- **Help Center and order tracking titles named the brand twice.** Their titles already ended in
+  "- Jose Madrid Salsa", and the site's title template added "| Jose Madrid Salsa" again, so every
+  help article ran past 60 characters, e.g. "Shipping & Tracking - Help Center - Jose Madrid Salsa | Jose Madrid Salsa".
+  The brand now appears once, and an article keeps "- Help Center" only when the title still fits
+  in 60 characters.
 - **Find Us showed the placeholder instead of a photo of each store.** Location photos were
   Google Places links, which the site stopped loading because every view was a billed request.
   Each location now has its own storefront photo stored in Blob, fetched once with the new

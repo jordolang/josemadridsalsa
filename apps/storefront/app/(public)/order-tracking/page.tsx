@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card'
 import { OrderLookupForm } from '@/components/order-tracking/OrderLookupForm'
 
 export const metadata: Metadata = createMetadata({
-  title: 'Track Your Order - Jose Madrid Salsa',
+  title: 'Track Your Order',
   description:
     'Check the status of your Jose Madrid Salsa order with your order number and phone, or a tracking number.',
   pathname: '/order-tracking',

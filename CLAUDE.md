@@ -51,27 +51,33 @@ It is a large, mature application: a public storefront, customer accounts, multi
 
 ## Part 3 — Architecture
 
-A **Turborepo** monorepo using **npm workspaces** (`npm@11.12.1`, Node **20** per `.nvmrc`). Workspaces are globbed from `apps/*` and `packages/*`; the task graph lives in `turbo.json`.
+A **Turborepo** monorepo using **npm workspaces** (`npm@11.12.1`, Node **20** per `.nvmrc`). Workspaces are globbed from `apps/*` and `packages/*`, except `apps/fundraiser-app` (excluded in the root `package.json`; it keeps its own lockfile). The native apps have no `package.json` and are not workspaces. The task graph lives in `turbo.json`.
 
 ```
 josemadridsalsa/
 ├── apps/
-│   ├── storefront/     # PRIMARY app — storefront, accounts, checkout, admin,
-│   │                   #   POS, and most API routes
-│   ├── fundraising/    # Fundraising site + all fundraiser pages/APIs (port 3001)
-│   ├── admin/          # Standalone role-based admin app (port 3003)
-│   └── docs/           # Fumadocs documentation site (port 3002) — canonical docs home
+│   ├── storefront/      # PRIMARY app — storefront, accounts, checkout, admin,
+│   │                    #   POS, kiosk screens, and most API routes (port 3000)
+│   ├── fundraising/     # Fundraising site + all fundraiser pages/APIs (port 3001)
+│   ├── docs/            # Fumadocs documentation site (port 3002) — canonical docs home
+│   ├── admin/           # Stub: its only page redirects to the storefront's /admin (port 3003)
+│   ├── agent/           # eve-framework platform agent (catalog search tool); skipped by `npm run build`
+│   ├── fundraiser-app/  # Expo / React Native app for fundraiser participants (not a workspace)
+│   ├── ios-kiosk/       # Swift iPad kiosk shell around the storefront's /kiosk
+│   ├── android-kiosk/   # Kotlin/Gradle Android kiosk shell around /kiosk
+│   ├── macos-admin/     # SwiftUI (SwiftPM) shell around the production admin panel
+│   └── windows-admin/   # Electron shell around the admin panel (Windows 11)
 ├── packages/
-│   └── core/           # Code shared by storefront + fundraising (@/ falls back to it)
-├── package.json        # npm workspace + turbo scripts
-└── turbo.json          # Turborepo task graph
+│   └── core/            # Code shared by storefront + fundraising (@/ falls back to it)
+├── package.json         # npm workspace + turbo scripts
+└── turbo.json           # Turborepo task graph
 ```
 
-**Key fact:** `apps/storefront` is where most product code lives — including the admin dashboard (`app/admin`, which also manages fundraisers), POS, and most API routes (`app/api`). **`apps/fundraising`** is its own deployment: the fundraising site (`app/(site)`), and every public fundraiser page, the fundraiser portal, the arena and their APIs; the storefront redirects those paths to it. The fundraiser mobile app's API (`/api/fundraiser-app`) and all webhooks stay in the storefront. The `admin` workspace is secondary; when in doubt about non-fundraiser work, use `storefront`. There is **no** `apps/backend` (a phantom left over from a reverted function-split; API handlers live in `apps/storefront/app/api`).
+**Key fact:** `apps/storefront` is where most product code lives — including the admin dashboard (`app/admin`, which also manages fundraisers), the desktop-shell admin (`app/admin-desktop`), POS (`app/pos`), the self-order kiosk (`app/kiosk`) and most API routes (`app/api`). **`apps/fundraising`** is its own deployment: the fundraising site (`app/(site)`), and every public fundraiser page, the fundraiser portal, the battle arena and their APIs; the storefront redirects those paths to it. The fundraiser mobile app's API (`/api/fundraiser-app`) and all webhooks stay in the storefront. The `admin` workspace holds no admin features; when in doubt, use `storefront`. There is **no** `apps/backend` (a phantom left over from a reverted function-split; API handlers live in `apps/storefront/app/api`).
+
+The native and mobile apps are thin clients: the kiosks wrap `/kiosk` (`apps/docs/content/docs/features/kiosk.mdx`), the macOS and Windows apps wrap the admin panel (`features/macos-admin-app.mdx`), and the fundraiser app talks to `/api/fundraiser-app` (`features/fundraiser-mobile-app.mdx`). Business logic belongs in the web apps, not in the shells. `apps/fundraiser-app` and `apps/agent` have their own `AGENTS.md`; read them before working there.
 
 **`packages/core`** holds the code more than one app imports (Prisma, auth, RBAC, email, UI primitives, fundraising domain logic). It mirrors the storefront's layout, and each app's `@/` alias resolves to the app first, then to core, so `@/lib/prisma` works everywhere. Core must never import from an app (`npm run type-check --workspace=@jose-madrid/core` enforces it). See `apps/docs/content/docs/guides/shared-code-strategy.mdx`.
-
-An iOS native app lives under `apps/ios/**` (not an npm workspace; build artifacts are gitignored).
 
 ### Dev servers (each on a distinct port)
 | App | Command | URL |
@@ -91,6 +97,7 @@ An iOS native app lives under `apps/ios/**` (not an npm workspace; build artifac
 |---|---|
 | Monorepo | Turborepo, npm workspaces, Node 20 |
 | Framework | Next.js **16** (App Router, RSC) |
+| Mobile / native | Expo SDK **57** (fundraiser app), Swift/SwiftUI (iPad kiosk, macOS admin), Kotlin (Android kiosk), Electron (Windows admin) |
 | UI runtime | React **19** |
 | Language | TypeScript **5.9** (strict; `@/` path alias) |
 | Styling | Tailwind CSS **4**, Shadcn UI / Radix UI |
@@ -99,9 +106,9 @@ An iOS native app lives under `apps/ios/**` (not an npm workspace; build artifac
 | Payments | Stripe **19**, PayPal, Square **43**, in-person POS |
 | Shipping | EasyPost (via `SHIPPING_PROVIDER`) |
 | Tax | Stripe Tax (`lib/tax-calculator.ts`) |
-| Email | Resend **6** + Nodemailer **8** |
+| Email | Resend **6** + Nodemailer **10** |
 | Validation | Zod **4** + React Hook Form |
-| Testing | Vitest **4** (jsdom, jest-dom, MSW), Playwright |
+| Testing | Vitest **5** (jsdom, jest-dom, MSW), Playwright |
 | Monitoring | Sentry, Amplitude, Vercel Analytics |
 | AI | Anthropic (AI chat + RAG in `lib/ai-rag`, `app/api/ai-chat`) |
 | Uploads | UploadThing |
@@ -114,10 +121,20 @@ Prefer the latest, most capable Claude models when building AI features (`ANTHRO
 
 ## Part 5 — Storefront Layout (`apps/storefront`)
 
-- **`app/`** route groups: `(public)`, `admin`, `auth`, `cart`, `order-confirmation`, `pos`, `avatar`, plus `api`. (The fundraiser pages, `fundraise`, `(fundraiser-portal)`, `(fundraiser-subdomain)`, `game-icons` and `s`, are in `apps/fundraising`.)
-- **`app/api/`** (~50 groups): `checkout`, `payment(s)`, `orders`, `cart`, `products`, `salsas`, `recipes`, `reviews`, `recommendations`, `gift-certificates`, `loyalty`, `fundraiser-app` (mobile app API), `social`, `integrations`, `developer`, `admin`, `account`, `ai-chat`, `chat-handoff`, `heat-index`, `newsletter`/`unsubscribe`/`send-email`, `locations`/`places`, `calendar`, `feeds`, `forms`, `live`, `pos`, `track`, `cron`, `uploadthing`, and **`webhooks/`** (`stripe`, `paypal`, `square`, `easypost`, `resend`).
-- **`lib/`** domain modules (~60): `payments`, `stripe`, `quickbooks`, `orders`, `financials`, `fundraising`/`fundraisers`, `arena`, `events`, `email`, `social`, `merchandise`, `gift-certificates`, `loyalty` (`loyalty.ts`), `inventory` (`inventory-manager.ts`, `inventory-alerts.ts`), `shipping` (`shipping-calculator.ts`, `shipping-api.ts`, `shipping-carriers.ts`), `tax-calculator.ts`, `recommendations.ts`, `discounts.ts`, `blog`, `seo`, `ai-rag`, `chat`, `forms`, `locations`, `analytics`, `tracking`, `notifications`, `training-data`, `customers`, `users`, `feeds`, `rate-limit`, plus core helpers: `prisma.ts`, `rbac.ts`, `admin-auth.ts`, `fundraiser-auth.ts`, `crypto.ts`, `validation(s)`, `logger.ts`, `errors.ts`, `csv.ts`.
-- **`components/`**: `ui` (Shadcn primitives), `store`, `admin`, `account`, `cart`, `checkout`, `products`, `reviews`, `fundraiser`/`fundraiser-portal`/`fundraising`, `arena`, `chat`, `messaging`, `dashboard`, `heat-index`, `social`, `seo`, `analytics`, `forms`, `providers`.
+- **`app/`** route groups: `(public)`, `admin`, `admin-desktop`, `auth`, `cart`, `order-confirmation`, `pos`, `kiosk`, `waiver`, `avatar`, `feed-images`, plus `api`, `sitemap.ts` and `robots.ts`. (The fundraiser pages, `fundraise`, `battle-arena`, `(fundraiser-portal)`, `(fundraiser-subdomain)`, `game-icons` and `s`, are in `apps/fundraising`.)
+- **`app/api/`** (50 groups), by area:
+  - *Commerce:* `products`, `salsas`, `recipes`, `reviews`, `recommendations`, `wishlist`, `cart`, `checkout`, `payment`/`payments`, `orders`, `order-tracking`, `track`, `gift-certificates`, `loyalty`, `merchandise`.
+  - *In-person sales:* `pos`, `kiosk`, `waivers`, `live`.
+  - *Accounts & auth:* `auth`, `account`, `avatar`.
+  - *Admin & staff:* `admin`, `desktop` (native admin shells), `developer`, `internal`, `cms`, `polls`, `site-feedback`, `forms`.
+  - *Fundraising:* `fundraiser-app` (mobile app API), `arena`.
+  - *Messaging & email:* `ai-chat`, `chat-handoff`, `newsletter`, `unsubscribe`, `send-email`.
+  - *Content & discovery:* `heat-index`, `locations`, `import-locations-secret`, `calendar`, `feeds`, `image-proxy`.
+  - *Integrations & jobs:* `integrations`, `social`, `uploadthing`, `cron` (one route per Vercel cron in `vercel.json`), and **`webhooks/`** (`stripe`, `paypal`, `square`, `easypost`, `resend`, `bigcommerce`).
+  - `sentry-example-api` is Sentry's test route.
+- **`lib/`** (~100 storefront modules): `payments`, `stripe`, `quickbooks`, `orders`, `order-tracking`, `financials`, `invoices`, `purchasing`, `operations`, `fundraising`/`fundraisers`/`fundraiser-app`, `arena`/`arena-game`, `events`, `email`, `inbox` (Gmail triage), `social`, `merchandise`, `printify`, `bigcommerce`, `cms`, `polls`, `kiosk`, `pos`, `waivers`, `gift-certificates`, `loyalty-rewards.ts`, `shipping`/`shipping-carriers.ts`, `recommendations.ts`, `salsa-categories.ts`, `merchant-center-feed.ts`, `blog`, `seo`, `ai-rag`, `ai-chat`, `chat`, `forms`, `locations`, `analytics`, `tracking`, `notifications`, `training-data`, `customers`, `users`, `feeds`, `rate-limit`, `admin-auth.ts`, `user-role.ts`, `logger.ts`, `csv.ts`, `validation.ts`/`validations`.
+- **Shared helpers live in `packages/core/lib`**, not the storefront, and resolve through `@/`: `prisma.ts`, `prisma-errors.ts`, `rbac.ts`, `auth.ts`, `fundraiser-auth.ts`, `crypto.ts`/`encryption.ts`, `errors.ts`, `discounts.ts`, `loyalty.ts`, `inventory-manager.ts`, `inventory-alerts.ts`, `shipping-calculator.ts`, `shipping-api.ts`, `tax-calculator.ts`, `stripe.ts`, `email.ts`, `site-url.ts`. Check core before adding a helper to an app.
+- **`components/`**: `ui` (Shadcn primitives), `store`, `admin`, `admin-desktop`, `account`, `cart`, `orders`, `order-tracking`, `products`, `reviews`, `wishlist`, `fundraising`, `kiosk`, `waiver`, `polls`, `cms`, `chat`, `messaging`, `dashboard`, `developer`, `heat-index`, `help`, `seo`, `analytics`, `forms`, `providers`.
 - **`prisma/`**: `schema.prisma` (+ migrations, seeds).
 - **`emails/`**: transactional/marketing email templates.
 - **`tests/`**: mirror source paths.
@@ -126,21 +143,23 @@ Prefer the latest, most capable Claude models when building AI features (`ANTHRO
 
 ## Part 6 — Data Layer
 
-- **PostgreSQL + Prisma 6.** Schema at `apps/storefront/prisma/schema.prisma` — a large domain model (**~145 models**, ~80 enums).
+- **PostgreSQL + Prisma 6.** Schema at `apps/storefront/prisma/schema.prisma` — a large domain model (**~200 models**, ~115 enums).
 - **Two connection strings:** `DATABASE_URL` (pooled, app runtime) and `DATABASE_URL_UNPOOLED` (direct, migrations). Production uses Prisma Accelerate / a pooled Postgres host; migrations run against the unpooled URL.
 - **After any schema change:** run `npm run db:generate` and commit the generated client changes. Never edit generated client output by hand.
 - **Never build raw SQL** — always go through Prisma. Watch for Prisma `P2021` (missing table) handling via `lib/prisma-errors.ts` (`isMissingTableError`).
 
 **Domain map (high level):**
-- **Commerce** — `Product`/`ProductVariant`/`Category`, `Cart`/`AbandonedCart`, `Order`/`OrderItem`, `Payment`/`Refund`/`PaymentProviderConfig`, `DiscountCode`, `GiftCertificate`, `Review`/`SiteReview`, `Inventory*`, `NutritionalInfo`/`Ingredient`. Heat is modeled via the `HeatLevel` enum.
+- **Commerce** — `Product`/`Category`/`Collection`, `CartItem`/`WishlistItem`/`AbandonedCart`, `Order`/`OrderItem`, `Fulfillment`, `ReturnRequest`, `Payment`/`Refund`/`PaymentProviderConfig`, `DiscountCode`, `GiftCertificate`, `Review`/`SiteReview`, `InventoryTransaction`/`InventoryAlert`/`RestockNotification`, `NutritionalInfo`/`Ingredient`, `MerchOrder` (Printify). Heat is modeled via the `HeatLevel` enum and sales channel via `SalesChannel`. There is no `ProductVariant` or `Cart` model.
+- **Order tracking** — `OrderCustomerUpdate`, `OrderSmsSubscription`, `GeocodedPlace`, `OrderNotificationSetting`/`OrderNotificationRule`.
+- **Purchasing & operations** — `Supplier`, `PurchaseOrder`(+items/receipts), `Invoice`, `EngagementRequest`, `TimeClockEntry`, `MileageEntry`, `LedgerEntry`/`LedgerImportBatch`, archive (`ArchiveDocument`, `ArchivedFundraiser`, `ArchivedShowSale`).
 - **Identity & access** — `User` (`UserRole` enum, incl. `DEVELOPER` super admin), `Customer` (`CustomerSource`), `Address`, `LoyaltyAccount`/points/rewards, `Permission`/`RolePermission`, `ServiceCredential`/`CredentialAccessGrant`, `PasswordResetToken`.
-- **Fundraising & arena** — `Fundraiser`, `FundraiserParticipant`, `FundraiserTeam`, `FundraiserSeason`, `FundraiserCharacter`, `FundraiserAccount`/`Profile`/`Access`, gamification (`FundraiserGamification`, `GamificationAction`), arena (`FundraiserSaleEvent`(+reactions/replies), `FundraiserShield`(+grants), `FundraiserShareEvent`/`Nonce`, `FundraiserChampionship`), `WholesaleAccount`, leads (`LeadCampaign`/`Lead`).
-- **Email marketing** — `EmailCampaign`/`EmailRecipient`/`EmailLog`, `EmailTemplate`(+versions/compositions), `EmailAutomation`/`AutomationStep`/`Enrollment`, `MailingList`/`Subscriber`, `EmailSegment`, `EmailBounce`/`Suppression`/`UnsubscribePreference`, `BrandKit`.
+- **Fundraising & arena** — `Fundraiser`, `FundraiserParticipant`, `FundraiserTeam`, `FundraiserSeason`, `FundraiserCharacter`, `FundraiserAccount`/`Profile`/`Access`, `FundraiserAppSession`, `FundraiserSignupRequest`, gamification (`FundraiserGamification`, `GamificationAction`), arena (`FundraiserSaleEvent`(+reactions/replies), `FundraiserShield`(+grants), `FundraiserShareEvent`/`Nonce`, `FundraiserChampionship`), arena game (`ArenaPlayer`, `ArenaMatch`, `ArenaHostedMatch`, `ArenaGameCode`, …), `WholesaleAccount`, leads (`LeadCampaign`/`Lead`), outreach (`FundraiserContact`/`FundraiserOutreachLog`).
+- **Email marketing** — `EmailCampaign`/`EmailRecipient`/`EmailLog`, `EmailTemplate`(+versions/compositions), `EmailAutomation`/`AutomationStep`/`AutomationEnrollment`, `MailingList`/`MailingListSubscriber`, `EmailBounce`/`EmailSuppression`/`UnsubscribePreference`, `BrandKit`; inbound mail (`GmailConnection`, `InboundEmail`).
 - **Social commerce** — `SocialAccount`, `SocialMediaPost`(+publishes/media), `SocialPlatformCredential`, `ShopListing` (`ShopPlatform`).
 - **QuickBooks** — `QuickBooksAppCredential`, `QuickBooksConnection`, `QuickBooksSyncRecord`, `QuickBooksEntityMap`, `QuickBooksSettings`.
 - **Events / shows** — `FeaturedEvent`, `EventStaff`/`EventContact`, `EventManifest`/`EventManifestItem`.
-- **Content & SEO** — `BlogPost`/`BlogSeries`/`BlogCategory` (the "Heat Index" editorial section), `Recipe`, `Media`, `TrainingDocument`, `DeveloperBlogPost`/`DeveloperPageContent`, `SeoConfiguration`/`StructuredData`.
-- **Ops** — `AuditLog`, `Notification`, `WebhookEvent`, `ShippingCarrier`/`ShippingLabel`, `ThirdPartyIntegration`, `ContactSubmission`.
+- **Content & SEO** — CMS (`Page`/`PageSection`/`ReusableSection`, `Banner`, `Announcement`, `FaqCategory`/`FaqItem`, `NavigationMenu`/`NavigationItem`, `FooterSettings`, `Redirect`), `BlogPost`/`BlogSeries`/`BlogCategory` (the "Heat Index" editorial section), `Recipe`, `Media`, `TrainingDocument`, `DeveloperBlogPost`/`DeveloperPageContent`, `SeoConfiguration`/`StructuredData`, polls (`Poll` … `PollAnswer`), `RetailLocation`/`LocationPhoto`.
+- **Ops** — `AuditLog`, `DomainEvent`, `Notification`, `WebhookEvent`, `ShippingCarrier`/`ShippingLabel`, `ThirdPartyIntegration`, `ServiceKey`/`PartnerApiKey`, `ContactSubmission`, `SiteFeedback`, `FormCapture`.
 
 ---
 
@@ -171,13 +190,17 @@ Configured by env vars (Part 10); most are optional and degrade gracefully when 
 - **Social commerce** — Facebook/Meta, TikTok Shop, Twitter/X, Amazon SP-API; verified OAuth session flow with explicit destination-account selection.
 - **Scraping / research** — BrightData, SerpAPI, Browserless (`lib/scraper`).
 - **AI** — Anthropic-powered chat + RAG (`lib/ai-rag`, `app/api/ai-chat`).
+- **BigCommerce** — the former store: pack price overrides and legacy order sync (`lib/bigcommerce`, `webhooks/bigcommerce`, `cron/bigcommerce-orders`). The catalog itself lives in Prisma.
+- **Printify** — merch fulfillment (`lib/printify`, `cron/merch-orders`).
+- **Gmail** — inbox triage and mail organizing (`lib/inbox`, `cron/inbox-triage`, `cron/mail-organizer`).
+- **Scheduled jobs** — Vercel crons in `apps/storefront/vercel.json` call `app/api/cron/*`: abandoned cart, email automation and campaigns, social publish, QuickBooks sync, operations sweep, pending-order expiry, processor fees, review requests, fundraiser lifecycle, plus the BigCommerce, Printify and Gmail jobs above.
 - **Uploads** — UploadThing. **Feature flags** — database `isActive` fields. **Monitoring** — Sentry / Amplitude / Vercel Analytics.
 
 ---
 
 ## Part 10 — Environment & Configuration
 
-- Secrets live in **`.env.local`** (never commit). Copy from `.env.example` (~71 documented keys). Production secrets are managed in **Vercel environment variables**.
+- Secrets live in **`.env.local`** (never commit). Copy from `.env.example` (~110 documented keys). Production secrets are managed in **Vercel environment variables**.
 - **Required before first run:** `DATABASE_URL`, `NEXTAUTH_SECRET`, `MASTER_KEY` (plus `ENCRYPTION_KEY` for the credential vault, and `NEXTAUTH_URL`). `DATABASE_URL_UNPOOLED` is needed for migrations; `CRON_SECRET` guards `app/api/cron`.
 - Document any **new** env var by name and purpose in `apps/docs/content/docs/configuration/environment-variables.mdx` — **never include actual values** anywhere.
 
