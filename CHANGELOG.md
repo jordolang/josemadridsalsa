@@ -369,6 +369,10 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Black Bean Corn Salsa and Jose Madrid Original Mild were left out of the salsa categories.**
+  `npm run products:salsa-categories` matches products by name, and neither production name was on
+  the flavor list, so applying the categories would have left both in their old category. Black
+  Bean Corn now goes to Medium and Original Mild to Mild.
 - **Help Center and order tracking titles named the brand twice.** Their titles already ended in
   "- Jose Madrid Salsa", and the site's title template added "| Jose Madrid Salsa" again, so every
   help article ran past 60 characters, e.g. "Shipping & Tracking - Help Center - Jose Madrid Salsa | Jose Madrid Salsa".
