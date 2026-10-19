@@ -4,7 +4,7 @@ import {
   isBlobPhotoUrl,
   locationPhotoPathname,
   pickBestPlacePhoto,
-} from '@/lib/locations/photo-cache'
+} from '@/lib/locations/photoCache'
 
 describe('locationPhotoPathname', () => {
   it('stores each location under its id', () => {
@@ -59,6 +59,20 @@ describe('addressesMatch', () => {
 
   it('flags a different street', () => {
     expect(addressesMatch('100 Main St', '100 Oak Ave, Zanesville, OH, USA')).toBe(false)
+  })
+
+  it('flags the opposite direction on the same street', () => {
+    expect(addressesMatch('100 N Main St', '100 S Main St, Zanesville, OH, USA')).toBe(false)
+    expect(addressesMatch('100 North Main St', '100 N Main St, Zanesville, OH, USA')).toBe(true)
+  })
+
+  it('flags a different street type with the same name', () => {
+    expect(addressesMatch('100 Main St', '100 Main Ave, Zanesville, OH, USA')).toBe(false)
+  })
+
+  it('accepts a side that leaves out the direction or street type', () => {
+    expect(addressesMatch('100 Main St', '100 N Main St, Zanesville, OH, USA')).toBe(true)
+    expect(addressesMatch('100 Main', '100 Main St, Zanesville, OH, USA')).toBe(true)
   })
 
   it('flags a missing Google address', () => {

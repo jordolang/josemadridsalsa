@@ -57,8 +57,12 @@ when the Place's address matches the stored one, otherwise Street View of the ad
 converts it to WebP, uploads it to Blob at `site/images/locations/<id>.webp` and saves that
 URL as `photoUrl` and in the gallery. It is a dry run without `--apply`, skips locations
 that already have a Blob photo unless `--force`, and writes every photo plus `report.json`
-to `.location-photos/` so each one can be checked. It needs `GOOGLE_PLACES_API_KEY`,
-`DATABASE_URL` and `BLOB_READ_WRITE_TOKEN`. With `--from-site <origin>` it reads the
+to `.location-photos/` so each one can be checked. Locations with no street address are
+skipped rather than given a city-wide Street View shot, and a Google key, quota or server
+error fails the location instead of being reported as missing imagery; the command exits
+non-zero if any location failed. It needs `GOOGLE_PLACES_API_KEY`, `DATABASE_URL` and
+`BLOB_READ_WRITE_TOKEN`, from the environment or `apps/storefront/.env.local`. Re-running
+the retail-location seed keeps a cached Blob photo. With `--from-site <origin>` it reads the
 locations from the public `/api/locations` API instead of the database, leaves the database
 alone, and records each `blobUrl` and `placeId` in `report.json` for saving separately.
 

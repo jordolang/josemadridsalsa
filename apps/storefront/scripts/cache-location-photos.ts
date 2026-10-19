@@ -16,21 +16,27 @@
  * against the store's name and address before or after applying.
  *
  * Needs GOOGLE_PLACES_API_KEY, DATABASE_URL (not with --from-site) and, with --apply,
- * BLOB_READ_WRITE_TOKEN.
+ * BLOB_READ_WRITE_TOKEN, read from the environment or apps/storefront/.env.local. Exits
+ * non-zero if any location failed.
  */
 
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { put } from '@vercel/blob'
 import { PrismaClient, type RetailLocation } from '@prisma/client'
-import { isGooglePlacesUrl } from '../lib/utils/image'
+import { config as loadEnv } from 'dotenv'
+import { isGooglePlacesUrl } from '@/lib/utils/image'
 import {
   addressesMatch,
   isBlobPhotoUrl,
   locationPhotoPathname,
   pickBestPlacePhoto,
   type PlacePhoto,
-} from '../lib/locations/photo-cache'
+} from '@/lib/locations/photoCache'
+
+// Load env the same way the app does (.env.local wins, then .env fills gaps).
+loadEnv({ path: path.join(process.cwd(), '.env.local') })
+loadEnv()
 
 const PLACES_API = 'https://places.googleapis.com/v1'
 const STREET_VIEW_API = 'https://maps.googleapis.com/maps/api/streetview'
@@ -121,10 +127,14 @@ async function downloadStreetView(loc: LocationInput): Promise<Buffer | null> {
   const location = encodeURIComponent(fullAddress(loc))
   // The metadata call is free and says whether there is imagery at the address.
   const meta = await fetch(`${STREET_VIEW_API}/metadata?location=${location}&source=outdoor&key=${apiKey}`)
-  const metaData = (await meta.json()) as { status?: string }
-  if (metaData.status !== 'OK') return null
+  const metaData = (await meta.json()) as { status?: string; error_message?: string }
+  if (metaData.status === 'ZERO_RESULTS' || metaData.status === 'NOT_FOUND') return null
+  // Anything else but OK is a key, quota or server problem, not a missing panorama.
+  if (metaData.status !== 'OK') {
+    throw new Error(`Street View metadata failed: ${metaData.status}${metaData.error_message ? ` ${metaData.error_message}` : ''}`)
+  }
   const res = await fetch(`${STREET_VIEW_API}?size=640x480&scale=2&location=${location}&source=outdoor&fov=80&key=${apiKey}`)
-  if (!res.ok) return null
+  if (!res.ok) throw new Error(`Street View download failed: ${res.status}`)
   return Buffer.from(await res.arrayBuffer())
 }
 
@@ -171,6 +181,12 @@ async function processLocation(loc: LocationInput): Promise<ReportEntry> {
     }
   }
 
+  // Without a street address Street View would return whatever panorama is near the city centre.
+  if (!image && !loc.address?.trim()) {
+    entry.reason = 'No matching Google photo and no street address for Street View'
+    return entry
+  }
+
   if (!image) {
     image = await downloadStreetView(loc)
     if (image) entry.source = 'street-view'
@@ -209,12 +225,14 @@ async function main() {
   console.log(`${todo.length} of ${locations.length} locations to process${apply ? '' : ' (dry run)'}`)
 
   const report: ReportEntry[] = []
+  let failures = 0
   for (const [index, loc] of todo.entries()) {
     try {
       const entry = await processLocation(loc)
       report.push(entry)
       console.log(`[${index + 1}/${todo.length}] ${entry.source.padEnd(11)} ${loc.businessName}, ${loc.city} ${loc.state}${entry.reason ? ` — ${entry.reason}` : ''}`)
     } catch (error) {
+      failures++
       const reason = error instanceof Error ? error.message : String(error)
       report.push({ id: loc.id, businessName: loc.businessName, address: fullAddress(loc), source: 'none', reason })
       console.error(`[${index + 1}/${todo.length}] error       ${loc.businessName}, ${loc.city} ${loc.state} — ${reason}`)
@@ -225,6 +243,10 @@ async function main() {
   const count = (source: ReportEntry['source']) => report.filter((entry) => entry.source === source).length
   console.log(`\nPlaces: ${count('places')}  Street View: ${count('street-view')}  None: ${count('none')}`)
   console.log(`Photos and report.json are in ${outDir}`)
+  if (failures > 0) {
+    console.error(`${failures} location(s) failed; see report.json`)
+    process.exitCode = 1
+  }
 }
 
 async function loadLocations(): Promise<LocationInput[]> {

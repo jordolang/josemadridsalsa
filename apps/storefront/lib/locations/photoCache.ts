@@ -61,7 +61,14 @@ const STREET_SUFFIXES: Record<string, string> = {
   south: 's',
   east: 'e',
   west: 'w',
+  northeast: 'ne',
+  northwest: 'nw',
+  southeast: 'se',
+  southwest: 'sw',
 }
+
+const DIRECTIONS = new Set(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
+const STREET_TYPES = new Set(['st', 'ave', 'rd', 'dr', 'blvd', 'ln', 'ct', 'hwy', 'pkwy', 'pl'])
 
 const normalizeStreet = (value: string) =>
   value
@@ -70,25 +77,31 @@ const normalizeStreet = (value: string) =>
     .split(/\s+/)
     .filter(Boolean)
     .map((word) => STREET_SUFFIXES[word] ?? word)
-    .join(' ')
+
+const pick = (words: string[], set: Set<string>) => [...new Set(words.filter((word) => set.has(word)))].sort().join(' ')
 
 /**
  * Checks that the address Google returned is the store we asked about: the same house
- * number and at least one shared street word. Used to flag photos that may be of the
- * wrong business, never to reject them silently.
+ * number, at least one shared street word, and no conflicting direction (N vs S) or street
+ * type (St vs Ave). A side that leaves out the direction or type is not a conflict.
  */
 export function addressesMatch(stored: string, googleFormatted?: string | null): boolean {
   if (!googleFormatted) return false
-  const storedStreet = normalizeStreet(stored)
-  const googleStreet = normalizeStreet(googleFormatted.split(',')[0] ?? '')
+  const storedWords = normalizeStreet(stored)
+  const googleWords = normalizeStreet(googleFormatted.split(',')[0] ?? '')
 
-  const storedNumber = storedStreet.match(/^\d+/)?.[0]
-  const googleNumber = googleStreet.match(/^\d+/)?.[0]
+  const storedNumber = storedWords[0]?.match(/^\d+$/)?.[0]
+  const googleNumber = googleWords[0]?.match(/^\d+$/)?.[0]
   if (storedNumber && googleNumber && storedNumber !== googleNumber) return false
 
-  const ignore = new Set(['n', 's', 'e', 'w', 'st', 'ave', 'rd', 'dr', 'blvd', 'ln', 'ct', 'hwy', 'pkwy', 'pl'])
-  const storedWords = storedStreet.split(' ').filter((word) => !/^\d+$/.test(word) && !ignore.has(word))
-  const googleWords = new Set(googleStreet.split(' '))
-  if (storedWords.length === 0) return Boolean(storedNumber && storedNumber === googleNumber)
-  return storedWords.some((word) => googleWords.has(word))
+  for (const set of [DIRECTIONS, STREET_TYPES]) {
+    const storedPart = pick(storedWords, set)
+    const googlePart = pick(googleWords, set)
+    if (storedPart && googlePart && storedPart !== googlePart) return false
+  }
+
+  const storedNames = storedWords.filter((word) => !/^\d+$/.test(word) && !DIRECTIONS.has(word) && !STREET_TYPES.has(word))
+  if (storedNames.length === 0) return Boolean(storedNumber && storedNumber === googleNumber)
+  const googleSet = new Set(googleWords)
+  return storedNames.some((word) => googleSet.has(word))
 }

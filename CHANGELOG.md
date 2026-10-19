@@ -369,6 +369,13 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **`locations:cache-photos` is stricter about which photo it trusts.** Address matching now
+  rejects the opposite direction (N vs S Main St) and a different street type (Main St vs Main
+  Ave). Locations with no street address no longer fall back to a city-wide Street View shot.
+  Street View key, quota and server errors now fail the location instead of reading as "no
+  imagery", and the command exits non-zero when any location fails. It now reads
+  `apps/storefront/.env.local`, and re-running the retail-location seed no longer replaces the
+  cached Blob photos with the old Google URLs.
 - **Help Center and order tracking titles named the brand twice.** Their titles already ended in
   "- Jose Madrid Salsa", and the site's title template added "| Jose Madrid Salsa" again, so every
   help article ran past 60 characters, e.g. "Shipping & Tracking - Help Center - Jose Madrid Salsa | Jose Madrid Salsa".
