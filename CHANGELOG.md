@@ -387,6 +387,8 @@ the root `package.json` is canonical.
   packing summary said 16 oz. Production product rows are corrected by hand. Google Shopping, Amazon
   and TikTok Shop syncs now send the filled jar's gross weight (contents plus glass) as the shipping
   weight instead of the 13 oz net contents.
+- **`/rewards` stops listing a reward as soon as its last redemption is used.** A successful
+  redemption now refreshes the page, so it no longer shows a used-up reward for up to an hour.
 - **BigCommerce order copies no longer fail on rate limits or doubled webhooks.** The hourly sweep
   of the fundraising store hit BigCommerce's rate limit and failed the same orders every hour; order
   reads now wait out more of those responses. When an order's created and updated webhooks arrived
