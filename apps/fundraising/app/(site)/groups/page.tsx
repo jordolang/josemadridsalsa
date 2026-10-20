@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { GroupDirectory } from '@/components/fundraising-site/group-directory'
-import { getActiveFundraisingGroups } from '@/lib/fundraising-site/groups'
+import { getGroupDirectory } from '@/lib/fundraising-site/groups'
 
 export const revalidate = 300
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 }
 
 export default async function GroupsPage() {
-  const groups = await getActiveFundraisingGroups().catch(() => null)
+  const groups = await getGroupDirectory().catch(() => null)
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -27,7 +27,7 @@ export default async function GroupsPage() {
           The group list can’t be loaded right now. Please try again in a few minutes.
         </p>
       ) : (
-        <GroupDirectory groups={groups.map(({ slug, label }) => ({ slug, label }))} />
+        <GroupDirectory groups={groups} />
       )}
     </div>
   )
