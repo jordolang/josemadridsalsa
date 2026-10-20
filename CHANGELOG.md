@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Changed
+- **Find your group lists the groups live on both stores.** `/groups` on the fundraising site
+  showed only the fundraising BigCommerce store's checkout dropdown. It now also lists the
+  fundraisers running on this site (active and within their dates), each linking to its own
+  page. A group whose name is in both is listed once.
 - **Main navigation is now Shop, Fundraising, Community and Support.** Merchandise, Gift
   Certificates and Wholesale moved under Shop. Fundraising links straight to every fundraiser page
   on the fundraising site: home, why Jose Madrid, find your group, sign-up, account creation,
