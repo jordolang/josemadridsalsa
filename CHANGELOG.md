@@ -62,8 +62,8 @@ the root `package.json` is canonical.
   site and lists any not copied yet, without writing anything.
 - **Salsa Rewards on the storefront.** A public `/rewards` page explains the loyalty program,
   lists the live reward catalog and tiers, and shows signed-in customers their points and progress
-  to the next tier. Product pages and the cart now say how many points a purchase earns, and ask
-  guests to sign in so the order counts. Linked from the Shop menu and footer, and in the sitemap.
+  to the next tier. Product pages and the cart now say how many points a purchase can earn (before
+  any discount code), and ask guests to sign in so the order counts. Linked from the Shop menu and footer, and in the sitemap.
 - **The order tracker shows a map of where the salsa is.** Both tracking pages (`/order-tracking/<order>`
   and `/track/<tracking number>`) now open with a map: a salsa bowl sits wherever the package was
   last scanned, or at Jose Madrid Salsa headquarters (601 Putnam Ave, Zanesville) until the carrier
