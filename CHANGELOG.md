@@ -58,6 +58,8 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **`bigcommerce:orders --dry-run`** counts a store's orders since a date against the copies on this
+  site and lists any not copied yet, without writing anything.
 - **Salsa Rewards on the storefront.** A public `/rewards` page explains the loyalty program,
   lists the live reward catalog and tiers, and shows signed-in customers their points and progress
   to the next tier. Product pages and the cart now say how many points a purchase can earn (before
@@ -373,6 +375,20 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **BigCommerce order copies no longer fail on rate limits or doubled webhooks.** The hourly sweep
+  of the fundraising store hit BigCommerce's rate limit and failed the same orders every hour; order
+  reads now wait out more of those responses. When an order's created and updated webhooks arrived
+  together, the second failed with a duplicate order number and its status change waited for the
+  next sweep; it now updates the copy the first one made.
+- **`locations:cache-photos` is stricter about which photo it trusts.** Address matching now
+  rejects the opposite direction (N vs S Main St), a different street type (Main St vs Main
+  Ave, Pike vs Road) and a different house number written as "5211-B". Locations with no
+  street address, or a placeholder such as "OH", no longer fall back to a city-wide Street View
+  shot.
+  Street View key, quota and server errors now fail the location instead of reading as "no
+  imagery", and the command exits non-zero when any location fails. It now reads
+  `apps/storefront/.env.local`, and re-running the retail-location seed no longer replaces the
+  cached Blob photos, or the Place IDs verified with them, with the old Google values.
 - **Black Bean Corn Salsa and Jose Madrid Original Mild were left out of the salsa categories.**
   `npm run products:salsa-categories` matches products by name, and neither production name was on
   the flavor list, so applying the categories would have left both in their old category. Black

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   addressesMatch,
+  hasStreetAddress,
   isBlobPhotoUrl,
   locationPhotoPathname,
   pickBestPlacePhoto,
-} from '@/lib/locations/photo-cache'
+} from '@/lib/locations/photoCache'
 
 describe('locationPhotoPathname', () => {
   it('stores each location under its id', () => {
@@ -61,7 +62,43 @@ describe('addressesMatch', () => {
     expect(addressesMatch('100 Main St', '100 Oak Ave, Zanesville, OH, USA')).toBe(false)
   })
 
+  it('flags the opposite direction on the same street', () => {
+    expect(addressesMatch('100 N Main St', '100 S Main St, Zanesville, OH, USA')).toBe(false)
+    expect(addressesMatch('100 North Main St', '100 N Main St, Zanesville, OH, USA')).toBe(true)
+  })
+
+  it('flags a different street type with the same name', () => {
+    expect(addressesMatch('100 Main St', '100 Main Ave, Zanesville, OH, USA')).toBe(false)
+  })
+
+  it('accepts a side that leaves out the direction or street type', () => {
+    expect(addressesMatch('100 Main St', '100 N Main St, Zanesville, OH, USA')).toBe(true)
+    expect(addressesMatch('100 Main', '100 Main St, Zanesville, OH, USA')).toBe(true)
+  })
+
+  it('compares the leading digits of an alphanumeric house number', () => {
+    expect(addressesMatch('5211-B Johnstown Road', '5221 Johnstown Rd, Columbus, OH, USA')).toBe(false)
+    expect(addressesMatch('5211-B Johnstown Road', '5211 Johnstown Rd, Columbus, OH, USA')).toBe(true)
+  })
+
+  it('treats pike as a street type', () => {
+    expect(addressesMatch('5400 Alexandria Pike', '5400 Alexandria Rd, Cold Spring, KY, USA')).toBe(false)
+  })
+
   it('flags a missing Google address', () => {
     expect(addressesMatch('100 Main St', null)).toBe(false)
+  })
+})
+
+describe('hasStreetAddress', () => {
+  it('accepts a numbered street', () => {
+    expect(hasStreetAddress('4990 Houston Road')).toBe(true)
+    expect(hasStreetAddress('State Route 60')).toBe(true)
+  })
+
+  it('rejects blanks and placeholders', () => {
+    expect(hasStreetAddress('')).toBe(false)
+    expect(hasStreetAddress(null)).toBe(false)
+    expect(hasStreetAddress('OH')).toBe(false)
   })
 })

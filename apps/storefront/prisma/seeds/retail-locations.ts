@@ -4,6 +4,7 @@ import {
   retailLocationsData,
   type RetailLocationSeedData,
 } from '../../lib/data/retail-locations'
+import { isBlobPhotoUrl } from '@/lib/locations/photoCache'
 
 const prisma = new PrismaClient()
 
@@ -37,6 +38,19 @@ async function main() {
       ? new Decimal(location.longitude)
       : null
 
+    // Keep a storefront photo cached in Blob by `locations:cache-photos`, and the Place ID
+    // it verified alongside it; the seed data only has the old Google URLs and IDs.
+    const existing = await prisma.retailLocation.findUnique({
+      where: {
+        businessName_address: {
+          businessName: location.businessName,
+          address: location.address,
+        },
+      },
+      select: { photoUrl: true, googlePlacesId: true },
+    })
+    const keepCachedPhoto = isBlobPhotoUrl(existing?.photoUrl)
+
     // Upsert the location
     const result = await prisma.retailLocation.upsert({
       where: {
@@ -51,8 +65,9 @@ async function main() {
         zipCode: location.zipCode,
         phone: location.phone,
         website: location.website,
-        photoUrl: location.photoUrl,
-        googlePlacesId: location.googlePlacesId,
+        ...(keepCachedPhoto
+          ? {}
+          : { photoUrl: location.photoUrl, googlePlacesId: location.googlePlacesId }),
         latitude,
         longitude,
         county: location.county,
@@ -87,7 +102,7 @@ async function main() {
     }
 
     // Handle photo gallery
-    if (location.photoGallery && location.photoGallery.length > 0) {
+    if (!keepCachedPhoto && location.photoGallery && location.photoGallery.length > 0) {
       // Delete existing photos for this location (for re-seeding)
       await prisma.locationPhoto.deleteMany({
         where: { locationId: result.id },
