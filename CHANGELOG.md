@@ -66,6 +66,13 @@ the root `package.json` is canonical.
   through it sees a note about the bonus, and when the friend's first order is paid, both
   customers get 500 reward points. The public rewards page explains how it works. Needs the
   `20261020000000_customer_referrals` migration (three new columns on users).
+- **The timeclock records your location at each punch.** Clock In and Clock Out now ask the browser
+  for a GPS fix and store latitude, longitude and accuracy on the punch beside the IP address. The
+  work history shows each fix with a map link. Location is best-effort: if permission is refused or
+  the device can't get a fix in time, the punch still goes through and shows no location.
+  `/account/timeclock` is now the second page, after `/waiver`, whose `Permissions-Policy` allows
+  geolocation; the account links to it now load the page fresh so that header applies. Schema: six
+  nullable columns on `time_clock_entries` (migration `20261020000000_timeclock_location`).
 - **Merchant Center feed is published.** `/merchant-center-feed.xml` now lists the 27 active
   salsas, each tagged with its new heat category, for Merchant Center's daily fetch. Regenerate it
   with `npm run products:feed -- --apply` after catalog changes.
@@ -386,6 +393,8 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **`/rewards` stops listing a reward as soon as its last redemption is used.** A successful
+  redemption now refreshes the page, so it no longer shows a used-up reward for up to an hour.
 - **BigCommerce order copies no longer fail on rate limits or doubled webhooks.** The hourly sweep
   of the fundraising store hit BigCommerce's rate limit and failed the same orders every hour; order
   reads now wait out more of those responses. When an order's created and updated webhooks arrived

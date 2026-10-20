@@ -4,17 +4,20 @@ import { ok, fail, forbidden, unauthorized, serverError } from '@/lib/api'
 import { getRequestMetadata } from '@/lib/audit'
 import { getCurrentUser, isStaff } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
+import { punchLocationSchema } from '@/lib/timeclock-server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const clockOutSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
+  location: punchLocationSchema.optional(),
 })
 
 /**
  * POST /api/account/timeclock/clock-out
- * Close the caller's open punch and attach their notes / job duties. This is
+ * Close the caller's open punch and attach their notes / job duties and, when
+ * the browser supplied one, the device's GPS fix. This is
  * the only moment notes can be written — there is deliberately no route that
  * updates or deletes a punch once it is closed.
  */
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const parsed = clockOutSchema.safeParse(body)
     if (!parsed.success) {
-      return fail('Invalid notes', 400, parsed.error.issues)
+      return fail('Invalid clock-out details', 400, parsed.error.issues)
     }
 
     const open = await prisma.timeClockEntry.findFirst({
@@ -42,6 +45,7 @@ export async function POST(request: NextRequest) {
 
     const { ipAddress } = getRequestMetadata(request)
     const notes = parsed.data.notes?.trim()
+    const { location } = parsed.data
 
     // Scoped to the caller and to a still-open row, so two concurrent requests
     // can't both close the same punch.
@@ -50,6 +54,9 @@ export async function POST(request: NextRequest) {
       data: {
         clockOutAt: new Date(),
         clockOutIp: ipAddress,
+        clockOutLatitude: location?.latitude ?? null,
+        clockOutLongitude: location?.longitude ?? null,
+        clockOutAccuracyMeters: location?.accuracyMeters ?? null,
         notes: notes && notes.length > 0 ? notes : null,
       },
     })
