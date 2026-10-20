@@ -88,6 +88,16 @@ export const sharedHeaders = async () => {
         },
       ],
     },
+    {
+      // The staff timeclock stamps each punch with the device's location.
+      source: '/account/timeclock',
+      headers: [
+        {
+          key: 'Permissions-Policy',
+          value: 'camera=(), microphone=(), geolocation=(self)',
+        },
+      ],
+    },
   ]
 }
 
