@@ -76,6 +76,40 @@ async function availableSlug(label: string): Promise<string> {
   }
 }
 
+/**
+ * Ties a fundraiser set up on this site to the store group of the same name,
+ * so the two are one campaign: the group's store orders credit to it and
+ * /groups lists it once. Staff add a site fundraiser to the store's dropdown
+ * under its own name, which is why a name match is enough. Only a live
+ * campaign links, so a registration still awaiting approval never collects a
+ * group's orders. Returns the fundraiser's id, or null when no single unlinked
+ * live fundraiser has that name.
+ */
+export async function linkSiteFundraiser(groupLabel: string): Promise<string | null> {
+  const key = normalizeGroupName(groupLabel)
+  const unlinked = await prisma.fundraiser.findMany({
+    where: { bigCommerceGroup: null, isActive: true, status: 'ACTIVE' },
+    select: { id: true, name: true },
+  })
+  const matches = unlinked.filter((fundraiser) => normalizeGroupName(fundraiser.name) === key)
+  if (matches.length !== 1) return null
+
+  try {
+    const linked = await prisma.fundraiser.updateMany({
+      where: { id: matches[0].id, bigCommerceGroup: null },
+      data: { bigCommerceGroup: key },
+    })
+    return linked.count === 1 ? matches[0].id : null
+  } catch (error) {
+    // Another fundraiser took the group first; the caller finds that one instead.
+    if (isUniqueViolation(error)) return null
+    throw error
+  }
+}
+
+/** Marks a fundraiser this mirror created to track a store group, as opposed to one set up on the site. */
+const STORE_RECORD_DESCRIPTION = 'Tracked from the BigCommerce fundraising store.'
+
 export type BigCommerceFundraiserRef = { id: string; commissionRate: number; created: boolean }
 
 /**
@@ -90,10 +124,14 @@ export async function ensureBigCommerceFundraiser(
   orderDate: Date,
 ): Promise<BigCommerceFundraiserRef> {
   const key = normalizeGroupName(groupLabel)
-  const select = { id: true, commissionRate: true, startDate: true, endDate: true } as const
+  const select = { id: true, commissionRate: true, startDate: true, endDate: true, description: true } as const
 
   for (let attempt = 0; ; attempt++) {
     const existing = await prisma.fundraiser.findUnique({ where: { bigCommerceGroup: key }, select })
+    // Only the store's own records stretch; a running site campaign keeps the dates staff set.
+    if (existing && existing.description !== STORE_RECORD_DESCRIPTION) {
+      return { id: existing.id, commissionRate: Number(existing.commissionRate), created: false }
+    }
     if (existing) {
       // Conditional writes, so two orders mirrored at once can only ever widen the range.
       if (orderDate < existing.startDate) {
@@ -110,6 +148,9 @@ export async function ensureBigCommerceFundraiser(
       }
       return { id: existing.id, commissionRate: Number(existing.commissionRate), created: false }
     }
+
+    // A group first seen here may be a site fundraiser staff added to the dropdown.
+    if (await linkSiteFundraiser(groupLabel)) continue
 
     const name = groupLabel.replace(/\s+/g, ' ').trim()
     const now = new Date()
@@ -132,7 +173,7 @@ export async function ensureBigCommerceFundraiser(
           status: 'ENDED',
           launchEmailSentAt: now,
           summaryEmailSentAt: now,
-          description: 'Tracked from the BigCommerce fundraising store.',
+          description: STORE_RECORD_DESCRIPTION,
         },
         select: { id: true, commissionRate: true },
       })

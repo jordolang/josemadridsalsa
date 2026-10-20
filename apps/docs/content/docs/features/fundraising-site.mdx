@@ -115,6 +115,17 @@ its status is `ACTIVE`, and today falls between its start and end dates; turning
 off in the admin or letting its end date pass removes it. A site fundraiser with the
 same name as a dropdown option is listed once, as the store group.
 
+**Site fundraisers go into the dropdown too.** BigCommerce's API cannot add dropdown
+options, so a person adds them. Each morning the fundraiser lifecycle cron
+(`lib/bigcommerce/fundraising-store-listing.ts`) checks every live site fundraiser
+against the dropdown. One that is already there is linked to its store group, so the
+group's store orders count toward the same fundraiser. The rest, and linked ones whose
+option was since removed, are emailed by exact name to fundraising@josemadridsalsa.com,
+daily until each is added. The same email names any whose group already has a separate
+record from earlier store orders, which has to be merged by hand. A store order for a
+group nobody has linked yet also links to a site fundraiser of the same name rather than
+starting a second record.
+
 When a buyer checks out, the site creates the BigCommerce cart and tries to
 pre-fill the group and salesperson answers. If BigCommerce does not accept the
 pre-fill, the buyer simply picks them again at checkout — both fields are
