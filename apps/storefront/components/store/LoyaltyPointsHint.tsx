@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { pointsForAmount } from '@/lib/loyalty-progress'
 
 interface LoyaltyPointsHintProps {
-  /** Merchandise amount in dollars, before tax and shipping. */
+  /** Merchandise amount in dollars, before tax, shipping and any discount code. */
   amount: number
   /** Where a signed-out shopper returns to after signing in. */
   callbackUrl: string
@@ -18,7 +18,8 @@ interface LoyaltyPointsHintProps {
 
 /**
  * Tells a shopper how many loyalty points a purchase earns. Signed-in customers see the
- * points; guests, who earn nothing, are invited to sign in so the order counts.
+ * points; guests, who earn nothing, are invited to sign in so the order counts. The figure
+ * is an upper bound: a discount code applied at checkout lowers the points earned.
  */
 export function LoyaltyPointsHint({ amount, callbackUrl, subject, className }: LoyaltyPointsHintProps) {
   const { status } = useSession()
@@ -38,14 +39,14 @@ export function LoyaltyPointsHint({ amount, callbackUrl, subject, className }: L
       <p>
         {status === 'authenticated' ? (
           <>
-            Earn <strong className="tabular-nums">{points.toLocaleString()} points</strong> with {subject}.{' '}
+            Earn up to <strong className="tabular-nums">{points.toLocaleString()} points</strong> with {subject}.{' '}
           </>
         ) : (
           <>
             <Link href={signInHref} className="font-medium underline underline-offset-2">
               Sign in
             </Link>{' '}
-            to earn <strong className="tabular-nums">{points.toLocaleString()} points</strong> with {subject}.{' '}
+            to earn up to <strong className="tabular-nums">{points.toLocaleString()} points</strong> with {subject}.{' '}
           </>
         )}
         <Link href="/rewards" className="underline underline-offset-2">

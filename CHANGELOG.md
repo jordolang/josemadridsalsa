@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Changed
+- **Find your group lists the groups live on both stores.** `/groups` on the fundraising site
+  showed only the fundraising BigCommerce store's checkout dropdown. It now also lists the
+  fundraisers running on this site (active and within their dates), each linking to its own
+  page. A group whose name is in both is listed once.
 - **Main navigation is now Shop, Fundraising, Community and Support.** Merchandise, Gift
   Certificates and Wholesale moved under Shop. Fundraising links straight to every fundraiser page
   on the fundraising site: home, why Jose Madrid, find your group, sign-up, account creation,
@@ -65,8 +69,8 @@ the root `package.json` is canonical.
   site and lists any not copied yet, without writing anything.
 - **Salsa Rewards on the storefront.** A public `/rewards` page explains the loyalty program,
   lists the live reward catalog and tiers, and shows signed-in customers their points and progress
-  to the next tier. Product pages and the cart now say how many points a purchase earns, and ask
-  guests to sign in so the order counts. Linked from the Shop menu and footer, and in the sitemap.
+  to the next tier. Product pages and the cart now say how many points a purchase can earn (before
+  any discount code), and ask guests to sign in so the order counts. Linked from the Shop menu and footer, and in the sitemap.
 - **The order tracker shows a map of where the salsa is.** Both tracking pages (`/order-tracking/<order>`
   and `/track/<tracking number>`) now open with a map: a salsa bowl sits wherever the package was
   last scanned, or at Jose Madrid Salsa headquarters (601 Putnam Ave, Zanesville) until the carrier

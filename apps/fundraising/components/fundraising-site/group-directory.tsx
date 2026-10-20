@@ -6,7 +6,7 @@ import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { normalizeGroupName } from '@/lib/fundraising-site/checkout-fields'
 
-type Group = { slug: string; label: string }
+type Group = { label: string; href: string }
 
 export function GroupDirectory({ groups }: { groups: Group[] }) {
   const [query, setQuery] = useState('')
@@ -43,9 +43,9 @@ export function GroupDirectory({ groups }: { groups: Group[] }) {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((group) => (
-            <li key={group.slug}>
+            <li key={group.href}>
               <Link
-                href={`/groups/${group.slug}`}
+                href={group.href}
                 className="block h-full rounded-lg border border-border bg-card p-4 font-medium text-foreground transition-colors hover:border-salsa-500 hover:text-salsa-600"
               >
                 {group.label}
