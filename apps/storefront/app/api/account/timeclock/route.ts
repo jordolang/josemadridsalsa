@@ -1,13 +1,18 @@
 import { NextRequest } from 'next/server'
 import { Prisma } from '@prisma/client'
+import { z } from 'zod'
 import { ok, fail, forbidden, unauthorized, serverError } from '@/lib/api'
 import { getRequestMetadata } from '@/lib/audit'
 import { getCurrentUser, isStaff } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
-import { buildTimeClockView, findOpenEntry } from '@/lib/timeclock-server'
+import { buildTimeClockView, findOpenEntry, punchLocationSchema } from '@/lib/timeclock-server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+const clockInSchema = z.object({
+  location: punchLocationSchema.optional(),
+})
 
 /**
  * GET /api/account/timeclock?start=MM/DD/YYYY&end=MM/DD/YYYY
@@ -35,7 +40,8 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/account/timeclock
  * Clock in. The punch time is taken from the server — never from the browser —
- * so the record cannot be moved by changing the client's clock.
+ * so the record cannot be moved by changing the client's clock. The body may
+ * carry the device's GPS fix; it is recorded when present.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -43,18 +49,28 @@ export async function POST(request: NextRequest) {
     if (!user) return unauthorized()
     if (!isStaff(user)) return forbidden('Timeclock access is limited to staff accounts')
 
+    const body = await request.json().catch(() => ({}))
+    const parsed = clockInSchema.safeParse(body)
+    if (!parsed.success) {
+      return fail('Invalid location', 400, parsed.error.issues)
+    }
+
     const existing = await findOpenEntry(user.id)
     if (existing) {
       return fail('You are already clocked in. Clock out before starting a new shift.', 409)
     }
 
     const { ipAddress } = getRequestMetadata(request)
+    const { location } = parsed.data
 
     const entry = await prisma.timeClockEntry.create({
       data: {
         userId: user.id,
         clockInAt: new Date(),
         clockInIp: ipAddress,
+        clockInLatitude: location?.latitude ?? null,
+        clockInLongitude: location?.longitude ?? null,
+        clockInAccuracyMeters: location?.accuracyMeters ?? null,
       },
       select: { id: true, clockInAt: true, clockInIp: true },
     })

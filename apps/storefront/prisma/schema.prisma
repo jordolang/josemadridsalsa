@@ -86,15 +86,23 @@ model User {
 /// deleting a User through /api/admin/users/[id] destroys their punch history
 /// too. Switch to Restrict if payroll records must outlive the account.
 model TimeClockEntry {
-  id         String    @id @default(cuid())
-  userId     String
-  clockInAt  DateTime  @default(now())
-  clockOutAt DateTime?
-  clockInIp  String?
-  clockOutIp String?
-  notes      String?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String    @id @default(cuid())
+  userId                 String
+  clockInAt              DateTime  @default(now())
+  clockOutAt             DateTime?
+  clockInIp              String?
+  clockOutIp             String?
+  /// GPS fix from the browser at each punch; null when permission was refused
+  /// or the device could not get a fix in time.
+  clockInLatitude        Float?
+  clockInLongitude       Float?
+  clockInAccuracyMeters  Float?
+  clockOutLatitude       Float?
+  clockOutLongitude      Float?
+  clockOutAccuracyMeters Float?
+  notes                  String?
+  createdAt              DateTime  @default(now())
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, clockInAt])
   @@map("time_clock_entries")

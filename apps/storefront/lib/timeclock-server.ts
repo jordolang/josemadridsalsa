@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import {
   endOfBusinessDay,
@@ -6,8 +7,21 @@ import {
   resolveRange,
   startOfBusinessDay,
   timeClockRangeBounds,
+  toPunchLocation,
+  type PunchLocation,
   type TimeClockPunch,
 } from '@/lib/timeclock'
+
+/**
+ * Optional GPS fix sent with a clock-in or clock-out. Location is best-effort:
+ * a punch without one is still accepted, so a refused permission prompt never
+ * stops someone getting paid.
+ */
+export const punchLocationSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracyMeters: z.number().min(0).max(100_000),
+})
 
 /** A punch as sent to the browser — timestamps as ISO strings. */
 export interface SerializedPunch {
@@ -16,6 +30,8 @@ export interface SerializedPunch {
   clockOutAt: string | null
   clockInIp: string | null
   clockOutIp: string | null
+  clockInLocation: PunchLocation | null
+  clockOutLocation: PunchLocation | null
   notes: string | null
   durationMs: number
 }
@@ -40,6 +56,12 @@ const PUNCH_SELECT = {
   clockOutAt: true,
   clockInIp: true,
   clockOutIp: true,
+  clockInLatitude: true,
+  clockInLongitude: true,
+  clockInAccuracyMeters: true,
+  clockOutLatitude: true,
+  clockOutLongitude: true,
+  clockOutAccuracyMeters: true,
   notes: true,
 } as const
 
@@ -50,6 +72,16 @@ function serialize(entry: TimeClockPunch, durationMs: number): SerializedPunch {
     clockOutAt: entry.clockOutAt?.toISOString() ?? null,
     clockInIp: entry.clockInIp,
     clockOutIp: entry.clockOutIp,
+    clockInLocation: toPunchLocation(
+      entry.clockInLatitude,
+      entry.clockInLongitude,
+      entry.clockInAccuracyMeters
+    ),
+    clockOutLocation: toPunchLocation(
+      entry.clockOutLatitude,
+      entry.clockOutLongitude,
+      entry.clockOutAccuracyMeters
+    ),
     notes: entry.notes,
     durationMs,
   }

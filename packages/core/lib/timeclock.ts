@@ -18,7 +18,20 @@ export interface TimeClockPunch {
   clockOutAt: Date | null
   clockInIp: string | null
   clockOutIp: string | null
+  clockInLatitude: number | null
+  clockInLongitude: number | null
+  clockInAccuracyMeters: number | null
+  clockOutLatitude: number | null
+  clockOutLongitude: number | null
+  clockOutAccuracyMeters: number | null
   notes: string | null
+}
+
+/** A GPS fix taken by the browser at the moment of a punch. */
+export interface PunchLocation {
+  latitude: number
+  longitude: number
+  accuracyMeters: number
 }
 
 export interface TimeClockDay {
@@ -298,4 +311,27 @@ export function formatDayLabel(dayKey: string): string {
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(Date.UTC(year, month - 1, day)))
+}
+
+/**
+ * Rebuild a punch's location from its three nullable columns. A fix is only
+ * meaningful whole, so any missing part means there is no location.
+ */
+export function toPunchLocation(
+  latitude: number | null,
+  longitude: number | null,
+  accuracyMeters: number | null
+): PunchLocation | null {
+  if (latitude === null || longitude === null || accuracyMeters === null) return null
+  return { latitude, longitude, accuracyMeters }
+}
+
+/** `39.940350, -82.013190 (±12 m)` */
+export function formatPunchLocation(location: PunchLocation): string {
+  const { latitude, longitude, accuracyMeters } = location
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracyMeters)} m)`
+}
+
+export function punchLocationMapUrl(location: PunchLocation): string {
+  return `https://maps.google.com/?q=${location.latitude},${location.longitude}`
 }

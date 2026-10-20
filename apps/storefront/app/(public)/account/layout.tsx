@@ -42,9 +42,12 @@ export default async function AccountLayout({ children }: Props) {
             {isStaff && (
               <>
                 <Separator className="my-2" />
-                <Link href="/account/timeclock" className="text-sm hover:underline font-medium">
+                {/* A full page load, not client navigation: Permissions-Policy is fixed
+                    per document, so only a fresh /account/timeclock load may use GPS. */}
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- see above */}
+                <a href="/account/timeclock" className="text-sm hover:underline font-medium">
                   Timeclock
-                </Link>
+                </a>
                 <Link href="/admin" className="text-sm hover:underline font-medium text-blue-600">
                   Admin Panel
                 </Link>

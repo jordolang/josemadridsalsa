@@ -66,6 +66,13 @@ the root `package.json` is canonical.
   through it sees a note about the bonus, and when the friend's first order is paid, both
   customers get 500 reward points. The public rewards page explains how it works. Needs the
   `20261020000000_customer_referrals` migration (three new columns on users).
+- **The timeclock records your location at each punch.** Clock In and Clock Out now ask the browser
+  for a GPS fix and store latitude, longitude and accuracy on the punch beside the IP address. The
+  work history shows each fix with a map link. Location is best-effort: if permission is refused or
+  the device can't get a fix in time, the punch still goes through and shows no location.
+  `/account/timeclock` is now the second page, after `/waiver`, whose `Permissions-Policy` allows
+  geolocation; the account links to it now load the page fresh so that header applies. Schema: six
+  nullable columns on `time_clock_entries` (migration `20261020000000_timeclock_location`).
 - **Merchant Center feed is published.** `/merchant-center-feed.xml` now lists the 27 active
   salsas, each tagged with its new heat category, for Merchant Center's daily fetch. Regenerate it
   with `npm run products:feed -- --apply` after catalog changes.

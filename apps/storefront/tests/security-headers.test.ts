@@ -291,14 +291,19 @@ describe('Security Headers Configuration', () => {
       expect(headers[0].source).toBe('/(.*)')
     })
 
-    it('limits later rules to the /waiver geolocation exception', async () => {
+    it('limits later rules to the /waiver and /account/timeclock geolocation exceptions', async () => {
       const headers = await getHeadersConfig('development')
 
-      // The photo-release kiosk location-stamps waivers, so /waiver alone may
-      // use geolocation. Anything else here would widen permissions silently.
+      // The photo-release kiosk location-stamps waivers and the staff timeclock
+      // location-stamps punches, so only those two pages may use geolocation.
+      // Anything else here would widen permissions silently.
       expect(headers.slice(1)).toEqual([
         {
           source: '/waiver',
+          headers: [{ key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' }],
+        },
+        {
+          source: '/account/timeclock',
           headers: [{ key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' }],
         },
       ])

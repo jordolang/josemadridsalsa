@@ -29,10 +29,14 @@ import {
   formatDayLabel,
   formatDecimalHours,
   formatDuration,
+  formatPunchLocation,
   parseDateInput,
+  punchLocationMapUrl,
   sumDayPayrollHours,
+  type PunchLocation,
 } from "@/lib/timeclock";
 import type { TimeClockView } from "@/lib/timeclock-server";
+import { getPunchLocation } from "./getPunchLocation";
 import { ElapsedTimer, LiveClock } from "./LiveClock";
 
 /**
@@ -50,11 +54,26 @@ function time(iso: string): string {
   return formatBusinessTime(new Date(iso));
 }
 
+function LocationLink({ location }: { location: PunchLocation | null }) {
+  if (!location) return <span>—</span>;
+  return (
+    <a
+      href={punchLocationMapUrl(location)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline underline-offset-2 hover:text-foreground"
+    >
+      {formatPunchLocation(location)}
+    </a>
+  );
+}
+
 export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) {
   const [view, setView] = useState(initialView);
   const [start, setStart] = useState(initialView.range.start);
   const [end, setEnd] = useState(initialView.range.end);
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [clockOutOpen, setClockOutOpen] = useState(false);
@@ -87,14 +106,17 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
   }, [end, load, rangeIsValid, start]);
 
   const punch = useCallback(
-    async (url: string, body?: unknown) => {
+    async (url: string, body?: Record<string, unknown>) => {
       setBusy(true);
       setError(null);
       try {
+        setLocating(true);
+        const location = await getPunchLocation();
+        setLocating(false);
         const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body ?? {}),
+          body: JSON.stringify({ ...body, location: location ?? undefined }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data?.error ?? "Something went wrong");
@@ -104,6 +126,7 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
         setError(e instanceof Error ? e.message : "Something went wrong");
         return false;
       } finally {
+        setLocating(false);
         setBusy(false);
       }
     },
@@ -153,7 +176,7 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
                 <Badge variant="secondary">Off the clock</Badge>
                 <div className="text-sm text-muted-foreground">Not currently clocked in</div>
                 <Button size="lg" disabled={busy} onClick={clockIn}>
-                  Clock In (Start Shift)
+                  {locating ? "Getting location…" : "Clock In (Start Shift)"}
                 </Button>
               </>
             )}
@@ -163,8 +186,8 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
         {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 
         <p className="mt-4 text-xs text-muted-foreground">
-          Punch times are recorded by the server and cannot be edited afterwards. Your IP address is
-          logged with every punch. Clocking out for lunch and back in is fine — each pair is timed
+          Punch times are recorded by the server and cannot be edited afterwards. Your IP address and,
+          if you allow it, your device&apos;s location are logged with every punch. Clocking out for lunch and back in is fine — each pair is timed
           separately and the day&apos;s total adds up.
         </p>
       </Card>
@@ -250,6 +273,7 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
                   <TableHead>Clock Out</TableHead>
                   <TableHead className="text-right">Hours</TableHead>
                   <TableHead>IP Address</TableHead>
+                  <TableHead>Location</TableHead>
                   <TableHead>Notes / Job Duties</TableHead>
                 </TableRow>
               </TableHeader>
@@ -257,7 +281,7 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
                 {view.days.map(day => (
                   <Fragment key={day.dayKey}>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableCell colSpan={4} className="font-medium">
+                      <TableCell colSpan={5} className="font-medium">
                         {formatDayLabel(day.dayKey)}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium tabular-nums">
@@ -284,6 +308,16 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
                           {entry.clockOutIp && entry.clockOutIp !== entry.clockInIp
                             ? ` → ${entry.clockOutIp}`
                             : ""}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <div>
+                            In: <LocationLink location={entry.clockInLocation} />
+                          </div>
+                          {entry.clockOutAt ? (
+                            <div>
+                              Out: <LocationLink location={entry.clockOutLocation} />
+                            </div>
+                          ) : null}
                         </TableCell>
                         <TableCell className="max-w-xs whitespace-pre-wrap text-sm">
                           {entry.notes ?? <span className="text-muted-foreground">—</span>}
@@ -334,7 +368,7 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
               Cancel
             </Button>
             <Button variant="destructive" disabled={busy} onClick={confirmClockOut}>
-              {busy ? "Clocking out…" : "Clock Out"}
+              {locating ? "Getting location…" : busy ? "Clocking out…" : "Clock Out"}
             </Button>
           </DialogFooter>
         </DialogContent>
