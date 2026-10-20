@@ -13,6 +13,13 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Fixed
+- **The fundraising cart's group dropdown scrolls.** With many groups, the "Group you're
+  supporting" list ran off the bottom of the page. The shared select's height cap used Tailwind 3
+  syntax that Tailwind 4 ignores, so no dropdown built on it was capped. It now is, the cart's list
+  stops at 20rem and scrolls, and a search box above it filters the groups when there are more
+  than eight.
+
 ### Changed
 - **Fundraisers set up on the site are listed in the BigCommerce fundraising store too.** Each
   morning the fundraiser lifecycle cron emails fundraising@josemadridsalsa.com the exact names of

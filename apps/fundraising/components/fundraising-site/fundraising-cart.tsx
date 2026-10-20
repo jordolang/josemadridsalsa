@@ -19,6 +19,9 @@ import { formatPrice } from './product-card'
 /** The fundraising store charges one flat rate per order, whatever the size. */
 const FLAT_SHIPPING = 10
 
+/** Above this many groups the dropdown gets a search box. */
+const GROUP_SEARCH_THRESHOLD = 8
+
 type Props = {
   /** Groups in the checkout dropdown; null when the list could not be loaded. */
   groups: string[] | null
@@ -29,12 +32,19 @@ export function FundraisingCart({ groups }: Props) {
   const [hydrated, setHydrated] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [groupQuery, setGroupQuery] = useState('')
 
   useEffect(() => setHydrated(true), [])
 
   // A remembered group that has since left the dropdown can't be credited.
   const groupIsListed = !!groups?.includes(group)
   const canCheckout = lines.length > 0 && groupIsListed && seller.trim().length > 0 && !submitting
+  const showGroupSearch = (groups?.length ?? 0) > GROUP_SEARCH_THRESHOLD
+  const query = groupQuery.trim().toLowerCase()
+  // The chosen group stays in the list so the dropdown can still show it.
+  const visibleGroups = (groups ?? []).filter(
+    (label) => !query || label === group || label.toLowerCase().includes(query)
+  )
 
   if (!hydrated) {
     return <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" aria-label="Loading cart" />
@@ -135,18 +145,33 @@ export function FundraisingCart({ groups }: Props) {
               The group list can’t be loaded right now. Please try again in a few minutes.
             </p>
           ) : (
-            <Select value={groupIsListed ? group : ''} onValueChange={setGroup}>
-              <SelectTrigger id="fundraising-group" className="w-full">
-                <SelectValue placeholder="Choose your group" />
-              </SelectTrigger>
-              <SelectContent>
-                {groups.map((label) => (
-                  <SelectItem key={label} value={label}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <>
+              {showGroupSearch && (
+                <Input
+                  type="search"
+                  value={groupQuery}
+                  autoComplete="off"
+                  aria-label="Search groups"
+                  placeholder="Search groups"
+                  onChange={(event) => setGroupQuery(event.target.value)}
+                />
+              )}
+              <Select value={groupIsListed ? group : ''} onValueChange={setGroup}>
+                <SelectTrigger id="fundraising-group" className="w-full">
+                  <SelectValue placeholder="Choose your group" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(20rem,var(--radix-select-content-available-height))]">
+                  {visibleGroups.map((label) => (
+                    <SelectItem key={label} value={label}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                  {visibleGroups.length === 0 && (
+                    <p className="px-2 py-1.5 text-sm text-muted-foreground">No groups match “{groupQuery.trim()}”.</p>
+                  )}
+                </SelectContent>
+              </Select>
+            </>
           )}
         </div>
 
