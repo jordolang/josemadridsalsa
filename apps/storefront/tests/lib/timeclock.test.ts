@@ -7,13 +7,16 @@ import {
   formatDateInput,
   formatDecimalHours,
   formatDuration,
+  formatPunchLocation,
   groupEntriesByDay,
   parseDateInput,
   punchDurationMs,
+  punchLocationMapUrl,
   resolveRange,
   startOfBusinessDay,
   sumDayPayrollHours,
   timeClockRangeBounds,
+  toPunchLocation,
   totalDurationMs,
   type TimeClockPunch,
 } from '@/lib/timeclock'
@@ -30,6 +33,12 @@ function punch(
     clockOutAt: clockOutAt ? new Date(clockOutAt) : null,
     clockInIp: '203.0.113.7',
     clockOutIp: clockOutAt ? '203.0.113.7' : null,
+    clockInLatitude: null,
+    clockInLongitude: null,
+    clockInAccuracyMeters: null,
+    clockOutLatitude: null,
+    clockOutLongitude: null,
+    clockOutAccuracyMeters: null,
     notes,
   }
 }
@@ -325,5 +334,34 @@ describe('formatting', () => {
     expect(formatDecimalHours(0)).toBe('0.00')
     expect(formatDecimalHours(8.25 * 60 * 60 * 1000)).toBe('8.25')
     expect(formatDecimalHours(20 * 60 * 1000)).toBe('0.33')
+  })
+})
+
+describe('punch location', () => {
+  it('rebuilds a fix only when all three columns are present', () => {
+    expect(toPunchLocation(39.94035, -82.01319, 12)).toEqual({
+      latitude: 39.94035,
+      longitude: -82.01319,
+      accuracyMeters: 12,
+    })
+    expect(toPunchLocation(null, null, null)).toBeNull()
+    expect(toPunchLocation(39.94035, null, 12)).toBeNull()
+    expect(toPunchLocation(39.94035, -82.01319, null)).toBeNull()
+  })
+
+  it('keeps a fix on the equator or prime meridian rather than treating 0 as missing', () => {
+    expect(toPunchLocation(0, 0, 0)).toEqual({ latitude: 0, longitude: 0, accuracyMeters: 0 })
+  })
+
+  it('formats coordinates to six places with rounded accuracy', () => {
+    expect(formatPunchLocation({ latitude: 39.94035, longitude: -82.01319, accuracyMeters: 12.4 })).toBe(
+      '39.940350, -82.013190 (±12 m)'
+    )
+  })
+
+  it('links to the coordinates on a map', () => {
+    expect(punchLocationMapUrl({ latitude: 39.94035, longitude: -82.01319, accuracyMeters: 12 })).toBe(
+      'https://maps.google.com/?q=39.94035,-82.01319'
+    )
   })
 })

@@ -1,6 +1,6 @@
 ---
 title: Timeclock
-description: The append-only staff timeclock in the account area — punch pairs, lunch breaks, IP logging, derived hours, and pay-period selection
+description: The append-only staff timeclock in the account area — punch pairs, lunch breaks, IP and location logging, derived hours, and pay-period selection
 ---
 
 # Timeclock
@@ -21,11 +21,37 @@ Each clock-in/clock-out cycle is one `TimeClockEntry` row:
 | --- | --- |
 | `clockInAt` / `clockOutAt` | Punch instants, both set by the server |
 | `clockInIp` / `clockOutIp` | IP address recorded at each punch |
+| `clockIn…` / `clockOut…` `Latitude`, `Longitude`, `AccuracyMeters` | Device GPS fix at each punch, when available |
 | `notes` | Notes / job duties, written once at clock-out |
 
 `clockOutAt` is null while a shift is open. There is deliberately **no stored
 hours column** — hours are always derived from the two timestamps, so a total
 can never disagree with the record it came from.
+
+### Location
+
+Clock In and Clock Out each ask the browser for one GPS fix
+(`getCurrentPosition`, high accuracy, up to ten seconds) before sending the
+punch, and the button reads *Getting location…* while it waits. The fix is
+validated with Zod on the server (`punchLocationSchema` in
+`lib/timeclock-server.ts`) and stored with the punch. The work history shows
+each fix as coordinates with its accuracy radius, linked to Google Maps.
+
+Location is **best-effort, not required.** If the browser has no geolocation,
+the user refuses the prompt, or no fix arrives in time, the punch is still
+recorded with the location columns left null, and the history shows a dash.
+The IP address is logged either way. To make location mandatory instead, the
+routes would reject a punch without `location` and the panel would need to
+explain how to re-enable the permission.
+
+Like the timestamp, the location comes from the person punching, but unlike
+the timestamp the server cannot produce it itself — a determined user can
+send coordinates of their choosing. Treat it as a strong signal, not proof.
+
+The site-wide `Permissions-Policy` header disables geolocation; `/account/timeclock`
+is one of two pages (with `/waiver`) granted `geolocation=(self)` in
+`packages/core/next-config.mjs`, and `tests/security-headers.test.ts` pins that
+list.
 
 ### Lunch breaks
 
@@ -116,6 +142,7 @@ unbounded history, and the UI re-displays the range the server actually used.
 | `app/api/account/timeclock/clock-out/route.ts` | `POST` clock out with notes |
 | `app/(public)/account/timeclock/page.tsx` | Server component, role gate |
 | `components/account/timeclock/LiveClock.tsx` | Ticking clock, isolated |
+| `components/account/timeclock/getPunchLocation.ts` | One-shot browser GPS fix, never rejects |
 | `components/account/timeclock/TimeClockPanel.tsx` | Controls, period, history table |
 
 The live clock repaints about 25 times a second and is kept in its own component

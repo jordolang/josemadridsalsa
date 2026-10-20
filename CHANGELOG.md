@@ -58,6 +58,13 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **The timeclock records your location at each punch.** Clock In and Clock Out now ask the browser
+  for a GPS fix and store latitude, longitude and accuracy on the punch beside the IP address. The
+  work history shows each fix with a map link. Location is best-effort: if permission is refused or
+  the device can't get a fix within ten seconds, the punch still goes through and shows no location.
+  `/account/timeclock` is now the second page, after `/waiver`, whose `Permissions-Policy` allows
+  geolocation. Schema: six nullable columns on `time_clock_entries` (migration
+  `20261020000000_timeclock_location`).
 - **`bigcommerce:orders --dry-run`** counts a store's orders since a date against the copies on this
   site and lists any not copied yet, without writing anything.
 - **Salsa Rewards on the storefront.** A public `/rewards` page explains the loyalty program,
