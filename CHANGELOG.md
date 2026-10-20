@@ -13,6 +13,13 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Fixed
+- **The fundraising cart's group dropdown scrolls.** With many groups, the "Group you're
+  supporting" list ran off the bottom of the page. The shared select's height cap used Tailwind 3
+  syntax that Tailwind 4 ignores, so no dropdown built on it was capped. It now is, the cart's list
+  stops at 20rem and scrolls, and a search box above it filters the groups when there are more
+  than eight.
+
 ### Changed
 - **CI runs faster.** Storefront test files now run in parallel; only the suites that write to the
   shared test database still run one at a time. Plain logic tests run in Node instead of a
