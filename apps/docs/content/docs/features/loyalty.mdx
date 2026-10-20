@@ -18,10 +18,10 @@ through `/api/loyalty` and the customer page `/account/rewards`.
 | Writing a review | 50 |
 | Birthday | 250 |
 
-Purchase points are awarded by `creditPurchaseLoyaltyPoints` when an order is paid, and referral
-points to both customers on a referred customer's first earning order (see
-[Referrals](#referrals)). The review and birthday amounts are constants in `lib/loyalty.ts` that
-nothing calls yet, so the storefront does not advertise them.
+Purchase points are awarded by `creditPurchaseLoyaltyPoints` when an order is paid, and the
+referral bonus is paid alongside a referred customer's first earning order (see [Referrals](#referrals)).
+The review and birthday amounts are constants in `lib/loyalty.ts` that nothing calls yet, so the
+storefront advertises purchase and referral points only.
 
 ## Tiers
 
@@ -85,7 +85,7 @@ issued the first time the page is opened (`getOrCreateReferralCode` in
 2. When an account is created, by password sign-up or the first OAuth sign-in,
    `attachReferrerFromCookie` sets `User.referredById` to the code's owner. It only runs for a
    new account, never for an existing one, and a customer's own code is ignored. The cookie is
-   deleted once read, so it credits one account at most.
+   deleted once it is read, so it credits only one new account.
 3. On the referred customer's first paid order that earns purchase points,
    `creditPurchaseLoyaltyPoints` calls `creditReferralPointsInTx`. It claims
    `User.referralRewardedAt` with a conditional write, then gives `REFERRAL_POINTS` (500) to both
@@ -94,9 +94,8 @@ issued the first time the page is opened (`getOrCreateReferralCode` in
    transaction, so a rolled-back payment takes the bonus with it and a racing webhook cannot pay
    it twice.
 
-The migration `20261020000000_customer_referrals` adds the three `User` columns. Vercel deploys
-don't apply migrations at the moment, so it has to be applied to production by hand before the
-code ships.
+The migration `20261020000000_customer_referrals` adds the three `User` columns. It was applied
+to production by hand on 2026-10-20, before the code shipped.
 
 ## Data model
 
