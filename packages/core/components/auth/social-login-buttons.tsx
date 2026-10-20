@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 
-export function SocialLoginButtons() {
+export function SocialLoginButtons({ callbackUrl = '/' }: { callbackUrl?: string }) {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null)
 
   const handleSocialSignIn = (provider: string) => {
     setLoadingProvider(provider)
-    signIn(provider, { callbackUrl: '/' })
+    signIn(provider, { callbackUrl })
   }
 
   return (

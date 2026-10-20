@@ -118,7 +118,7 @@ function SignInFormInner() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <SocialLoginButtons />
+          <SocialLoginButtons callbackUrl={callbackUrl} />
           <SocialLoginDivider />
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">

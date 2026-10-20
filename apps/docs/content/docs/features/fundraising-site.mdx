@@ -55,6 +55,12 @@ Local development: `npm run dev:fundraising` serves it on `http://localhost:3001
 | `/why-jose-madrid`, `/start`, `/sign-up` | Program details, 2026 fundraiser-kit downloads, account sign-up form (shared with `/auth/fundraiser-signup`) plus group inquiry form |
 | `/our-story`, `/testimonials`, `/survey`, `/blog`, `/contact`, `/shipping` | Content carried over from the old site |
 
+The header's person icon is the fundraiser login, the counterpart of the main site's
+account icon (`components/fundraising-site/site-header.tsx`). For a signed-in fundraiser it
+reads **My Fundraiser** and opens `/fundraiser-portal/dashboard`. For anyone else it reads
+**Fundraiser Login** and opens `/auth/signin` with that dashboard as the `callbackUrl`, which
+email and social sign-in both honor.
+
 Order-form packs and fliers are static files in
 `apps/fundraising/public/fundraising/downloads/`. Replace a file there to update it.
 

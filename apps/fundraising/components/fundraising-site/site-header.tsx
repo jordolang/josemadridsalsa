@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, ShoppingCart, X } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { Menu, ShoppingCart, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cartItemCount, useFundraisingCart } from '@/lib/fundraising-site/cart-store'
 import { FUNDRAISING_NAV } from './nav'
 
 const LOGO_URL = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/logo-image.webp'
+const PORTAL_HOME = '/fundraiser-portal/dashboard'
 
 export function FundraisingSiteHeader() {
   const pathname = usePathname()
@@ -17,6 +19,13 @@ export function FundraisingSiteHeader() {
   // The cart lives in localStorage; render the count only after hydration.
   const [hydrated, setHydrated] = useState(false)
   const count = useFundraisingCart((state) => cartItemCount(state.lines))
+  const { data: session } = useSession()
+  // A fundraiser's account opens the portal; anyone else signs in and lands there. A signed-in
+  // shopper with no fundraiser would only be bounced from the portal back to sign-in.
+  const account =
+    session?.user?.fundraiserId
+      ? { href: PORTAL_HOME, label: 'My Fundraiser' }
+      : { href: `/auth/signin?${new URLSearchParams({ callbackUrl: PORTAL_HOME })}`, label: 'Fundraiser Login' }
 
   useEffect(() => setHydrated(true), [])
   useEffect(() => setOpen(false), [pathname])
@@ -54,6 +63,14 @@ export function FundraisingSiteHeader() {
           <Button asChild size="sm" className="hidden bg-salsa-600 hover:bg-salsa-700 sm:inline-flex">
             <Link href="/start">Start a Fundraiser</Link>
           </Button>
+          <Link
+            href={account.href}
+            className="flex items-center gap-1.5 rounded-md p-2 text-sm font-medium text-foreground hover:bg-muted"
+            aria-label={account.label}
+          >
+            <User className="h-6 w-6" />
+            <span className="hidden whitespace-nowrap md:inline xl:hidden 2xl:inline">{account.label}</span>
+          </Link>
           <Link
             href="/cart"
             className="relative rounded-md p-2 text-foreground hover:bg-muted"
@@ -97,6 +114,11 @@ export function FundraisingSiteHeader() {
             <li>
               <Link href="/start" className="block rounded-md px-3 py-3 text-base font-semibold text-salsa-600 hover:bg-muted">
                 Start a Fundraiser
+              </Link>
+            </li>
+            <li>
+              <Link href={account.href} className="block rounded-md px-3 py-3 text-base font-medium text-foreground hover:bg-muted">
+                {account.label}
               </Link>
             </li>
           </ul>
