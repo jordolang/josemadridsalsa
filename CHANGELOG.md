@@ -62,6 +62,10 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **Refer a friend.** Each customer's rewards page has a link to share. A friend who signs up
+  through it sees a note about the bonus, and when the friend's first order is paid, both
+  customers get 500 reward points. The public rewards page explains how it works. Needs the
+  `20261020000000_customer_referrals` migration (three new columns on users).
 - **Merchant Center feed is published.** `/merchant-center-feed.xml` now lists the 27 active
   salsas, each tagged with its new heat category, for Merchant Center's daily fetch. Regenerate it
   with `npm run products:feed -- --apply` after catalog changes.

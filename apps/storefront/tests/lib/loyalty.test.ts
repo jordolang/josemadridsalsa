@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import * as loyaltyModule from '@/lib/loyalty'
-import { creditPurchaseLoyaltyPoints, POINTS_PER_DOLLAR } from '@/lib/loyalty'
+import { creditPurchaseLoyaltyPoints, POINTS_PER_DOLLAR, REFERRAL_POINTS } from '@/lib/loyalty'
 
 /**
  * A stand-in transaction client. The behaviour under test is which branch runs and whether the
@@ -12,11 +12,16 @@ function fakeTx({
   order,
   claimCount = 1,
   account = { id: 'account-1', lifetimePoints: 0, tier: 'BRONZE' },
+  referralClaimCount = 0,
+  referredById = 'referrer-1',
 }: {
   order: Record<string, unknown> | null
   claimCount?: number
   account?: { id: string; lifetimePoints: number; tier: string }
+  referralClaimCount?: number
+  referredById?: string | null
 }) {
+  const userUpdateMany = vi.fn().mockResolvedValue({ count: referralClaimCount })
   const orderUpdateMany = vi.fn().mockResolvedValue({ count: claimCount })
   const accountUpsert = vi.fn().mockResolvedValue(account)
   const accountUpdate = vi.fn().mockResolvedValue({})
@@ -35,8 +40,13 @@ function fakeTx({
       },
       pointTransaction: { create: transactionCreate },
       domainEvent: { create: eventCreate },
+      user: {
+        updateMany: userUpdateMany,
+        findUnique: vi.fn().mockResolvedValue({ referredById }),
+      },
     } as unknown as Parameters<typeof creditPurchaseLoyaltyPoints>[0],
     eventCreate,
+    userUpdateMany,
     orderUpdateMany,
     accountUpsert,
     accountUpdate,
@@ -204,6 +214,50 @@ describe('creditPurchaseLoyaltyPoints', () => {
       tier: 'GOLD',
       previousTier: 'BRONZE',
     })
+  })
+
+  it('pays the referral bonus to both customers on a referred customer’s first earning order', async () => {
+    const { tx, userUpdateMany, accountUpsert, transactionCreate } = fakeTx({
+      order: paidOrder,
+      referralClaimCount: 1,
+    })
+
+    const result = await creditPurchaseLoyaltyPoints(tx, 'order-1')
+
+    expect(result).toEqual({ awarded: true, points: 500, referralRewarded: true })
+
+    // Claimed once, only for a referred customer not yet rewarded.
+    const claim = userUpdateMany.mock.calls[0][0]
+    expect(claim.where).toEqual({ id: 'user-1', referredById: { not: null }, referralRewardedAt: null })
+    expect(claim.data.referralRewardedAt).toBeInstanceOf(Date)
+
+    // Purchase account, then the new customer and the referrer.
+    expect(accountUpsert.mock.calls.map((c) => c[0].where.userId)).toEqual(['user-1', 'user-1', 'referrer-1'])
+    const referralEarns = transactionCreate.mock.calls
+      .map((c) => c[0].data)
+      .filter((d) => d.type === 'EARNED_REFERRAL')
+    expect(referralEarns).toHaveLength(2)
+    expect(referralEarns.every((d) => d.points === REFERRAL_POINTS && d.orderId === 'order-1')).toBe(true)
+  })
+
+  it('pays no referral bonus once it has been claimed or when nobody referred the customer', async () => {
+    const { tx, transactionCreate } = fakeTx({ order: paidOrder, referralClaimCount: 0 })
+
+    const result = await creditPurchaseLoyaltyPoints(tx, 'order-1')
+
+    expect(result).toEqual({ awarded: true, points: 500 })
+    expect(transactionCreate).toHaveBeenCalledOnce()
+  })
+
+  it('pays no referral bonus when the order earned no purchase points', async () => {
+    const { tx, userUpdateMany } = fakeTx({
+      order: { ...paidOrder, subtotal: 20, discountAmount: 20 },
+      referralClaimCount: 1,
+    })
+
+    await creditPurchaseLoyaltyPoints(tx, 'order-1')
+
+    expect(userUpdateMany).not.toHaveBeenCalled()
   })
 
   it('records nothing when the order was already credited by the racing path', async () => {

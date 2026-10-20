@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Gift, ShoppingBag, TrendingUp } from 'lucide-react'
+import { Gift, ShoppingBag, TrendingUp, Users } from 'lucide-react'
 import type { LoyaltyTier } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { createMetadata } from '@/lib/metadata'
 import { prisma } from '@/lib/prisma'
-import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty-rules'
+import { POINTS_PER_DOLLAR, REFERRAL_POINTS, TIER_THRESHOLDS } from '@/lib/loyalty-rules'
 import { LOYALTY_TIERS, hasRedemptionsLeft, tierLabel } from '@/lib/loyalty-progress'
 import { formatPrice } from '@/lib/utils'
 import { RewardsStatusPanel } from './rewards-status-panel'
@@ -34,6 +34,11 @@ const steps = [
     icon: Gift,
     title: 'Redeem for money off',
     description: 'Trade points for a one-time discount code from your account page, then enter it at checkout.',
+  },
+  {
+    icon: Users,
+    title: 'Refer a friend',
+    description: `Share the link on your rewards page. When a friend signs up with it and places their first order, you each get ${REFERRAL_POINTS.toLocaleString()} points.`,
   },
 ]
 
@@ -87,7 +92,7 @@ export default async function RewardsPage() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="mb-10 text-center text-3xl font-serif font-bold text-foreground lg:text-4xl">How it works</h2>
-          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
+          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-4">
             {steps.map(({ icon: Icon, title, description }, index) => (
               <Card key={title} className="card surface-shadow">
                 <CardContent className="p-6">
@@ -169,6 +174,13 @@ export default async function RewardsPage() {
               <dt className="font-semibold text-foreground">What counts toward points?</dt>
               <dd className="mt-1 text-muted-foreground">
                 The products in your order after any discount. Shipping and sales tax do not earn points.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-foreground">How do referral points work?</dt>
+              <dd className="mt-1 text-muted-foreground">
+                Your friend has to create a new account through your link. Once their first order is paid, you and
+                your friend each get {REFERRAL_POINTS.toLocaleString()} points. Each friend counts once.
               </dd>
             </div>
             <div>

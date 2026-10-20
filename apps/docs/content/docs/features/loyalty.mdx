@@ -71,7 +71,29 @@ so switch it off instead. Its limit also cannot be lowered below the number alre
 - The display math (points for an amount, tier progress) is in `lib/loyalty-progress.ts` and
   rounds the same way as the purchase credit. It reads `POINTS_PER_DOLLAR` and `TIER_THRESHOLDS`
   from `packages/core/lib/loyalty-rules.ts`, which has no server imports, so the client
-  components don't bundle Prisma; `lib/loyalty.ts` re-exports both.
+  components don't bundle Prisma; `lib/loyalty.ts` re-exports them, along with `REFERRAL_POINTS`.
+
+## Referrals
+
+Each customer's account rewards page shows a refer-a-friend link, `/refer/<code>`. The code is
+issued the first time the page is opened (`getOrCreateReferralCode` in
+`packages/core/lib/referrals.ts`) and stored in `User.referralCode`.
+
+1. Opening the link (`app/refer/[code]/route.ts`) stores the code in the `jms_ref` cookie for 30
+   days and sends the visitor to `/auth/signup?referred=1`, which explains the bonus.
+2. When an account is created, by password sign-up or the first OAuth sign-in,
+   `attachReferrerFromCookie` sets `User.referredById` to the code's owner. It only runs for a
+   new account, never for an existing one, and a customer's own code is ignored.
+3. On the referred customer's first paid order that earns purchase points,
+   `creditPurchaseLoyaltyPoints` calls `creditReferralPointsInTx`. It claims
+   `User.referralRewardedAt` with a conditional write, then gives `REFERRAL_POINTS` (500) to both
+   customers as `EARNED_REFERRAL` transactions. Like purchase points, this runs on the payment's
+   transaction, so a rolled-back payment takes the bonus with it and a racing webhook cannot pay
+   it twice.
+
+The migration `20261020000000_customer_referrals` adds the three `User` columns. Vercel deploys
+don't apply migrations at the moment, so it has to be applied to production by hand before the
+code ships.
 
 ## Data model
 

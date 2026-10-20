@@ -7,7 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createMetadata } from "@/lib/metadata";
-import { POINTS_PER_DOLLAR } from "@/lib/loyalty";
+import { POINTS_PER_DOLLAR, REFERRAL_POINTS } from "@/lib/loyalty";
+import { getOrCreateReferralCode, referralLink } from "@/lib/referrals";
+import { CopyReferralLink } from "./copy-referral-link";
 import { RedeemRewardButton } from "./redeem-reward-button";
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +32,7 @@ export default async function RewardsPage() {
   }
   const userId = (session.user as { id: string }).id;
 
-  const [account, rewards] = await Promise.all([
+  const [account, rewards, referralCode, referred, referredRewarded] = await Promise.all([
     prisma.loyaltyAccount.findUnique({
       where: { userId },
       include: {
@@ -46,6 +48,9 @@ export default async function RewardsPage() {
       where: { isActive: true, rewardType: "DISCOUNT" },
       orderBy: { pointsCost: "asc" },
     }),
+    getOrCreateReferralCode(userId),
+    prisma.user.count({ where: { referredById: userId } }),
+    prisma.user.count({ where: { referredById: userId, referralRewardedAt: { not: null } } }),
   ]);
 
   const balance = account?.pointsBalance ?? 0;
@@ -125,6 +130,23 @@ export default async function RewardsPage() {
           </div>
         )}
       </Card>
+
+      {referralCode && (
+        <Card className="p-4">
+          <h2 className="text-lg font-medium mb-1">Refer a friend</h2>
+          <p className="text-sm text-muted-foreground mb-3">
+            Share your link. When a friend creates an account with it and their first order goes through, you each
+            get {REFERRAL_POINTS.toLocaleString()} points.
+          </p>
+          <CopyReferralLink link={referralLink(referralCode)} />
+          {referred > 0 && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {referred.toLocaleString()} {referred === 1 ? "friend has" : "friends have"} joined with your link
+              {referredRewarded > 0 && `, and ${referredRewarded.toLocaleString()} earned you points`}.
+            </p>
+          )}
+        </Card>
+      )}
 
       <Card className="p-4">
         <h2 className="text-lg font-medium mb-3">Recent activity</h2>

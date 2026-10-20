@@ -8,6 +8,7 @@ import { SocialLoginButtons, SocialLoginDivider } from '@/components/auth/social
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { REFERRAL_POINTS } from '@/lib/loyalty-rules'
 import {
   Card,
   CardContent,
@@ -35,6 +36,7 @@ function SignUpFormInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams?.get('callbackUrl') || '/'
+  const referred = searchParams?.get('referred') === '1'
 
   const [formState, setFormState] = useState<RegisterState>(initialState)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -106,6 +108,12 @@ function SignUpFormInner() {
           <CardDescription>
             Create an account to save your details and keep track of your orders.
           </CardDescription>
+          {referred && (
+            <p className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+              A friend sent you here. Create your account, and when your first order goes through
+              you and your friend each get {REFERRAL_POINTS.toLocaleString()} reward points.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
           <SocialLoginButtons />
