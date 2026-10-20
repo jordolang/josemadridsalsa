@@ -56,7 +56,7 @@ describe('totalWeightOunces', () => {
 
   it('assumes a jar for a product with no recorded weight', () => {
     expect(totalWeightOunces([{ quantity: 1 }])).toBe(DEFAULT_ITEM_WEIGHT_OZ)
-    expect(DEFAULT_ITEM_WEIGHT_OZ).toBe(16)
+    expect(DEFAULT_ITEM_WEIGHT_OZ).toBe(13)
   })
 
   it('is zero for an empty basket rather than throwing', () => {

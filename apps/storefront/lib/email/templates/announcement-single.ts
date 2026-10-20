@@ -108,7 +108,7 @@ export const announcementSingleTemplate: EmailTemplateDefinition = {
               </tr>
               <tr>
                 <td width="120" style="width:120px; padding:5px 12px 5px 0; color:#8a7c6d; letter-spacing:1.2px; font-size:11px; text-transform:uppercase; vertical-align:top;">SIZE</td>
-                <td style="padding:5px 0; color:#3a332d;">16 oz glass jar</td>
+                <td style="padding:5px 0; color:#3a332d;">13 oz glass jar</td>
               </tr>
               <tr>
                 <td width="120" style="width:120px; padding:5px 12px 5px 0; color:#8a7c6d; letter-spacing:1.2px; font-size:11px; text-transform:uppercase; vertical-align:top;">AVAILABLE</td>
