@@ -60,15 +60,18 @@ so switch it off instead. Its limit also cannot be lowered below the number alre
 ## On the storefront
 
 - **`/rewards`** is the public program page: how earning works, the live reward catalog (active
-  `DISCOUNT` rewards), the tier ladder with what each tier unlocks, and a short FAQ. A signed-in
+  `DISCOUNT` rewards that have not hit `maxRedemptions`), the tier ladder with what each tier unlocks, and a short FAQ. A signed-in
   visitor also sees their balance, tier and progress to the next tier, fetched in the browser
   from `GET /api/loyalty` so the page itself stays cached. It is in the sitemap and linked from
   the Shop menu and the footer.
-- **Product pages and the cart** show how many points the jar or the cart subtotal earns
-  (`components/store/LoyaltyPointsHint.tsx`). Guests are asked to sign in, since guest orders
-  earn nothing.
+- **Product pages and the cart** show the most points the jar or the cart subtotal can earn
+  (`components/store/LoyaltyPointsHint.tsx`), worded "up to" because a discount code applied at
+  checkout lowers the base. Guests are asked to sign in, since guest orders earn nothing.
+  Printify merchandise (`MerchOrder`) does not earn points, so the copy only promises them on salsa.
 - The display math (points for an amount, tier progress) is in `lib/loyalty-progress.ts` and
-  rounds the same way as the purchase credit.
+  rounds the same way as the purchase credit. It reads `POINTS_PER_DOLLAR` and `TIER_THRESHOLDS`
+  from `packages/core/lib/loyalty-rules.ts`, which has no server imports, so the client
+  components don't bundle Prisma; `lib/loyalty.ts` re-exports both.
 
 ## Data model
 
