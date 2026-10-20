@@ -16,8 +16,8 @@ export const sharedHeaders = async () => {
     // 'unsafe-eval' is also needed in dev for HMR. 'wasm-unsafe-eval' lets the
     // admin's PDF invoices compile react-pdf's layout engine (WebAssembly).
     isProd
-      ? "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live"
-      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live",
+      ? "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live https://browser.sentry-cdn.com"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com https://js.stripe.com https://va.vercel-scripts.com https://vercel.live https://browser.sentry-cdn.com",
     "worker-src 'self' blob:",
     // Allow Google Maps iframes, GTM noscript, Stripe checkout iframes,
     // YouTube/Vimeo video embeds used in blog (Heat Index) posts, and the
@@ -102,7 +102,7 @@ export const sharedHeaders = async () => {
 }
 
 export const sharedImages = {
-  formats: ['image/webp'],
+  formats: ['image/avif', 'image/webp'],
   deviceSizes: [640, 750, 828, 1080, 1200, 1920],
   imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   minimumCacheTTL: 86400,

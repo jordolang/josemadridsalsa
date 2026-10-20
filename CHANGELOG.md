@@ -21,6 +21,15 @@ the root `package.json` is canonical.
   than eight.
 
 ### Changed
+- **Pages load faster (PageSpeed).** Code that is not needed for the first paint now loads later:
+  the analytics and ad tags (GTM, Meta and TikTok pixels, the Google reviews badge, Notifuse) wait
+  for the page's load event; the Amplitude SDK downloads only after a visitor accepts analytics
+  cookies; Sentry Session Replay loads from Sentry's CDN once the page is idle; the chat's Markdown
+  renderer loads when the chat opens; and the homepage hero video starts after the page has loaded
+  (never for reduced-motion visitors). The Picante chat sprite is 69% smaller (532 KB → 165 KB),
+  `next/image` serves AVIF where the browser supports it, and unused font and Stripe preconnects
+  are gone. The "Find Us" event ticker now renders with the page instead of appearing after it
+  loads, so it no longer pushes the page down.
 - **Fundraisers set up on the site are listed in the BigCommerce fundraising store too.** Each
   morning the fundraiser lifecycle cron emails fundraising@josemadridsalsa.com the exact names of
   live site fundraisers missing from the store's checkout dropdown, since BigCommerce's API cannot
