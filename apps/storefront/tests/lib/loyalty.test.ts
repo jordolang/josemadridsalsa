@@ -240,6 +240,24 @@ describe('creditPurchaseLoyaltyPoints', () => {
     expect(referralEarns.every((d) => d.points === REFERRAL_POINTS && d.orderId === 'order-1')).toBe(true)
   })
 
+  it('records a points-earned fact for each referral credit, keyed on the customer who earned it', async () => {
+    const { tx, eventCreate } = fakeTx({ order: paidOrder, referralClaimCount: 1 })
+
+    await creditPurchaseLoyaltyPoints(tx, 'order-1')
+
+    const customerEvents = eventCreate.mock.calls
+      .map((c) => c[0].data)
+      .filter((d) => d.entityType === 'customer')
+    // 0 → 500 lifetime points also crosses SILVER, so each credit announces the upgrade too.
+    expect(customerEvents.map((d) => [d.type, d.entityId])).toEqual([
+      ['loyalty.points_earned', 'user-1'],
+      ['loyalty.tier_upgraded', 'user-1'],
+      ['loyalty.points_earned', 'referrer-1'],
+      ['loyalty.tier_upgraded', 'referrer-1'],
+    ])
+    expect(customerEvents[0].payload).toMatchObject({ points: REFERRAL_POINTS, orderId: 'order-1' })
+  })
+
   it('pays no referral bonus once it has been claimed or when nobody referred the customer', async () => {
     const { tx, transactionCreate } = fakeTx({ order: paidOrder, referralClaimCount: 0 })
 

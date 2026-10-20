@@ -8,12 +8,17 @@ vi.mock('@/lib/prisma', () => {
   return { prisma: client, default: client }
 })
 
-const { attachReferrer, generateReferralCode, getOrCreateReferralCode, parseReferralCode, referralLink } =
+const cookieJar = { get: vi.fn(), delete: vi.fn() }
+vi.mock('next/headers', () => ({ cookies: async () => cookieJar }))
+
+const { attachReferrer, attachReferrerFromCookie, generateReferralCode, getOrCreateReferralCode, parseReferralCode, referralLink } =
   await import('@/lib/referrals')
 
 beforeEach(() => {
   userFindUnique.mockReset()
   userUpdateMany.mockReset()
+  cookieJar.get.mockReset()
+  cookieJar.delete.mockReset()
 })
 
 describe('parseReferralCode', () => {
@@ -90,5 +95,36 @@ describe('attachReferrer', () => {
     expect(await attachReferrer('user-1', '<script>')).toBe(false)
     expect(userFindUnique).not.toHaveBeenCalled()
     expect(userUpdateMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('attachReferrerFromCookie', () => {
+  it('attaches the referrer from the cookie and spends the cookie', async () => {
+    cookieJar.get.mockReturnValue({ value: 'ABCD2345' })
+    userFindUnique.mockResolvedValue({ id: 'referrer-1' })
+    userUpdateMany.mockResolvedValue({ count: 1 })
+
+    expect(await attachReferrerFromCookie('new-user')).toBe(true)
+    expect(cookieJar.delete).toHaveBeenCalledWith('jms_ref')
+  })
+
+  it('does nothing without a cookie', async () => {
+    cookieJar.get.mockReturnValue(undefined)
+
+    expect(await attachReferrerFromCookie('new-user')).toBe(false)
+    expect(userFindUnique).not.toHaveBeenCalled()
+    expect(cookieJar.delete).not.toHaveBeenCalled()
+  })
+
+  it('keeps the referral when the cookie cannot be cleared', async () => {
+    cookieJar.get.mockReturnValue({ value: 'ABCD2345' })
+    cookieJar.delete.mockImplementation(() => {
+      throw new Error('read-only')
+    })
+    userFindUnique.mockResolvedValue({ id: 'referrer-1' })
+    userUpdateMany.mockResolvedValue({ count: 1 })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(await attachReferrerFromCookie('new-user')).toBe(true)
   })
 })

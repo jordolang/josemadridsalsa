@@ -86,8 +86,18 @@ export async function attachReferrer(userId: string, rawCode: unknown): Promise<
 export async function attachReferrerFromCookie(userId: string): Promise<boolean> {
   try {
     const { cookies } = await import('next/headers')
-    const code = (await cookies()).get(REFERRAL_COOKIE)?.value
-    return code ? await attachReferrer(userId, code) : false
+    const jar = await cookies()
+    const code = jar.get(REFERRAL_COOKIE)?.value
+    if (!code) return false
+    const attached = await attachReferrer(userId, code)
+    // Spent on the first account it reaches, so a second sign-up in the same browser is not
+    // credited to the same referrer. Cookies are read-only outside a route handler or action.
+    try {
+      jar.delete(REFERRAL_COOKIE)
+    } catch (error) {
+      console.error('[Referrals] Could not clear referral cookie:', error)
+    }
+    return attached
   } catch (error) {
     console.error('[Referrals] Could not record referrer:', error)
     return false

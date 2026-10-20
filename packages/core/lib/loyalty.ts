@@ -336,15 +336,39 @@ async function creditPointsInTx(
   })
 
   const newTier = (await calculateTier(account.lifetimePoints + points)) as LoyaltyTier
+  const tierChanged = newTier !== account.tier
   await tx.loyaltyAccount.update({
     where: { id: account.id },
     data: {
       pointsBalance: { increment: points },
       lifetimePoints: { increment: points },
       tier: newTier,
-      ...(newTier !== account.tier && { tierUpdatedAt: new Date() }),
+      ...(tierChanged && { tierUpdatedAt: new Date() }),
     },
   })
+
+  // Keyed on the customer, not the order: the referrer did not place it, and the automation
+  // handler resolves a customer event to that customer's own email.
+  await emitDomainEvent(
+    {
+      type: 'loyalty.points_earned',
+      entityType: 'customer',
+      entityId: userId,
+      payload: { points, pointsBalance: account.pointsBalance + points, tier: newTier, orderId },
+    },
+    tx
+  )
+  if (tierChanged) {
+    await emitDomainEvent(
+      {
+        type: 'loyalty.tier_upgraded',
+        entityType: 'customer',
+        entityId: userId,
+        payload: { tier: newTier, previousTier: account.tier },
+      },
+      tx
+    )
+  }
 }
 
 const REDEMPTION_TTL_MS = 90 * 24 * 60 * 60 * 1000

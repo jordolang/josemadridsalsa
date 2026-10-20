@@ -18,9 +18,10 @@ through `/api/loyalty` and the customer page `/account/rewards`.
 | Writing a review | 50 |
 | Birthday | 250 |
 
-Only purchase points are awarded today, by `creditPurchaseLoyaltyPoints` when an order is paid.
-The referral, review and birthday amounts are constants in `lib/loyalty.ts` that nothing calls
-yet, so the storefront advertises purchase points only.
+Purchase points are awarded by `creditPurchaseLoyaltyPoints` when an order is paid, and referral
+points to both customers on a referred customer's first earning order (see
+[Referrals](#referrals)). The review and birthday amounts are constants in `lib/loyalty.ts` that
+nothing calls yet, so the storefront does not advertise them.
 
 ## Tiers
 
@@ -83,11 +84,13 @@ issued the first time the page is opened (`getOrCreateReferralCode` in
    days and sends the visitor to `/auth/signup?referred=1`, which explains the bonus.
 2. When an account is created, by password sign-up or the first OAuth sign-in,
    `attachReferrerFromCookie` sets `User.referredById` to the code's owner. It only runs for a
-   new account, never for an existing one, and a customer's own code is ignored.
+   new account, never for an existing one, and a customer's own code is ignored. The cookie is
+   deleted once read, so it credits one account at most.
 3. On the referred customer's first paid order that earns purchase points,
    `creditPurchaseLoyaltyPoints` calls `creditReferralPointsInTx`. It claims
    `User.referralRewardedAt` with a conditional write, then gives `REFERRAL_POINTS` (500) to both
-   customers as `EARNED_REFERRAL` transactions. Like purchase points, this runs on the payment's
+   customers as `EARNED_REFERRAL` transactions, each with its own `loyalty.points_earned` event
+   keyed on that customer. Like purchase points, this runs on the payment's
    transaction, so a rolled-back payment takes the bonus with it and a racing webhook cannot pay
    it twice.
 
