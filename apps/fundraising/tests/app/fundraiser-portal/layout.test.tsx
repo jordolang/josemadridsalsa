@@ -43,6 +43,14 @@ describe('fundraiser portal layout', () => {
     )
   })
 
+  it('returns a signed-out visitor sent to the pending page to the dashboard after sign-in', async () => {
+    getCurrentFundraiserAccount.mockResolvedValue(null)
+    headerValues.set('x-pathname', '/fundraiser-portal/pending')
+    await expect(FundraiserPortalLayout({ children: null })).rejects.toThrow(
+      'redirect:/auth/signin?callbackUrl=%2Ffundraiser-portal%2Fdashboard'
+    )
+  })
+
   it('tells a signed-in visitor with no fundraiser so, instead of sending them back to sign-in', async () => {
     // Sending them to sign-in again made a working sign-in look broken.
     getCurrentFundraiserAccount.mockResolvedValue(null)

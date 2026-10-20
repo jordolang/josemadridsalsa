@@ -49,7 +49,9 @@ export default async function FundraiserPortalLayout({
     if (await getCurrentUser()) {
       return <NoFundraiserAccount />
     }
-    redirect(`/auth/signin?${new URLSearchParams({ callbackUrl: pathname || '/fundraiser-portal/dashboard' })}`)
+    // Portal pages send a visitor with no account to /pending, so come back to the dashboard from there.
+    const callbackUrl = pathname && pathname !== '/fundraiser-portal/pending' ? pathname : '/fundraiser-portal/dashboard'
+    redirect(`/auth/signin?${new URLSearchParams({ callbackUrl })}`)
   }
 
   if (account.status === 'PENDING') {

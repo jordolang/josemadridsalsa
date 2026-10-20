@@ -11,7 +11,7 @@ export default async function AnalyticsPage() {
   const account = await getCurrentFundraiserAccount()
 
   if (!account || !account.fundraiserId) {
-    redirect('/auth/signin')
+    redirect('/fundraiser-portal/pending')
   }
 
   return <AnalyticsClient fundraiserId={account.fundraiserId} />
