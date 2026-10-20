@@ -8,12 +8,20 @@ vi.mock('@/lib/prisma', () => {
   return { prisma: client, default: client }
 })
 
-const { attachReferrer, generateReferralCode, getOrCreateReferralCode, parseReferralCode, referralLink } =
+const cookieGet = vi.fn()
+const cookieDelete = vi.fn()
+vi.mock('next/headers', () => ({
+  cookies: async () => ({ get: cookieGet, delete: cookieDelete }),
+}))
+
+const { attachReferrer, attachReferrerFromCookie, generateReferralCode, getOrCreateReferralCode, parseReferralCode, referralLink } =
   await import('@/lib/referrals')
 
 beforeEach(() => {
   userFindUnique.mockReset()
   userUpdateMany.mockReset()
+  cookieGet.mockReset()
+  cookieDelete.mockReset()
 })
 
 describe('parseReferralCode', () => {
@@ -89,6 +97,25 @@ describe('attachReferrer', () => {
     userFindUnique.mockClear()
     expect(await attachReferrer('user-1', '<script>')).toBe(false)
     expect(userFindUnique).not.toHaveBeenCalled()
+    expect(userUpdateMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('attachReferrerFromCookie', () => {
+  it('spends the cookie so a second account from the same browser is not credited', async () => {
+    cookieGet.mockReturnValue({ value: 'ABCD2345' })
+    userFindUnique.mockResolvedValue({ id: 'referrer-1' })
+    userUpdateMany.mockResolvedValue({ count: 1 })
+
+    expect(await attachReferrerFromCookie('new-user')).toBe(true)
+    expect(cookieDelete).toHaveBeenCalledWith('jms_ref')
+  })
+
+  it('does nothing without a cookie', async () => {
+    cookieGet.mockReturnValue(undefined)
+
+    expect(await attachReferrerFromCookie('new-user')).toBe(false)
+    expect(cookieDelete).not.toHaveBeenCalled()
     expect(userUpdateMany).not.toHaveBeenCalled()
   })
 })

@@ -81,13 +81,17 @@ export async function attachReferrer(userId: string, rawCode: unknown): Promise<
 
 /**
  * Reads the referral cookie on the current request and attaches its referrer to a new account.
- * Never throws: a failed referral must not fail a sign-up.
+ * The cookie is spent on the first sign-up, so a later account made in the same browser is not
+ * credited to the same referrer. Never throws: a failed referral must not fail a sign-up.
  */
 export async function attachReferrerFromCookie(userId: string): Promise<boolean> {
   try {
     const { cookies } = await import('next/headers')
-    const code = (await cookies()).get(REFERRAL_COOKIE)?.value
-    return code ? await attachReferrer(userId, code) : false
+    const store = await cookies()
+    const code = store.get(REFERRAL_COOKIE)?.value
+    if (!code) return false
+    store.delete(REFERRAL_COOKIE)
+    return await attachReferrer(userId, code)
   } catch (error) {
     console.error('[Referrals] Could not record referrer:', error)
     return false
