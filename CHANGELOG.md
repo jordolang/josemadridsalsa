@@ -62,6 +62,9 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **Merchant Center feed is published.** `/merchant-center-feed.xml` now lists the 27 active
+  salsas, each tagged with its new heat category, for Merchant Center's daily fetch. Regenerate it
+  with `npm run products:feed -- --apply` after catalog changes.
 - **`bigcommerce:orders --dry-run`** counts a store's orders since a date against the copies on this
   site and lists any not copied yet, without writing anything.
 - **Salsa Rewards on the storefront.** A public `/rewards` page explains the loyalty program,
