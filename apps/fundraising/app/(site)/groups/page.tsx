@@ -7,7 +7,7 @@ export const revalidate = 300
 export const metadata: Metadata = {
   title: { absolute: 'Find Your Group | Jose Madrid Salsa Fundraising' },
   description:
-    'Supporting a school, team or club? Find the group you want to help and every jar of salsa you order sends $5 their way.',
+    'Supporting a school, team or club? Find the group you want to help, and every jar of salsa you order raises money for them.',
   alternates: { canonical: '/groups' },
 }
 
@@ -19,7 +19,7 @@ export default async function GroupsPage() {
       <header className="mx-auto mb-8 max-w-3xl text-center">
         <h1 className="mb-4 font-serif text-3xl font-bold text-foreground lg:text-4xl">Find your group</h1>
         <p className="text-lg text-muted-foreground">
-          These groups are taking online orders right now. Pick yours, shop, and $5 from every jar goes to them.
+          These groups are taking online orders right now. Pick yours, shop, and every jar you order raises money for them.
         </p>
       </header>
       {groups === null ? (
