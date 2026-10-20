@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  DEFAULT_JAR_CONTENTS_OZ,
   jarGrossWeightOz,
   JARS_PER_CASE,
   JAR_TARE_OZ,
@@ -28,6 +29,11 @@ describe('jarGrossWeightOz', () => {
 })
 
 describe('packJars', () => {
+  it('assumes the 13 oz jar when it only knows the count', () => {
+    expect(DEFAULT_JAR_CONTENTS_OZ).toBe(13)
+    expect(packJars(3).weightOz).toBe(packJars(3, 3 * 13).weightOz)
+  })
+
   it('puts three jars in one line', () => {
     const parcel = packJars(3)
     expect(parcel).toMatchObject({ jarsAcross: 3, lines: 1, layers: 1, boxes: 1 })
@@ -54,7 +60,8 @@ describe('packJars', () => {
   })
 
   it('sizes a case close to a real salsa carton', () => {
-    // A real case of twelve pint jars is roughly 13 x 10 x 6 inches and about 22 lb.
+    // A real case of twelve jars is roughly 13 x 10 x 6 inches. With 13 oz of salsa in each, it
+    // weighs about 19 lb.
     const parcel = packJars(12)
     expect(parcel.length).toBeGreaterThan(11)
     expect(parcel.length).toBeLessThan(14)
@@ -62,8 +69,8 @@ describe('packJars', () => {
     expect(parcel.width).toBeLessThan(11)
     expect(parcel.height).toBeGreaterThan(5)
     expect(parcel.height).toBeLessThan(7)
-    expect(parcel.weightOz / 16).toBeGreaterThan(20)
-    expect(parcel.weightOz / 16).toBeLessThan(24)
+    expect(parcel.weightOz / 16).toBeGreaterThan(17)
+    expect(parcel.weightOz / 16).toBeLessThan(22)
   })
 
   it('opens a second box on the thirteenth jar', () => {

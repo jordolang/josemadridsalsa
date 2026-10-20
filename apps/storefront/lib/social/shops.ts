@@ -1,5 +1,6 @@
 import type { ShopPlatform, SocialMediaPlatform } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { jarGrossWeightOz } from '@/lib/shipping/jar-packing'
 import {
   getAccountAccessToken,
   getAccountRefreshToken,
@@ -296,6 +297,10 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
     weight: listing.product.weight ? Number(listing.product.weight) : null,
   }
 
+  // Marketplaces want what the carrier weighs. `weight` is the jar's net contents, so add the glass.
+  const shippingWeightOz =
+    productData.weight === null ? null : Math.ceil(jarGrossWeightOz(productData.weight))
+
   const overrides = {
     title: listing.titleOverride,
     description: listing.descriptionOverride,
@@ -337,7 +342,7 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
           images: productData.images,
           featuredImage: productData.featuredImage,
           inventory: productData.inventory,
-          weightOz: productData.weight,
+          weightOz: shippingWeightOz,
         },
         {
           title: overrides.title,
@@ -361,7 +366,7 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
           featuredImage: productData.featuredImage,
           inventory: productData.inventory,
           gtin: listing.product.barcode?.trim() || null,
-          weightOz: productData.weight,
+          weightOz: shippingWeightOz,
         },
         {
           title: overrides.title,
@@ -385,7 +390,7 @@ export async function syncShopListing(listingId: string): Promise<SyncResult> {
           inventory: productData.inventory,
           url: productData.url,
           gtin: listing.product.barcode?.trim() || null,
-          weightOz: productData.weight,
+          weightOz: shippingWeightOz,
         },
         {
           title: overrides.title,

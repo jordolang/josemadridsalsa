@@ -45,7 +45,7 @@ not as permission.
   group. This reads backwards to most people; do not "correct" it.
 - **QuickBooks Online is the source of truth for accounting.** When platform
   financials and QBO disagree, QBO is right and the platform needs reconciling.
-- **`Product.weight` is in ounces.** A jar is 16 oz, not 16 lb.
+- **`Product.weight` is in ounces.** A jar is 13 oz, not 13 lb.
 - **The `Documents/` archive holds customer PII** and is gitignored. It must
   stay out of version control. Never echo personal data from it into a shared
   channel, a commit, or a document without being asked for that specific record.

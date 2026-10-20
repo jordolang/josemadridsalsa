@@ -9469,7 +9469,7 @@ async function loadShippingSettings(): Promise<SettingsPayload> {
             },
             {
               label: 'Jar weight',
-              value: 'Product weight is recorded in ounces. A jar is 16 oz, not 16 lb.',
+              value: 'Product weight is recorded in ounces. A jar is 13 oz, not 13 lb.',
               wrap: true,
             },
           ],

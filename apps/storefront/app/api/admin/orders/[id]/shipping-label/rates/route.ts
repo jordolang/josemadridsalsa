@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { getShippingClient } from '@/lib/shipping-api'
 import { describeMissingOrigin, getShippingOrigin } from '@/lib/shipping/origin'
-import { buildShippingItems, calculateOrderParcel } from '@/lib/shipping-calculator'
+import { buildShippingItems, calculateOrderParcel, totalWeightOunces } from '@/lib/shipping-calculator'
 import { packJars, describeJarPacking } from '@/lib/shipping/jar-packing'
 
 /**
@@ -60,9 +60,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     })
 
     // The same parcel the purchase will use, so the quoted price is the price paid.
-    const parcel = calculateOrderParcel(
-      buildShippingItems(order.items, new Map(products.map((p) => [p.id, p])))
-    )
+    const shippingItems = buildShippingItems(order.items, new Map(products.map((p) => [p.id, p])))
+    const parcel = calculateOrderParcel(shippingItems)
 
     const jarCount = order.items.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -85,7 +84,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({
       parcel,
       // What to pack, in the warehouse's own terms.
-      packing: describeJarPacking(packJars(jarCount)),
+      packing: describeJarPacking(packJars(jarCount, totalWeightOunces(shippingItems))),
       /** What the customer was charged, so an underwater label is visible before it is bought. */
       customerPaidShipping: Number(order.shippingCost),
       testMode: client.testMode,

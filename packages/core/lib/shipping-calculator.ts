@@ -90,12 +90,12 @@ export const OUNCES_PER_POUND = 16
 /**
  * Assumed weight of a unit whose product has none recorded.
  *
- * 16 oz, because the catalogue is 16oz jars — six of the thirty-four active products have a null
+ * 13 oz, because the catalogue is 13oz jars — six of the thirty-four active products have a null
  * `weight`, and assuming a jar is a jar is far closer than any generic default. It is deliberately
  * a documented assumption rather than a silent `1`: an under-declared parcel gets rejected at the
  * counter, so a wrong guess here should be wrong in the safe direction.
  */
-export const DEFAULT_ITEM_WEIGHT_OZ = 16
+export const DEFAULT_ITEM_WEIGHT_OZ = 13
 
 /**
  * Assumed dimensions of a unit whose product has none recorded — which is currently **all** of
@@ -249,8 +249,8 @@ function totalJarCount(items: ShippingItem[]): number {
  *
  * **Jars take the warehouse grid** — three across, four lines to a case of twelve — via
  * `lib/shipping/jar-packing.ts`, which also computes the *gross* weight: glass, lid, contents,
- * dividers and box. That matters because `Product.weight` holds `16`, the jar size, and shipping a
- * jar as 16 oz under-declares it by about two thirds.
+ * dividers and box. That matters because `Product.weight` holds `13`, the jar size, and shipping a
+ * jar as 13 oz under-declares it by about two thirds.
  *
  * Anything with real recorded dimensions falls through to the generic volume fit against
  * `STANDARD_BOXES`, which is the previous behaviour and is fine for non-cylinders.

@@ -34,8 +34,8 @@ export const JARS_PER_CASE = JARS_PER_LINE * LINES_PER_CASE
 /**
  * Weight of the empty jar, lid and band, ounces.
  *
- * **This is the number to check against a real scale.** `Product.weight` stores `16`, which is the
- * jar *size* — the net contents — not what the carrier weighs. Shipping on 16 oz under-declares a
+ * **This is the number to check against a real scale.** `Product.weight` stores `13`, which is the
+ * jar *size* — the net contents — not what the carrier weighs. Shipping on 13 oz under-declares a
  * jar by roughly two thirds, and an under-declared parcel is rejected at the counter or surcharged
  * after the fact.
  *
@@ -52,7 +52,7 @@ export const JAR_TARE_OZ = 10.5
 export const SALSA_SPECIFIC_GRAVITY = 1.04
 
 /** Net contents of the standard jar, ounces — used only when a caller knows just the count. */
-export const DEFAULT_JAR_CONTENTS_OZ = 16
+export const DEFAULT_JAR_CONTENTS_OZ = 13
 
 /** Corrugated box itself, ounces. Roughly constant across the sizes used here. */
 export const BOX_TARE_OZ = 5
@@ -69,7 +69,7 @@ export const BOX_VERTICAL_PADDING_IN = 0.75
 /**
  * Gross shipping weight of one filled jar, in ounces.
  *
- * @param netContentsOz The jar size — 16 for a 16oz jar. This is what `Product.weight` holds.
+ * @param netContentsOz The jar size — 13 for a 13oz jar. This is what `Product.weight` holds.
  */
 export function jarGrossWeightOz(netContentsOz: number): number {
   return netContentsOz * SALSA_SPECIFIC_GRAVITY + JAR_TARE_OZ
