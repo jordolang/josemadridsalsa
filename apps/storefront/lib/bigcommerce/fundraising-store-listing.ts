@@ -31,8 +31,14 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function listItems(names: string[]): string {
-  return `<ul>${names.map((name) => `<li><strong>${escapeHtml(name)}</strong></li>`).join('')}</ul>`
+type Listing = { option: string; fundraiser: string }
+
+function listItems(items: Listing[]): string {
+  const rows = items.map(({ option, fundraiser }) => {
+    const note = option === fundraiser ? '' : ` (for ${escapeHtml(fundraiser)})`
+    return `<li><strong>${escapeHtml(option)}</strong>${note}</li>`
+  })
+  return `<ul>${rows.join('')}</ul>`
 }
 
 export async function syncSiteFundraisersToStore(now: Date = new Date()): Promise<StoreListingResult> {
@@ -46,18 +52,19 @@ export async function syncSiteFundraisersToStore(now: Date = new Date()): Promis
   const { groups } = await getFundraisingCheckoutFields()
   const listed = new Set(groups.map((group) => normalizeGroupName(group.label)))
   let linked = 0
-  const missing: string[] = []
-  const unlinkable: string[] = []
+  const missing: Listing[] = []
+  const unlinkable: Listing[] = []
   for (const fundraiser of live) {
     const name = fundraiser.name.replace(/\s+/g, ' ').trim()
     if (fundraiser.bigCommerceGroup) {
-      if (!listed.has(fundraiser.bigCommerceGroup)) missing.push(name)
+      // Only the normalized key is stored; matching ignores case, so restoring it as written works.
+      if (!listed.has(fundraiser.bigCommerceGroup)) missing.push({ option: fundraiser.bigCommerceGroup, fundraiser: name })
       continue
     }
     const option = findGroupOption(groups, fundraiser.name)
-    if (!option) missing.push(name)
+    if (!option) missing.push({ option: name, fundraiser: name })
     else if (await linkSiteFundraiser(option.label)) linked++
-    else unlinkable.push(name)
+    else unlinkable.push({ option: option.label, fundraiser: name })
   }
 
   const total = missing.length + unlinkable.length

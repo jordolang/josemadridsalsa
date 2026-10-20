@@ -76,7 +76,7 @@ describe('syncSiteFundraisersToStore', () => {
 
     expect(await syncSiteFundraisersToStore(NOW)).toEqual({ linked: 0, missing: 1, unlinkable: 0 })
     expect(linkSiteFundraiser).not.toHaveBeenCalled()
-    expect(sendEmail.mock.calls[0][0].html).toContain('<strong>ESBD Boosters</strong>')
+    expect(sendEmail.mock.calls[0][0].html).toContain('<strong>esbd booster club fall 2026</strong> (for ESBD Boosters)')
   })
 
   it('asks staff to merge a fundraiser whose group already has its own record', async () => {
