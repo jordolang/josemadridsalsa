@@ -61,9 +61,9 @@ the root `package.json` is canonical.
 - **The timeclock records your location at each punch.** Clock In and Clock Out now ask the browser
   for a GPS fix and store latitude, longitude and accuracy on the punch beside the IP address. The
   work history shows each fix with a map link. Location is best-effort: if permission is refused or
-  the device can't get a fix within ten seconds, the punch still goes through and shows no location.
+  the device can't get a fix in time, the punch still goes through and shows no location.
   `/account/timeclock` is now the second page, after `/waiver`, whose `Permissions-Policy` allows
-  geolocation. Schema: six nullable columns on `time_clock_entries` (migration
+  geolocation; the account links to it now load the page fresh so that header applies. Schema: six nullable columns on `time_clock_entries` (migration
   `20261020000000_timeclock_location`).
 - **`bigcommerce:orders --dry-run`** counts a store's orders since a date against the copies on this
   site and lists any not copied yet, without writing anything.

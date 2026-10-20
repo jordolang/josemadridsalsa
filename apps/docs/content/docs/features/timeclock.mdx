@@ -31,8 +31,9 @@ can never disagree with the record it came from.
 ### Location
 
 Clock In and Clock Out each ask the browser for one GPS fix
-(`getCurrentPosition`, high accuracy, up to ten seconds) before sending the
-punch, and the button reads *Getting location…* while it waits. The fix is
+(`getCurrentPosition`, high accuracy, up to ten seconds for the fix and twenty
+in all, so an ignored permission prompt cannot stall a punch) before sending
+the punch, and the button reads *Getting location…* while it waits. The fix is
 validated with Zod on the server (`punchLocationSchema` in
 `lib/timeclock-server.ts`) and stored with the punch. The work history shows
 each fix as coordinates with its accuracy radius, linked to Google Maps.
@@ -51,7 +52,9 @@ send coordinates of their choosing. Treat it as a strong signal, not proof.
 The site-wide `Permissions-Policy` header disables geolocation; `/account/timeclock`
 is one of two pages (with `/waiver`) granted `geolocation=(self)` in
 `packages/core/next-config.mjs`, and `tests/security-headers.test.ts` pins that
-list.
+list. The header is fixed per document, so a client-side `<Link>` from another
+page would carry that page's denial with it; the account links to the
+timeclock are therefore plain `<a>` tags that load the page fresh.
 
 ### Lunch breaks
 

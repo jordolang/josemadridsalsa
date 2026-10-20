@@ -93,9 +93,12 @@ export default async function AccountPage() {
               </Link>
             )}
             {(user?.role === UserRole.ADMIN || user?.role === UserRole.DEVELOPER || user?.role === UserRole.STAFF) && (
-              <Link href="/account/timeclock">
+              // A full page load, not client navigation: Permissions-Policy is fixed
+              // per document, so only a fresh /account/timeclock load may use GPS.
+              // eslint-disable-next-line @next/next/no-html-link-for-pages -- see above
+              <a href="/account/timeclock">
                 <Button variant="secondary">Timeclock</Button>
-              </Link>
+              </a>
             )}
             {(user?.role === UserRole.ADMIN || user?.role === UserRole.DEVELOPER || user?.role === UserRole.STAFF) && (
               <Link href="/admin">
