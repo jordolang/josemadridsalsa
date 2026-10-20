@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { createMetadata } from '@/lib/metadata'
 import { prisma } from '@/lib/prisma'
-import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty'
+import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty-rules'
 import { LOYALTY_TIERS, hasRedemptionsLeft, tierLabel } from '@/lib/loyalty-progress'
 import { formatPrice } from '@/lib/utils'
 import { RewardsStatusPanel } from './rewards-status-panel'
@@ -23,7 +23,7 @@ const steps = [
   {
     icon: ShoppingBag,
     title: 'Shop signed in',
-    description: `Every $1 of salsa earns ${POINTS_PER_DOLLAR} points. Points post to your account as soon as your payment goes through.`,
+    description: `Every $1 you spend on salsa earns ${POINTS_PER_DOLLAR} points. Points post to your account as soon as your payment goes through.`,
   },
   {
     icon: TrendingUp,
@@ -168,8 +168,7 @@ export default async function RewardsPage() {
             <div>
               <dt className="font-semibold text-foreground">What counts toward points?</dt>
               <dd className="mt-1 text-muted-foreground">
-                The salsa in your order after any discount. Shipping and sales tax do not earn points, and
-                merchandise from the merch shop does not earn points yet.
+                The products in your order after any discount. Shipping and sales tax do not earn points.
               </dd>
             </div>
             <div>

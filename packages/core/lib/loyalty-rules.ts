@@ -1,9 +1,4 @@
 /**
- * Loyalty earning and tier rules with no server dependencies, so client components can
- * import them without pulling Prisma into the browser bundle. `@/lib/loyalty` re-exports both.
- */
-
-/**
  * Points earned per dollar spent.
  * @constant
  * @type {number}

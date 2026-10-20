@@ -145,6 +145,21 @@ describe('bigCommerceFetch', () => {
     await expect(bigCommerceFetch('main', 'v2/time')).rejects.toMatchObject({ status: 429 })
     expect(calls).toBe(3)
   })
+
+  it('waits out more 429s when the caller asks for it', async () => {
+    let calls = 0
+    server.use(
+      http.get(`${API}/v2/time`, () => {
+        calls++
+        return calls <= 4
+          ? new HttpResponse(null, { status: 429, headers: { 'X-Rate-Limit-Time-Reset-Ms': '1' } })
+          : HttpResponse.json({ time: 1 })
+      }),
+    )
+
+    await expect(bigCommerceFetch('main', 'v2/time', { rateLimitRetries: 5 })).resolves.toEqual({ time: 1 })
+    expect(calls).toBe(5)
+  })
 })
 
 describe('bigCommerceFetchAll', () => {

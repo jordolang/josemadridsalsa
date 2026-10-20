@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
+import { Prisma } from '@prisma/client'
 import { server } from '@/tests/mocks/server'
 import { normalizeBigCommerceProduct, type RawBigCommerceProduct } from '@/lib/bigcommerce/catalog'
 import {
+  auditBigCommerceOrders,
   BIGCOMMERCE_FUNDRAISING_ORDER_SOURCE,
   bigCommerceOrderNumber,
   buildMirrorItems,
@@ -17,7 +19,7 @@ import { bigCommerceOrderLock } from '@/lib/bigcommerce/order-lock'
 import fixtures from './fixtures.json'
 
 const db = vi.hoisted(() => ({
-  order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), aggregate: vi.fn() },
+  order: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), aggregate: vi.fn() },
   fundraiser: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   orderItem: { deleteMany: vi.fn(), createMany: vi.fn() },
   product: { findMany: vi.fn() },
@@ -233,6 +235,32 @@ describe('mirrorBigCommerceOrder', () => {
     expect(db.order.create.mock.calls[0][0].data).toMatchObject({ guestEmail: 'ana@example.com' })
   })
 
+  it('updates the copy another delivery created first instead of failing', async () => {
+    useOrder({ status_id: 2 })
+    db.order.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'o-1', fundraiserId: null, _count: { fulfillments: 0, returnRequests: 0 } })
+    db.order.create.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', { code: 'P2002', clientVersion: 'test' }),
+    )
+
+    const result = await mirrorBigCommerceOrder(9595, { catalog, siteProducts })
+
+    expect(result).toMatchObject({ action: 'updated', orderId: 'o-1' })
+    expect(db.order.update.mock.calls[0][0].data).toMatchObject({ status: 'SHIPPED' })
+  })
+
+  it('gives up after one retry when the copy still cannot be created', async () => {
+    useOrder()
+    db.order.findUnique.mockResolvedValue(null)
+    db.order.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', { code: 'P2002', clientVersion: 'test' }),
+    )
+
+    await expect(mirrorBigCommerceOrder(9595, { catalog, siteProducts })).rejects.toMatchObject({ code: 'P2002' })
+    expect(db.order.create).toHaveBeenCalledTimes(2)
+  })
+
   it('skips an order that is not a sale yet', async () => {
     useOrder({ status_id: 0 })
     db.order.findUnique.mockResolvedValue(null)
@@ -320,6 +348,41 @@ describe('syncBigCommerceOrders', () => {
 
     expect(query!.get('min_date_modified')).toBe('2026-09-22T00:00:00.000Z')
     expect(tally).toEqual({ created: 0, updated: 0, skipped: 1, failed: 1 })
+  })
+})
+
+describe('auditBigCommerceOrders', () => {
+  beforeEach(() => {
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_STORE_HASH', 'testhash')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_ACCESS_TOKEN', 'test-token')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_ID', 'test-client')
+    vi.stubEnv('BIGCOMMERCE_FUNDRAISING_CLIENT_SECRET', 'test-secret')
+    db.order.findMany.mockReset()
+    db.order.create.mockReset()
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('counts copied and missing sales without writing anything', async () => {
+    let query: URLSearchParams | null = null
+    server.use(
+      http.get(`${API}/v2/orders`, ({ request }) => {
+        query = new URL(request.url).searchParams
+        return HttpResponse.json([
+          { id: 10, status_id: 2 },
+          { id: 11, status_id: 0 },
+          { id: 12, status_id: 11 },
+          { id: 13, status_id: 4 },
+        ])
+      }),
+    )
+    db.order.findMany.mockResolvedValue([{ orderNumber: 'BCF-10' }, { orderNumber: 'BCF-13' }])
+
+    const audit = await auditBigCommerceOrders(new Date('2020-01-01T00:00:00Z'), 'fundraising')
+
+    expect(query!.get('min_date_created')).toBe('2020-01-01T00:00:00.000Z')
+    expect(db.order.findMany.mock.calls[0][0].where.orderNumber.in).toEqual(['BCF-10', 'BCF-12', 'BCF-13'])
+    expect(audit).toEqual({ inBigCommerce: 4, notSales: 1, copied: 2, missing: [12] })
+    expect(db.order.create).not.toHaveBeenCalled()
   })
 })
 

@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Changed
+- **Find your group lists the groups live on both stores.** `/groups` on the fundraising site
+  showed only the fundraising BigCommerce store's checkout dropdown. It now also lists the
+  fundraisers running on this site (active and within their dates), each linking to its own
+  page. A group whose name is in both is listed once.
 - **Main navigation is now Shop, Fundraising, Community and Support.** Merchandise, Gift
   Certificates and Wholesale moved under Shop. Fundraising links straight to every fundraiser page
   on the fundraising site: home, why Jose Madrid, find your group, sign-up, account creation,
@@ -58,12 +62,15 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **Merchant Center feed is published.** `/merchant-center-feed.xml` now lists the 27 active
+  salsas, each tagged with its new heat category, for Merchant Center's daily fetch. Regenerate it
+  with `npm run products:feed -- --apply` after catalog changes.
+- **`bigcommerce:orders --dry-run`** counts a store's orders since a date against the copies on this
+  site and lists any not copied yet, without writing anything.
 - **Salsa Rewards on the storefront.** A public `/rewards` page explains the loyalty program,
-  lists the live reward catalog (leaving out rewards that have reached their redemption cap) and
-  tiers, and shows signed-in customers their points and progress to the next tier. Product pages
-  and the cart now say how many points a purchase earns (the cart's figure is before any discount
-  code), and ask guests to sign in so the order counts. Merch shop orders do not earn points, and
-  the page says so. Linked from the Shop menu and footer, and in the sitemap.
+  lists the live reward catalog and tiers, and shows signed-in customers their points and progress
+  to the next tier. Product pages and the cart now say how many points a purchase can earn (before
+  any discount code), and ask guests to sign in so the order counts. Linked from the Shop menu and footer, and in the sitemap.
 - **The order tracker shows a map of where the salsa is.** Both tracking pages (`/order-tracking/<order>`
   and `/track/<tracking number>`) now open with a map: a salsa bowl sits wherever the package was
   last scanned, or at Jose Madrid Salsa headquarters (601 Putnam Ave, Zanesville) until the carrier
@@ -375,6 +382,20 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **BigCommerce order copies no longer fail on rate limits or doubled webhooks.** The hourly sweep
+  of the fundraising store hit BigCommerce's rate limit and failed the same orders every hour; order
+  reads now wait out more of those responses. When an order's created and updated webhooks arrived
+  together, the second failed with a duplicate order number and its status change waited for the
+  next sweep; it now updates the copy the first one made.
+- **`locations:cache-photos` is stricter about which photo it trusts.** Address matching now
+  rejects the opposite direction (N vs S Main St), a different street type (Main St vs Main
+  Ave, Pike vs Road) and a different house number written as "5211-B". Locations with no
+  street address, or a placeholder such as "OH", no longer fall back to a city-wide Street View
+  shot.
+  Street View key, quota and server errors now fail the location instead of reading as "no
+  imagery", and the command exits non-zero when any location fails. It now reads
+  `apps/storefront/.env.local`, and re-running the retail-location seed no longer replaces the
+  cached Blob photos, or the Place IDs verified with them, with the old Google values.
 - **Black Bean Corn Salsa and Jose Madrid Original Mild were left out of the salsa categories.**
   `npm run products:salsa-categories` matches products by name, and neither production name was on
   the flavor list, so applying the categories would have left both in their old category. Black

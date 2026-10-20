@@ -3,8 +3,9 @@ import type { LoyaltyTier, Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
-import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty-constants'
+import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty-rules'
 
+// Kept in a module with no server imports so client components can read them.
 export { POINTS_PER_DOLLAR, TIER_THRESHOLDS }
 
 /**

@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  hasRedemptionsLeft,
-  pointsForAmount,
-  tierForLifetimePoints,
-  tierLabel,
-  tierProgress,
-} from '@/lib/loyalty-progress'
+import { hasRedemptionsLeft, pointsForAmount, tierForLifetimePoints, tierLabel, tierProgress } from '@/lib/loyalty-progress'
 
 describe('pointsForAmount', () => {
   it('earns 10 points per dollar, rounded down like the purchase credit', () => {
@@ -53,12 +47,9 @@ describe('tierLabel', () => {
 })
 
 describe('hasRedemptionsLeft', () => {
-  it('treats a reward with no cap as always available', () => {
-    expect(hasRedemptionsLeft({ maxRedemptions: null, usedCount: 10_000 })).toBe(true)
-  })
-
-  it('is available while under the cap and not once the cap is reached', () => {
-    expect(hasRedemptionsLeft({ maxRedemptions: 5, usedCount: 4 })).toBe(true)
-    expect(hasRedemptionsLeft({ maxRedemptions: 5, usedCount: 5 })).toBe(false)
+  it('drops rewards that have reached their redemption cap', () => {
+    expect(hasRedemptionsLeft({ maxRedemptions: null, usedCount: 900 })).toBe(true)
+    expect(hasRedemptionsLeft({ maxRedemptions: 10, usedCount: 9 })).toBe(true)
+    expect(hasRedemptionsLeft({ maxRedemptions: 10, usedCount: 10 })).toBe(false)
   })
 })
