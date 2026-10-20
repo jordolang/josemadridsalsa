@@ -16,6 +16,7 @@ type Row = {
   bigCommerceGroup: string | null
   isActive?: boolean
   status?: string
+  description?: string
   commissionRate: number
   startDate: Date
   endDate: Date
@@ -172,10 +173,10 @@ describe('ensureBigCommerceFundraiser', () => {
     expect(rows[0].bigCommerceGroup).toBeNull()
   })
 
-  it('keeps the dates staff set on a running site fundraiser', async () => {
+  it.each(['ACTIVE', 'ENDED'])('keeps the dates staff set on a %s site fundraiser', async (status) => {
     const start = new Date('2023-02-01T00:00:00Z')
     const end = new Date('2023-02-28T00:00:00Z')
-    rows.push({ id: 'site', slug: 'dragon-guard', name: 'Dragon Guard', bigCommerceGroup: 'dragon guard', isActive: true, status: 'ACTIVE', commissionRate: 50, startDate: start, endDate: end })
+    rows.push({ id: 'site', slug: 'dragon-guard', name: 'Dragon Guard', bigCommerceGroup: 'dragon guard', isActive: status === 'ACTIVE', status, commissionRate: 50, startDate: start, endDate: end })
 
     await ensureBigCommerceFundraiser('Dragon Guard', jan)
     await ensureBigCommerceFundraiser('Dragon Guard', new Date('2023-04-01T00:00:00Z'))

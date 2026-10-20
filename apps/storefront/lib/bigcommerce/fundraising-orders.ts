@@ -107,6 +107,9 @@ export async function linkSiteFundraiser(groupLabel: string): Promise<string | n
   }
 }
 
+/** Marks a fundraiser this mirror created to track a store group, as opposed to one set up on the site. */
+const STORE_RECORD_DESCRIPTION = 'Tracked from the BigCommerce fundraising store.'
+
 export type BigCommerceFundraiserRef = { id: string; commissionRate: number; created: boolean }
 
 /**
@@ -121,12 +124,12 @@ export async function ensureBigCommerceFundraiser(
   orderDate: Date,
 ): Promise<BigCommerceFundraiserRef> {
   const key = normalizeGroupName(groupLabel)
-  const select = { id: true, commissionRate: true, startDate: true, endDate: true, status: true } as const
+  const select = { id: true, commissionRate: true, startDate: true, endDate: true, description: true } as const
 
   for (let attempt = 0; ; attempt++) {
     const existing = await prisma.fundraiser.findUnique({ where: { bigCommerceGroup: key }, select })
     // Only the store's own records stretch; a running site campaign keeps the dates staff set.
-    if (existing && existing.status !== 'ENDED') {
+    if (existing && existing.description !== STORE_RECORD_DESCRIPTION) {
       return { id: existing.id, commissionRate: Number(existing.commissionRate), created: false }
     }
     if (existing) {
@@ -170,7 +173,7 @@ export async function ensureBigCommerceFundraiser(
           status: 'ENDED',
           launchEmailSentAt: now,
           summaryEmailSentAt: now,
-          description: 'Tracked from the BigCommerce fundraising store.',
+          description: STORE_RECORD_DESCRIPTION,
         },
         select: { id: true, commissionRate: true },
       })
