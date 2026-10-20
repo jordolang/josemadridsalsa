@@ -94,14 +94,20 @@ store's checkout asks two required questions, **Fundraising Group name** (a
 dropdown) and **Salesperson** (free text), and BigCommerce stores the answers on
 the order.
 
-**The group list is the BigCommerce checkout dropdown.** The site reads it live
-from the store's public form-fields endpoint, so staff keep managing groups where
-they always have:
+**The cart's group list is the BigCommerce checkout dropdown.** The site reads it
+live from the store's public form-fields endpoint, so staff keep managing groups
+where they always have:
 
 1. BigCommerce control panel › **Settings › Form fields** › Address fields ›
    *Fundraising Group name* › add the group as a new option.
 2. Within five minutes the group appears on `/groups` and in the cart's dropdown.
    Remove the option when the fundraiser ends and it disappears from both.
+
+`/groups` also lists the fundraisers set up on this site (`lib/fundraising-site/groups.ts`),
+each linking to its own `/fundraisers/<slug>` store. One appears while it is active,
+its status is `ACTIVE`, and today falls between its start and end dates; turning it
+off in the admin or letting its end date pass removes it. A site fundraiser with the
+same name as a dropdown option is listed once, as the store group.
 
 When a buyer checks out, the site creates the BigCommerce cart and tries to
 pre-fill the group and salesperson answers. If BigCommerce does not accept the

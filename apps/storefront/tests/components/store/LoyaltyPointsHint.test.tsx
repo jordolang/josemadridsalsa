@@ -15,7 +15,7 @@ describe('LoyaltyPointsHint', () => {
     session.status = 'authenticated'
     render(<LoyaltyPointsHint amount={8.99} callbackUrl="/cart" subject="this order" />)
 
-    expect(screen.getByText(/Earn/)).toHaveTextContent('Earn 89 points with this order.')
+    expect(screen.getByText(/Earn/)).toHaveTextContent('Earn up to 89 points with this order.')
     expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull()
   })
 
