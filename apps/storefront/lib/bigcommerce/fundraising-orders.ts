@@ -76,6 +76,35 @@ async function availableSlug(label: string): Promise<string> {
   }
 }
 
+/**
+ * Ties a fundraiser set up on this site to the store group of the same name,
+ * so the two are one campaign: the group's store orders credit to it and
+ * /groups lists it once. Staff add a site fundraiser to the store's dropdown
+ * under its own name, which is why a name match is enough. Returns the
+ * fundraiser's id, or null when no single unlinked fundraiser has that name.
+ */
+export async function linkSiteFundraiser(groupLabel: string): Promise<string | null> {
+  const key = normalizeGroupName(groupLabel)
+  const unlinked = await prisma.fundraiser.findMany({
+    where: { bigCommerceGroup: null },
+    select: { id: true, name: true },
+  })
+  const matches = unlinked.filter((fundraiser) => normalizeGroupName(fundraiser.name) === key)
+  if (matches.length !== 1) return null
+
+  try {
+    const linked = await prisma.fundraiser.updateMany({
+      where: { id: matches[0].id, bigCommerceGroup: null },
+      data: { bigCommerceGroup: key },
+    })
+    return linked.count === 1 ? matches[0].id : null
+  } catch (error) {
+    // Another fundraiser took the group first; the caller finds that one instead.
+    if (isUniqueViolation(error)) return null
+    throw error
+  }
+}
+
 export type BigCommerceFundraiserRef = { id: string; commissionRate: number; created: boolean }
 
 /**
@@ -110,6 +139,9 @@ export async function ensureBigCommerceFundraiser(
       }
       return { id: existing.id, commissionRate: Number(existing.commissionRate), created: false }
     }
+
+    // A group first seen here may be a site fundraiser staff added to the dropdown.
+    if (await linkSiteFundraiser(groupLabel)) continue
 
     const name = groupLabel.replace(/\s+/g, ' ').trim()
     const now = new Date()

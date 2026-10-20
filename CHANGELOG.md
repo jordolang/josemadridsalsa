@@ -14,6 +14,11 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Changed
+- **Fundraisers set up on the site are listed in the BigCommerce fundraising store too.** Each
+  morning the fundraiser lifecycle cron emails fundraising@josemadridsalsa.com the exact names of
+  live site fundraisers missing from the store's checkout dropdown, since BigCommerce's API cannot
+  add options to it. Once a name is added, its store orders count toward the same fundraiser here
+  instead of creating a second one.
 - **CI runs faster.** Storefront test files now run in parallel; only the suites that write to the
   shared test database still run one at a time. Plain logic tests run in Node instead of a
   simulated browser. Tests and the production build now run as two jobs side by side.
