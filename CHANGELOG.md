@@ -77,6 +77,10 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **Cranberry Salsa in the catalog seeds.** The seasonal fruit-mild flavor (SKU JMS-FRUIT-009,
+  13 oz jar, priced like the other fruit jars) is added to both seed files so dev data matches the
+  live catalog. The live product row and its photos are added by hand; it joins the Merchant
+  Center feed once its UPC is in `Product.barcode`.
 - The fundraising site's header has a Fundraiser Login link, like the main site's account link: signed out it signs in and opens the fundraiser portal, signed in it reads My Fundraiser and goes straight there.
 - **Refer a friend.** Each customer's rewards page has a link to share. A friend who signs up
   through it sees a note about the bonus, and when the friend's first order is paid, both

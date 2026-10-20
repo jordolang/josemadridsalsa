@@ -497,6 +497,21 @@ export async function seedDatabase() {
       featuredImage: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/blueberry-mild.webp',
       searchKeywords: ['blueberry', 'fruit', 'mild', 'sweet'],
     },
+    {
+      name: 'Cranberry Salsa',
+      slug: 'cranberry-salsa',
+      description: 'A seasonal favorite: tart cranberries in our mild salsa. Spoon it over a block of cream cheese with crackers, or serve it alongside turkey for the holidays.',
+      heatLevel: HeatLevel.FRUIT,
+      ingredients: ['Cranberries', 'Tomatoes', 'Jalapeños', 'Garlic', 'Spices'],
+      price: 8.00,
+      sku: 'JMS-FRUIT-009',
+      inventory: 100,
+      weight: 13.0,
+      categoryId: fruitCategory.id,
+      images: ['https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/cranberry.webp'],
+      featuredImage: 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/new-products/cranberry.webp',
+      searchKeywords: ['cranberry', 'fruit', 'mild', 'seasonal', 'holiday', 'thanksgiving'],
+    },
   ]
 
   for (const product of products) {
