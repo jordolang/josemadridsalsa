@@ -59,6 +59,19 @@ tests/
     └── server.ts          # MSW server configuration
 ```
 
+The storefront's `vitest.config.ts` splits these into three projects:
+
+| Project | Files | Environment | Runs |
+|---|---|---|---|
+| `node` | `*.test.ts` | Node | In parallel |
+| `dom` | `*.test.tsx` | jsdom, plus `vitest-setup-dom.ts` (jest-dom, Testing Library cleanup) | In parallel |
+| `database` | The four database-backed suites below, and `tests/e2e` | Node | One file at a time, after the others finish |
+
+A `.ts` test that needs `window` or `document` opts into jsdom with
+`// @vitest-environment jsdom` on its first line. A new test that writes to the real database
+must be added to `DATABASE_TESTS` in `vitest.config.ts`, or it will run alongside the others and
+collide with them.
+
 ## Quick Start
 
 ```bash
@@ -789,15 +802,18 @@ Don't obsess over 100% coverage for:
 Tests run automatically on every pull request via `.github/workflows/ci.yml`:
 
 ```yaml
+# Job "Lint, types and tests"
 - Run linter
 - Run type check
 - Run unit/integration tests with coverage
-- Generate Prisma client
-- Build application
-- Install Playwright browsers
-- Run E2E tests
 - Upload coverage reports
 - Post coverage to PR comments
+
+# Job "Build and shipping E2E", running at the same time
+- Generate Prisma client
+- Build application
+- Seed catalogue and run the shipping E2E suite
+- Install Playwright browsers and run E2E tests (only when run by hand)
 ```
 
 ### Viewing Results

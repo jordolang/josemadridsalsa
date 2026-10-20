@@ -42,9 +42,12 @@ main before deploying. Runs are skipped when a change touches only docs, Markdow
 apps, and a new push to a pull request cancels the run for the previous one. Each run is capped
 at 30 minutes.
 
-**One job, in order:** ESLint → TypeScript → Vitest (a single run that gates on failures and
-writes the coverage report; the 60% thresholds report but do not gate) → Next.js build →
-shipping E2E against the built app. The Playwright suite runs only when requested by hand, because
+**Two jobs, side by side**, each with its own throwaway Postgres:
+- *Lint, types and tests:* ESLint → TypeScript → Vitest (a single run that gates on failures and
+  writes the coverage report; the 60% thresholds report but do not gate).
+- *Build and shipping E2E:* Next.js build → shipping E2E against the built app.
+
+A run takes as long as the slower job, not both added together. The Playwright suite runs only when requested by hand, because
 it currently hits its 10-minute limit without producing a result.
 
 Actions minutes are billed against the account's budget. When the budget is spent, GitHub refuses

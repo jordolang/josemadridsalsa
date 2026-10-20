@@ -2,8 +2,9 @@
  * Vitest Test Setup
  * José Madrid Salsa E-commerce Platform
  *
- * Sets up global test matchers, cleanup for React Testing Library,
- * and Mock Service Worker (MSW) for API mocking
+ * Sets up test environment variables and Mock Service Worker (MSW) for API mocking.
+ * DOM matchers and React Testing Library cleanup live in vitest-setup-dom.ts, which only the
+ * component tests load.
  */
 
 process.env.RESEND_API_KEY = 'test_resend_api_key_12345'
@@ -14,8 +15,6 @@ process.env.ENCRYPTION_KEY =
   process.env.ENCRYPTION_KEY ||
   Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(48))).toString('base64')
 
-import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
 import { afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { server } from './tests/mocks/server'
 
@@ -46,7 +45,6 @@ beforeAll(() => {
 })
 
 afterEach(() => {
-  cleanup()
   server.resetHandlers()
 })
 

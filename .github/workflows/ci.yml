@@ -36,11 +36,30 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  # Node sizes its old-space heap from available memory and lands on ~2 GB on a
+  # GitHub runner. Both the TypeScript pass and `next build` over this codebase now
+  # exceed that — each died with "Reached heap limit" while main was still passing
+  # by a few megabytes, so any PR that adds files tipped them over. Set once for the
+  # workflow so every Node step in both jobs gets it; the root scripts run turbo with
+  # --env-mode=loose, so it reaches tsc and next. The Dockerfiles raise the same limit
+  # for the same reason. ubuntu-latest runners have 16 GB.
+  NODE_OPTIONS: --max-old-space-size=8192
+  DATABASE_URL: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
+  DATABASE_URL_UNPOOLED: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
+  # The database-backed tests create and delete rows, so they run only where the
+  # database is disposable. This throwaway Postgres is; a developer's .env is not,
+  # which is why they opt in on this flag rather than on DATABASE_URL being present.
+  RUN_INTEGRATION_TESTS: 'true'
+
+# Two jobs run side by side, each on its own runner: tests on one, the production build and
+# the shipping E2E that needs it on the other. A run takes as long as the slower of the two
+# instead of both added together.
 jobs:
-  ci:
-    name: CI Pipeline
+  test:
+    name: Lint, types and tests
     runs-on: ubuntu-latest
-    # A healthy run takes about 15 minutes; anything past 30 is stuck, not slow.
+    # A healthy run takes under 10 minutes; anything past 30 is stuck, not slow.
     timeout-minutes: 30
 
     # Provision a throwaway Postgres so the integration tests (inventory, checkout
@@ -61,22 +80,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
-    env:
-      # Node sizes its old-space heap from available memory and lands on ~2 GB on a
-      # GitHub runner. Both the TypeScript pass and `next build` over this codebase now
-      # exceed that — each died with "Reached heap limit" while main was still passing
-      # by a few megabytes, so any PR that adds files tipped them over. Set once for the
-      # job so every Node step gets it; the root scripts run turbo with --env-mode=loose,
-      # so it reaches tsc and next. The Dockerfiles raise the same limit for the same
-      # reason. ubuntu-latest runners have 16 GB.
-      NODE_OPTIONS: --max-old-space-size=8192
-      DATABASE_URL: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
-      DATABASE_URL_UNPOOLED: postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/jms_test
-      # The database-backed tests create and delete rows, so they run only where the
-      # database is disposable. This throwaway Postgres is; a developer's .env is not,
-      # which is why they opt in on this flag rather than on DATABASE_URL being present.
-      RUN_INTEGRATION_TESTS: 'true'
 
     steps:
       - name: Checkout code
@@ -141,6 +144,48 @@ jobs:
         with:
           working-directory: apps/storefront
 
+  build:
+    name: Build and shipping E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Provision a throwaway Postgres for the shipping E2E
+    # suite's seeded catalogue.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          # Ephemeral CI-only database password, injected from the CI_POSTGRES_PASSWORD
+          # repository secret (not hardcoded in the workflow).
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: jms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Generate the Prisma client and sync the schema to the throwaway Postgres
+      # so integration tests have their tables before the suite runs.
+      - name: Set up test database
+        run: npm run db:push --workspace=@jose-madrid/storefront
+
       - name: Generate Prisma Client
         run: npm run db:generate
 
@@ -150,9 +195,9 @@ jobs:
           SKIP_ENV_VALIDATION: true
 
       # The shipping E2E files are gated on E2E_BASE_URL (tests/helpers/e2e.ts) and need a
-      # live server plus a product catalogue. Seeding runs here, after the unit and
-      # integration suite has already used the empty database, so the extra rows cannot
-      # perturb it. With no SHIPPING_API_KEY and no configured origin the calculator takes
+      # live server plus a product catalogue. This job has its own Postgres, separate from
+      # the one the unit and integration suite uses, so the seeded rows cannot perturb it.
+      # With no SHIPPING_API_KEY and no configured origin the calculator takes
       # its estimate path, which is the behaviour these tests assert against.
       - name: Seed catalogue for shipping E2E
         run: npm run db:seed --workspace=@jose-madrid/storefront
