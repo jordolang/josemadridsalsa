@@ -18,7 +18,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { SocialLoginButtons, SocialLoginDivider } from '@/components/auth/social-login-buttons'
+import { SocialLoginButtons } from '@/components/auth/social-login-buttons'
+import { getSignInErrorMessage } from '@/lib/auth/oauth-providers'
 
 const signInSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Must be a valid email address').trim(),
@@ -33,7 +34,9 @@ function SignInFormInner() {
   const callbackUrl = searchParams?.get('callbackUrl') || '/'
 
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // NextAuth returns here with ?error= when a Google/GitHub/... sign-in fails. Without
+  // showing it, a failed social sign-in looks like the button did nothing.
+  const [error, setError] = useState<string | null>(() => getSignInErrorMessage(searchParams?.get('error')))
   // Revealed only after the password has been accepted and the account turns out to have a
   // second factor, so the form never advertises which accounts are protected.
   const [needsTwoFactor, setNeedsTwoFactor] = useState(false)
@@ -119,7 +122,6 @@ function SignInFormInner() {
         </CardHeader>
         <CardContent className="space-y-6">
           <SocialLoginButtons callbackUrl={callbackUrl} />
-          <SocialLoginDivider />
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

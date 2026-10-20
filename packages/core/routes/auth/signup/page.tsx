@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
-import { SocialLoginButtons, SocialLoginDivider } from '@/components/auth/social-login-buttons'
+import { SocialLoginButtons } from '@/components/auth/social-login-buttons'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -117,7 +117,6 @@ function SignUpFormInner() {
         </CardHeader>
         <CardContent className="space-y-6">
           <SocialLoginButtons />
-          <SocialLoginDivider />
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
