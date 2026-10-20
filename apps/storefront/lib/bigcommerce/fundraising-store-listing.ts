@@ -49,6 +49,9 @@ export async function syncSiteFundraisersToStore(now: Date = new Date()): Promis
     const option = findGroupOption(groups, fundraiser.name)
     if (!option) missing.push(fundraiser.name.replace(/\s+/g, ' ').trim())
     else if (await linkSiteFundraiser(option.label)) linked++
+    // The group already has its own record from earlier store orders, or two site fundraisers
+    // share the name; either way staff merge them by hand.
+    else console.warn('[fundraiser-store-listing] Not linked to its store group', { name: fundraiser.name })
   }
 
   if (missing.length > 0) {

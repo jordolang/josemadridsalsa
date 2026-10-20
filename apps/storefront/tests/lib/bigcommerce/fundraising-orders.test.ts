@@ -9,7 +9,17 @@ import {
   recomputeFundraiserTotals,
 } from '@/lib/bigcommerce/fundraising-orders'
 
-type Row = { id: string; slug: string; name?: string; bigCommerceGroup: string | null; commissionRate: number; startDate: Date; endDate: Date }
+type Row = {
+  id: string
+  slug: string
+  name?: string
+  bigCommerceGroup: string | null
+  isActive?: boolean
+  status?: string
+  commissionRate: number
+  startDate: Date
+  endDate: Date
+}
 
 // A small in-memory fundraiser table, so find-or-create can be exercised across calls.
 const rows = vi.hoisted(() => [] as Row[])
@@ -30,10 +40,12 @@ beforeEach(() => {
     rows.find((row) => row.bigCommerceGroup === where.bigCommerceGroup) ?? null,
   )
   db.fundraiser.findMany.mockImplementation(
-    async ({ where }: { where: { slug?: { startsWith: string }; bigCommerceGroup?: null } }) =>
+    async ({ where }: { where: { slug?: { startsWith: string }; isActive?: boolean; status?: string } }) =>
       where.slug
         ? rows.filter((row) => row.slug.startsWith(where.slug!.startsWith)).map(({ slug }) => ({ slug }))
-        : rows.filter((row) => row.bigCommerceGroup === null).map(({ id, name }) => ({ id, name: name ?? '' })),
+        : rows
+            .filter((row) => row.bigCommerceGroup === null && row.isActive === where.isActive && row.status === where.status)
+            .map(({ id, name }) => ({ id, name: name ?? '' })),
   )
   db.fundraiser.create.mockImplementation(async ({ data }: { data: Row }) => {
     const row = { ...data, id: `f-${rows.length + 1}` }
@@ -144,7 +156,7 @@ describe('ensureBigCommerceFundraiser', () => {
   })
 
   it('credits a group to the site fundraiser of the same name instead of creating one', async () => {
-    rows.push({ id: 'site', slug: 'esbd-boosters', name: 'ESBD Boosters ', bigCommerceGroup: null, commissionRate: 50, startDate: jan, endDate: jan })
+    rows.push({ id: 'site', slug: 'esbd-boosters', name: 'ESBD Boosters ', bigCommerceGroup: null, isActive: true, status: 'ACTIVE', commissionRate: 50, startDate: jan, endDate: jan })
 
     const ref = await ensureBigCommerceFundraiser('esbd  boosters', jan)
 
@@ -153,10 +165,29 @@ describe('ensureBigCommerceFundraiser', () => {
     expect(db.fundraiser.create).not.toHaveBeenCalled()
   })
 
+  it('leaves a registration awaiting approval alone', async () => {
+    rows.push({ id: 'pending', slug: 'dragon-guard', name: 'Dragon Guard', bigCommerceGroup: null, isActive: false, status: 'PENDING', commissionRate: 50, startDate: jan, endDate: jan })
+
+    expect(await ensureBigCommerceFundraiser('Dragon Guard', jan)).toMatchObject({ created: true })
+    expect(rows[0].bigCommerceGroup).toBeNull()
+  })
+
+  it('keeps the dates staff set on a running site fundraiser', async () => {
+    const start = new Date('2023-02-01T00:00:00Z')
+    const end = new Date('2023-02-28T00:00:00Z')
+    rows.push({ id: 'site', slug: 'dragon-guard', name: 'Dragon Guard', bigCommerceGroup: 'dragon guard', isActive: true, status: 'ACTIVE', commissionRate: 50, startDate: start, endDate: end })
+
+    await ensureBigCommerceFundraiser('Dragon Guard', jan)
+    await ensureBigCommerceFundraiser('Dragon Guard', new Date('2023-04-01T00:00:00Z'))
+
+    expect(rows[0]).toMatchObject({ startDate: start, endDate: end })
+    expect(db.fundraiser.updateMany).not.toHaveBeenCalled()
+  })
+
   it('creates its own record when two site fundraisers share the name', async () => {
     rows.push(
-      { id: 'a', slug: 'a', name: 'Dragon Guard', bigCommerceGroup: null, commissionRate: 50, startDate: jan, endDate: jan },
-      { id: 'b', slug: 'b', name: 'Dragon Guard', bigCommerceGroup: null, commissionRate: 50, startDate: jan, endDate: jan },
+      { id: 'a', slug: 'a', name: 'Dragon Guard', bigCommerceGroup: null, isActive: true, status: 'ACTIVE', commissionRate: 50, startDate: jan, endDate: jan },
+      { id: 'b', slug: 'b', name: 'Dragon Guard', bigCommerceGroup: null, isActive: true, status: 'ACTIVE', commissionRate: 50, startDate: jan, endDate: jan },
     )
 
     expect(await ensureBigCommerceFundraiser('Dragon Guard', jan)).toMatchObject({ created: true })

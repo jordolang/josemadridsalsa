@@ -80,13 +80,15 @@ async function availableSlug(label: string): Promise<string> {
  * Ties a fundraiser set up on this site to the store group of the same name,
  * so the two are one campaign: the group's store orders credit to it and
  * /groups lists it once. Staff add a site fundraiser to the store's dropdown
- * under its own name, which is why a name match is enough. Returns the
- * fundraiser's id, or null when no single unlinked fundraiser has that name.
+ * under its own name, which is why a name match is enough. Only a live
+ * campaign links, so a registration still awaiting approval never collects a
+ * group's orders. Returns the fundraiser's id, or null when no single unlinked
+ * live fundraiser has that name.
  */
 export async function linkSiteFundraiser(groupLabel: string): Promise<string | null> {
   const key = normalizeGroupName(groupLabel)
   const unlinked = await prisma.fundraiser.findMany({
-    where: { bigCommerceGroup: null },
+    where: { bigCommerceGroup: null, isActive: true, status: 'ACTIVE' },
     select: { id: true, name: true },
   })
   const matches = unlinked.filter((fundraiser) => normalizeGroupName(fundraiser.name) === key)
@@ -119,10 +121,14 @@ export async function ensureBigCommerceFundraiser(
   orderDate: Date,
 ): Promise<BigCommerceFundraiserRef> {
   const key = normalizeGroupName(groupLabel)
-  const select = { id: true, commissionRate: true, startDate: true, endDate: true } as const
+  const select = { id: true, commissionRate: true, startDate: true, endDate: true, status: true } as const
 
   for (let attempt = 0; ; attempt++) {
     const existing = await prisma.fundraiser.findUnique({ where: { bigCommerceGroup: key }, select })
+    // Only the store's own records stretch; a running site campaign keeps the dates staff set.
+    if (existing && existing.status !== 'ENDED') {
+      return { id: existing.id, commissionRate: Number(existing.commissionRate), created: false }
+    }
     if (existing) {
       // Conditional writes, so two orders mirrored at once can only ever widen the range.
       if (orderDate < existing.startDate) {
