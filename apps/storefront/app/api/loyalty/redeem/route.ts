@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getCurrentUser } from '@/lib/rbac'
 import { redeemReward } from '@/lib/loyalty'
@@ -27,6 +28,10 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }
+
+    // The public catalog hides rewards at their redemption cap; refresh it so it stops
+    // listing a reward this redemption just used up.
+    revalidatePath('/rewards')
 
     return NextResponse.json({ data: result.redemption })
   } catch (error) {

@@ -36,7 +36,7 @@ export function CartSummary() {
             Shipping and taxes calculated at checkout
           </p>
 
-          <LoyaltyPointsHint amount={totalPrice} callbackUrl="/cart" subject="this order" />
+          <LoyaltyPointsHint amount={totalPrice} callbackUrl="/cart" subject="this order before any discount code" />
         </div>
       </CardContent>
     </Card>
