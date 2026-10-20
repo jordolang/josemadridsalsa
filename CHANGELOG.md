@@ -14,6 +14,9 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Changed
+- **CI runs faster.** Storefront test files now run in parallel; only the suites that write to the
+  shared test database still run one at a time. Plain logic tests run in Node instead of a
+  simulated browser. Tests and the production build now run as two jobs side by side.
 - **Find your group lists the groups live on both stores.** `/groups` on the fundraising site
   showed only the fundraising BigCommerce store's checkout dropdown. It now also lists the
   fundraisers running on this site (active and within their dates), each linking to its own

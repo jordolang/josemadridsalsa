@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { trackCheckoutStarted } from '@/lib/analytics/checkout-started'
 import { trackEvent } from '@/lib/analytics/amplitude'

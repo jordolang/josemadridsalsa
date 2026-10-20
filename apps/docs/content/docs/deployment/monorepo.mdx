@@ -141,9 +141,9 @@ directory" is on. Do not add a per-app lockfile.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs one pipeline for the whole repo on push and pull
-request: lint → type-check → tests → Prisma generate → build → shipping E2E →
-Playwright. Coverage and Playwright results are reported but do not gate the merge;
+`.github/workflows/ci.yml` runs two jobs for the whole repo on push and pull
+request, side by side: lint → type-check → tests in one, and Prisma generate →
+build → shipping E2E (→ Playwright, when run by hand) in the other. Coverage and Playwright results are reported but do not gate the merge;
 lint, type-check, tests and build do.
 
 Three Node versions are in play and they do not agree: `.nvmrc` pins **20**, CI runs

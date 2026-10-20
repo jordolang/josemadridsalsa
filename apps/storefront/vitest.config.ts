@@ -19,6 +19,16 @@ function resolveAtAlias(id: string): string | null {
   return null
 }
 
+// Files that read and write the real database (gated on RUN_INTEGRATION_TESTS), and the shipping
+// E2E files, which drive a running storefront backed by it.
+const DATABASE_TESTS = [
+  'tests/integration/checkout-reservation-flow.test.ts',
+  'tests/integration/import-export-round-trip.test.ts',
+  'tests/integration/inventory-alerts.test.ts',
+  'tests/api/cms-page-save.test.ts',
+  'tests/e2e/**/*.test.ts',
+]
+
 export default defineConfig({
   plugins: [
     react(),
@@ -37,14 +47,44 @@ export default defineConfig({
   oxc: { tsconfig: false } as UserConfig['oxc'],
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./vitest-setup.ts'],
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    // Run test files sequentially. The DB integration tests (inventory, checkout
-    // reservation, order completion) share one Postgres and some assertions query
-    // inventory globally, so overlapping files would contaminate each other. This
-    // also removes the parallel-execution flakiness previously seen in the suite.
-    fileParallelism: false,
+    projects: [
+      // Tests that use a real Postgres share one database, and some assertions query inventory
+      // globally, so these files run one at a time, after everything else has finished.
+      {
+        extends: true,
+        test: {
+          name: 'database',
+          include: DATABASE_TESTS,
+          environment: 'node',
+          setupFiles: ['./vitest-setup.ts'],
+          fileParallelism: false,
+        },
+        sequence: { groupOrder: 1 },
+      },
+      // Component tests need a DOM. Everything else is plain logic and skips the cost of
+      // building one per file; a .ts test that does need it opts in with
+      // `// @vitest-environment jsdom` at the top.
+      {
+        extends: true,
+        test: {
+          name: 'dom',
+          include: ['tests/**/*.test.tsx'],
+          exclude: DATABASE_TESTS,
+          environment: 'jsdom',
+          setupFiles: ['./vitest-setup.ts', './vitest-setup-dom.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          include: ['tests/**/*.test.ts'],
+          exclude: DATABASE_TESTS,
+          environment: 'node',
+          setupFiles: ['./vitest-setup.ts'],
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
       // Count packages/core too: its code was part of this app and is still tested from here.

@@ -122,7 +122,7 @@ import { prisma } from '../../lib/prisma';
 
 ## Testing Guidelines
 
-- **Framework:** Vitest with jsdom, jest-dom matchers, and MSW for API mocking.
+- **Framework:** Vitest with MSW for API mocking. `.test.tsx` files run in jsdom with jest-dom matchers; `.test.ts` files run in Node (add `// @vitest-environment jsdom` if one needs a DOM). Tests that write to the real database are listed in `DATABASE_TESTS` in `vitest.config.ts` so they run one at a time.
 - **Location:** Application tests live with their owning workspace and mirror the source path.
   - Source: `apps/storefront/lib/pricing.ts` → Test: `apps/storefront/tests/lib/pricing.test.ts`
 - **Coverage thresholds** are configured in the owning workspace's `vitest.config.ts` — do not lower them.

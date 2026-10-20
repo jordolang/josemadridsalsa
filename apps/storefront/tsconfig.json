@@ -45,6 +45,7 @@
     "tests",
     "scripts",
     "vitest-setup.ts",
+    "vitest-setup-dom.ts",
     "vitest.config.ts",
     "playwright.config.ts"
   ]
