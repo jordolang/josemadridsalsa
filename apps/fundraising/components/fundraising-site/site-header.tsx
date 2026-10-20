@@ -19,10 +19,11 @@ export function FundraisingSiteHeader() {
   // The cart lives in localStorage; render the count only after hydration.
   const [hydrated, setHydrated] = useState(false)
   const count = useFundraisingCart((state) => cartItemCount(state.lines))
-  const { status } = useSession()
-  // Signed in, the link opens the fundraiser portal; signed out, it signs in and lands there.
+  const { data: session } = useSession()
+  // A fundraiser's account opens the portal; anyone else signs in and lands there. A signed-in
+  // shopper with no fundraiser would only be bounced from the portal back to sign-in.
   const account =
-    status === 'authenticated'
+    session?.user?.fundraiserId
       ? { href: PORTAL_HOME, label: 'My Fundraiser' }
       : { href: `/auth/signin?${new URLSearchParams({ callbackUrl: PORTAL_HOME })}`, label: 'Fundraiser Login' }
 
@@ -68,7 +69,7 @@ export function FundraisingSiteHeader() {
             aria-label={account.label}
           >
             <User className="h-6 w-6" />
-            <span className="hidden whitespace-nowrap md:inline">{account.label}</span>
+            <span className="hidden whitespace-nowrap md:inline xl:hidden 2xl:inline">{account.label}</span>
           </Link>
           <Link
             href="/cart"
