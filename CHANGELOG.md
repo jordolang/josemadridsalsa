@@ -382,6 +382,8 @@ the root `package.json` is canonical.
   expanded.
 
 ### Fixed
+- **Salsa jars are listed at 13 oz, their real weight.** The Merchant Center feed titles, the seed
+  data and the product import CSV said 16 oz. Production product rows are corrected by hand.
 - **BigCommerce order copies no longer fail on rate limits or doubled webhooks.** The hourly sweep
   of the fundraising store hit BigCommerce's rate limit and failed the same orders every hour; order
   reads now wait out more of those responses. When an order's created and updated webhooks arrived
