@@ -65,6 +65,7 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- The fundraising site's header has a Fundraiser Login link, like the main site's account link: signed out it signs in and opens the fundraiser portal, signed in it reads My Fundraiser and goes straight there.
 - **Refer a friend.** Each customer's rewards page has a link to share. A friend who signs up
   through it sees a note about the bonus, and when the friend's first order is paid, both
   customers get 500 reward points. The public rewards page explains how it works. Needs the
