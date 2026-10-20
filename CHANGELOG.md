@@ -65,6 +65,10 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **Refer a friend.** Each customer's rewards page has a link to share. A friend who signs up
+  through it sees a note about the bonus, and when the friend's first order is paid, both
+  customers get 500 reward points. The public rewards page explains how it works. Needs the
+  `20261020000000_customer_referrals` migration (three new columns on users).
 - **The timeclock records your location at each punch.** Clock In and Clock Out now ask the browser
   for a GPS fix and store latitude, longitude and accuracy on the punch beside the IP address. The
   work history shows each fix with a map link. Location is best-effort: if permission is refused or

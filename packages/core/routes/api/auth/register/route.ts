@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma'
 import { sendWelcomeEmail } from '@/lib/email/automation'
 import { logEngagementRequest } from '@/lib/engagements'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
+import { attachReferrerFromCookie } from '@/lib/referrals'
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
         role: 'CUSTOMER',
       },
     })
+
+    await attachReferrerFromCookie(user.id)
 
     // The customer identity here is the `User` row: `Customer` is a CRM rollup keyed by
     // email that may not exist yet for a brand-new account, so the payload carries the

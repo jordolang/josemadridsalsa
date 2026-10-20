@@ -6,6 +6,14 @@
 export const POINTS_PER_DOLLAR = 10; // 10 points per $1 spent
 
 /**
+ * Points each customer gets when a referred friend places their first order: the friend and
+ * the customer who referred them both earn this.
+ * @constant
+ * @type {number}
+ */
+export const REFERRAL_POINTS = 500;
+
+/**
  * Thresholds for loyalty tiers based on lifetime points.
  * @constant
  * @type {Object}

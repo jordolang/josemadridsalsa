@@ -3,17 +3,10 @@ import type { LoyaltyTier, Prisma } from '@prisma/client'
 
 import { prisma } from '@/lib/prisma'
 import { emitDomainEvent } from '@/lib/domain-events/emit'
-import { POINTS_PER_DOLLAR, TIER_THRESHOLDS } from '@/lib/loyalty-rules'
+import { POINTS_PER_DOLLAR, REFERRAL_POINTS, TIER_THRESHOLDS } from '@/lib/loyalty-rules'
 
 // Kept in a module with no server imports so client components can read them.
-export { POINTS_PER_DOLLAR, TIER_THRESHOLDS }
-
-/**
- * Points awarded for referrals.
- * @constant
- * @type {number}
- */
-export const REFERRAL_POINTS = 500;
+export { POINTS_PER_DOLLAR, REFERRAL_POINTS, TIER_THRESHOLDS }
 
 /**
  * Points awarded for writing a review.
@@ -169,6 +162,8 @@ export interface PurchasePointsCredit {
   /** Zero unless this call is the one that awarded. */
   points: number
   reason?: 'guest-order' | 'no-points' | 'already-awarded'
+  /** True when this order also paid out the referral bonus to both customers. */
+  referralRewarded?: boolean
 }
 
 /**
@@ -291,7 +286,89 @@ export async function creditPurchaseLoyaltyPoints(
     )
   }
 
-  return { awarded: true, points }
+  const referralRewarded = await creditReferralPointsInTx(tx, order.userId, orderId)
+
+  return { awarded: true, points, ...(referralRewarded && { referralRewarded }) }
+}
+
+/**
+ * Pay the refer-a-friend bonus — {@link REFERRAL_POINTS} to the new customer and the same to
+ * the customer who referred them — on the referred customer's first order that earns points.
+ * Exactly once: the bonus claims `User.referralRewardedAt` with a conditional write before any
+ * points move, the same way purchase points claim the order. Called from
+ * {@link creditPurchaseLoyaltyPoints} behind its claim, on the same transaction client, so a
+ * rolled-back payment takes the bonus with it.
+ */
+export async function creditReferralPointsInTx(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  orderId: string
+): Promise<boolean> {
+  const claim = await tx.user.updateMany({
+    where: { id: userId, referredById: { not: null }, referralRewardedAt: null },
+    data: { referralRewardedAt: new Date() },
+  })
+  if (claim.count === 0) return false
+
+  const user = await tx.user.findUnique({ where: { id: userId }, select: { referredById: true } })
+  if (!user?.referredById) return false
+
+  await creditPointsInTx(tx, userId, REFERRAL_POINTS, 'Referral bonus for joining through a friend', orderId)
+  await creditPointsInTx(tx, user.referredById, REFERRAL_POINTS, 'Referral bonus: a friend you referred placed their first order', orderId)
+  return true
+}
+
+async function creditPointsInTx(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  points: number,
+  description: string,
+  orderId: string
+) {
+  const account = await tx.loyaltyAccount.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  })
+
+  await tx.pointTransaction.create({
+    data: { accountId: account.id, type: 'EARNED_REFERRAL', points, description, orderId },
+  })
+
+  const newTier = (await calculateTier(account.lifetimePoints + points)) as LoyaltyTier
+  const tierChanged = newTier !== account.tier
+  await tx.loyaltyAccount.update({
+    where: { id: account.id },
+    data: {
+      pointsBalance: { increment: points },
+      lifetimePoints: { increment: points },
+      tier: newTier,
+      ...(tierChanged && { tierUpdatedAt: new Date() }),
+    },
+  })
+
+  // Keyed on the customer, not the order: the referrer did not place it, and the automation
+  // handler resolves a customer event to that customer's own email.
+  await emitDomainEvent(
+    {
+      type: 'loyalty.points_earned',
+      entityType: 'customer',
+      entityId: userId,
+      payload: { points, pointsBalance: account.pointsBalance + points, tier: newTier, orderId },
+    },
+    tx
+  )
+  if (tierChanged) {
+    await emitDomainEvent(
+      {
+        type: 'loyalty.tier_upgraded',
+        entityType: 'customer',
+        entityId: userId,
+        payload: { tier: newTier, previousTier: account.tier },
+      },
+      tx
+    )
+  }
 }
 
 const REDEMPTION_TTL_MS = 90 * 24 * 60 * 60 * 1000

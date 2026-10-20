@@ -30,6 +30,14 @@ model User {
   updatedAt               DateTime                      @updatedAt
   lastLoginAt             DateTime?
   stripeCustomerId        String?                       @unique
+  /// The code in this customer's refer-a-friend link. Issued the first time they open it.
+  referralCode            String?                       @unique
+  /// The customer whose link this account signed up through. Set once, at sign-up.
+  referredById            String?
+  /// Non-null once the first paid order earned the referral points for both customers.
+  referralRewardedAt      DateTime?
+  referredBy              User?                         @relation("CustomerReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals               User[]                        @relation("CustomerReferrals")
   abandonedCarts          AbandonedCart[]
   addresses               Address[]
   analyticsSettings       AnalyticsSetting[]
@@ -63,6 +71,7 @@ model User {
   customer                Customer?
   timeClockEntries        TimeClockEntry[]
 
+  @@index([referredById])
   @@map("users")
 }
 

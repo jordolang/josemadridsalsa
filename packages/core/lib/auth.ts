@@ -233,6 +233,9 @@ export const authOptions: NextAuthOptions = {
               })
               console.log(`[JWT Callback] Created new user via ${account.provider} OAuth:`, normalizedEmail)
 
+              const { attachReferrerFromCookie } = await import('@/lib/referrals')
+              await attachReferrerFromCookie(dbUser.id)
+
               const { emitDomainEvent } = await import('@/lib/domain-events/emit')
               await emitDomainEvent({
                 type: 'customer.created',
