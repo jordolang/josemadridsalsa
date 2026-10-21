@@ -13,6 +13,10 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Fixed
+- **Fundraising footer email stays on one line.** The contact address no longer breaks mid-word
+  ("…salsa.c / om"); its size scales to the footer column so it always fits.
+
 ## [2.2] — 2026-10-21
 
 ### Added
