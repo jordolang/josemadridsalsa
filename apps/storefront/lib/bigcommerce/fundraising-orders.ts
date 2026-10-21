@@ -108,7 +108,7 @@ export async function linkSiteFundraiser(groupLabel: string): Promise<string | n
 }
 
 /** Marks a fundraiser this mirror created to track a store group, as opposed to one set up on the site. */
-const STORE_RECORD_DESCRIPTION = 'Tracked from the BigCommerce fundraising store.'
+export const STORE_RECORD_DESCRIPTION = 'Tracked from the BigCommerce fundraising store.'
 
 export type BigCommerceFundraiserRef = { id: string; commissionRate: number; created: boolean }
 

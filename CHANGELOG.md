@@ -19,6 +19,12 @@ the root `package.json` is canonical.
   failed on click and sent the visitor back to the same page. A failed social sign-in now shows
   why. A signed-in visitor with no fundraiser now gets a message and a "Start a fundraiser" link
   in the fundraiser portal, instead of being sent back to sign-in.
+- **The desktop admin's Fundraisers page lists every campaign.** It listed fundraiser
+  participants, and with one participant in the database it showed one fundraiser. It now lists
+  campaigns, both the ones set up on the site and the ones mirrored from the BigCommerce
+  fundraising store, with a Source column, sales totals and search. A store campaign is marked
+  "In store" (and counts as active) while its group is in the store's checkout dropdown.
+  Participants moved to their own Participants page in the same section.
 - **The fundraising cart's group dropdown scrolls.** With many groups, the "Group you're
   supporting" list ran off the bottom of the page. The shared select's height cap used Tailwind 3
   syntax that Tailwind 4 ignores, so no dropdown built on it was capped. It now is, the cart's list
