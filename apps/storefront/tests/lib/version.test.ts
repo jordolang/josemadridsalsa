@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   VERSIONED_PACKAGE_FILES,
+  pinWorkspaceDependencies,
   bumpProjectVersion,
   formatProjectVersion,
   fromSemver,
@@ -244,5 +245,19 @@ describe('VERSIONED_PACKAGE_FILES', () => {
       projectVersion: string
     }
     expect(toSemver(root.projectVersion)).toBe(root.version)
+  })
+})
+
+describe('pinWorkspaceDependencies', () => {
+  it('moves exact pins on our own workspaces to the new version', () => {
+    const before = '"dependencies": {\n    "@jose-madrid/core": "2.1.0",\n    "next": "16.0.0"\n  }'
+    expect(pinWorkspaceDependencies(before, '2.2.0')).toBe(
+      '"dependencies": {\n    "@jose-madrid/core": "2.2.0",\n    "next": "16.0.0"\n  }',
+    )
+  })
+
+  it('leaves ranges and outside packages alone', () => {
+    const text = '"@jose-madrid/core": "*", "@jose-madrid/ui": "^2.1.0", "react": "19.0.0"'
+    expect(pinWorkspaceDependencies(text, '2.2.0')).toBe(text)
   })
 })

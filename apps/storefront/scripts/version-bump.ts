@@ -24,6 +24,7 @@ import { join, resolve } from 'node:path'
 import {
   bumpProjectVersion,
   fromSemver,
+  pinWorkspaceDependencies,
   toSemver,
   VERSIONED_PACKAGE_FILES,
   type VersionBump,
@@ -90,7 +91,7 @@ async function updatePackageFile(
 
   // Edited as text rather than re-serialised from JSON.parse, so key order, indentation and the
   // trailing newline survive. A release should not reformat six package.json files.
-  let next = raw.replace(/("version"\s*:\s*)"[^"]*"/, `$1"${semver}"`)
+  let next = pinWorkspaceDependencies(raw.replace(/("version"\s*:\s*)"[^"]*"/, `$1"${semver}"`), semver)
 
   if (projectVersion !== null) {
     if (/"projectVersion"\s*:/.test(next)) {
@@ -152,6 +153,9 @@ async function updateLockfile(
     )
     next = next.replace(pattern, `$1"${semver}"`)
   }
+
+  // And the workspaces' pins on each other, as recorded under their dependencies.
+  next = pinWorkspaceDependencies(next, semver)
 
   if (next === raw) return null
   if (!dryRun) await writeFile(path, next, 'utf-8')

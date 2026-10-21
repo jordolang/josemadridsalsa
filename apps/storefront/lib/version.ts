@@ -179,3 +179,14 @@ export const VERSIONED_PACKAGE_FILES = [
   'apps/windows-admin/package.json',
   'packages/core/package.json',
 ] as const
+
+/**
+ * Move every exact pin on one of our own workspaces to the new version.
+ *
+ * `apps/fundraising` depends on `"@jose-madrid/core": "2.1.0"`. Bumping core
+ * to 2.2.0 without moving that pin leaves npm looking for 2.1.0 on the public
+ * registry, and `npm ci` fails everywhere. Ranges and `*` are left alone.
+ */
+export function pinWorkspaceDependencies(text: string, semver: string): string {
+  return text.replace(/("@jose-madrid\/[^"]+"\s*:\s*)"\d+\.\d+\.\d+"/g, `$1"${semver}"`)
+}

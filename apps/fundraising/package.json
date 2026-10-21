@@ -13,7 +13,7 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
-    "@jose-madrid/core": "2.1.0",
+    "@jose-madrid/core": "2.2.0",
     "@prisma/client": "^6.19.3",
     "@tailwindcss/typography": "^0.5.19",
     "@vercel/blob": "^2.4.0",
