@@ -1177,6 +1177,8 @@ export function DesktopShell({
         return
       }
       if (event.key === 'Enter') {
+        // A focused column header sorts on Enter, like a click, rather than opening the row.
+        if (target instanceof Element && target.closest('.jmsd-thead')) return
         event.preventDefault()
         openRow(activeRow)
         return
