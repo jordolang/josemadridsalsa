@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, ClipboardList, HandCoins, Share2, Truck } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FeaturedFundraisingProducts } from '@/components/fundraising-site/featured-products'
+import { CampaignProcess } from './_components/campaign-process'
 import { FundraiserDownloads } from './_components/fundraiser-downloads'
 import { YouTubeEmbed } from './_components/youtube-embed'
 
@@ -14,24 +15,6 @@ export const metadata: Metadata = {
     'Easy, fun, fast fundraising for schools, teams and clubs. Supporters buy $10 jars of Jose Madrid Salsa online and your group keeps $5 on every jar.',
   alternates: { canonical: '/' },
 }
-
-const STEPS = [
-  {
-    icon: ClipboardList,
-    title: 'Sign up your group',
-    text: 'Tell us about your fundraiser. We add your group to this site and email you ordering instructions.',
-  },
-  {
-    icon: Share2,
-    title: 'Share with supporters',
-    text: 'Post it on social media and send it to family and friends. They order online, pick your group and add the seller’s name.',
-  },
-  {
-    icon: HandCoins,
-    title: 'Collect $5 a jar',
-    text: 'We ship every order straight to your supporters’ homes, then send your group a check for $5 on every jar.',
-  },
-] as const
 
 export default function FundraisingHomePage() {
   return (
@@ -65,29 +48,7 @@ export default function FundraisingHomePage() {
         </div>
       </section>
 
-      <section className="bg-card py-14">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-10 text-center font-serif text-3xl font-bold text-foreground">How online fundraising works</h2>
-          <ol className="grid gap-6 md:grid-cols-3">
-            {STEPS.map((step, index) => (
-              <li key={step.title} className="card surface-shadow p-6">
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-salsa-500 to-chile-500 font-bold text-white">
-                    {index + 1}
-                  </span>
-                  <step.icon className="h-6 w-6 text-salsa-600" aria-hidden />
-                </div>
-                <h3 className="mb-2 font-serif text-xl font-bold text-foreground">{step.title}</h3>
-                <p className="text-muted-foreground">{step.text}</p>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-8 flex items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-            <Truck className="h-4 w-4 text-salsa-600" aria-hidden />
-            Prefer a traditional order-form sale? <Link href="/start" className="font-semibold text-salsa-600 hover:underline">Community fundraising</Link> works too.
-          </p>
-        </div>
-      </section>
+      <CampaignProcess className="bg-card" />
 
       <section className="py-14">
         <div className="container mx-auto px-4">

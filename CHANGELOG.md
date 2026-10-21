@@ -13,6 +13,12 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **"How a fundraising campaign works" on the fundraising home page.** A six-step infographic
+  (sign up, set up, account, team, sell, submit) replaces the old three-card "How online
+  fundraising works" section, with a "New step" callout on submitting final totals at /submit and
+  a downloadable one-page PDF guide (`/fundraising/downloads/how-a-fundraising-campaign-works.pdf`).
+
 ### Fixed
 - **Fundraising sign-in no longer fails silently.** The sign-in pages show only the Google, GitHub,
   Facebook and Apple buttons whose keys are set. Before, a button for a provider with no keys
