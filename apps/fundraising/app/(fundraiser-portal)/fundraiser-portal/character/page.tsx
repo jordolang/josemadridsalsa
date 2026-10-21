@@ -4,7 +4,7 @@ import { getCurrentFundraiserAccount } from '@/lib/rbac'
 
 export default async function FundraiserCharacterPage() {
   const account = await getCurrentFundraiserAccount()
-  if (!account) redirect('/auth/signin')
+  if (!account) redirect('/fundraiser-portal/pending')
 
   return <CharacterSelector />
 }

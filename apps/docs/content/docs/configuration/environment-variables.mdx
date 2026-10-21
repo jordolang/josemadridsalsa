@@ -49,6 +49,11 @@ DATABASE_URL_UNPOOLED="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/jos
 | `APPLE_CLIENT_ID` | For Apple login | Apple Services ID |
 | `APPLE_CLIENT_SECRET` | For Apple login | Apple client secret (JWT) |
 
+A sign-in button appears only when both of its provider's variables are set, so each Vercel project
+(storefront and fundraising) shows only the providers it has keys for. Each site's domain also needs
+its callback, such as `https://fundraising.josemadridsalsa.com/api/auth/callback/google`, listed as
+an authorized redirect URI with the provider.
+
 ## Encryption
 
 | Variable | Required | Description |

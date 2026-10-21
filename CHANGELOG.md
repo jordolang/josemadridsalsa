@@ -14,6 +14,11 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Fixed
+- **Fundraising sign-in no longer fails silently.** The sign-in pages show only the Google, GitHub,
+  Facebook and Apple buttons whose keys are set. Before, a button for a provider with no keys
+  failed on click and sent the visitor back to the same page. A failed social sign-in now shows
+  why. A signed-in visitor with no fundraiser now gets a message and a "Start a fundraiser" link
+  in the fundraiser portal, instead of being sent back to sign-in.
 - **The fundraising cart's group dropdown scrolls.** With many groups, the "Group you're
   supporting" list ran off the bottom of the page. The shared select's height cap used Tailwind 3
   syntax that Tailwind 4 ignores, so no dropdown built on it was capped. It now is, the cart's list
