@@ -55,9 +55,15 @@ export function FundraisingSiteFooter() {
             </li>
             <li className="flex items-center gap-2">
               <Mail className="h-4 w-4 shrink-0 text-salsa-600" aria-hidden />
-              <a href={`mailto:${FUNDRAISING_CONTACT.email}`} className="break-all hover:text-foreground">
-                {FUNDRAISING_CONTACT.email}
-              </a>
+              {/* Shrink the address to its column width so it stays on one line. */}
+              <span className="@container min-w-0 flex-1">
+                <a
+                  href={`mailto:${FUNDRAISING_CONTACT.email}`}
+                  className="whitespace-nowrap text-[min(0.875rem,5.2cqi)] hover:text-foreground"
+                >
+                  {FUNDRAISING_CONTACT.email}
+                </a>
+              </span>
             </li>
             <li className="flex items-center gap-2">
               <Phone className="h-4 w-4 shrink-0 text-salsa-600" aria-hidden />
