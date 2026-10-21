@@ -13,6 +13,14 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Changed
+- **New fundraising site header and footer.** The header gains a red "Fundraising with flavor"
+  strip with a ribbon accent, an underlined active menu item, and a full-width Start a Fundraiser
+  button on phones. The footer opens with a red "Big flavor. Bigger impact." banner over a dark
+  body with Explore / Get to know us columns, Find Your Group, social links, and Privacy / Terms.
+  The footer no longer lists contact details (they stay on the Contact page) or the newsletter
+  sign-up.
+
 ### Fixed
 - **Fundraising footer email stays on one line.** The contact address no longer breaks mid-word
   ("…salsa.c / om"); its size scales to the footer column so it always fits.

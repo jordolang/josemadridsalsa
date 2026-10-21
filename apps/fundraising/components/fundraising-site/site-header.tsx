@@ -5,10 +5,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Menu, ShoppingCart, User, X } from 'lucide-react'
+import { ChevronRight, Menu, ShoppingCart, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cartItemCount, useFundraisingCart } from '@/lib/fundraising-site/cart-store'
 import { FUNDRAISING_NAV } from './nav'
+import { RibbonSwoosh } from './ribbon-swoosh'
 
 const LOGO_URL = 'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/shared/logo-image.webp'
 const PORTAL_HOME = '/fundraiser-portal/dashboard'
@@ -33,13 +34,24 @@ export function FundraisingSiteHeader() {
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname?.startsWith(href))
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur-sm">
-      <div className="container mx-auto flex h-[72px] items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex items-center gap-3" aria-label="Jose Madrid Salsa Fundraising home">
-          <Image src={LOGO_URL} alt="Jose Madrid Salsa" width={48} height={48} className="h-12 w-12 object-contain" priority />
-          <span className="font-serif text-lg font-bold leading-tight text-foreground">
-            Jose Madrid Salsa
-            <span className="block text-xs font-sans font-semibold uppercase tracking-widest text-salsa-600">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+      <div className="relative overflow-hidden bg-salsa-600 text-white">
+        <p className="container mx-auto flex h-8 items-center justify-center gap-4 px-4 text-[10px] font-medium uppercase tracking-[0.4em] sm:text-xs">
+          <span aria-hidden className="h-px w-10 bg-white/70 sm:w-16" />
+          Fundraising with flavor
+          <span aria-hidden className="h-px w-10 bg-white/70 sm:w-16" />
+        </p>
+        <RibbonSwoosh className="w-28 sm:w-48" />
+      </div>
+
+      <div className="container mx-auto flex h-20 items-center justify-between gap-4 px-4">
+        <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="Jose Madrid Salsa Fundraising home">
+          <Image src={LOGO_URL} alt="Jose Madrid Salsa" width={56} height={56} className="h-14 w-14 object-contain" priority />
+          <span className="font-serif text-xl font-bold leading-[1.1] text-foreground">
+            Jose Madrid
+            <br />
+            Salsa
+            <span className="mt-0.5 block font-sans text-xs font-semibold uppercase tracking-[0.2em] text-salsa-600">
               Fundraising
             </span>
           </span>
@@ -50,8 +62,9 @@ export function FundraisingSiteHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground ${
-                isActive(item.href) ? 'text-salsa-600' : 'text-muted-foreground'
+              aria-current={isActive(item.href) ? 'page' : undefined}
+              className={`relative whitespace-nowrap px-3 py-2 text-[15px] text-foreground transition-colors after:absolute after:inset-x-3 after:-bottom-1 after:h-[3px] after:rounded-full after:bg-salsa-600 after:transition-transform hover:text-salsa-600 ${
+                isActive(item.href) ? 'after:scale-x-100' : 'after:scale-x-0 hover:after:scale-x-100'
               }`}
             >
               {item.label}
@@ -59,18 +72,32 @@ export function FundraisingSiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" className="hidden bg-salsa-600 hover:bg-salsa-700 sm:inline-flex">
-            <Link href="/start">Start a Fundraiser</Link>
+        <div className="flex items-center gap-1">
+          <Button asChild className="mr-2 hidden h-11 bg-salsa-600 px-5 text-base hover:bg-salsa-700 md:inline-flex">
+            <Link href="/start">
+              Start a Fundraiser
+              <ChevronRight className="h-5 w-5" aria-hidden />
+            </Link>
           </Button>
           <Link
             href={account.href}
-            className="flex items-center gap-1.5 rounded-md p-2 text-sm font-medium text-foreground hover:bg-muted"
+            className="hidden rounded-md p-2 text-foreground hover:bg-muted md:block"
             aria-label={account.label}
+            title={account.label}
           >
             <User className="h-6 w-6" />
-            <span className="hidden whitespace-nowrap md:inline xl:hidden 2xl:inline">{account.label}</span>
           </Link>
+          <button
+            type="button"
+            className="rounded-md p-2 text-foreground hover:bg-muted xl:hidden"
+            aria-expanded={open}
+            aria-controls="fundraising-mobile-nav"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+          </button>
+          <span aria-hidden className="mx-1 h-7 w-px bg-border xl:hidden" />
           <Link
             href="/cart"
             className="relative rounded-md p-2 text-foreground hover:bg-muted"
@@ -83,17 +110,16 @@ export function FundraisingSiteHeader() {
               </span>
             )}
           </Link>
-          <button
-            type="button"
-            className="rounded-md p-2 text-foreground hover:bg-muted xl:hidden"
-            aria-expanded={open}
-            aria-controls="fundraising-mobile-nav"
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
         </div>
+      </div>
+
+      <div className="border-t border-border px-4 py-3 md:hidden">
+        <Button asChild className="h-12 w-full bg-salsa-600 text-base hover:bg-salsa-700">
+          <Link href="/start">
+            Start a Fundraiser
+            <ChevronRight className="h-5 w-5" aria-hidden />
+          </Link>
+        </Button>
       </div>
 
       {open && (
@@ -103,6 +129,7 @@ export function FundraisingSiteHeader() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
                   className={`block rounded-md px-3 py-3 text-base font-medium hover:bg-muted ${
                     isActive(item.href) ? 'text-salsa-600' : 'text-foreground'
                   }`}
@@ -111,11 +138,6 @@ export function FundraisingSiteHeader() {
                 </Link>
               </li>
             ))}
-            <li>
-              <Link href="/start" className="block rounded-md px-3 py-3 text-base font-semibold text-salsa-600 hover:bg-muted">
-                Start a Fundraiser
-              </Link>
-            </li>
             <li>
               <Link href={account.href} className="block rounded-md px-3 py-3 text-base font-medium text-foreground hover:bg-muted">
                 {account.label}
