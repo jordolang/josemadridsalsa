@@ -13,6 +13,12 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **"How a fundraising campaign works" on the fundraising home page.** A six-step infographic
+  (sign up, set up, account, team, sell, submit) replaces the old three-card "How online
+  fundraising works" section, with a "New step" callout on submitting final totals at /submit and
+  a downloadable one-page PDF guide (`/fundraising/downloads/how-a-fundraising-campaign-works.pdf`).
+
 ### Fixed
 - **The fundraising cart's group dropdown scrolls.** With many groups, the "Group you're
   supporting" list ran off the bottom of the page. The shared select's height cap used Tailwind 3
