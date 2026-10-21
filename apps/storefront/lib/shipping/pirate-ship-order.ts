@@ -60,7 +60,8 @@ export function toShipment(
 
   const parcelItems: ParcelItemInput[] = order.items.map((item) => ({
     quantity: item.quantity,
-    weightLb: decToNumber(item.product?.weight ?? null),
+    // Product.weight is ounces of contents (a 16oz jar is 16), not pounds.
+    weightOz: decToNumber(item.product?.weight ?? null),
     lengthIn: decToNumber(item.product?.lengthInches ?? null),
     widthIn: decToNumber(item.product?.widthInches ?? null),
     heightIn: decToNumber(item.product?.heightInches ?? null),
