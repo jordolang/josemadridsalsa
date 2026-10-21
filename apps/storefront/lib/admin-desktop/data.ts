@@ -16,6 +16,8 @@ import { SalesChannel, type Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { gmailThreadUrl } from '@/lib/inbox/gmail'
 import { isMissingTableError } from '@/lib/prisma-errors'
+import { getFundraisingCheckoutFields, normalizeGroupName } from '@/lib/fundraising-site/checkout-fields'
+import { STORE_RECORD_DESCRIPTION } from '@/lib/bigcommerce/fundraising-orders'
 import {
   findPage,
   findSection,
@@ -112,6 +114,7 @@ const yearOf = (word: string): number | null => (/^\d{4}$/.test(word) ? Number(w
 const SEARCHABLE_PAGES = new Set([
   'orders',
   'customers',
+  'fundraisers',
   'audit',
   'email.lists',
   'media.documents',
@@ -983,41 +986,242 @@ async function loadCustomers(list: ListQuery = DEFAULT_LIST): Promise<TablePaylo
 // Fundraisers
 // ---------------------------------------------------------------------------
 
-const FUNDRAISER_FILTERS = ['All participants', 'Active campaigns', 'Has sales', 'No sales yet']
+const CAMPAIGN_FILTERS = ['All campaigns', 'Active', 'Set up here', 'BigCommerce store', 'Ended']
+const PARTICIPANT_FILTERS = ['All participants', 'Active campaigns', 'Has sales', 'No sales yet']
 
+/** Everything a campaign's edit sheet needs, so opening it from any row costs no second query. */
+const CAMPAIGN_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  organizationName: true,
+  contactEmail: true,
+  contactPhone: true,
+  description: true,
+  status: true,
+  goal: true,
+  totalRevenue: true,
+  commissionRate: true,
+  defaultUnitPrice: true,
+  startDate: true,
+  endDate: true,
+  fulfillmentMethod: true,
+  brochureOption: true,
+  subdomain: true,
+  isActive: true,
+  missionStatement: true,
+} satisfies Prisma.FundraiserSelect
+
+type Campaign = Prisma.FundraiserGetPayload<{ select: typeof CAMPAIGN_SELECT }>
+
+function campaignForm(campaign: Campaign): DesktopCommand {
+  return form('fundraiser.edit', {
+    recordId: campaign.id,
+    title: campaign.name,
+    values: {
+      name: campaign.name,
+      slug: campaign.slug,
+      organizationName: campaign.organizationName,
+      contactEmail: campaign.contactEmail,
+      contactPhone: textValue(campaign.contactPhone),
+      description: textValue(campaign.description),
+      startDate: dateValue(campaign.startDate),
+      endDate: dateValue(campaign.endDate),
+      goal: moneyValue(campaign.goal),
+      commissionRate: moneyValue(campaign.commissionRate),
+      defaultUnitPrice: moneyValue(campaign.defaultUnitPrice),
+      status: campaign.status,
+      fulfillmentMethod: campaign.fulfillmentMethod,
+      brochureOption: campaign.brochureOption ?? '',
+      subdomain: textValue(campaign.subdomain),
+      isActive: campaign.isActive,
+      missionStatement: textValue(campaign.missionStatement),
+    },
+  })
+}
+
+/**
+ * The groups in the fundraising store's checkout dropdown, normalized, or null
+ * when the store cannot be reached. A campaign mirrored from the store is
+ * stored as ENDED (see `ensureBigCommerceFundraiser`), so whether it is still
+ * selling is only known from the dropdown.
+ */
+async function storeGroupKeys(): Promise<Set<string> | null> {
+  try {
+    const { groups } = await getFundraisingCheckoutFields()
+    return new Set(groups.map((group) => normalizeGroupName(group.label)))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Every campaign: the ones set up here and the ones mirrored from the
+ * BigCommerce fundraising store. Campaigns that are live — ACTIVE here, or in
+ * the store's dropdown — are always listed, ahead of the newest of the rest, so
+ * the window never cuts off a running drive.
+ */
 async function loadFundraisers(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
+  const search = matching<Prisma.FundraiserWhereInput>(list.q, (word) => [
+    { name: word },
+    { organizationName: word },
+    { contactEmail: word },
+    { slug: word },
+  ])
+  const inStore = await storeGroupKeys()
+  const liveWhere: Prisma.FundraiserWhereInput = {
+    OR: [{ status: 'ACTIVE' }, ...(inStore?.size ? [{ bigCommerceGroup: { in: [...inStore] } }] : [])],
+  }
+
+  const [live, recent] = await Promise.all([
+    safe(
+      () =>
+        prisma.fundraiser.findMany({
+          where: search ? { AND: [search, liveWhere] } : liveWhere,
+          orderBy: [{ endDate: 'desc' }, { name: 'asc' }],
+          select: { ...CAMPAIGN_SELECT, bigCommerceGroup: true, totalOrders: true, totalCommission: true },
+        }),
+      [],
+    ),
+    safe(
+      () =>
+        prisma.fundraiser.findMany({
+          where: search,
+          orderBy: [{ endDate: 'desc' }, { name: 'asc' }],
+          take: list.limit,
+          select: { ...CAMPAIGN_SELECT, bigCommerceGroup: true, totalOrders: true, totalCommission: true },
+        }),
+      [],
+    ),
+  ])
+  const seen = new Set(live.map((campaign) => campaign.id))
+  const campaigns = [...live, ...recent.filter((campaign) => !seen.has(campaign.id))]
+
+  const columns: Column[] = [
+    { label: 'Fundraiser', width: 'minmax(0,1.4fr)' },
+    { label: 'Organization', width: 'minmax(0,1.1fr)' },
+    { label: 'Source', width: '96px' },
+    { label: 'Runs', width: 'minmax(0,1fr)' },
+    { label: 'Orders', width: '64px', right: true },
+    { label: 'Sales', width: '96px', right: true },
+    { label: 'To org', width: '96px', right: true },
+    { label: 'Status', width: '104px' },
+  ]
+
+  let orders = 0
+  let sales = 0
+  let commission = 0
+
+  const rows: Row[] = campaigns.map((campaign) => {
+    const revenue = toNumber(campaign.totalRevenue)
+    const payout = toNumber(campaign.totalCommission)
+    orders += campaign.totalOrders
+    sales += revenue
+    commission += payout
+
+    const storeRecord = campaign.description === STORE_RECORD_DESCRIPTION
+    const selling = Boolean(campaign.bigCommerceGroup && inStore?.has(campaign.bigCommerceGroup))
+    const live = campaign.status === 'ACTIVE' || selling
+    const status = campaign.status === 'ACTIVE' || !selling ? humanise(campaign.status) : 'In store'
+    const source = storeRecord ? 'Store' : campaign.bigCommerceGroup ? 'Site + store' : 'Site'
+    const runs = `${shortDate(campaign.startDate)} – ${shortDate(campaign.endDate)}`
+    const edit = campaignForm(campaign)
+
+    return {
+      id: campaign.id,
+      open: edit,
+      search: `${campaign.name} ${campaign.organizationName} ${campaign.contactEmail} ${campaign.slug}`,
+      buckets: [0, ...(live ? [1] : [4]), ...(storeRecord ? [] : [2]), ...(campaign.bigCommerceGroup ? [3] : [])],
+      cells: [
+        text(campaign.name, { strong: true }),
+        text(campaign.organizationName, { dim: true }),
+        text(source, { dim: true }),
+        text(runs, { dim: true }),
+        text(count(campaign.totalOrders), { mono: true, right: true }),
+        text(money(revenue), { mono: true, right: true }),
+        text(money(payout), { mono: true, right: true, strong: true }),
+        statusCell(status, live ? 'good' : 'muted'),
+      ],
+      inspector: {
+        title: campaign.name,
+        tag: status,
+        tagTone: live ? 'good' : 'muted',
+        groups: [
+          {
+            label: 'CAMPAIGN',
+            fields: [
+              { label: 'Organization', value: campaign.organizationName },
+              { label: 'Contact', value: campaign.contactEmail, mono: true },
+              { label: 'Runs', value: runs },
+              { label: 'Source', value: source },
+              ...(campaign.bigCommerceGroup
+                ? [{ label: 'Store group', value: `${campaign.bigCommerceGroup}${selling ? '' : ' (not in dropdown)'}` }]
+                : []),
+            ],
+          },
+          {
+            label: 'SALES',
+            fields: [
+              { label: 'Orders', value: count(campaign.totalOrders), mono: true },
+              // Goal and raised are both gross sales, not the group's cut.
+              { label: 'Goal (sales)', value: campaign.goal ? money(campaign.goal) : '—', mono: true },
+              { label: 'Raised (sales)', value: money(revenue), mono: true },
+              { label: 'Split to org', value: `${percent(toNumber(campaign.commissionRate), 0)}`, mono: true },
+              { label: 'To org', value: money(payout), mono: true, strong: true },
+            ],
+          },
+        ],
+        actions: [
+          { label: 'Edit campaign…', shortcut: '⌘⏎', command: edit },
+          {
+            label: 'Add a participant…',
+            shortcut: '⌘U',
+            command: form('participant.create', {
+              title: `Add to ${campaign.name}`,
+              values: { fundraiserId: campaign.id },
+            }),
+          },
+          ...(campaign.status === 'ENDED' || campaign.status === 'CANCELLED'
+            ? []
+            : [
+                {
+                  label: 'End the campaign',
+                  command: write('fundraiser.end', campaign.id, {
+                    confirm: `End ${campaign.name}? Its store stops taking orders and the campaign is marked ended.`,
+                  }),
+                },
+              ]),
+          { label: 'Participants', command: page('fundraisers.participants') },
+          { label: 'Battle arena', command: page('fundraisers.arena'), shortcut: '⌘B' },
+        ],
+      },
+    }
+  })
+
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [
+      text(`${count(rows.length)} campaigns`),
+      text(''),
+      text(''),
+      text(''),
+      text(count(orders), { right: true }),
+      text(money(sales), { right: true }),
+      text(money(commission), { right: true, strong: true }),
+      text(''),
+    ],
+  }
+}
+
+async function loadFundraiserParticipants(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
   const participants = await safe(
     () =>
       prisma.fundraiserParticipant.findMany({
         orderBy: [{ totalRevenue: 'desc' }, { name: 'asc' }],
         take: list.limit,
-        include: {
-          // Everything the campaign's own edit sheet needs, so opening it from a
-          // participant row costs no second query.
-          fundraiser: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              organizationName: true,
-              contactEmail: true,
-              contactPhone: true,
-              description: true,
-              status: true,
-              goal: true,
-              totalRevenue: true,
-              commissionRate: true,
-              defaultUnitPrice: true,
-              startDate: true,
-              endDate: true,
-              fulfillmentMethod: true,
-              brochureOption: true,
-              subdomain: true,
-              isActive: true,
-              missionStatement: true,
-            },
-          },
-        },
+        include: { fundraiser: { select: CAMPAIGN_SELECT } },
       }),
     [],
   )
@@ -1121,29 +1325,7 @@ async function loadFundraisers(list: ListQuery = DEFAULT_LIST): Promise<TablePay
           {
             label: 'Edit campaign…',
             shortcut: '⌘E',
-            command: form('fundraiser.edit', {
-              recordId: campaign.id,
-              title: campaign.name,
-              values: {
-                name: campaign.name,
-                slug: campaign.slug,
-                organizationName: campaign.organizationName,
-                contactEmail: campaign.contactEmail,
-                contactPhone: textValue(campaign.contactPhone),
-                description: textValue(campaign.description),
-                startDate: dateValue(campaign.startDate),
-                endDate: dateValue(campaign.endDate),
-                goal: moneyValue(campaign.goal),
-                commissionRate: moneyValue(campaign.commissionRate),
-                defaultUnitPrice: moneyValue(campaign.defaultUnitPrice),
-                status: campaign.status,
-                fulfillmentMethod: campaign.fulfillmentMethod,
-                brochureOption: campaign.brochureOption ?? '',
-                subdomain: textValue(campaign.subdomain),
-                isActive: campaign.isActive,
-                missionStatement: textValue(campaign.missionStatement),
-              },
-            }),
+            command: campaignForm(campaign),
           },
           {
             label: 'Add a participant…',
@@ -9685,11 +9867,11 @@ function meta(section: DesktopSection): SectionMeta {
       }
     case 'fundraisers':
       return {
-        eyebrow: 'PARTICIPANTS ACROSS EVERY CAMPAIGN',
-        filters: FUNDRAISER_FILTERS,
+        eyebrow: 'EVERY CAMPAIGN, SITE AND STORE',
+        filters: CAMPAIGN_FILTERS,
         actions: [
           { label: 'New fundraiser', icon: 'i-plus', command: form('fundraiser.create'), primary: true },
-          { label: 'Add participant', icon: 'i-users', command: form('participant.create') },
+          { label: 'Participants', icon: 'i-users', command: page('fundraisers.participants') },
           open,
         ],
       }
@@ -10018,6 +10200,15 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
         actions: [
           { label: 'New supplier', icon: 'i-plus', command: form('supplier.create'), primary: true },
           { label: 'New purchase order', icon: 'i-truck', command: form('purchase.create') },
+          back,
+        ],
+      }
+    case 'fundraisers.participants':
+      return {
+        eyebrow: 'PARTICIPANTS ACROSS EVERY CAMPAIGN',
+        filters: PARTICIPANT_FILTERS,
+        actions: [
+          { label: 'Add participant', icon: 'i-plus', command: form('participant.create'), primary: true },
           back,
         ],
       }
@@ -10371,6 +10562,8 @@ async function loadPageBody(pageId: string, list: ListQuery): Promise<SectionPay
       return loadShippingLabels(list)
     case 'purchase.suppliers':
       return loadSuppliers(list)
+    case 'fundraisers.participants':
+      return loadFundraiserParticipants(list)
     case 'fundraisers.arena':
       return loadArena(list)
     case 'fundraisers.codes':
