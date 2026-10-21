@@ -13,6 +13,11 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **Draft-only email agent** (`apps/agents/email-agent`). Reviews the main inbox, has Claude
+  sort customer mail into routine drafts, owner decisions, and ignorable mail, and prints a
+  digest. It never sends, labels, archives, or deletes email.
+
 ### Changed
 - **Shipping uses the warehouse's real boxes.** Jar orders are sized as 1–3 jars 10×7×5″,
   4–6 jars 12×9×6″, a case (7–12) 14×10×8″ and two cases (13–24) 20×15×9″. Checkout quotes,

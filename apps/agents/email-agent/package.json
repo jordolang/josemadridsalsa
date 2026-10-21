@@ -1,0 +1,27 @@
+{
+  "name": "@jose-madrid/email-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "run": "tsx src/index.ts",
+    "dry-run": "tsx src/index.ts --dry-run",
+    "test": "vitest run",
+    "type-check": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.137.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.x",
+    "tsx": "4.20.6",
+    "typescript": "7.0.2",
+    "vitest": "5.0.1"
+  }
+}
