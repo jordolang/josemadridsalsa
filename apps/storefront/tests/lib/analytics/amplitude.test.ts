@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const initAll = vi.fn()
 const setOptOut = vi.fn()
-vi.mock('@amplitude/unified', () => ({ initAll, setOptOut, track: vi.fn() }))
+const track = vi.fn()
+vi.mock('@amplitude/unified', () => ({ initAll, setOptOut, track }))
 
 async function freshModule() {
   vi.resetModules()
@@ -13,6 +14,7 @@ async function freshModule() {
 beforeEach(() => {
   initAll.mockReset()
   setOptOut.mockReset()
+  track.mockReset()
   vi.unstubAllEnvs()
   window.localStorage.setItem('cookie-consent', 'accepted')
 })
@@ -24,6 +26,7 @@ describe('initAmplitude', () => {
 
     expect(initAmplitude()).toBe(true)
     expect(initAmplitude()).toBe(true)
+    await vi.dynamicImportSettled()
 
     expect(initAll).toHaveBeenCalledTimes(1)
     expect(initAll).toHaveBeenCalledWith('test-key', {
@@ -39,6 +42,7 @@ describe('initAmplitude', () => {
     const { initAmplitude } = await freshModule()
 
     expect(initAmplitude()).toBe(false)
+    await vi.dynamicImportSettled()
     expect(initAll).not.toHaveBeenCalled()
   })
 
@@ -47,6 +51,7 @@ describe('initAmplitude', () => {
     const { initAmplitude, disableAmplitude } = await freshModule()
 
     initAmplitude()
+    await vi.dynamicImportSettled()
     disableAmplitude()
     expect(setOptOut).toHaveBeenLastCalledWith(true)
 
@@ -63,5 +68,19 @@ describe('initAmplitude', () => {
     expect(initAmplitude()).toBe(false)
     expect(initAll).not.toHaveBeenCalled()
     expect(warn).toHaveBeenCalledWith('Amplitude API key missing — analytics disabled')
+  })
+
+  it('holds events sent while the SDK downloads, then sends them after init', async () => {
+    vi.stubEnv('NEXT_PUBLIC_AMPLITUDE_API_KEY', 'test-key')
+    const { initAmplitude, trackEvent } = await freshModule()
+
+    initAmplitude()
+    trackEvent('Viewed Home Page', { source: 'test' })
+    expect(track).not.toHaveBeenCalled()
+
+    await vi.dynamicImportSettled()
+    expect(initAll).toHaveBeenCalledTimes(1)
+    expect(track).toHaveBeenCalledWith('Viewed Home Page', { source: 'test' })
+    expect(initAll.mock.invocationCallOrder[0]).toBeLessThan(track.mock.invocationCallOrder[0])
   })
 })

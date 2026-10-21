@@ -83,7 +83,7 @@ export const identifyUser = (
 
 ### Session Replay
 
-`@amplitude/unified` includes session replay, set to record every session (`sampleRate: 1`) on the public site, cart and checkout included. Amplitude masks form inputs by default.
+`@amplitude/unified` includes session replay, set to record every session (`sampleRate: 1`) on the public site, cart and checkout included. Amplitude masks form inputs by default. The SDK is loaded with a dynamic import only after consent, so visitors who have not accepted cookies never download it; `trackEvent` and the other helpers queue calls made while it downloads.
 
 ### Agent Analytics
 

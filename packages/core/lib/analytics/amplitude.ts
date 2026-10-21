@@ -1,6 +1,16 @@
-import * as amplitude from '@amplitude/unified';
+type AmplitudeSdk = typeof import('@amplitude/unified');
 
 let isInitialized = false;
+
+// The SDK (~120 KB with session replay) is fetched only once the visitor has consented, so it
+// stays out of every page's first bundle. Calls made while it downloads wait in this queue.
+let sdk: AmplitudeSdk | null = null;
+const pending: Array<(amplitude: AmplitudeSdk) => void> = [];
+
+const withSdk = (call: (amplitude: AmplitudeSdk) => void) => {
+  if (sdk) call(sdk);
+  else pending.push(call);
+};
 
 /** Same key and values the cookie banner writes. */
 const COOKIE_CONSENT_KEY = 'cookie-consent';
@@ -32,7 +42,7 @@ export const initAmplitude = () => {
   }
 
   if (isInitialized) {
-    amplitude.setOptOut(false);
+    withSdk((amplitude) => amplitude.setOptOut(false));
     return true;
   }
 
@@ -44,9 +54,15 @@ export const initAmplitude = () => {
     return false;
   }
 
-  amplitude.initAll(apiKey, { analytics: { autocapture: true }, sessionReplay: { sampleRate: 1 } });
-
   isInitialized = true;
+  void import('@amplitude/unified')
+    .then((amplitude) => {
+      amplitude.initAll(apiKey, { analytics: { autocapture: true }, sessionReplay: { sampleRate: 1 } });
+      sdk = amplitude;
+      pending.splice(0).forEach((call) => call(amplitude));
+    })
+    .catch((error: unknown) => console.warn('Amplitude failed to load — analytics disabled', error));
+
   return true;
 };
 
@@ -57,7 +73,7 @@ export const initAmplitude = () => {
  */
 export const trackEvent = (eventName: string, eventProperties?: Record<string, unknown>) => {
   if (!isInitialized) return;
-  amplitude.track(eventName, eventProperties);
+  withSdk((amplitude) => amplitude.track(eventName, eventProperties));
 };
 
 /**
@@ -67,14 +83,16 @@ export const trackEvent = (eventName: string, eventProperties?: Record<string, u
  */
 export const identifyUser = (userId: string, userProperties?: Record<string, AmplitudeProperty>) => {
   if (!isInitialized) return;
-  amplitude.setUserId(userId);
-  if (userProperties) {
-    const identifyEvent = new amplitude.Identify();
-    Object.entries(userProperties).forEach(([key, value]) => {
-      identifyEvent.set(key, value);
-    });
-    amplitude.identify(identifyEvent);
-  }
+  withSdk((amplitude) => {
+    amplitude.setUserId(userId);
+    if (userProperties) {
+      const identifyEvent = new amplitude.Identify();
+      Object.entries(userProperties).forEach(([key, value]) => {
+        identifyEvent.set(key, value);
+      });
+      amplitude.identify(identifyEvent);
+    }
+  });
 };
 
 /**
@@ -82,11 +100,11 @@ export const identifyUser = (userId: string, userProperties?: Record<string, Amp
  */
 export const resetUser = () => {
   if (!isInitialized) return;
-  amplitude.reset();
+  withSdk((amplitude) => amplitude.reset());
 };
 
 /** The browser's device id once analytics is running (and consented to), else undefined. */
-export const getAmplitudeDeviceId = () => (isInitialized ? amplitude.getDeviceId() : undefined);
+export const getAmplitudeDeviceId = () => (isInitialized ? sdk?.getDeviceId() : undefined);
 
 /**
  * Stop analytics and session replay after the visitor rejects cookies. Replay honours the
@@ -94,7 +112,5 @@ export const getAmplitudeDeviceId = () => (isInitialized ? amplitude.getDeviceId
  */
 export const disableAmplitude = () => {
   if (!isInitialized) return;
-  amplitude.setOptOut(true);
+  withSdk((amplitude) => amplitude.setOptOut(true));
 };
-
-export { amplitude };

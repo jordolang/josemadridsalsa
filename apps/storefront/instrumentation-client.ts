@@ -7,8 +7,8 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: "https://98b04ae9086c6cb3b8136686e088d957@o4509068102139904.ingest.us.sentry.io/4510733629587456",
 
-  // Add optional integrations for additional features
-  integrations: [Sentry.replayIntegration()],
+  // Session Replay is added below, after the page has loaded
+  integrations: [],
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
@@ -27,5 +27,19 @@ Sentry.init({
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
 });
+
+// Session Replay is the largest piece of the SDK, so it loads from Sentry's CDN once the page
+// is idle instead of shipping in every page's first bundle.
+if (typeof window !== "undefined") {
+  const loadReplay = () => {
+    Sentry.lazyLoadIntegration("replayIntegration")
+      .then((replayIntegration) => Sentry.addIntegration(replayIntegration()))
+      .catch(() => {});
+  };
+  const whenIdle = () =>
+    "requestIdleCallback" in window ? window.requestIdleCallback(loadReplay) : setTimeout(loadReplay, 1);
+  if (document.readyState === "complete") whenIdle();
+  else window.addEventListener("load", whenIdle, { once: true });
+}
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

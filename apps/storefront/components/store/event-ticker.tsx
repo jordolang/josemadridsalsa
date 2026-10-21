@@ -66,7 +66,9 @@ export function EventTicker({ initialEvents }: EventTickerProps) {
     }
   }, [])
 
-  if (segments.length === 0) return null
+  // The labels use the visitor's local date, so they fill in after mount. The bar itself
+  // renders on the server whenever there are events, so it does not push the page down later.
+  if (!initialEvents.some(e => e.location && e.start)) return null
 
   const formattedSegments = segments.length > 1
     ? segments.flatMap((seg, i) => i < segments.length - 1 ? [seg, `━━━━━━  UPCOMING  ━━━━━━`] : [seg])

@@ -18,7 +18,7 @@ Jose Madrid Salsa uses four analytics systems, each serving a distinct purpose.
 
 ## Google Tag Manager
 
-GTM is loaded in the public layout (`app/(public)/layout.tsx`) with container ID `GTM-5KSQW4JJ` using `next/script` with `strategy="afterInteractive"`. A `noscript` fallback iframe is also included for non-JavaScript environments.
+GTM is loaded in the root layout (`app/layout.tsx`) with container ID `GTM-NTWG6BQW` using `next/script` with `strategy="lazyOnload"`. A `noscript` fallback iframe is also included for non-JavaScript environments.
 
 GTM manages:
 - Google Analytics tags
@@ -134,15 +134,15 @@ This automatically captures Core Web Vitals (LCP, FID, CLS, TTFB, INP) and page 
 
 ## Loading Strategy
 
-All analytics scripts use `strategy="afterInteractive"` from `next/script`, which loads them after the page becomes interactive. This prevents analytics from blocking the initial page render.
+Analytics tags in the root layout use `strategy="lazyOnload"` from `next/script`, which loads them after the page's `load` event. This keeps their JavaScript out of the first render and off the main thread while the page hydrates (better LCP and Total Blocking Time). Events pushed before a tag arrives wait in its queue (`dataLayer`, `fbq`, `ttq`).
 
 ```
 Page Load Timeline:
  HTML parse + hydration
- Page becomes interactive (FID/INP ready)
- GTM loads (afterInteractive)
- GA4 loads (afterInteractive, via GTM or direct)
- Amplitude initializes (useEffect)
+ Amplitude SDK is fetched (dynamic import) if the visitor has accepted analytics cookies
+ Page load event
+ GTM loads (lazyOnload), then GA4 via GTM
+ Meta / TikTok pixels load (lazyOnload)
  Vercel Analytics captures Web Vitals
 ```
 
