@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Bot, CheckCircle2, Headphones, Loader2, Mail, Send, Sparkles, User, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { ChatMarkdown } from '@/components/chat/chat-markdown'
 import { PicanteChatLauncher } from '@/components/chat/picante-chat-launcher'
 import { PICANTE_INITIAL_MESSAGE } from '@/lib/ai-chat/persona'
 import { getAmplitudeDeviceId } from '@/lib/analytics/amplitude'
@@ -26,6 +26,10 @@ const INITIAL_MESSAGE: ChatMessage = {
 }
 
 const LIVE_POLL_MS = 3000
+
+// The Markdown renderer (react-markdown, GFM, sanitizer) is only needed once the chat is
+// open, so it loads then instead of with every public page.
+const ChatMarkdown = dynamic(() => import('@/components/chat/chat-markdown').then((mod) => mod.ChatMarkdown))
 
 export function AiChatWidget() {
   const [isOpen, setIsOpen] = useState(false)

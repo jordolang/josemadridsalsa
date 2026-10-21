@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
 const { initAmplitude, track } = vi.hoisted(() => ({ initAmplitude: vi.fn(), track: vi.fn() }))
-vi.mock('@/lib/analytics/amplitude', () => ({ initAmplitude, amplitude: { track } }))
+vi.mock('@/lib/analytics/amplitude', () => ({ initAmplitude, trackEvent: track }))
 
 import { HomePageView } from '@/components/analytics/home-page-view'
 

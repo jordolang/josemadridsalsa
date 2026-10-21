@@ -18,6 +18,7 @@ import { OrganizationJsonLd } from '@/components/seo/organization-jsonld'
 import { HomePageView } from '@/components/analytics/home-page-view'
 import { loadHomepageProducts } from '@/components/store/featured-products-section'
 import { HomeBoothTile } from '@/components/store/home-booth-tile'
+import { HomeHeroVideo } from '@/components/store/home-hero-video'
 import { AwardSeal } from '@/components/store/award-seal'
 import { AwardsStrip } from '@/components/store/awards-strip'
 import { BATTLE_ARENA_URL } from '@/lib/arena-game/links'
@@ -189,16 +190,9 @@ export default async function Home() {
             sizes="100vw"
             className="-z-20 object-cover object-[72%_50%] md:object-center"
           />
-          <video
-            aria-hidden
-            className="absolute inset-0 -z-20 h-full w-full object-cover object-[72%_50%] motion-reduce:hidden md:object-center"
+          <HomeHeroVideo
             src={`${PLATES}/hero-loop.mp4`}
-            poster={`${PLATES}/hero-poster.webp`}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-[72%_50%] motion-reduce:hidden md:object-center"
           />
           {/* Legibility scrim: dark behind the copy column, clear over the rider */}
           <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-r from-black/80 via-black/40 to-transparent md:via-black/25" />

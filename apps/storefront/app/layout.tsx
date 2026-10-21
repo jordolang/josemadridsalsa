@@ -111,17 +111,17 @@ export default function RootLayout({
         <meta name="google-site-verification" content="E6ciztQzSgCnoZxkfE5GvfLE349LWqzal-VezMq3nRQ" />
         <meta name="facebook-domain-verification" content="7kfb51qu3466hctngy2wldog2btpul" />
 
-        {/* Resource hints for external services */}
-        <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://js.stripe.com" />
+        {/* Resource hints for external services. Fonts are self-hosted by next/font and
+            Stripe loads only on checkout, so neither gets an early connection here. */}
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-        <link rel="dns-prefetch" href="https://vitals.vercel-insights.com" />
+
+        {/* Tags and pixels load after the page has finished loading (lazyOnload) so their
+            JavaScript never competes with the page's own first render */}
 
         <Script
           id="gtm-script"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -132,7 +132,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         />
         <Script
           id="tiktok-pixel"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `!function (w, d, t) {
   w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(
@@ -146,7 +146,7 @@ var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n
         />
         <Script
           id="meta-pixel"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `!function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -166,11 +166,11 @@ fbq('track', 'PageView');`,
         <Script
           id="merchantWidgetScript"
           src="https://www.gstatic.com/shopping/merchant/merchantwidget.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <Script
           id="merchant-widget-init"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `(function(){function start(){if(window.merchantwidget){window.merchantwidget.start({merchant_id:731675578});}}var s=document.getElementById('merchantWidgetScript');if(window.merchantwidget){start();}else if(s){s.addEventListener('load',start);}})();`,
           }}
@@ -178,7 +178,7 @@ fbq('track', 'PageView');`,
         {/* Notifuse web analytics */}
         <Script
           id="notifuse-analytics-config"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `window.NotifuseAnalyticsConfig = { workspace_id: "zanesvillecloud", endpoint: "https://mail.zanesville.cloud" };`,
           }}
@@ -186,7 +186,7 @@ fbq('track', 'PageView');`,
         <Script
           id="notifuse-analytics"
           src="https://mail.zanesville.cloud/na.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">

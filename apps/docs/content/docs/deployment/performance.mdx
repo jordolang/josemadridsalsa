@@ -116,11 +116,20 @@ This prevents stale cached pages from being served after a deployment.
 
 ## Script Loading
 
-All third-party scripts (GTM, GA4) use `strategy="afterInteractive"` to avoid blocking the critical rendering path:
+Third-party tags in the root layout (GTM, the Meta and TikTok pixels, the Google Customer Reviews badge, Notifuse) use `strategy="lazyOnload"`, so they download after the page's `load` event and never compete with the first render or hydration:
 
 ```tsx
-<Script id="gtm-script" strategy="afterInteractive" ... />
+<Script id="gtm-script" strategy="lazyOnload" ... />
 ```
+
+Heavy client code that is not needed for the first paint is deferred the same way:
+
+| Code | When it loads |
+|---|---|
+| Amplitude SDK (`lib/analytics/amplitude.ts`) | Dynamic import, only after the visitor accepts analytics cookies |
+| Sentry Session Replay (`instrumentation-client.ts`) | `Sentry.lazyLoadIntegration` from `browser.sentry-cdn.com` once the page is idle |
+| Chat Markdown renderer (`components/chat/chat-markdown.tsx`) | `next/dynamic`, when the Picante chat is opened |
+| Homepage hero video (`components/store/home-hero-video.tsx`) | After the `load` event; never for reduced-motion visitors. The poster image is the LCP element and is preloaded with `priority`. |
 
 ## Performance Checklist
 
@@ -129,6 +138,6 @@ All third-party scripts (GTM, GA4) use `strategy="afterInteractive"` to avoid bl
 - [ ] Serverless functions stay under 250 MB unzipped
 - [ ] Prisma Client is included in API route traces
 - [ ] Development uses Turbopack (`--turbo`)
-- [ ] Third-party scripts load after interactive
+- [ ] Third-party scripts use `lazyOnload`; client-only SDKs load on demand
 - [ ] Sentry logger tree-shaking is enabled
 - [ ] Build IDs are unique per deployment
