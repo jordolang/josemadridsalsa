@@ -128,6 +128,17 @@ vi.mock('@/lib/prisma', () => ({
   prisma: prismaMock,
 }))
 
+// The fundraising store's checkout dropdown is read over the network; every
+// test gets an empty one unless it says otherwise.
+const checkoutFields = vi.hoisted(() => ({
+  getFundraisingCheckoutFields: vi.fn(),
+}))
+
+vi.mock('@/lib/fundraising-site/checkout-fields', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/fundraising-site/checkout-fields')>()),
+  getFundraisingCheckoutFields: checkoutFields.getFundraisingCheckoutFields,
+}))
+
 const { loadSection } = await import('@/lib/admin-desktop/data')
 const { isBindableShortcut } = await import('@/lib/admin-desktop/shortcuts')
 
@@ -251,6 +262,7 @@ function missingTable(table: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  checkoutFields.getFundraisingCheckoutFields.mockResolvedValue({ groups: [] })
   for (const model of Object.values(prismaMock)) {
     for (const [name, fn] of Object.entries(model)) {
       if (name === 'count') fn.mockResolvedValue(0)
@@ -1240,6 +1252,96 @@ describe('packing manifests', () => {
     expect(row.cells[4].text).toBe('51')
     expect(row.cells[5].text).toBe('12')
     expect(row.cells[6].text).toBe('39')
+  })
+})
+
+describe('fundraisers', () => {
+  const campaign = (overrides: Record<string, unknown>) => ({
+    id: 'f1',
+    name: 'Hardin Valley MS Band 2026',
+    slug: 'hardin-valley-ms-band-2026',
+    organizationName: 'Hardin Valley MS Band 2026',
+    contactEmail: 'fundraising@josemadridsalsa.com',
+    contactPhone: null,
+    description: 'Tracked from the BigCommerce fundraising store.',
+    status: 'ENDED',
+    goal: null,
+    totalRevenue: 420,
+    totalCommission: 210,
+    totalOrders: 21,
+    commissionRate: 50,
+    defaultUnitPrice: 10,
+    startDate: new Date('2026-10-13T12:00:00Z'),
+    endDate: new Date('2026-10-20T12:00:00Z'),
+    fulfillmentMethod: 'ORDER_FORMS_AND_BULK',
+    brochureOption: null,
+    subdomain: null,
+    isActive: false,
+    missionStatement: null,
+    bigCommerceGroup: 'hardin valley ms band 2026',
+    ...overrides,
+  })
+
+  it('lists every campaign, not just the ones with participants', async () => {
+    // Regression: the page listed participants, and with one participant in the
+    // whole database it showed one fundraiser out of nearly five hundred.
+    checkoutFields.getFundraisingCheckoutFields.mockResolvedValue({
+      groups: [{ value: '1', label: 'Hardin Valley MS Band 2026' }],
+    })
+    const selling = campaign({})
+    const site = campaign({
+      id: 'f2',
+      name: 'Creativity Unites',
+      slug: 'creativity-unites',
+      organizationName: 'Dance United',
+      description: null,
+      status: 'ACTIVE',
+      isActive: true,
+      bigCommerceGroup: null,
+      totalOrders: 0,
+      totalRevenue: 0,
+      totalCommission: 0,
+    })
+    const past = campaign({ id: 'f3', name: 'Theta Phi Alpha 2023', bigCommerceGroup: 'theta phi alpha 2023' })
+    prismaMock.fundraiser.findMany
+      .mockResolvedValueOnce([selling, site])
+      .mockResolvedValueOnce([selling, site, past])
+
+    const payload = await loadSection('fundraisers')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+    expect(prismaMock.fundraiserParticipant.findMany).not.toHaveBeenCalled()
+
+    // The live query asks for site campaigns and the groups in the store dropdown.
+    expect(prismaMock.fundraiser.findMany.mock.calls[0][0].where).toEqual({
+      OR: [{ status: 'ACTIVE' }, { bigCommerceGroup: { in: ['hardin valley ms band 2026'] } }],
+    })
+
+    const rows = payload.body.rows
+    expect(rows.map((row) => row.id)).toEqual(['f1', 'f2', 'f3'])
+    // A store record is stored as ENDED; the dropdown is what says it is selling.
+    expect(rows[0].cells[7].text).toBe('In store')
+    expect(rows[0].buckets).toContain(1)
+    expect(rows[1].buckets).toContain(1)
+    expect(rows[2].buckets).not.toContain(1)
+    expect(rows[2].buckets).toContain(4)
+    expect(payload.body.totals[0].text).toBe('3 campaigns')
+  })
+
+  it('still lists campaigns when the store cannot be reached', async () => {
+    checkoutFields.getFundraisingCheckoutFields.mockRejectedValue(new Error('BigCommerce 503'))
+    prismaMock.fundraiser.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([campaign({})])
+
+    const payload = await loadSection('fundraisers')
+    if (payload.body.view !== 'table') throw new Error('expected a table payload')
+    expect(prismaMock.fundraiser.findMany.mock.calls[0][0].where).toEqual({ OR: [{ status: 'ACTIVE' }] })
+    expect(payload.body.rows).toHaveLength(1)
+    expect(payload.body.rows[0].cells[7].text).toBe('Ended')
+  })
+
+  it('keeps participants on their own page', async () => {
+    const payload = await loadSection('fundraisers.participants')
+    expect(payload.page).toBe('fundraisers.participants')
+    expect(prismaMock.fundraiserParticipant.findMany).toHaveBeenCalled()
   })
 })
 

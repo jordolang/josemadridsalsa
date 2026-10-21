@@ -20,6 +20,17 @@ the root `package.json` is canonical.
   a downloadable one-page PDF guide (`/fundraising/downloads/how-a-fundraising-campaign-works.pdf`).
 
 ### Fixed
+- **Fundraising sign-in no longer fails silently.** The sign-in pages show only the Google, GitHub,
+  Facebook and Apple buttons whose keys are set. Before, a button for a provider with no keys
+  failed on click and sent the visitor back to the same page. A failed social sign-in now shows
+  why. A signed-in visitor with no fundraiser now gets a message and a "Start a fundraiser" link
+  in the fundraiser portal, instead of being sent back to sign-in.
+- **The desktop admin's Fundraisers page lists every campaign.** It listed fundraiser
+  participants, and with one participant in the database it showed one fundraiser. It now lists
+  campaigns, both the ones set up on the site and the ones mirrored from the BigCommerce
+  fundraising store, with a Source column, sales totals and search. A store campaign is marked
+  "In store" (and counts as active) while its group is in the store's checkout dropdown.
+  Participants moved to their own Participants page in the same section.
 - **The fundraising cart's group dropdown scrolls.** With many groups, the "Group you're
   supporting" list ran off the bottom of the page. The shared select's height cap used Tailwind 3
   syntax that Tailwind 4 ignores, so no dropdown built on it was capped. It now is, the cart's list
@@ -92,6 +103,10 @@ the root `package.json` is canonical.
   to the placeholder, and the unused `/api/places/photo` and `/api/reviews/google` routes are gone.
 
 ### Added
+- **Cranberry Salsa in the catalog seeds.** The seasonal fruit-mild flavor (SKU JMS-FRUIT-009,
+  13 oz jar, priced like the other fruit jars) is added to both seed files so dev data matches the
+  live catalog. The live product row and its photos are added by hand; it joins the Merchant
+  Center feed once its UPC is in `Product.barcode`.
 - The fundraising site's header has a Fundraiser Login link, like the main site's account link: signed out it signs in and opens the fundraiser portal, signed in it reads My Fundraiser and goes straight there.
 - **Refer a friend.** Each customer's rewards page has a link to share. A friend who signs up
   through it sees a note about the bonus, and when the friend's first order is paid, both

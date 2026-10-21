@@ -5,9 +5,11 @@ import GitHubProvider from 'next-auth/providers/github'
 import FacebookProvider from 'next-auth/providers/facebook'
 import AppleProvider from 'next-auth/providers/apple'
 import type { NextAuthOptions } from 'next-auth'
+import type { Provider } from 'next-auth/providers/index'
 import bcrypt from 'bcryptjs'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
 import { DEVELOPER_ACCOUNT_EMAIL } from '@/lib/developer/constants'
+import { getConfiguredOAuthProviders, type OAuthProviderId } from '@/lib/auth/oauth-providers'
 
 /** Cached Prisma client instance for lazy loading */
 let prismaClient: any = null
@@ -51,6 +53,29 @@ if (process.env.NEXTAUTH_URL) {
   console.log('[Auth] NEXTAUTH_URL not set - will be auto-detected')
 }
 
+const OAUTH_PROVIDER_FACTORIES: Record<OAuthProviderId, () => Provider> = {
+  google: () =>
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+  github: () =>
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
+  facebook: () =>
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID!,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+    }),
+  apple: () =>
+    AppleProvider({
+      clientId: process.env.APPLE_CLIENT_ID!,
+      clientSecret: process.env.APPLE_CLIENT_SECRET!,
+    }),
+}
+
 /**
  * NextAuth.js configuration options.
  *
@@ -86,22 +111,8 @@ export const authOptions: NextAuthOptions = {
     },
   },
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }),
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-    }),
-    AppleProvider({
-      clientId: process.env.APPLE_CLIENT_ID!,
-      clientSecret: process.env.APPLE_CLIENT_SECRET!,
-    }),
+    // Only providers with credentials set: an unconfigured one fails when clicked.
+    ...getConfiguredOAuthProviders().map((id) => OAUTH_PROVIDER_FACTORIES[id]()),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {

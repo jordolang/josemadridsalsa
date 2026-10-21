@@ -1,7 +1,34 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { getCurrentFundraiserAccount } from '@/lib/rbac'
+import Link from 'next/link'
+import { getCurrentFundraiserAccount, getCurrentUser } from '@/lib/rbac'
 import { PortalNav } from '@/components/fundraiser-portal/portal-nav'
+
+function NoFundraiserAccount() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md text-center">
+        <h1 className="mb-4 font-serif text-3xl font-bold text-gray-900">
+          No fundraiser on this account
+        </h1>
+        <p className="mb-8 text-gray-600">
+          You&apos;re signed in, but this account isn&apos;t linked to a fundraiser yet. Start one, or sign in
+          with the account you used to set up your fundraiser. Questions? Email{' '}
+          <a href="mailto:mike@josemadridsalsa.com" className="text-salsa-600 hover:text-salsa-700">
+            mike@josemadridsalsa.com
+          </a>
+          .
+        </p>
+        <Link
+          href="/start"
+          className="inline-block rounded-md bg-salsa-500 px-6 py-3 text-white hover:bg-salsa-600"
+        >
+          Start a fundraiser
+        </Link>
+      </div>
+    </div>
+  )
+}
 
 export default async function FundraiserPortalLayout({
   children,
@@ -17,7 +44,14 @@ export default async function FundraiserPortalLayout({
   const account = await getCurrentFundraiserAccount()
 
   if (!account) {
-    redirect('/auth/signin')
+    // Signed in, but this login has no fundraiser. Sending them to sign-in again
+    // looked like sign-in was broken, so say what is wrong instead.
+    if (await getCurrentUser()) {
+      return <NoFundraiserAccount />
+    }
+    // Portal pages send a visitor with no account to /pending, so come back to the dashboard from there.
+    const callbackUrl = pathname && pathname !== '/fundraiser-portal/pending' ? pathname : '/fundraiser-portal/dashboard'
+    redirect(`/auth/signin?${new URLSearchParams({ callbackUrl })}`)
   }
 
   if (account.status === 'PENDING') {

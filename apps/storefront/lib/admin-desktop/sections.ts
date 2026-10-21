@@ -159,7 +159,8 @@ export const DESKTOP_SECTION_GROUPS: DesktopSectionGroup[] = [
         kind: 'table',
         digit: '7',
         pages: [
-          { id: 'fundraisers', label: 'Fundraisers', path: '/admin/fundraisers' },
+          { id: 'fundraisers', label: 'Campaigns', path: '/admin/fundraisers' },
+          { id: 'fundraisers.participants', label: 'Participants', path: '/admin/fundraisers' },
           { id: 'fundraisers.arena', label: 'Battle arena', path: '/admin/fundraisers/battle-arena' },
           { id: 'fundraisers.codes', label: 'Arena game codes', path: '/admin/fundraisers/battle-arena/game-codes' },
         ],
