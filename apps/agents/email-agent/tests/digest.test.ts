@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDigest } from '../src/digest.js';
+import { buildDigest, unanalyzedItem } from '../src/digest.js';
+
+describe('unanalyzedItem', () => {
+  it('flags a message whose analysis failed for the owner, with no draft', () => {
+    const item = unanalyzedItem(
+      { id: '9', from: 'Cy <cy@example.com>', subject: 'Order question' },
+      new Error('Command failed: hermes chat (timed out)'),
+    );
+
+    expect(item.disposition).toBe('needs-owner');
+    expect(item.draftReply).toBeNull();
+    expect(item.summary).toContain('timed out');
+    expect(item.summary).toContain('retried at the next review');
+    expect(buildDigest([item])).toContain('Needs your decision (1)');
+  });
+});
 
 describe('buildDigest', () => {
   it('produces a concise report grouped by disposition', () => {

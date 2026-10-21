@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { analyzeMessage } from './anthropic.js';
 import { classifyEmail } from './classifier.js';
-import { buildDigest, type DigestItem } from './digest.js';
+import { buildDigest, unanalyzedItem, type DigestItem } from './digest.js';
 import { getMessage, searchInbox } from './gmail.js';
 import { loadState, saveState, selectNewMessages } from './state.js';
 
@@ -32,6 +32,7 @@ async function main(): Promise<void> {
   }
 
   const digestItems: DigestItem[] = [];
+  const failedIds = new Set<string>();
   for (const envelope of newEnvelopes) {
     const message = await getMessage(envelope.id);
     const heuristic = classifyEmail({
@@ -40,7 +41,14 @@ async function main(): Promise<void> {
       from: message.from,
     });
 
-    const decision = await analyzeMessage(message, heuristic);
+    let decision;
+    try {
+      decision = await analyzeMessage(message, heuristic);
+    } catch (error) {
+      failedIds.add(message.id);
+      digestItems.push(unanalyzedItem(message, error));
+      continue;
+    }
     digestItems.push({
       id: message.id,
       from: message.from,
@@ -58,7 +66,9 @@ async function main(): Promise<void> {
     const processedMessageIds = [
       ...new Set([
         ...state.processedMessageIds,
-        ...newEnvelopes.map((message) => message.id),
+        ...newEnvelopes
+          .map((message) => message.id)
+          .filter((id) => !failedIds.has(id)),
       ]),
     ].slice(-5_000);
 

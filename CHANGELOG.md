@@ -16,7 +16,9 @@ the root `package.json` is canonical.
 ### Added
 - **Draft-only email agent** (`apps/agents/email-agent`). Reviews the main inbox, has Claude
   sort customer mail into routine drafts, owner decisions, and ignorable mail, and prints a
-  digest. It never sends, labels, archives, or deletes email.
+  digest. It never sends, labels, archives, or deletes email. Each model call has a time limit
+  (`EMAIL_AGENT_TIMEOUT_MS`, default 2 minutes); a message that can't be analyzed is listed for
+  the owner and retried at the next review instead of failing the whole run.
 
 ### Changed
 - **Shipping uses the warehouse's real boxes.** Jar orders are sized as 1–3 jars 10×7×5″,

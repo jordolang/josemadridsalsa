@@ -8,6 +8,22 @@ export type DigestItem = {
   ownerQuestion: string | null;
 };
 
+export function unanalyzedItem(
+  message: Pick<DigestItem, 'id' | 'from' | 'subject'>,
+  error: unknown,
+): DigestItem {
+  const reason = error instanceof Error ? error.message : String(error);
+  return {
+    id: message.id,
+    from: message.from,
+    subject: message.subject,
+    disposition: 'needs-owner',
+    summary: `Could not be analyzed this run (${reason.slice(0, 200)}). It will be retried at the next review.`,
+    draftReply: null,
+    ownerQuestion: 'Read this one yourself if it cannot wait for the next review.',
+  };
+}
+
 function formatItem(item: DigestItem): string {
   const details = [
     `- **${item.subject}** — ${item.from}`,
