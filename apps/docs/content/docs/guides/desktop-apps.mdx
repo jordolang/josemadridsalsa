@@ -129,6 +129,21 @@ A column's default may be a share of the pane rather than a fixed size. Once you
 becomes an absolute width — dragging a column is saying you want it *that* wide, not that share
 of whatever is left.
 
+### Sorting by a column
+
+Click any column header to sort the table by it. The first click puts numbers, money and dates
+biggest and newest first (a fundraiser's **Runs** column lists the newest campaign at the top) and
+text A to Z. A second click flips the order, and a third puts the rows back in the order the
+section loaded them. A small arrow marks the sorted column.
+
+Dates sort by the actual date, not the `Oct 21` text, so campaigns from different years land in
+the right order. Empty cells (`—`, `Never`) always go to the bottom. The sort applies to the rows
+the window has loaded and to whatever the filter box and chips leave showing, and the selected
+row stays selected wherever the sort moves it.
+
+Like column widths, the sort is remembered in that browser or desktop app, separately for each
+page.
+
 ### What each section needs to open
 
 The shell is a second door onto the same data, so it refuses exactly what the web panel refuses.

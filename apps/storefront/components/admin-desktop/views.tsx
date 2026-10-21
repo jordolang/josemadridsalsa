@@ -3,6 +3,7 @@
 import { useCallback, useRef } from 'react'
 import { Icon } from './icons'
 import { clampWidth, columnKey, gridTemplate } from '@/lib/admin-desktop/columns'
+import type { SortState } from '@/lib/admin-desktop/sort'
 import type {
   AnalyticsPayload,
   Cell as CellData,
@@ -62,6 +63,8 @@ export function TableView({
   widths,
   onResize,
   onResetColumn,
+  sort,
+  onSort,
 }: {
   columns: Column[]
   rows: Row[]
@@ -77,29 +80,54 @@ export function TableView({
   onResize?: (key: string, width: number) => void
   /** Double-clicking a handle puts that column back on the loader's track. */
   onResetColumn?: (key: string) => void
+  /** The column the rows are sorted by, if the operator picked one. */
+  sort?: SortState
+  /** A header click: sort by this column, flip it, or go back to the loader's order. */
+  onSort?: (key: string, index: number) => void
 }) {
   const template = gridTemplate(columns, widths)
 
   return (
     <div>
       <div className="jmsd-thead" style={{ gridTemplateColumns: template }}>
-        {columns.map((column, index) => (
-          <span
-            key={columnKey(column, index)}
-            className="jmsd-th"
-            style={{ textAlign: column.right ? 'right' : 'left' }}
-          >
-            <span className="jmsd-th-label">{column.label}</span>
-            {onResize ? (
-              <ResizeHandle
-                column={column}
-                columnKey={columnKey(column, index)}
-                onResize={onResize}
-                onReset={onResetColumn}
-              />
-            ) : null}
-          </span>
-        ))}
+        {columns.map((column, index) => {
+          const key = columnKey(column, index)
+          const direction = sort?.key === key ? sort.direction : undefined
+          return (
+            <span
+              key={key}
+              className="jmsd-th"
+              role="columnheader"
+              aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : undefined}
+              style={{ textAlign: column.right ? 'right' : 'left' }}
+            >
+              {onSort ? (
+                <button
+                  type="button"
+                  className="jmsd-th-sort"
+                  data-sorted={direction ? true : undefined}
+                  title={`Sort by ${column.label}`}
+                  onClick={() => onSort(key, index)}
+                >
+                  <span className="jmsd-th-label">{column.label}</span>
+                  <span className="jmsd-th-arrow" aria-hidden="true">
+                    {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : ''}
+                  </span>
+                </button>
+              ) : (
+                <span className="jmsd-th-label">{column.label}</span>
+              )}
+              {onResize ? (
+                <ResizeHandle
+                  column={column}
+                  columnKey={columnKey(column, index)}
+                  onResize={onResize}
+                  onReset={onResetColumn}
+                />
+              ) : null}
+            </span>
+          )
+        })}
       </div>
 
       {rows.length === 0 ? (
@@ -468,6 +496,8 @@ export function EventsView({
   widths,
   onResize,
   onResetColumn,
+  sort,
+  onSort,
 }: {
   payload: EventsPayload
   selected: number
@@ -477,6 +507,8 @@ export function EventsView({
   widths?: Record<string, number>
   onResize?: (key: string, width: number) => void
   onResetColumn?: (key: string) => void
+  sort?: SortState
+  onSort?: (key: string, index: number) => void
 }) {
   return (
     <div className="jmsd-padded">
@@ -527,6 +559,8 @@ export function EventsView({
           widths={widths}
           onResize={onResize}
           onResetColumn={onResetColumn}
+          sort={sort}
+          onSort={onSort}
         />
       </div>
     </div>

@@ -23,6 +23,11 @@ export interface Cell {
   tone?: Tone
   /** Draw a status dot in this cell, coloured by `tone`. */
   dot?: boolean
+  /**
+   * What a header click sorts this cell by, when its text alone would sort
+   * wrong. Every date cell sets it: `Oct 21` has no year. See `sort.ts`.
+   */
+  sort?: number | string
 }
 
 export interface Column {

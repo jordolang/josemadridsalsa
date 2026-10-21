@@ -28,6 +28,15 @@ import {
   type ColumnWidths,
 } from '@/lib/admin-desktop/columns'
 import { findForm } from '@/lib/admin-desktop/forms'
+import {
+  firstDirection,
+  nextSort,
+  readTableSorts,
+  sortRows,
+  withTableSort,
+  writeTableSorts,
+  type TableSorts,
+} from '@/lib/admin-desktop/sort'
 import { filterRows, listSearch, MAX_LIST_LIMIT, ROW_LIMIT, searchQuery, type ListQuery } from '@/lib/admin-desktop/list'
 import { bulkActions, type BulkAction } from '@/lib/admin-desktop/bulk'
 import { attentionCount, badgeAlerts, type DesktopAlert } from '@/lib/admin-desktop/alerts'
@@ -251,6 +260,8 @@ export function DesktopShell({
   const [confirming, setConfirming] = useState<PendingConfirm | null>(null)
   const [working, setWorking] = useState(false)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
+  /** The column each page is sorted by, when the operator clicked a header. */
+  const [tableSorts, setTableSorts] = useState<TableSorts>({})
   const [badgeCounts, setBadgeCounts] = useState<DesktopBadges>(badges)
   /** Row ids marked for a bulk action. */
   const [marked, setMarked] = useState<ReadonlySet<string>>(() => new Set())
@@ -314,6 +325,7 @@ export function DesktopShell({
   // server has no idea what this window's operator dragged.
   useEffect(() => {
     setColumnWidths(readColumnWidths())
+    setTableSorts(readTableSorts())
   }, [])
 
   const flash = useCallback((message: string) => {
@@ -741,9 +753,16 @@ export function DesktopShell({
     [body],
   )
 
+  const columns = useMemo(
+    () => (body.view === 'table' || body.view === 'events' ? body.columns : []),
+    [body],
+  )
+  // Keyed by page, not section: each page in a section has its own columns.
+  const tableSort = tableSorts[section.page]
+
   const rows = useMemo(
-    () => filterRows(allRows, { query, filter, serverQuery: section.list?.q }),
-    [allRows, query, filter, section.list?.q],
+    () => sortRows(filterRows(allRows, { query, filter, serverQuery: section.list?.q }), columns, tableSort),
+    [allRows, columns, tableSort, query, filter, section.list?.q],
   )
 
   // The filter box searches the database on lists that outgrow their window,
@@ -775,6 +794,20 @@ export function DesktopShell({
   useEffect(() => {
     activeRowId.current = activeRow?.id ?? null
   }, [activeRow])
+
+  /** A header click. The cursor stays on the same row wherever the sort moves it. */
+  const sortBy = useCallback(
+    (key: string, index: number) => {
+      restoreRow.current = activeRowId.current
+      const next = nextSort(tableSort, key, firstDirection(rows, index))
+      setTableSorts((previous) => {
+        const updated = withTableSort(previous, section.page, next)
+        writeTableSorts(updated)
+        return updated
+      })
+    },
+    [tableSort, rows, section.page],
+  )
 
   // Marks follow the rows: one that a reload or a search removed is dropped
   // rather than acted on unseen.
@@ -1144,6 +1177,8 @@ export function DesktopShell({
         return
       }
       if (event.key === 'Enter') {
+        // A focused column header sorts on Enter, like a click, rather than opening the row.
+        if (target instanceof Element && target.closest('.jmsd-thead')) return
         event.preventDefault()
         openRow(activeRow)
         return
@@ -1494,6 +1529,8 @@ export function DesktopShell({
                 widths={sectionWidths}
                 onResize={resizeColumn}
                 onResetColumn={resetColumn}
+                sort={tableSort}
+                onSort={sortBy}
               />
             ) : (
               <TableView
@@ -1507,6 +1544,8 @@ export function DesktopShell({
                 widths={sectionWidths}
                 onResize={resizeColumn}
                 onResetColumn={resetColumn}
+                sort={tableSort}
+                onSort={sortBy}
                 emptyLabel={
                   allRows.length === 0
                     ? 'Nothing in this table yet.'

@@ -13,13 +13,23 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+## [2.2] — 2026-10-21
+
 ### Added
+- **Sort any desktop admin table by clicking its column header.** Every column in every section
+  of the macOS and Windows admin apps (and the `/admin-desktop` window in a browser) sorts on a
+  header click: numbers, money and dates biggest and newest first, text A to Z; a second click
+  flips it and a third goes back to the loaded order. Dates sort by the real date, so the
+  Fundraisers page's Runs column lists the newest campaign first. The sort is remembered per page.
 - **"How a fundraising campaign works" on the fundraising home page.** A six-step infographic
   (sign up, set up, account, team, sell, submit) replaces the old three-card "How online
   fundraising works" section, with a "New step" callout on submitting final totals at /submit and
   a downloadable one-page PDF guide (`/fundraising/downloads/how-a-fundraising-campaign-works.pdf`).
 
 ### Fixed
+- **`npm run version:feature` / `version:increment` no longer break `npm ci`.** They bumped
+  `@jose-madrid/core` without moving `apps/fundraising`'s exact pin on it, so npm looked for the
+  old core version on the public registry. The bump now moves workspace pins too.
 - **Fundraising sign-in no longer fails silently.** The sign-in pages show only the Google, GitHub,
   Facebook and Apple buttons whose keys are set. Before, a button for a provider with no keys
   failed on click and sent the visitor back to the same page. A failed social sign-in now shows
