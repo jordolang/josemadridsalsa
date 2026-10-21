@@ -114,7 +114,7 @@ export async function POST(
     }
 
     // The parcel the order actually needs, from the same packing model that quoted the customer at
-    // checkout — three jars to a line, four lines to a case, and gross weight including the glass.
+    // checkout — the warehouse box for that many jars, and gross weight including the glass.
     // A hand-measured override is accepted for the odd parcel that does not fit the grid.
     const products = await prisma.product.findMany({
       where: { id: { in: order.items.map((item) => item.productId) } },

@@ -118,9 +118,10 @@ doing", `/admin/analytics` answers "how are we performing".
   `${CARRIER}${Date.now()}` as a tracking number, pointed `labelUrl` at a route that did not exist,
   and bought no postage — so it marked orders shipped and showed customers a tracking number that
   404s. The buy dialog invented the rates it displayed, too
-- ✅ Packing model — jars pack three to a line, four lines to a case of twelve
-  (`lib/shipping/jar-packing.ts`), which sizes and weighs the parcel for both the customer's quote
-  and the label bought against it
+- ✅ Packing model — jars ship in the warehouse boxes: 1–3 jars 10×7×5″, 4–6 jars 12×9×6″, a case
+  14×10×8″, two cases 20×15×9″ (`SHIPPING_BOXES` in `lib/shipping/jar-packing.ts`), which sizes
+  and weighs the parcel for the customer's quote, the label bought against it, and the Pirate Ship
+  export
 - ✅ Postage bought elsewhere — Pirate Ship has no API, so tracking, carrier, service and **what we
   actually paid** can be recorded by hand and land on the order as a shipment
 - ✅ Fulfillment status, ✅ automated customer notifications

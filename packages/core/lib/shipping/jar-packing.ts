@@ -1,35 +1,41 @@
 /**
- * How jars actually go in a box.
+ * Which box an order of jars ships in, and what it weighs.
  *
- * The generic volume-fitting this replaces summed each item's bounding box and then picked the
- * smallest standard carton whose *volume* was larger. That is wrong for jars in two ways: volume
- * ignores that cylinders pack in a grid rather than pouring like liquid, and six jars do not stack
- * into a jar-shaped space. It produced a plausible box that was not the box.
- *
- * The real rule, from the warehouse: **three jars side by side make a line, four lines make a
- * case of twelve, one layer deep.** Smaller orders use smaller boxes on the same grid.
+ * The boxes are the ones the warehouse actually uses, picked by jar count. Checkout quotes, EasyPost
+ * labels and the Pirate Ship export all size parcels from `SHIPPING_BOXES`, so changing a box here
+ * changes it everywhere.
  *
  * Every number below is a stated assumption in one place, so correcting one corrects every quote.
  */
 
-/**
- * Outside diameter of a 16oz regular-mouth mason jar, inches.
- *
- * Measured across the body, which is the widest point and therefore what decides the grid.
- */
-export const JAR_DIAMETER_IN = 3.0
+export interface ShippingBox {
+  name: string
+  /** Most jars this box holds. */
+  maxJars: number
+  /** Outer dimensions, inches, longest side first. */
+  length: number
+  width: number
+  height: number
+}
 
-/** Height of the same jar with lid and band on, inches. */
-export const JAR_HEIGHT_IN = 5.0
-
-/** Jars per line, across the width of the box. */
-export const JARS_PER_LINE = 3
-
-/** Lines per case, along the depth of the box. `JARS_PER_LINE × LINES_PER_CASE` = 12. */
-export const LINES_PER_CASE = 4
+/** The warehouse's boxes, smallest first. */
+export const SHIPPING_BOXES: readonly ShippingBox[] = [
+  { name: '1–3 jar box', maxJars: 3, length: 10, width: 7, height: 5 },
+  { name: '4–6 jar box', maxJars: 6, length: 12, width: 9, height: 6 },
+  { name: 'Case box', maxJars: 12, length: 14, width: 10, height: 8 },
+  { name: '2-case box', maxJars: 24, length: 20, width: 15, height: 9 },
+]
 
 /** A full case. */
-export const JARS_PER_CASE = JARS_PER_LINE * LINES_PER_CASE
+export const JARS_PER_CASE = 12
+
+/** The biggest box, which larger orders are split across. */
+const LARGEST_BOX = SHIPPING_BOXES[SHIPPING_BOXES.length - 1]
+
+/** The smallest box that holds this many jars, or the largest box when none does. */
+export function boxForJars(jarCount: number): ShippingBox {
+  return SHIPPING_BOXES.find((box) => jarCount <= box.maxJars) ?? LARGEST_BOX
+}
 
 /**
  * Weight of the empty jar, lid and band, ounces.
@@ -60,12 +66,6 @@ export const BOX_TARE_OZ = 5
 /** Dividers and paper per jar, ounces. */
 export const PACKING_PER_JAR_OZ = 1
 
-/** Clearance added across width and depth for box walls and a little slack, inches. */
-export const BOX_WALL_ALLOWANCE_IN = 0.5
-
-/** Padding above and below the jars, inches. */
-export const BOX_VERTICAL_PADDING_IN = 0.75
-
 /**
  * Gross shipping weight of one filled jar, in ounces.
  *
@@ -84,10 +84,8 @@ export interface JarParcel {
   weightOz: number
   /** How many boxes this many jars really needs. */
   boxes: number
-  /** The grid, for showing staff what to pack. */
-  jarsAcross: number
-  lines: number
-  layers: number
+  /** The box the jars go in, for showing staff what to pack. Null when there is nothing to pack. */
+  box: ShippingBox | null
 }
 
 const round = (value: number) => Math.round(value * 100) / 100
@@ -95,11 +93,11 @@ const round = (value: number) => Math.round(value * 100) / 100
 /**
  * Size the parcel for a number of jars.
  *
- * Beyond one case the jars are modelled as **stacked cases in a single taller parcel**, because the
- * carrier client quotes one parcel per shipment. That is a real approximation and it is stated
- * rather than hidden: a genuine three-case order ships as three boxes, and quoting it as one tall
- * box gets the weight right but the dimensional pricing wrong. Splitting a quote across boxes needs
- * multi-parcel support at the carrier layer.
+ * Beyond the largest box the jars are modelled as **stacked 2-case boxes in a single taller
+ * parcel**, because the carrier client quotes one parcel per shipment. That is a real approximation
+ * and it is stated rather than hidden: a genuine 36-jar order ships as two boxes, and quoting it as
+ * one tall box gets the weight right but the dimensional pricing wrong. Splitting a quote across
+ * boxes needs multi-parcel support at the carrier layer.
  */
 export function packJars(
   jarCount: number,
@@ -115,30 +113,11 @@ export function packJars(
   const jars = Math.max(0, Math.floor(jarCount))
 
   if (jars === 0) {
-    return {
-      length: 0,
-      width: 0,
-      height: 0,
-      weightOz: 0,
-      boxes: 0,
-      jarsAcross: 0,
-      lines: 0,
-      layers: 0,
-    }
+    return { length: 0, width: 0, height: 0, weightOz: 0, boxes: 0, box: null }
   }
 
-  const boxes = Math.ceil(jars / JARS_PER_CASE)
-  const jarsInFootprint = Math.min(jars, JARS_PER_CASE)
-
-  // A short order is a short box: one jar does not ship in a twelve-jar carton.
-  const jarsAcross = Math.min(jarsInFootprint, JARS_PER_LINE)
-  const lines = Math.ceil(jarsInFootprint / JARS_PER_LINE)
-  // Full cases stack; a partial case sits on top of them as its own layer.
-  const layers = boxes
-
-  const width = jarsAcross * JAR_DIAMETER_IN + BOX_WALL_ALLOWANCE_IN
-  const depth = lines * JAR_DIAMETER_IN + BOX_WALL_ALLOWANCE_IN
-  const height = layers * JAR_HEIGHT_IN + BOX_VERTICAL_PADDING_IN
+  const box = boxForJars(jars)
+  const boxes = Math.ceil(jars / LARGEST_BOX.maxJars)
 
   // Contents at their real density, plus the glass and lid for each jar. Falls back to one jar's
   // worth apiece when the caller knows only how many there are.
@@ -146,26 +125,23 @@ export function packJars(
   const jarWeight = netContents * SALSA_SPECIFIC_GRAVITY + jars * JAR_TARE_OZ
   const packaging = boxes * BOX_TARE_OZ + jars * PACKING_PER_JAR_OZ
 
-  // Longest side is the length, which is how carriers describe a parcel.
-  const [length, shorter] = depth >= width ? [depth, width] : [width, depth]
-
   return {
-    length: round(length),
-    width: round(shorter),
-    height: round(height),
+    length: box.length,
+    width: box.width,
+    height: box.height * boxes,
     weightOz: round(jarWeight + packaging),
     boxes,
-    jarsAcross,
-    lines,
-    layers,
+    box,
   }
 }
 
 /** Human description of the packing, for the admin fulfillment screen. */
 export function describeJarPacking(parcel: JarParcel): string {
-  if (parcel.boxes === 0) return 'Nothing to pack'
-  const grid = `${parcel.lines} line${parcel.lines === 1 ? '' : 's'} of ${parcel.jarsAcross}`
+  if (parcel.boxes === 0 || !parcel.box) return 'Nothing to pack'
+  const { name, length, width, height } = parcel.box
+  const size = `${length}″ × ${width}″ × ${height}″`
+  const pounds = `${(parcel.weightOz / 16).toFixed(1)} lb`
   return parcel.boxes === 1
-    ? `${grid} — ${parcel.length}″ × ${parcel.width}″ × ${parcel.height}″, ${(parcel.weightOz / 16).toFixed(1)} lb`
-    : `${parcel.boxes} boxes, ${grid} each — quoted as one parcel of ${(parcel.weightOz / 16).toFixed(1)} lb`
+    ? `${name} — ${size}, ${pounds}`
+    : `${parcel.boxes} × ${name} (${size}) — quoted as one parcel of ${pounds}`
 }

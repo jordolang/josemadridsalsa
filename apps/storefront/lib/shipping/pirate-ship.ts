@@ -16,6 +16,7 @@
  */
 
 import { toCsv, detectMapping, mappedCell } from '@/lib/csv'
+import { packJars } from '@/lib/shipping/jar-packing'
 
 /**
  * Column headers for the Pirate Ship import file, in output order.
@@ -54,18 +55,6 @@ export const DEFAULT_UNIT_WEIGHT_LB = 1.2
 /** Box + dunnage tare added to every parcel (pounds). */
 export const PACKAGING_TARE_LB = 0.5
 
-/**
- * Standard outer-box sizes (inches, L x W x H), smallest first. Used when the
- * order's products don't carry their own dimensions — the box is chosen from
- * the total number of units so a typical salsa order lands in a sane box.
- */
-const STANDARD_BOXES = [
-  { maxUnits: 3, length: 8, width: 6, height: 4 },
-  { maxUnits: 8, length: 11, width: 8.5, height: 5.5 },
-  { maxUnits: 16, length: 16, width: 12, height: 8 },
-  { maxUnits: Infinity, length: 18, width: 14, height: 12 },
-] as const
-
 /** A single order line as far as parcel math is concerned. */
 export interface ParcelItemInput {
   quantity: number
@@ -97,7 +86,8 @@ const isPositive = (n: number | null | undefined): n is number =>
  * Weight = sum(per-unit weight x quantity) + packaging tare, where a missing
  * per-unit weight falls back to {@link DEFAULT_UNIT_WEIGHT_LB}. Dimensions use
  * the largest per-product box among the line items when products carry their
- * own dimensions; otherwise a standard box is picked by total unit count.
+ * own dimensions; otherwise the warehouse box for that many jars, from
+ * {@link packJars}, so Pirate Ship gets the same box as checkout.
  */
 export function computeParcel(items: ParcelItemInput[]): ComputedParcel {
   let totalWeightLb = 0
@@ -133,7 +123,7 @@ export function computeParcel(items: ParcelItemInput[]): ComputedParcel {
   const weightLb = Math.floor(totalOunces / 16)
   const weightOz = totalOunces - weightLb * 16
 
-  const box = STANDARD_BOXES.find((b) => unitCount <= b.maxUnits) ?? STANDARD_BOXES[STANDARD_BOXES.length - 1]
+  const box = packJars(Math.max(unitCount, 1))
 
   return {
     weightLb,

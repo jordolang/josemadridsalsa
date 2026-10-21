@@ -230,7 +230,7 @@ const STANDARD_BOXES = [
 ] as const
 
 /**
- * Whether an order is entirely jars, and therefore packs on the warehouse grid.
+ * Whether an order is entirely jars, and therefore ships in the warehouse jar boxes.
  *
  * A product with real dimensions recorded is something other than a jar — merchandise, a gift set —
  * and goes through the generic volume fit below instead.
@@ -247,7 +247,7 @@ function totalJarCount(items: ShippingItem[]): number {
 /**
  * The parcel a set of items actually ships in.
  *
- * **Jars take the warehouse grid** — three across, four lines to a case of twelve — via
+ * **Jars take the warehouse boxes** — 1–3 jars, 4–6 jars, a case, two cases — via
  * `lib/shipping/jar-packing.ts`, which also computes the *gross* weight: glass, lid, contents,
  * dividers and box. That matters because `Product.weight` holds `13`, the jar size, and shipping a
  * jar as 13 oz under-declares it by about two thirds.
@@ -472,7 +472,7 @@ export async function calculateShipping(
   }
 
   try {
-    // Jars pack on the warehouse grid; anything else falls back to a volume fit.
+    // Jars go in the warehouse boxes; anything else falls back to a volume fit.
     const parcel = calculateOrderParcel(items)
 
     // Build shipping API request
