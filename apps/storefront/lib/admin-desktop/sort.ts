@@ -77,10 +77,13 @@ export function sortRows(rows: Row[], columns: Column[], sort: SortState | undef
     .map(({ row }) => row)
 }
 
-/** Which way a column reads on its first click: numbers and dates descending, text ascending. */
+/**
+ * Which way a column reads on its first click: numbers and dates descending, text ascending.
+ * Asks whether any value is a number, not what the first row holds, so the answer is the
+ * same whatever order the rows are in; otherwise a second click could clear instead of flip.
+ */
 export function firstDirection(rows: Row[], index: number): SortDirection {
-  const value = rows.map((row) => sortValue(row.cells[index])).find((entry) => entry !== null)
-  return typeof value === 'number' ? 'desc' : 'asc'
+  return rows.some((row) => typeof sortValue(row.cells[index]) === 'number') ? 'desc' : 'asc'
 }
 
 /** The sort after a click on `key`: first way, then flipped, then off. */

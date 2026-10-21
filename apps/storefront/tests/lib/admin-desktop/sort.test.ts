@@ -95,6 +95,12 @@ describe('header clicks', () => {
     expect(firstDirection(rows, 0)).toBe('asc')
   })
 
+  it('gives the same first direction whatever order the rows are in', () => {
+    const mixed = [row('a', [{ text: 'n/a' }]), row('b', [{ text: '$5.00' }])]
+    expect(firstDirection(mixed, 0)).toBe('desc')
+    expect(firstDirection([...mixed].reverse(), 0)).toBe('desc')
+  })
+
   it('cycles first way, flipped, then off', () => {
     const first = nextSort(undefined, 'Runs', 'desc')
     expect(first).toEqual({ key: 'Runs', direction: 'desc' })

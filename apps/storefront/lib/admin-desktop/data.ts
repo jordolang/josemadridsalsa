@@ -4115,7 +4115,7 @@ async function loadMedia(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
       cells: [
         text(file.filename, { mono: true, strong: true }),
         text(kind, { dim: true }),
-        text(bytes(file.fileSize), { mono: true, right: true }),
+        text(bytes(file.fileSize), { sort: file.fileSize, mono: true, right: true }),
         text(dimensions, { mono: true, right: true, dim: true }),
         isImage
           ? statusCell(file.alt ? 'Set' : 'Missing', file.alt ? 'good' : 'warn')
@@ -5997,7 +5997,7 @@ async function loadAutomations(list: ListQuery = DEFAULT_LIST): Promise<TablePay
         text(automation.name, { strong: true }),
         text(humanise(automation.trigger), { dim: true }),
         text(count(automation.steps.length), { mono: true, right: true }),
-        text(span > 0 ? `${count(Math.round(span / 24))} d` : 'same day', { mono: true, right: true, dim: true }),
+        text(span > 0 ? `${count(Math.round(span / 24))} d` : 'same day', { sort: span, mono: true, right: true, dim: true }),
         text(count(automation._count.enrollments), { mono: true, right: true }),
         text(count(automation._count.logs), { mono: true, right: true, dim: true }),
         statusCell(automation.isActive ? 'Running' : 'Paused', automation.isActive ? 'good' : 'muted'),
@@ -8531,7 +8531,12 @@ async function loadArchiveDocuments(list: ListQuery = DEFAULT_LIST): Promise<Tab
         text(document.filename, { strong: true }),
         text(document.category, { dim: true }),
         text(document.year ? String(document.year) : '—', { mono: true, right: true, dim: !document.year }),
-        text(document.sizeBytes ? bytes(document.sizeBytes) : '—', { mono: true, right: true, dim: true }),
+        text(document.sizeBytes ? bytes(document.sizeBytes) : '—', {
+          sort: document.sizeBytes || undefined,
+          mono: true,
+          right: true,
+          dim: true,
+        }),
         text(document.textChars ? count(document.textChars) : '—', {
           mono: true,
           right: true,
