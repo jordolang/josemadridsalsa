@@ -24,3 +24,8 @@ export const FUNDRAISING_CONTACT = {
   phoneHref: 'tel:+17405214304',
   mailingAddress: ['PO Box 1061', 'Zanesville, OH 43702'],
 } as const
+
+export const FUNDRAISING_SOCIAL = [
+  { href: 'https://www.instagram.com/josemadridsalsa', label: 'Instagram' },
+  { href: 'https://www.facebook.com/josemadridsalsa', label: 'Facebook' },
+] as const
