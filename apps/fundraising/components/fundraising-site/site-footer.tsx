@@ -33,10 +33,10 @@ export function FundraisingSiteFooter() {
     <footer className="bg-neutral-900 text-white">
       <div className="relative overflow-hidden bg-salsa-600">
         <div className="container relative z-10 mx-auto flex flex-col items-center gap-4 px-4 py-6 md:flex-row md:justify-between md:gap-8 md:py-10">
-          <p className="font-serif text-3xl font-bold leading-tight md:text-5xl lg:text-6xl">Big flavor. Bigger impact.</p>
+          <p className="font-serif text-3xl font-bold leading-tight md:whitespace-nowrap md:text-4xl lg:text-5xl xl:text-6xl">Big flavor. Bigger impact.</p>
           <Link
             href="/start"
-            className="flex h-12 w-full max-w-md shrink-0 items-center justify-center gap-2 rounded-md bg-[#FBF8F3] px-8 text-base font-semibold text-neutral-900 shadow-sm transition-colors hover:bg-white md:mr-24 md:w-auto lg:mr-40"
+            className="flex h-12 w-full max-w-md shrink-0 items-center justify-center gap-2 rounded-md bg-[#FBF8F3] px-8 text-base font-semibold text-neutral-900 shadow-sm transition-colors hover:bg-white md:mr-16 md:w-auto xl:mr-32"
           >
             Start a Fundraiser
             <ChevronRight className="h-5 w-5" aria-hidden />
