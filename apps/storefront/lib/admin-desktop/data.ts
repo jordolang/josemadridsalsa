@@ -149,6 +149,13 @@ async function safe<T>(run: () => Promise<T>, fallback: T): Promise<T> {
 
 const text = (value: string, extra: Partial<Cell> = {}): Cell => ({ text: value, ...extra })
 
+/** A date cell's sort key: its text (`Oct 21`) has no year to sort on. Absent sorts last. */
+function at(value: Date | string | null | undefined): number | undefined {
+  if (!value) return undefined
+  const time = new Date(value).getTime()
+  return Number.isNaN(time) ? undefined : time
+}
+
 function statusCell(label: string, tone: Tone): Cell {
   return { text: label, tone, dot: true }
 }
@@ -306,7 +313,7 @@ async function loadOrders(list: ListQuery = DEFAULT_LIST): Promise<TablePayload>
         text(count(units), { mono: true, right: true }),
         text(money(total), { mono: true, right: true, strong: true }),
         statusCell(humanise(order.status), orderStatusTone(order.status)),
-        text(stamp(order.createdAt), { mono: true, dim: true }),
+        text(stamp(order.createdAt), { sort: at(order.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: order.orderNumber,
@@ -555,7 +562,7 @@ async function loadProducts(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
         text(cost === null ? '—' : money(cost), { mono: true, right: true, dim: true }),
         text(margin === null ? '—' : percent(margin, 0), { mono: true, right: true }),
         statusCell(product.isActive ? 'Active' : 'Inactive', product.isActive ? 'good' : 'muted'),
-        text(shortDate(product.updatedAt), { mono: true, dim: true }),
+        text(shortDate(product.updatedAt), { sort: at(product.updatedAt), mono: true, dim: true }),
       ],
       inspector: {
         title: product.name,
@@ -886,7 +893,7 @@ async function loadCustomers(list: ListQuery = DEFAULT_LIST): Promise<TablePaylo
         text(customer.sourceName ?? humanise(customer.source), { dim: true }),
         text(count(customer.totalOrders), { mono: true, right: true }),
         text(money(spent), { mono: true, right: true, strong: true }),
-        text(shortDate(customer.lastOrderAt), { mono: true, dim: true }),
+        text(shortDate(customer.lastOrderAt), { sort: at(customer.lastOrderAt), mono: true, dim: true }),
       ],
       inspector: {
         title: name,
@@ -1136,7 +1143,7 @@ async function loadFundraisers(list: ListQuery = DEFAULT_LIST): Promise<TablePay
         text(campaign.name, { strong: true }),
         text(campaign.organizationName, { dim: true }),
         text(source, { dim: true }),
-        text(runs, { dim: true }),
+        text(runs, { sort: at(campaign.startDate), dim: true }),
         text(count(campaign.totalOrders), { mono: true, right: true }),
         text(money(revenue), { mono: true, right: true }),
         text(money(payout), { mono: true, right: true, strong: true }),
@@ -1490,7 +1497,7 @@ async function loadEvents(list: ListQuery = DEFAULT_LIST): Promise<EventsPayload
           : []),
       ],
       cells: [
-        text(shortDate(event.startDate), { mono: true, dim: true }),
+        text(shortDate(event.startDate), { sort: at(event.startDate), mono: true, dim: true }),
         text(event.title, { strong: true }),
         text(where, { dim: true }),
         text(event.boothFee ? money(event.boothFee) : '—', { mono: true, right: true, dim: true }),
@@ -1677,7 +1684,7 @@ async function loadLedger(list: ListQuery = DEFAULT_LIST): Promise<TablePayload>
       search: `${entry.description} ${entry.counterparty ?? ''} ${entry.category}`,
       buckets: [0, ...(income ? [1] : [2]), ...(entry.exportedAt ? [] : [3])],
       cells: [
-        text(shortDate(entry.date), { mono: true, dim: true }),
+        text(shortDate(entry.date), { sort: at(entry.date), mono: true, dim: true }),
         text(entry.description, { strong: true }),
         text(humanise(entry.category), { dim: true }),
         text(income ? '—' : centsToMoney(entry.amountCents), {
@@ -1693,7 +1700,10 @@ async function loadLedger(list: ListQuery = DEFAULT_LIST): Promise<TablePayload>
           dim: !income,
         }),
         text(humanise(entry.source), { dim: true, mono: true }),
-        statusCell(entry.exportedAt ? shortDate(entry.exportedAt) : 'Not exported', entry.exportedAt ? 'good' : 'warn'),
+        {
+          ...statusCell(entry.exportedAt ? shortDate(entry.exportedAt) : 'Not exported', entry.exportedAt ? 'good' : 'warn'),
+          sort: at(entry.exportedAt),
+        },
       ],
       inspector: {
         title: entry.description,
@@ -2506,7 +2516,7 @@ async function loadAudit(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
       search: `${who} ${log.action} ${entity}`,
       buckets: [0, ...(log.userId ? [1] : [2])],
       cells: [
-        text(stamp(log.createdAt), { mono: true, dim: true }),
+        text(stamp(log.createdAt), { sort: at(log.createdAt), mono: true, dim: true }),
         text(who, { mono: true, tone: log.userId ? 'accent' : 'muted' }),
         text(log.action, { strong: true }),
         text(entity, { dim: true }),
@@ -2631,7 +2641,7 @@ async function loadPurchase(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
         text(summary, { dim: true }),
         text(count(ordered), { mono: true, right: true }),
         text(money(cost), { mono: true, right: true, strong: true }),
-        text(shortDate(order.expectedAt), { mono: true, dim: true }),
+        text(shortDate(order.expectedAt), { sort: at(order.expectedAt), mono: true, dim: true }),
         statusCell(humanise(order.status), PURCHASE_TONE[order.status] ?? 'muted'),
       ],
       inspector: {
@@ -2901,8 +2911,8 @@ async function loadInvoices(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
       cells: [
         text(invoice.number, { mono: true, dim: true }),
         text(customer, { strong: true }),
-        text(shortDate(invoice.createdAt), { mono: true, dim: true }),
-        text(shortDate(invoice.dueDate), { mono: true, dim: true, tone: lapsed ? 'bad' : undefined }),
+        text(shortDate(invoice.createdAt), { sort: at(invoice.createdAt), mono: true, dim: true }),
+        text(shortDate(invoice.dueDate), { sort: at(invoice.dueDate), mono: true, dim: true, tone: lapsed ? 'bad' : undefined }),
         text(money(total), { mono: true, right: true, strong: true }),
         statusCell(label, tone),
       ],
@@ -3055,7 +3065,7 @@ async function loadWholesale(list: ListQuery = DEFAULT_LIST): Promise<TablePaylo
         text(discount > 0 ? percent(discount, 0) : '—', { mono: true, right: true }),
         text(account.minimumOrder ? money(account.minimumOrder) : '—', { mono: true, right: true }),
         statusCell(humanise(account.status), WHOLESALE_TONE[account.status] ?? 'muted'),
-        text(shortDate(account.createdAt), { mono: true, dim: true }),
+        text(shortDate(account.createdAt), { sort: at(account.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: account.businessName,
@@ -3233,7 +3243,7 @@ async function loadEmail(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
       cells: [
         text(campaign.name, { strong: true }),
         text(audience, { dim: true }),
-        text(sentAt ? stamp(sentAt) : '—', { mono: true, dim: true }),
+        text(sentAt ? stamp(sentAt) : '—', { sort: at(sentAt), mono: true, dim: true }),
         text(count(campaign.totalRecipients), { mono: true, right: true }),
         text(measured ? percent(open) : '—', { mono: true, right: true, tone: open >= 40 ? 'good' : undefined }),
         text(measured ? percent(click) : '—', { mono: true, right: true, tone: click >= 10 ? 'good' : undefined }),
@@ -3430,7 +3440,7 @@ async function loadSocial(list: ListQuery = DEFAULT_LIST): Promise<TablePayload>
       cells: [
         text(headline, { strong: true }),
         text(channels, { dim: true }),
-        text(when ? stamp(when) : '—', { mono: true, dim: true }),
+        text(when ? stamp(when) : '—', { sort: at(when), mono: true, dim: true }),
         text(reach ? count(reach) : '—', { mono: true, right: true }),
         text(reach ? percent(engagement) : '—', { mono: true, right: true, tone: engagement >= 5 ? 'good' : undefined }),
         text(clicks ? count(clicks) : '—', { mono: true, right: true }),
@@ -3622,7 +3632,7 @@ async function loadContent(list: ListQuery = DEFAULT_LIST): Promise<TablePayload
         text(url, { mono: true, dim: true }),
         text(post.author ? personName(post.author) : '—', { dim: true }),
         statusCell(humanise(post.status), CONTENT_TONE[post.status] ?? 'muted'),
-        text(shortDate(post.updatedAt), { mono: true, dim: true }),
+        text(shortDate(post.updatedAt), { sort: at(post.updatedAt), mono: true, dim: true }),
       ],
       inspector: {
         title: post.title,
@@ -3955,7 +3965,7 @@ async function loadReviews(list: ListQuery = DEFAULT_LIST): Promise<TablePayload
         text(author, { dim: true }),
         text(stars(review.rating), { tone: review.rating >= 4 ? 'accent' : 'bad' }),
         text(excerpt(body, 80), { dim: true }),
-        text(shortDate(review.createdAt), { mono: true, dim: true }),
+        text(shortDate(review.createdAt), { sort: at(review.createdAt), mono: true, dim: true }),
         statusCell(humanise(review.status), REVIEW_TONE[review.status] ?? 'muted'),
       ],
       inspector: {
@@ -4110,7 +4120,7 @@ async function loadMedia(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
         isImage
           ? statusCell(file.alt ? 'Set' : 'Missing', file.alt ? 'good' : 'warn')
           : text('—', { dim: true }),
-        text(shortDate(file.createdAt), { mono: true, dim: true }),
+        text(shortDate(file.createdAt), { sort: at(file.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: file.filename,
@@ -4264,7 +4274,7 @@ async function loadMessages(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
         text(who, { strong: true }),
         text(excerpt(conversation.subject ?? latest?.body, 80), { dim: true }),
         text('Conversation', { dim: true, dot: true, tone: 'warn' }),
-        text(stamp(conversation.updatedAt), { mono: true, dim: true }),
+        text(stamp(conversation.updatedAt), { sort: at(conversation.updatedAt), mono: true, dim: true }),
         statusCell(humanise(conversation.status), open ? 'warn' : 'muted'),
       ],
       inspector: {
@@ -4326,7 +4336,7 @@ async function loadMessages(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
       text(entry.name, { strong: true }),
       text(excerpt(entry.subject, 80), { dim: true }),
       text('Web form', { dim: true, dot: true, tone: 'accent' }),
-      text(stamp(entry.createdAt), { mono: true, dim: true }),
+      text(stamp(entry.createdAt), { sort: at(entry.createdAt), mono: true, dim: true }),
       statusCell('Received', 'good'),
     ],
     inspector: {
@@ -4374,7 +4384,7 @@ async function loadMessages(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
         text(who, { strong: true }),
         text(`${count(thread._count.messages)} messages · ${thread.source ?? 'live chat'}`, { dim: true }),
         text('Live chat', { dim: true, dot: true, tone: 'good' }),
-        text(stamp(thread.lastMessageAt), { mono: true, dim: true }),
+        text(stamp(thread.lastMessageAt), { sort: at(thread.lastMessageAt), mono: true, dim: true }),
         statusCell(humanise(thread.status), CHAT_TONE[thread.status] ?? 'muted'),
       ],
       inspector: {
@@ -4520,11 +4530,12 @@ async function loadUsers(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
         { text: humanise(user.role), dot: true, tone: ROLE_TONE[user.role] ?? 'muted' },
         text(secured ? 'Enabled' : 'Disabled', { tone: secured ? 'good' : 'bad' }),
         text(user.lastLoginAt ? stamp(user.lastLoginAt) : 'Never', {
+          sort: at(user.lastLoginAt),
           mono: true,
           dim: true,
           tone: user.lastLoginAt ? undefined : 'muted',
         }),
-        text(shortDate(user.createdAt), { mono: true, dim: true }),
+        text(shortDate(user.createdAt), { sort: at(user.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: personName(user),
@@ -4706,7 +4717,7 @@ async function loadReturns(list: ListQuery = DEFAULT_LIST): Promise<TablePayload
         text(count(lineUnits), { mono: true, right: true }),
         text(money(lineValue), { mono: true, right: true }),
         statusCell(humanise(request.status), RETURN_TONE[request.status] ?? 'neutral'),
-        text(shortDate(request.createdAt), { mono: true, dim: true }),
+        text(shortDate(request.createdAt), { sort: at(request.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: request.rmaNumber,
@@ -4909,7 +4920,7 @@ async function loadShippingLabels(list: ListQuery = DEFAULT_LIST): Promise<Table
         text(label.serviceName ?? '—', { dim: !label.serviceName }),
         text(cost ? money(cost) : '—', { mono: true, right: true }),
         statusCell(label.status ? humanise(label.status) : 'Created', labelTone(label.status)),
-        text(shortDate(label.shipDate ?? label.createdAt), { mono: true, dim: true }),
+        text(shortDate(label.shipDate ?? label.createdAt), { sort: at(label.shipDate ?? label.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: tracking ?? label.order.orderNumber,
@@ -5318,7 +5329,7 @@ async function loadArenaGameCodes(list: ListQuery = DEFAULT_LIST): Promise<Table
         text(code.groupName, { strong: true }),
         text(code.code, { mono: true, strong: !revoked, dim: revoked }),
         text(code.fundraiser?.name ?? '—', { dim: true }),
-        text(code.lastUsedAt ? shortDate(code.lastUsedAt) : 'Never', { mono: true, dim: true }),
+        text(code.lastUsedAt ? shortDate(code.lastUsedAt) : 'Never', { sort: at(code.lastUsedAt), mono: true, dim: true }),
         statusCell(revoked ? 'Revoked' : 'Active', revoked ? 'muted' : 'good'),
       ],
       inspector: {
@@ -5444,7 +5455,7 @@ async function loadManifests(list: ListQuery = DEFAULT_LIST): Promise<TablePaylo
       cells: [
         text(manifest.event.title, { strong: true }),
         text(place({ city: manifest.event.city, state: manifest.event.state }), { dim: true }),
-        text(shortDate(manifest.event.startDate), { mono: true, dim: true }),
+        text(shortDate(manifest.event.startDate), { sort: at(manifest.event.startDate), mono: true, dim: true }),
         text(count(manifest.items.length), { mono: true, right: true }),
         text(count(taken), { mono: true, right: true }),
         text(count(returned), { mono: true, right: true, dim: true }),
@@ -5866,6 +5877,7 @@ async function loadEmailTemplates(list: ListQuery = DEFAULT_LIST): Promise<Table
         text(count(template._count.campaigns), { mono: true, right: true }),
         text(count(template.sentCount), { mono: true, right: true }),
         text(template.lastSentAt ? shortDate(template.lastSentAt) : 'Never', {
+          sort: at(template.lastSentAt),
           mono: true,
           dim: !template.lastSentAt,
         }),
@@ -5989,7 +6001,7 @@ async function loadAutomations(list: ListQuery = DEFAULT_LIST): Promise<TablePay
         text(count(automation._count.enrollments), { mono: true, right: true }),
         text(count(automation._count.logs), { mono: true, right: true, dim: true }),
         statusCell(automation.isActive ? 'Running' : 'Paused', automation.isActive ? 'good' : 'muted'),
-        text(shortDate(automation.updatedAt), { mono: true, dim: true }),
+        text(shortDate(automation.updatedAt), { sort: at(automation.updatedAt), mono: true, dim: true }),
       ],
       inspector: {
         title: automation.name,
@@ -6147,7 +6159,7 @@ async function loadSubscribers(list: ListQuery = DEFAULT_LIST): Promise<TablePay
         text(subscriber.source ?? '—', { dim: true }),
         text(count(subscriber.engagementScore), { mono: true, right: true, dim: true }),
         statusCell(humanise(subscriber.status), SUBSCRIBER_TONE[subscriber.status] ?? 'neutral'),
-        text(shortDate(subscriber.createdAt), { mono: true, dim: true }),
+        text(shortDate(subscriber.createdAt), { sort: at(subscriber.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: subscriber.email,
@@ -6320,7 +6332,7 @@ async function loadSuppressions(list: ListQuery = DEFAULT_LIST): Promise<TablePa
         text(suppression.source ?? '—', { dim: true }),
         text(bounceCount ? count(bounceCount) : '—', { mono: true, right: true, dim: !bounceCount }),
         text(excerpt(suppression.notes, 70) || '—', { dim: true }),
-        text(shortDate(suppression.createdAt), { mono: true, dim: true }),
+        text(shortDate(suppression.createdAt), { sort: at(suppression.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: suppression.email,
@@ -6439,10 +6451,10 @@ async function loadEmailLogs(list: ListQuery = DEFAULT_LIST): Promise<TablePaylo
         text(log.recipientEmail, { mono: true, strong: true }),
         text(excerpt(log.subject, 64), { dim: true }),
         text(log.from ?? '—', { mono: true, dim: true }),
-        text(log.openedAt ? shortDate(log.openedAt) : '—', { mono: true, dim: !log.openedAt }),
-        text(log.clickedAt ? shortDate(log.clickedAt) : '—', { mono: true, dim: !log.clickedAt }),
+        text(log.openedAt ? shortDate(log.openedAt) : '—', { sort: at(log.openedAt), mono: true, dim: !log.openedAt }),
+        text(log.clickedAt ? shortDate(log.clickedAt) : '—', { sort: at(log.clickedAt), mono: true, dim: !log.clickedAt }),
         statusCell(humanise(log.status), EMAIL_LOG_TONE[log.status] ?? 'neutral'),
-        text(stamp(log.sentAt ?? log.createdAt), { mono: true, dim: true }),
+        text(stamp(log.sentAt ?? log.createdAt), { sort: at(log.sentAt ?? log.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: log.recipientEmail,
@@ -6646,6 +6658,7 @@ async function loadSocialAccounts(list: ListQuery = DEFAULT_LIST): Promise<Table
         text(count(account._count.shopListings), { mono: true, right: true }),
         {
           text: account.tokenExpiresAt ? shortDate(account.tokenExpiresAt) : 'No expiry',
+          sort: at(account.tokenExpiresAt),
           mono: true,
           tone: expired ? 'bad' : 'muted',
         },
@@ -6782,6 +6795,7 @@ async function loadFeeds(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
         text(listing.socialAccount?.accountName ?? '—', { dim: true }),
         text(money(price), { mono: true, right: true }),
         text(listing.lastSyncedAt ? shortDate(listing.lastSyncedAt) : 'Never', {
+          sort: at(listing.lastSyncedAt),
           mono: true,
           dim: !listing.lastSyncedAt,
         }),
@@ -6925,7 +6939,7 @@ async function loadSocialReach(list: ListQuery = DEFAULT_LIST): Promise<TablePay
           tone: rate >= 0.05 ? 'good' : rate >= 0.02 ? 'warn' : 'muted',
         },
         text(count(publish.clicks), { mono: true, right: true }),
-        text(publish.publishedAt ? stamp(publish.publishedAt) : '—', { mono: true, dim: true }),
+        text(publish.publishedAt ? stamp(publish.publishedAt) : '—', { sort: at(publish.publishedAt), mono: true, dim: true }),
       ],
       inspector: {
         title: excerpt(publish.post.content, 60),
@@ -7092,7 +7106,7 @@ async function loadCmsPages(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
         },
         statusCell(record.noIndex ? 'noindex' : 'Indexed', record.noIndex ? 'warn' : 'good'),
         statusCell(humanise(record.status), CONTENT_TONE[record.status] ?? 'neutral'),
-        text(shortDate(record.updatedAt), { mono: true, dim: true }),
+        text(shortDate(record.updatedAt), { sort: at(record.updatedAt), mono: true, dim: true }),
       ],
       inspector: {
         title: record.title,
@@ -7263,7 +7277,7 @@ async function loadBanners(list: ListQuery = DEFAULT_LIST): Promise<TablePayload
         text(banner.name, { strong: true }),
         text(excerpt(banner.headline, 66) || '—', { dim: true }),
         text(humanise(banner.placement), { dim: true }),
-        text(window, { mono: true, dim: true }),
+        text(window, { sort: at(banner.startsAt), mono: true, dim: true }),
         text(count(banner.priority), { mono: true, right: true }),
         statusCell(
           showing ? 'Showing' : humanise(banner.status),
@@ -7630,6 +7644,7 @@ async function loadRedirects(list: ListQuery = DEFAULT_LIST): Promise<TablePaylo
         text(redirect.permanent ? '301' : '302', { mono: true }),
         text(count(redirect.hitCount), { mono: true, right: true }),
         text(redirect.lastHitAt ? shortDate(redirect.lastHitAt) : 'Never', {
+          sort: at(redirect.lastHitAt),
           mono: true,
           dim: !redirect.lastHitAt,
         }),
@@ -8016,7 +8031,7 @@ async function loadForms(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> 
         text(`v${template.version}`, { mono: true, right: true }),
         text(count(template._count.versions), { mono: true, right: true, dim: true }),
         statusCell(humanise(template.status), FORM_TONE[template.status] ?? 'neutral'),
-        text(shortDate(template.updatedAt), { mono: true, dim: true }),
+        text(shortDate(template.updatedAt), { sort: at(template.updatedAt), mono: true, dim: true }),
       ],
       inspector: {
         title: template.name,
@@ -8638,7 +8653,7 @@ async function loadMileage(list: ListQuery = DEFAULT_LIST): Promise<TablePayload
       search: `${trip.destination} ${trip.city ?? ''} ${trip.driver ?? ''} ${trip.year}`,
       buckets,
       cells: [
-        text(shortDate(trip.tripDate), { mono: true }),
+        text(shortDate(trip.tripDate), { sort: at(trip.tripDate), mono: true }),
         text(trip.destination, { strong: true }),
         text(place({ city: trip.city, state: trip.state }), { dim: true }),
         text(trip.driver ?? '—', { dim: !trip.driver }),
@@ -8760,7 +8775,7 @@ async function loadShowArchive(list: ListQuery = DEFAULT_LIST): Promise<TablePay
       buckets,
       cells: [
         text(show.showName, { strong: true }),
-        text(show.showDate ? shortDate(show.showDate) : show.dateText ?? '—', { mono: true, dim: true }),
+        text(show.showDate ? shortDate(show.showDate) : show.dateText ?? '—', { sort: at(show.showDate), mono: true, dim: true }),
         text(show.year ? String(show.year) : '—', { mono: true, right: true, dim: !show.year }),
         text(humanise(show.eventType), { dim: true }),
         text(show.sales ? money(showSales) : '—', { mono: true, right: true, dim: !show.sales }),
@@ -8917,7 +8932,7 @@ async function loadLiveChat(list: ListQuery = DEFAULT_LIST): Promise<TablePayloa
           tone: waitingMinutes > 10 ? 'bad' : waitingMinutes > 0 ? 'warn' : 'muted',
         },
         statusCell(humanise(thread.status), CHAT_THREAD_TONE[thread.status] ?? 'neutral'),
-        text(stamp(thread.lastMessageAt), { mono: true, dim: true }),
+        text(stamp(thread.lastMessageAt), { sort: at(thread.lastMessageAt), mono: true, dim: true }),
       ],
       inspector: {
         title: thread.customerName ?? 'Anonymous visitor',
@@ -9065,7 +9080,7 @@ async function loadCustomerEmail(list: ListQuery = DEFAULT_LIST): Promise<TableP
           tone: open.length > 0 ? 'warn' : 'muted',
           strong: open.length > 0,
         }),
-        text(stamp(email.receivedAt), { mono: true, dim: true }),
+        text(stamp(email.receivedAt), { sort: at(email.receivedAt), mono: true, dim: true }),
       ],
       inspector: {
         title: email.subject,
@@ -9210,7 +9225,7 @@ async function loadNotifications(list: ListQuery = DEFAULT_LIST): Promise<TableP
           tone: notification.isRead ? 'muted' : 'accent',
           strong: !notification.isRead,
         }),
-        text(stamp(notification.createdAt), { mono: true, dim: true }),
+        text(stamp(notification.createdAt), { sort: at(notification.createdAt), mono: true, dim: true }),
       ],
       inspector: {
         title: notification.title,
@@ -9345,7 +9360,7 @@ async function loadCredentials(list: ListQuery = DEFAULT_LIST): Promise<TablePay
         text(credential.label),
         text(credential.username ?? '—', { mono: true, dim: true }),
         text(credential.url ?? '—', { mono: true, dim: true }),
-        text(rotated ? shortDate(rotated) : 'Never', { mono: true, dim: !rotated }),
+        text(rotated ? shortDate(rotated) : 'Never', { sort: at(rotated), mono: true, dim: !rotated }),
         {
           text: `${count(ageDays)}d`,
           mono: true,
@@ -9717,6 +9732,7 @@ async function loadIntegrations(): Promise<TablePayload> {
           integration.isConfigured ? 'good' : 'warn',
         ),
         text(integration.lastSyncAt ? stamp(integration.lastSyncAt) : 'Never', {
+          sort: at(integration.lastSyncAt),
           mono: true,
           dim: !integration.lastSyncAt,
         }),

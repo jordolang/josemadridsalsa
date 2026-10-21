@@ -1412,6 +1412,45 @@
   justify-content: flex-end;
 }
 
+/* The header label is the sort control: click to sort, again to flip, again to clear. */
+.jmsd-th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.jmsd-th-sort:hover,
+.jmsd-th-sort[data-sorted] {
+  color: var(--text);
+}
+
+.jmsd-th-sort:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.jmsd-th[style*='right'] .jmsd-th-sort {
+  flex-direction: row-reverse;
+}
+
+.jmsd-th-arrow {
+  flex: none;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--gold);
+}
+
 .jmsd-col-handle {
   position: absolute;
   top: -6px;
