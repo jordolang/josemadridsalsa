@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Changed
+- **Shipping uses the warehouse's real boxes.** Jar orders are sized as 1–3 jars 10×7×5″,
+  4–6 jars 12×9×6″, a case (7–12) 14×10×8″ and two cases (13–24) 20×15×9″. Checkout quotes,
+  EasyPost labels and the Pirate Ship export now all use the same table (`SHIPPING_BOXES`);
+  Pirate Ship previously had its own, different box sizes.
 - **New fundraising site header and footer.** The header gains a red "Fundraising with flavor"
   strip with a ribbon accent, an underlined active menu item, and a full-width Start a Fundraiser
   button on phones. The footer opens with a red "Big flavor. Bigger impact." banner over a dark

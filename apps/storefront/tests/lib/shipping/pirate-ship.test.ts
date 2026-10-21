@@ -64,21 +64,24 @@ describe('computeParcel', () => {
     expect(result.totalOunces).toBeGreaterThan(0)
   })
 
-  it('picks a small box for a few units when no product dims are set', () => {
+  it('picks the 1–3 jar box for a few units when no product dims are set', () => {
     const result = computeParcel([{ quantity: 3, weightLb: 1 }])
     expect({ l: result.lengthIn, w: result.widthIn, h: result.heightIn }).toEqual({
-      l: 8,
-      w: 6,
-      h: 4,
+      l: 10,
+      w: 7,
+      h: 5,
     })
     expect(result.unitCount).toBe(3)
   })
 
-  it('escalates box size as unit count grows', () => {
-    const large = computeParcel([{ quantity: 12, weightLb: 1 }])
-    expect(large.lengthIn).toBe(16)
-    const xl = computeParcel([{ quantity: 40, weightLb: 1 }])
-    expect(xl.lengthIn).toBe(18)
+  it('uses the same warehouse boxes as checkout as unit count grows', () => {
+    const dims = (quantity: number) => {
+      const r = computeParcel([{ quantity, weightLb: 1 }])
+      return [r.lengthIn, r.widthIn, r.heightIn]
+    }
+    expect(dims(5)).toEqual([12, 9, 6])
+    expect(dims(12)).toEqual([14, 10, 8])
+    expect(dims(20)).toEqual([20, 15, 9])
   })
 
   it('uses the largest product dimensions when items carry their own', () => {
