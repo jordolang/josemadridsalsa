@@ -380,6 +380,15 @@ describe('business datetime inputs', () => {
     expect(parseBusinessDateTimeInput('2026-10-09T24:00')).toBeNull()
   })
 
+  it('rejects a wall time skipped by spring-forward', () => {
+    expect(parseBusinessDateTimeInput('2026-03-08T02:30')).toBeNull()
+  })
+
+  it('rejects a wall time that occurs twice at fall-back', () => {
+    expect(parseBusinessDateTimeInput('2026-11-01T01:30')).toBeNull()
+    expect(parseBusinessDateTimeInput('2026-11-01T02:30')?.toISOString()).toBe('2026-11-01T07:30:00.000Z')
+  })
+
   it('formats an instant back to the same wall time', () => {
     expect(formatBusinessDateTimeInput(new Date('2026-10-09T18:00:00Z'))).toBe('2026-10-09T14:00')
     expect(formatBusinessDateTimeInput(new Date('2026-10-10T04:05:00Z'))).toBe('2026-10-10T00:05')

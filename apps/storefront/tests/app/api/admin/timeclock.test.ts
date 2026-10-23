@@ -83,6 +83,25 @@ describe('PATCH /api/admin/timeclock/:id', () => {
     })
   })
 
+  it('keeps stored times when only job duties change', async () => {
+    vi.mocked(prisma.timeClockEntry.findUnique).mockResolvedValue({
+      id: 'entry-1',
+      userId: 'user-1',
+      clockInAt: new Date('2026-10-09T13:45:50Z'),
+      clockOutAt: new Date('2026-10-09T18:00:05Z'),
+      notes: null,
+    } as never)
+
+    const response = await patch({ notes: 'Labeled salsa', reason: 'Add duties' })
+
+    expect(response.status).toBe(200)
+    expect(vi.mocked(prisma.timeClockEntry.update).mock.calls[0][0].data).toEqual({
+      clockInAt: new Date('2026-10-09T13:45:50Z'),
+      clockOutAt: new Date('2026-10-09T18:00:05Z'),
+      notes: 'Labeled salsa',
+    })
+  })
+
   it('requires a reason', async () => {
     const response = await patch({ ...correction, reason: '' })
 

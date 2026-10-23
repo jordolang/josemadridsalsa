@@ -83,7 +83,11 @@ admin console (`/admin/users/[id]`). The pencil on a row opens a dialog to set
 the clock-in, clock-out and job duties, and a reason is required.
 
 - Times are entered as Zanesville wall time and converted on the server, so an
-  admin in another time zone still sets the time the employee saw.
+  admin in another time zone still sets the time the employee saw. A time the
+  admin leaves untouched is not sent, so the stored instant, seconds included,
+  is kept and a notes-only edit never changes paid hours. A wall time that
+  names no single instant (the spring-forward gap or the repeated fall-back
+  hour) is rejected rather than guessed.
 - `PATCH /api/admin/timeclock/[id]` rejects a clock-out before the clock-in or
   in the future, a shift over 24 hours, and times that overlap another punch
   for the same employee (overlaps would pay the same minutes twice).

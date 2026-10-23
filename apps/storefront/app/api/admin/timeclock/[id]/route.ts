@@ -35,9 +35,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return fail('Invalid punch correction', 400, parsed.error.issues)
     }
 
-    const correction = resolvePunchCorrection(parsed.data)
-    if (!correction.ok) return fail(correction.error, 400)
-
     const { ipAddress, userAgent } = getRequestMetadata(request)
     const result = await prisma.$transaction(
       async (tx) => {
@@ -47,6 +44,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           select: { id: true, userId: true, clockInAt: true, clockOutAt: true, notes: true },
         })
         if (!existing) return 'not-found' as const
+
+        const correction = resolvePunchCorrection(parsed.data, existing)
+        if (!correction.ok) return correction
 
         // Overlapping punches would pay the same minutes twice.
         const overlap = await tx.timeClockEntry.findFirst({
@@ -95,13 +95,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           },
         })
 
-        return entry
+        return { ok: true as const, entry }
       },
       { isolationLevel: 'Serializable' }
     )
     if (result === 'not-found') return fail('Punch not found', 404)
     if (result === 'overlap') return fail('These times overlap another punch for this employee', 409)
-    const updated = result
+    if (!result.ok) return fail(result.error, 400)
+    const updated = result.entry
 
     return ok({
       id: updated.id,

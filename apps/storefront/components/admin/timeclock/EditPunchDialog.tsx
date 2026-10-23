@@ -53,7 +53,13 @@ export default function EditPunchDialog({
       const response = await fetch(`/api/admin/timeclock/${punchId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clockInAt, clockOutAt, notes, reason }),
+        // Omit untouched times so the server keeps the stored instant, seconds included.
+        body: JSON.stringify({
+          clockInAt: clockInAt === initialClockIn ? undefined : clockInAt,
+          clockOutAt: clockOutAt === (initialClockOut ?? '') ? undefined : clockOutAt,
+          notes,
+          reason,
+        }),
       })
 
       const result = await response.json()

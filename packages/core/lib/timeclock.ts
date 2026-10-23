@@ -160,6 +160,9 @@ export function parseDateInput(value: string): CalendarDate | null {
  * `datetime-local` input — into the instant it names in Zanesville. Read
  * against the business timezone, not the browser's, so an admin editing from
  * another timezone still sets the time the employee saw on the clock.
+ *
+ * Returns `null` for a wall time that names no single instant: one skipped by
+ * the spring-forward gap, or one that occurs twice in the fall-back hour.
  */
 export function parseBusinessDateTimeInput(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim())
@@ -170,7 +173,17 @@ export function parseBusinessDateTimeInput(value: string): Date | null {
   const date = parseDateInput(`${month}/${day}/${year}`)
   if (!date) return null
 
-  return businessWallTimeToInstant(date, hour, minute, 0, 0)
+  const instant = businessWallTimeToInstant(date, hour, minute, 0, 0)
+  const wallTime = formatBusinessDateTimeInput(instant)
+  if (wallTime !== value.trim()) return null
+  const HOUR_MS = 3_600_000
+  if (
+    formatBusinessDateTimeInput(new Date(instant.getTime() - HOUR_MS)) === wallTime ||
+    formatBusinessDateTimeInput(new Date(instant.getTime() + HOUR_MS)) === wallTime
+  ) {
+    return null
+  }
+  return instant
 }
 
 /** An instant as a business-local `YYYY-MM-DDTHH:mm`, for a `datetime-local` input. */
