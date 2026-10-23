@@ -165,7 +165,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "resend": "^6.10.0",
-    "sanitize-html": "^2.17.7",
+    "sanitize-html": "^2.18.1",
     "serpapi": "^2.2.1",
     "shebang-regex": "^4.0.0",
     "sonner": "^2.0.7",
@@ -220,7 +220,7 @@
     "tsx": "^4.23.1",
     "typescript": "^5.9.3",
     "vercel": "^58.8.0",
-    "vite": "^8.0.16",
+    "vite": "^8.3.5",
     "vitest": "^5.0.1"
   },
   "lint-staged": {
