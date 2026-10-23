@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Admins can correct time clock punches.** The admin user page has a Time Clock card listing
+  recent punches; admins with `users:read` and `users:write` see it and can fix a punch's times and job duties there (for
+  example a forgotten clock-out). A reason is required, overlapping or impossible shifts are
+  rejected, and every correction is written to the audit log with the before and after values.
 - **Draft-only email agent** (`apps/agents/email-agent`). Reviews the main inbox, has Claude
   sort customer mail into routine drafts, owner decisions, and ignorable mail, and prints a
   digest. It never sends, labels, archives, or deletes email. Each model call has a time limit
