@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { parseCsv } from '@/lib/csv'
 import {
-  DEFAULT_UNIT_WEIGHT_LB,
-  PACKAGING_TARE_LB,
   PIRATE_SHIP_HEADERS,
   buildPirateShipCsv,
   buildPirateShipRow,
   computeParcel,
+  isReadyToShip,
   parseTrackingRows,
   trackingUrlFor,
   type ComputedParcel,
   type PirateShipRecipient,
 } from '@/lib/shipping/pirate-ship'
+import { DEFAULT_JAR_CONTENTS_OZ, packJars } from '@/lib/shipping/jar-packing'
 
 const recipient = (overrides: Partial<PirateShipRecipient> = {}): PirateShipRecipient => ({
   reference: 'JMS-1001',
@@ -36,36 +36,34 @@ const parcel = (overrides: Partial<ComputedParcel> = {}): ComputedParcel => ({
 })
 
 describe('computeParcel', () => {
-  it('sums product weights, adds tare, and rounds up to whole ounces', () => {
-    // 2 units x 1 lb + 0.5 lb tare = 2.5 lb = 40 oz
-    const result = computeParcel([{ quantity: 2, weightLb: 1 }])
-    expect(result.totalOunces).toBe(Math.ceil((2 * 1 + PACKAGING_TARE_LB) * 16))
-    expect(result.totalOunces).toBe(40)
-    expect(result.weightLb).toBe(2)
-    expect(result.weightOz).toBe(8)
+  it('reads product weight as ounces of contents, not pounds (regression: 6 jars exported as 96 lb)', () => {
+    // Product.weight for a 16oz jar is 16. Six of them must be ~11 lb, never 96.
+    const result = computeParcel([{ quantity: 6, weightOz: 16 }])
+    expect(result.weightLb).toBeLessThan(15)
+    expect(result.totalOunces).toBe(Math.ceil(packJars(6, 96).weightOz))
   })
 
-  it('falls back to the default unit weight when a product has no weight', () => {
-    const result = computeParcel([{ quantity: 1, weightLb: null }])
-    const expected = Math.ceil((DEFAULT_UNIT_WEIGHT_LB + PACKAGING_TARE_LB) * 16)
+  it('declares the same weight checkout and EasyPost use, rounded up to whole ounces', () => {
+    const result = computeParcel([
+      { quantity: 2, weightOz: 16 },
+      { quantity: 1, weightOz: 13 },
+    ])
+    const expected = Math.ceil(packJars(3, 2 * 16 + 13).weightOz)
     expect(result.totalOunces).toBe(expected)
+    expect(result.weightLb * 16 + result.weightOz).toBe(expected)
   })
 
-  it('rounds partial ounces up so postage is never underpaid', () => {
-    // 0.01 lb + 0.5 tare = 0.51 lb = 8.16 oz -> ceil 9
-    const result = computeParcel([{ quantity: 1, weightLb: 0.01 }])
-    expect(result.totalOunces).toBe(9)
+  it('falls back to a standard jar when a product has no weight', () => {
+    const result = computeParcel([{ quantity: 1, weightOz: null }])
+    expect(result.totalOunces).toBe(Math.ceil(packJars(1, DEFAULT_JAR_CONTENTS_OZ).weightOz))
   })
 
   it('never returns zero weight for an empty order', () => {
-    const result = computeParcel([])
-    // Just the tare, rounded up.
-    expect(result.totalOunces).toBe(Math.ceil(PACKAGING_TARE_LB * 16))
-    expect(result.totalOunces).toBeGreaterThan(0)
+    expect(computeParcel([]).totalOunces).toBeGreaterThan(0)
   })
 
   it('picks the 1–3 jar box for a few units when no product dims are set', () => {
-    const result = computeParcel([{ quantity: 3, weightLb: 1 }])
+    const result = computeParcel([{ quantity: 3, weightOz: 16 }])
     expect({ l: result.lengthIn, w: result.widthIn, h: result.heightIn }).toEqual({
       l: 10,
       w: 7,
@@ -76,7 +74,7 @@ describe('computeParcel', () => {
 
   it('uses the same warehouse boxes as checkout as unit count grows', () => {
     const dims = (quantity: number) => {
-      const r = computeParcel([{ quantity, weightLb: 1 }])
+      const r = computeParcel([{ quantity, weightOz: 16 }])
       return [r.lengthIn, r.widthIn, r.heightIn]
     }
     expect(dims(5)).toEqual([12, 9, 6])
@@ -86,8 +84,8 @@ describe('computeParcel', () => {
 
   it('uses the largest product dimensions when items carry their own', () => {
     const result = computeParcel([
-      { quantity: 1, weightLb: 1, lengthIn: 10, widthIn: 4, heightIn: 4 },
-      { quantity: 1, weightLb: 1, lengthIn: 6, widthIn: 9, heightIn: 3 },
+      { quantity: 1, weightOz: 16, lengthIn: 10, widthIn: 4, heightIn: 4 },
+      { quantity: 1, weightOz: 16, lengthIn: 6, widthIn: 9, heightIn: 3 },
     ])
     expect(result.lengthIn).toBe(10)
     expect(result.widthIn).toBe(9)
@@ -96,11 +94,12 @@ describe('computeParcel', () => {
 
   it('ignores non-positive quantities', () => {
     const result = computeParcel([
-      { quantity: 0, weightLb: 5 },
-      { quantity: -2, weightLb: 5 },
-      { quantity: 1, weightLb: 1 },
+      { quantity: 0, weightOz: 80 },
+      { quantity: -2, weightOz: 80 },
+      { quantity: 1, weightOz: 16 },
     ])
     expect(result.unitCount).toBe(1)
+    expect(result.totalOunces).toBe(Math.ceil(packJars(1, 16).weightOz))
   })
 })
 
@@ -176,5 +175,35 @@ describe('trackingUrlFor', () => {
 
   it('returns undefined for an unknown carrier/number', () => {
     expect(trackingUrlFor('DHL', '123456')).toBeUndefined()
+  })
+})
+
+describe('isReadyToShip', () => {
+  const ready = {
+    status: 'PROCESSING',
+    paymentStatus: 'PAID',
+    fulfillmentStatus: 'UNFULFILLED',
+    hasShippingAddress: true,
+  }
+
+  it('accepts a paid, open, unshipped order with an address', () => {
+    expect(isReadyToShip(ready)).toBe(true)
+    expect(isReadyToShip({ ...ready, status: 'PENDING', paymentStatus: 'SUCCEEDED' })).toBe(true)
+    expect(isReadyToShip({ ...ready, fulfillmentStatus: 'PARTIALLY_FULFILLED' })).toBe(true)
+  })
+
+  it('rejects an order with no shipping address', () => {
+    expect(isReadyToShip({ ...ready, hasShippingAddress: false })).toBe(false)
+  })
+
+  it('rejects an unpaid order', () => {
+    expect(isReadyToShip({ ...ready, paymentStatus: 'PENDING' })).toBe(false)
+    expect(isReadyToShip({ ...ready, paymentStatus: 'REFUNDED' })).toBe(false)
+  })
+
+  it('rejects an order that has shipped or closed', () => {
+    expect(isReadyToShip({ ...ready, status: 'SHIPPED' })).toBe(false)
+    expect(isReadyToShip({ ...ready, status: 'CANCELLED' })).toBe(false)
+    expect(isReadyToShip({ ...ready, fulfillmentStatus: 'FULFILLED' })).toBe(false)
   })
 })

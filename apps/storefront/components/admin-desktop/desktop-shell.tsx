@@ -813,6 +813,14 @@ export function DesktopShell({
   // rather than acted on unseen.
   const markedRows = useMemo(() => allRows.filter((row) => marked.has(row.id)), [allRows, marked])
   const bulk = useMemo(() => bulkActions(markedRows), [markedRows])
+  // Orders on screen that can go straight into a Pirate Ship batch. Only the
+  // orders list sets `shipReady`, so this is empty everywhere else.
+  const shipReadyRows = useMemo(() => rows.filter((row) => row.shipReady), [rows])
+  const isOrdersList = section.page === 'orders'
+
+  const markShipReady = useCallback(() => {
+    setMarked(new Set(shipReadyRows.map((row) => row.id)))
+  }, [shipReadyRows])
 
   /** A click on a row: plain moves the cursor, ⌘/Ctrl toggles a mark, Shift marks a run. */
   const clickRow = useCallback(
@@ -862,6 +870,24 @@ export function DesktopShell({
     link.remove()
     flash('Preparing the CSV…')
   }, [section.id, section.page, query, filter, flash])
+
+  /** One Pirate Ship import file for every marked order, the same rows a single-order export writes. */
+  const exportPirateShip = useCallback(() => {
+    if (markedRows.length === 0) return
+    const ids = markedRows.map((row) => row.id).join(',')
+    const link = document.createElement('a')
+    link.href = `/api/admin/shipping/pirate-ship/export?ids=${encodeURIComponent(ids)}`
+    link.download = `pirateship-batch-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.append(link)
+    link.click()
+    link.remove()
+    const notReady = markedRows.filter((row) => !row.shipReady).length
+    flash(
+      notReady === 0
+        ? `Pirate Ship CSV: ${markedRows.length} orders`
+        : `Pirate Ship CSV: ${markedRows.length} orders — ${notReady} not ready to ship; any without an address are left out`,
+    )
+  }, [markedRows, flash])
 
   const inspectorData: InspectorData | null = useMemo(() => {
     if (body.view === 'table' || body.view === 'events') return activeRow?.inspector ?? null
@@ -963,6 +989,30 @@ export function DesktopShell({
           setMarked(new Set(rows.map((row) => row.id)))
         },
       })
+      if (shipReadyRows.length > 0) {
+        items.push({
+          key: 'command:mark-ship-ready',
+          label: 'Mark orders ready to ship',
+          hint: `${shipReadyRows.length} paid, unshipped, with an address`,
+          icon: 'i-columns',
+          run: () => {
+            setPaletteOpen(false)
+            markShipReady()
+          },
+        })
+      }
+      if (isOrdersList && markedRows.length > 0) {
+        items.push({
+          key: 'command:pirate-ship',
+          label: 'Export marked orders for Pirate Ship',
+          hint: `${markedRows.length} orders · one import CSV`,
+          icon: 'i-file',
+          run: () => {
+            setPaletteOpen(false)
+            exportPirateShip()
+          },
+        })
+      }
     }
     if (section.list?.more && section.list.limit < MAX_LIST_LIMIT) {
       items.push({
@@ -1045,6 +1095,11 @@ export function DesktopShell({
     exportCsv,
     loadMore,
     section.list,
+    shipReadyRows,
+    markShipReady,
+    isOrdersList,
+    markedRows,
+    exportPirateShip,
   ])
 
   // ------------------------------------------------------------ keyboard
@@ -1468,6 +1523,16 @@ export function DesktopShell({
                   Load more
                 </button>
               ) : null}
+              {isOrdersList && shipReadyRows.length > 0 ? (
+                <button
+                  type="button"
+                  className="jmsd-chip"
+                  onClick={markShipReady}
+                  title="Mark every paid, unshipped order with an address"
+                >
+                  Ready to ship · {shipReadyRows.length}
+                </button>
+              ) : null}
               {isRowView ? (
                 <button
                   type="button"
@@ -1500,6 +1565,11 @@ export function DesktopShell({
                   </button>
                 ))
               )}
+              {isOrdersList ? (
+                <button type="button" className="jmsd-action" onClick={exportPirateShip}>
+                  Pirate Ship CSV
+                </button>
+              ) : null}
               <button type="button" className="jmsd-chip jmsd-bulkbar-clear" onClick={() => setMarked(new Set())}>
                 Clear · Esc
               </button>
