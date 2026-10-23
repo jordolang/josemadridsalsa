@@ -78,8 +78,9 @@ Three things together make the record tamper-evident for the person clocking in:
 ### Admin corrections
 
 A forgotten clock-out, or a punch made on the wrong day, is corrected by an
-admin with `users:write` from the **Time Clock** card on the user's page in the
-admin console (`/admin/users/[id]`). The pencil on a row opens a dialog to set
+admin with `users:read` and `users:write` from the **Time Clock** card on the
+user's page in the admin console (`/admin/users/[id]`). The card is hidden from
+admins without `users:write`. The pencil on a row opens a dialog to set
 the clock-in, clock-out and job duties, and a reason is required.
 
 - Times are entered as Zanesville wall time and converted on the server, so an

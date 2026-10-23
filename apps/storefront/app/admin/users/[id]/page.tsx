@@ -128,7 +128,8 @@ export default async function UserDetailPage({
   }
 
   const canWrite = await hasPermission(currentUser, 'users:write')
-  const punches = await getRecentPunches(user.id)
+  // Punch history is payroll data: only admins who can correct it see it.
+  const punches = canWrite ? await getRecentPunches(user.id) : []
   const totalSpent = user.orders.reduce((sum, order) => sum + Number(order.total), 0)
 
   return (
