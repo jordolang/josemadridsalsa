@@ -1,6 +1,6 @@
 ---
 title: Timeclock
-description: The append-only staff timeclock in the account area — punch pairs, lunch breaks, IP and location logging, derived hours, and pay-period selection
+description: The staff timeclock in the account area — punch pairs, lunch breaks, IP and location logging, derived hours, pay-period selection, and audited admin corrections
 ---
 
 # Timeclock
@@ -62,25 +62,39 @@ A break is not modelled specially. The user clocks out, clocks back in, and gets
 a second row on the same day. Day and period totals sum the pairs, so an
 8:00–12:00 and a 13:00–17:00 punch add up to 8.00 hours on one day.
 
-### Why entries cannot be altered
+### Why employees cannot alter entries
 
-Three things together make the record tamper-evident:
+Three things together make the record tamper-evident for the person clocking in:
 
 1. **Server-authoritative timestamps.** The punch time comes from `new Date()`
    inside the route handler. The browser never sends a time, so changing a
    laptop's clock changes nothing but the cosmetic display.
-2. **No mutation surface.** The API exposes a read, a clock-in, and a clock-out.
-   There is no PATCH and no DELETE, and the clock-out only ever closes the
-   caller's own single open row.
-3. **Notes are write-once.** They arrive as part of the clock-out mutation and
-   can never be edited afterwards.
+2. **No employee mutation surface.** The account API exposes a read, a
+   clock-in, and a clock-out. There is no PATCH and no DELETE, and the
+   clock-out only ever closes the caller's own single open row.
+3. **Notes are write-once for the employee.** They arrive as part of the
+   clock-out mutation and the employee cannot edit them afterwards.
 
-Two consequences worth knowing:
+### Admin corrections
 
-**A forgotten clock-out cannot be corrected.** The row stays open, renders as
-*In progress*, and is excluded from every total. Adding an admin correction path
-would mean deliberately opening a hole in the guarantees above — it is not
-built.
+A forgotten clock-out, or a punch made on the wrong day, is corrected by an
+admin with `users:write` from the **Time Clock** card on the user's page in the
+admin console (`/admin/users/[id]`). The pencil on a row opens a dialog to set
+the clock-in, clock-out and job duties, and a reason is required.
+
+- Times are entered as Zanesville wall time and converted on the server, so an
+  admin in another time zone still sets the time the employee saw.
+- `PATCH /api/admin/timeclock/[id]` rejects a clock-out before the clock-in or
+  in the future, a shift over 24 hours, and times that overlap another punch
+  for the same employee (overlaps would pay the same minutes twice).
+- Every correction writes an `AuditLog` row with action `TIMECLOCK_CORRECTION`:
+  the admin, the employee, the reason, and the before and after values. The
+  card shows who last corrected a punch, when, and why.
+
+A correction always sets a clock-out, so it can never create a second open
+punch.
+
+One more consequence worth knowing:
 
 **Deleting the user deletes the history.** The `userId` relation uses
 `onDelete: Cascade`, matching every other user-owned record in this schema, so
@@ -89,8 +103,8 @@ That path is therefore held to the owner accounts listed in
 `DATA_ERASURE_EMAILS` (`lib/developer/constants.ts`) — holding `users:write` is
 no longer enough to delete a user. Everyone else gets a 403.
 
-The guarantees above cover the person clocking in; this guard covers the admin
-console. If payroll records must survive even an owner deleting the account,
+The guarantees above cover the person clocking in; this guard covers deleting
+through the admin console. If payroll records must survive even an owner deleting the account,
 change the relation to `onDelete: Restrict` — note that this makes deleting any
 user who has ever clocked in fail outright.
 
@@ -143,6 +157,9 @@ unbounded history, and the UI re-displays the range the server actually used.
 | `lib/timeclock-server.ts` | Range resolution and the page/API view model |
 | `app/api/account/timeclock/route.ts` | `GET` history, `POST` clock in |
 | `app/api/account/timeclock/clock-out/route.ts` | `POST` clock out with notes |
+| `app/api/admin/timeclock/[id]/route.ts` | `PATCH` audited admin correction |
+| `lib/timeclock-admin.ts` | Correction validation |
+| `components/admin/timeclock/EditPunchDialog.tsx` | Admin correction dialog |
 | `app/(public)/account/timeclock/page.tsx` | Server component, role gate |
 | `components/account/timeclock/LiveClock.tsx` | Ticking clock, isolated |
 | `components/account/timeclock/getPunchLocation.ts` | One-shot browser GPS fix, never rejects |

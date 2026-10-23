@@ -155,6 +155,44 @@ export function parseDateInput(value: string): CalendarDate | null {
   return { year, month, day }
 }
 
+/**
+ * Parse a `YYYY-MM-DDTHH:mm` business-local wall time — the value of a
+ * `datetime-local` input — into the instant it names in Zanesville. Read
+ * against the business timezone, not the browser's, so an admin editing from
+ * another timezone still sets the time the employee saw on the clock.
+ */
+export function parseBusinessDateTimeInput(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim())
+  if (!match) return null
+
+  const [year, month, day, hour, minute] = match.slice(1).map(Number)
+  if (hour > 23 || minute > 59) return null
+  const date = parseDateInput(`${month}/${day}/${year}`)
+  if (!date) return null
+
+  return businessWallTimeToInstant(date, hour, minute, 0, 0)
+}
+
+/** An instant as a business-local `YYYY-MM-DDTHH:mm`, for a `datetime-local` input. */
+export function formatBusinessDateTimeInput(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: TIMECLOCK_TIMEZONE,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(date)
+
+  const read: Record<string, number> = {}
+  for (const part of parts) {
+    if (part.type !== 'literal') read[part.type] = Number(part.value)
+  }
+
+  // Intl can render midnight as hour 24 in some engines.
+  const hour = String(read.hour % 24).padStart(2, '0')
+  const minute = String(read.minute).padStart(2, '0')
+  return `${businessDayKey(date)}T${hour}:${minute}`
+}
+
 /** Render a calendar date back as `MM/DD/YYYY`. */
 export function formatDateInput({ year, month, day }: CalendarDate): string {
   return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`

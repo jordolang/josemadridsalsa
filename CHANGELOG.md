@@ -13,6 +13,12 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **Admins can correct time clock punches.** The admin user page has a Time Clock card listing
+  recent punches; anyone with `users:write` can fix a punch's times and job duties there (for
+  example a forgotten clock-out). A reason is required, overlapping or impossible shifts are
+  rejected, and every correction is written to the audit log with the before and after values.
+
 ### Changed
 - **Shipping uses the warehouse's real boxes.** Jar orders are sized as 1–3 jars 10×7×5″,
   4–6 jars 12×9×6″, a case (7–12) 14×10×8″ and two cases (13–24) 20×15×9″. Checkout quotes,

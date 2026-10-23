@@ -3,6 +3,15 @@ import Link from 'next/link'
 import { ArrowLeft, Mail, Phone, Calendar, Shield, Edit } from 'lucide-react'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
+import {
+  businessDayKey,
+  formatBusinessDateTimeInput,
+  formatBusinessTime,
+  formatDayLabel,
+  formatDecimalHours,
+  punchDurationMs,
+} from '@/lib/timeclock'
+import EditPunchDialog from '@/components/admin/timeclock/EditPunchDialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -50,6 +59,56 @@ async function getUserWithOrders(id: string) {
   return user
 }
 
+/** Most recent punches, each with its latest audited correction, if any. */
+async function getRecentPunches(userId: string) {
+  const punches = await prisma.timeClockEntry.findMany({
+    where: { userId },
+    orderBy: { clockInAt: 'desc' },
+    take: 30,
+    select: { id: true, clockInAt: true, clockOutAt: true, notes: true },
+  })
+  if (punches.length === 0) return []
+
+  const corrections = await prisma.auditLog.findMany({
+    where: {
+      action: 'TIMECLOCK_CORRECTION',
+      entityType: 'TimeClockEntry',
+      entityId: { in: punches.map((punch) => punch.id) },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { entityId: true, userId: true, createdAt: true, changes: true },
+  })
+
+  const editorIds = [...new Set(corrections.flatMap((c) => (c.userId ? [c.userId] : [])))]
+  const editors = await prisma.user.findMany({
+    where: { id: { in: editorIds } },
+    select: { id: true, name: true, email: true },
+  })
+  const editorName = new Map(editors.map((editor) => [editor.id, editor.name || editor.email]))
+
+  const latestCorrection = new Map<string, (typeof corrections)[number]>()
+  for (const correction of corrections) {
+    if (correction.entityId && !latestCorrection.has(correction.entityId)) {
+      latestCorrection.set(correction.entityId, correction)
+    }
+  }
+
+  return punches.map((punch) => {
+    const correction = latestCorrection.get(punch.id)
+    const changes = correction?.changes as { reason?: string } | null | undefined
+    return {
+      ...punch,
+      correction: correction
+        ? {
+          by: (correction.userId && editorName.get(correction.userId)) || 'Unknown',
+          at: correction.createdAt,
+          reason: changes?.reason ?? null,
+        }
+        : null,
+    }
+  })
+}
+
 export default async function UserDetailPage({
   params,
 }: {
@@ -69,6 +128,7 @@ export default async function UserDetailPage({
   }
 
   const canWrite = await hasPermission(currentUser, 'users:write')
+  const punches = await getRecentPunches(user.id)
   const totalSpent = user.orders.reduce((sum, order) => sum + Number(order.total), 0)
 
   return (
@@ -168,7 +228,7 @@ export default async function UserDetailPage({
         </div>
 
         {/* Order History */}
-        <div className="lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-4">Order History</h2>
@@ -223,6 +283,73 @@ export default async function UserDetailPage({
               )}
             </div>
           </Card>
+
+          {punches.length > 0 && (
+            <Card>
+              <div className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Time Clock</h2>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Day</TableHead>
+                        <TableHead>In</TableHead>
+                        <TableHead>Out</TableHead>
+                        <TableHead className="text-right">Hours</TableHead>
+                        <TableHead>Job duties</TableHead>
+                        {canWrite && <TableHead className="w-10" />}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {punches.map((punch) => (
+                        <TableRow key={punch.id}>
+                          <TableCell className="whitespace-nowrap">
+                            {formatDayLabel(businessDayKey(punch.clockInAt))}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {formatBusinessTime(punch.clockInAt)}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {punch.clockOutAt ? (
+                              formatBusinessTime(punch.clockOutAt)
+                            ) : (
+                              <Badge variant="outline">On the clock</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatDecimalHours(punchDurationMs(punch))}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {punch.notes}
+                            {punch.correction && (
+                              <p className="mt-1 text-xs">
+                                Corrected by {punch.correction.by} on{' '}
+                                {punch.correction.at.toLocaleDateString()}
+                                {punch.correction.reason && `: ${punch.correction.reason}`}
+                              </p>
+                            )}
+                          </TableCell>
+                          {canWrite && (
+                            <TableCell>
+                              <EditPunchDialog
+                                punchId={punch.id}
+                                employeeName={user.name || user.email}
+                                clockInAt={formatBusinessDateTimeInput(punch.clockInAt)}
+                                clockOutAt={
+                                  punch.clockOutAt ? formatBusinessDateTimeInput(punch.clockOutAt) : null
+                                }
+                                notes={punch.notes}
+                              />
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>
