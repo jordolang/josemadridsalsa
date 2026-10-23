@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * so this is the one place a punch changes after the fact; every correction
  * writes an audit entry with the before/after values, who made it, and why.
  *
- * The overlap check, the update and the audit entry share one serializable
+ * The read, the overlap check, the update and the audit entry share one serializable
  * transaction: a correction is never saved without its audit record, and two
  * concurrent corrections can't both pass the overlap check.
  */
@@ -38,15 +38,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const correction = resolvePunchCorrection(parsed.data)
     if (!correction.ok) return fail(correction.error, 400)
 
-    const existing = await prisma.timeClockEntry.findUnique({
-      where: { id },
-      select: { id: true, userId: true, clockInAt: true, clockOutAt: true, notes: true },
-    })
-    if (!existing) return fail('Punch not found', 404)
-
     const { ipAddress, userAgent } = getRequestMetadata(request)
-    const updated = await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
+        // Read inside the transaction so the audit "before" is what was overwritten.
+        const existing = await tx.timeClockEntry.findUnique({
+          where: { id },
+          select: { id: true, userId: true, clockInAt: true, clockOutAt: true, notes: true },
+        })
+        if (!existing) return 'not-found' as const
+
         // Overlapping punches would pay the same minutes twice.
         const overlap = await tx.timeClockEntry.findFirst({
           where: {
@@ -57,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           },
           select: { id: true },
         })
-        if (overlap) return null
+        if (overlap) return 'overlap' as const
 
         const entry = await tx.timeClockEntry.update({
           where: { id },
@@ -98,7 +99,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       },
       { isolationLevel: 'Serializable' }
     )
-    if (!updated) return fail('These times overlap another punch for this employee', 409)
+    if (result === 'not-found') return fail('Punch not found', 404)
+    if (result === 'overlap') return fail('These times overlap another punch for this employee', 409)
+    const updated = result
 
     return ok({
       id: updated.id,
