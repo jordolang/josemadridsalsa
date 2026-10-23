@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useState } from "react";
+import { Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,6 +26,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  businessDayKey,
+  formatBusinessDateTimeInput,
   formatBusinessTime,
   formatDayLabel,
   formatDecimalHours,
@@ -35,7 +38,7 @@ import {
   sumDayPayrollHours,
   type PunchLocation,
 } from "@/lib/timeclock";
-import type { TimeClockView } from "@/lib/timeclock-server";
+import type { SerializedPunch, TimeClockView } from "@/lib/timeclock-server";
 import { getPunchLocation } from "./getPunchLocation";
 import { ElapsedTimer, LiveClock } from "./LiveClock";
 
@@ -68,7 +71,14 @@ function LocationLink({ location }: { location: PunchLocation | null }) {
   );
 }
 
-export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) {
+export function TimeClockPanel({
+  initialView,
+  canEditClockOut = false,
+}: {
+  initialView: TimeClockView;
+  /** Developer accounts may correct the clock-out time of their own punches. */
+  canEditClockOut?: boolean;
+}) {
   const [view, setView] = useState(initialView);
   const [start, setStart] = useState(initialView.range.start);
   const [end, setEnd] = useState(initialView.range.end);
@@ -77,6 +87,10 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [clockOutOpen, setClockOutOpen] = useState(false);
+  const [editing, setEditing] = useState<SerializedPunch | null>(null);
+  const [editClockOut, setEditClockOut] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
 
   const rangeIsValid = parseDateInput(start) !== null && parseDateInput(end) !== null;
 
@@ -142,6 +156,36 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
     if (succeeded) {
       setClockOutOpen(false);
       setNotes("");
+    }
+  };
+
+  const openEditClockOut = (entry: SerializedPunch) => {
+    setEditing(entry);
+    setEditClockOut(
+      formatBusinessDateTimeInput(entry.clockOutAt ? new Date(entry.clockOutAt) : new Date())
+    );
+    setEditReason("");
+    setEditError(null);
+  };
+
+  const saveClockOut = async () => {
+    if (!editing) return;
+    setBusy(true);
+    setEditError(null);
+    try {
+      const response = await fetch(`/api/account/timeclock/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clockOutAt: editClockOut, reason: editReason }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error ?? "Failed to update clock-out");
+      setView(await load(start, end));
+      setEditing(null);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Failed to update clock-out");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -294,11 +338,25 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
                           {time(entry.clockInAt)}
                         </TableCell>
                         <TableCell className="font-mono tabular-nums">
-                          {entry.clockOutAt ? (
-                            time(entry.clockOutAt)
-                          ) : (
-                            <span className="text-amber-600">In progress</span>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {entry.clockOutAt ? (
+                              time(entry.clockOutAt)
+                            ) : (
+                              <span className="text-amber-600">In progress</span>
+                            )}
+                            {canEditClockOut ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                aria-label="Edit clock-out time"
+                                disabled={busy}
+                                onClick={() => openEditClockOut(entry)}
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right font-mono tabular-nums">
                           {entry.clockOutAt ? formatDecimalHours(entry.durationMs) : "—"}
@@ -331,6 +389,59 @@ export function TimeClockPanel({ initialView }: { initialView: TimeClockView }) 
           </div>
         )}
       </Card>
+
+      <Dialog open={editing !== null} onOpenChange={open => !busy && !open && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Clock-Out Time</DialogTitle>
+            <DialogDescription>
+              Times are Zanesville time. The change and your reason are saved to the audit log.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editing ? (
+            <div className="text-sm text-muted-foreground">
+              {formatDayLabel(businessDayKey(new Date(editing.clockInAt)))}{" "}
+              · clocked in at {time(editing.clockInAt)}
+            </div>
+          ) : null}
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="timeclock-edit-clock-out">Clock out</Label>
+            <Input
+              id="timeclock-edit-clock-out"
+              type="datetime-local"
+              value={editClockOut}
+              onChange={e => setEditClockOut(e.target.value)}
+              required
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="timeclock-edit-reason">Reason for correction</Label>
+            <Input
+              id="timeclock-edit-reason"
+              value={editReason}
+              onChange={e => setEditReason(e.target.value)}
+              placeholder="e.g. Forgot to clock out"
+              maxLength={500}
+            />
+          </div>
+
+          {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
+
+          <DialogFooter>
+            <Button variant="secondary" disabled={busy} onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={busy || !editClockOut || editReason.trim().length < 3}
+              onClick={saveClockOut}
+            >
+              {busy ? "Saving…" : "Save clock-out"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={clockOutOpen} onOpenChange={open => !busy && setClockOutOpen(open)}>
         <DialogContent>

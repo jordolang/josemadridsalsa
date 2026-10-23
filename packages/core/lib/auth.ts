@@ -10,6 +10,7 @@ import bcrypt from 'bcryptjs'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
 import { DEVELOPER_ACCOUNT_EMAIL } from '@/lib/developer/constants'
 import { getConfiguredOAuthProviders, type OAuthProviderId } from '@/lib/auth/oauth-providers'
+import { isLastSeenStale, recordLastSeen } from '@/lib/auth/last-seen'
 
 /** Cached Prisma client instance for lazy loading */
 let prismaClient: any = null
@@ -336,6 +337,17 @@ export const authOptions: NextAuthOptions = {
             console.log('[JWT Callback] Promoted developer account to DEVELOPER role')
           } catch (promoteError) {
             console.error('[JWT Callback] Developer account promotion error:', promoteError)
+          }
+        }
+
+        // "Last Logged In" on the admin Users page: every sign-in, then hourly
+        // while the session is in use.
+        if (typeof token.id === 'string') {
+          const signIn = Boolean(user || account)
+          const now = Date.now()
+          if (signIn || isLastSeenStale(token.lastSeenAt as number | undefined, now)) {
+            await recordLastSeen(token.id, { signIn, now: new Date(now) })
+            token.lastSeenAt = now
           }
         }
 

@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Added
+- **Developer accounts can edit a clock-out time from the timeclock window.** On
+  `/account/timeclock`, developer accounts get a pencil beside each clock-out to change that
+  punch's clock-out time. A reason is required, impossible or overlapping shifts are rejected,
+  and the change is audited like an admin correction. No other role can use it.
 - **Admins can correct time clock punches.** The admin user page has a Time Clock card listing
   recent punches; admins with `users:read` and `users:write` see it and can fix a punch's times and job duties there (for
   example a forgotten clock-out). A reason is required, overlapping or impossible shifts are
@@ -25,6 +29,9 @@ the root `package.json` is canonical.
   the owner and retried at the next review instead of failing the whole run.
 
 ### Fixed
+- **"Last Logged In" on the admin Users page no longer reads Never for everyone.** Nothing wrote
+  `User.lastLoginAt`. It is now set on every sign-in and refreshed at most once an hour while a
+  signed-in account keeps using the site.
 - **Email agent review fixes.** New mail older than the newest already-processed batch is now
   found (`EMAIL_AGENT_SEARCH_MAX`); a failed Gmail fetch no longer stops the whole review; a
   failed direct Anthropic call now falls back to Hermes; SDK retries no longer stretch a
