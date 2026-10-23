@@ -19,6 +19,12 @@ the root `package.json` is canonical.
   digest. It never sends, labels, archives, or deletes email. Each model call has a time limit
   (`EMAIL_AGENT_TIMEOUT_MS`, default 2 minutes); a message that can't be analyzed is listed for
   the owner and retried at the next review instead of failing the whole run.
+
+### Fixed
+- **Email agent review fixes.** New mail older than the newest already-processed batch is now
+  found (`EMAIL_AGENT_SEARCH_MAX`); a failed Gmail fetch no longer stops the whole review; a
+  failed direct Anthropic call now falls back to Hermes; SDK retries no longer stretch a
+  message past `EMAIL_AGENT_TIMEOUT_MS`; and the agent's usage docs moved into the docs site.
 - **Batch Pirate Ship export from the Orders list, on the web and in the desktop app.** A
   **Ready to ship** control selects every paid, open, unshipped order that has an address,
   and **Pirate Ship CSV** in the bulk bar downloads one import file for all selected orders,

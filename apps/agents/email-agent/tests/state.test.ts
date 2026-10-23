@@ -11,3 +11,13 @@ describe('selectNewMessages', () => {
     ]);
   });
 });
+
+describe('selectNewMessages with a limit', () => {
+  it('skips processed messages before applying the limit', () => {
+    const messages = [{ id: 'one' }, { id: 'two' }, { id: 'three' }, { id: 'four' }];
+
+    expect(selectNewMessages(messages, new Set(['one', 'two']), 1)).toEqual([
+      { id: 'three' },
+    ]);
+  });
+});
