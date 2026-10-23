@@ -99,6 +99,16 @@ the clock-in, clock-out and job duties, and a reason is required.
 A correction always sets a clock-out, so it can never create a second open
 punch.
 
+### Developer clock-out edits
+
+Developer accounts (role `DEVELOPER`) also see a pencil next to each clock-out
+in their own timeclock window (`/account/timeclock`). It changes only that
+punch's clock-out time, through `PATCH /api/account/timeclock/[id]`, with the
+same rules as an admin correction: a reason is required, the shift must end
+after it starts, not in the future and within 24 hours, may not overlap another
+punch, and the change is written to the audit log as `TIMECLOCK_CORRECTION`.
+Every other role gets a 403, and the route only touches the caller's own punches.
+
 One more consequence worth knowing:
 
 **Deleting the user deletes the history.** The `userId` relation uses
@@ -163,6 +173,7 @@ unbounded history, and the UI re-displays the range the server actually used.
 | `app/api/account/timeclock/route.ts` | `GET` history, `POST` clock in |
 | `app/api/account/timeclock/clock-out/route.ts` | `POST` clock out with notes |
 | `app/api/admin/timeclock/[id]/route.ts` | `PATCH` audited admin correction |
+| `app/api/account/timeclock/[id]/route.ts` | `PATCH` developer-only clock-out edit |
 | `lib/timeclock-admin.ts` | Correction validation |
 | `components/admin/timeclock/EditPunchDialog.tsx` | Admin correction dialog |
 | `app/(public)/account/timeclock/page.tsx` | Server component, role gate |

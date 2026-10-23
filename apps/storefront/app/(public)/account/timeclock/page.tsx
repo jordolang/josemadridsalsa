@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
-import { getCurrentUser, isStaff } from "@/lib/rbac";
+import { getCurrentUser, isDeveloper, isStaff } from "@/lib/rbac";
 import { Card } from "@/components/ui/card";
 import { TimeClockPanel } from "@/components/account/timeclock/TimeClockPanel";
 import { buildTimeClockView } from "@/lib/timeclock-server";
@@ -43,7 +43,7 @@ export default async function TimeClockPage() {
           {user.role === UserRole.STAFF ? "" : ` · ${user.role}`}
         </p>
       </div>
-      <TimeClockPanel initialView={view} />
+      <TimeClockPanel initialView={view} canEditClockOut={isDeveloper(user)} />
     </div>
   );
 }
