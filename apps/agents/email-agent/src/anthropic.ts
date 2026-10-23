@@ -13,10 +13,10 @@ const execFileAsync = promisify(execFile);
 
 // A stalled model call must not hold up the whole review; the caller
 // reports the message for retry instead.
-const ANALYSIS_TIMEOUT_MS = Number.parseInt(
-  process.env.EMAIL_AGENT_TIMEOUT_MS ?? '120000',
-  10,
-);
+const DEFAULT_TIMEOUT_MS = 120_000;
+const parsedTimeout = Number.parseInt(process.env.EMAIL_AGENT_TIMEOUT_MS ?? '', 10);
+const ANALYSIS_TIMEOUT_MS =
+  Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : DEFAULT_TIMEOUT_MS;
 
 const SYSTEM_PROMPT = `You review customer email for José Madrid Salsa.
 
@@ -64,7 +64,35 @@ export async function analyzeMessage(
   const apiKey = await resolveAnthropicApiKey();
   if (!apiKey) return analyzeWithHermes(message, heuristic);
 
-  const client = new Anthropic({ apiKey, timeout: ANALYSIS_TIMEOUT_MS, maxRetries: 1 });
+  try {
+    return await analyzeWithApi(apiKey, message, heuristic);
+  } catch (directError) {
+    // A timeout already used this message's time budget; leave it for the
+    // next review rather than spend another full timeout on Hermes.
+    if (directError instanceof Anthropic.APIConnectionTimeoutError) throw directError;
+    try {
+      return await analyzeWithHermes(message, heuristic);
+    } catch (fallbackError) {
+      throw new AggregateError(
+        [directError, fallbackError],
+        `Anthropic failed (${errorMessage(directError)}); Hermes fallback failed (${errorMessage(fallbackError)})`,
+      );
+    }
+  }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function analyzeWithApi(
+  apiKey: string,
+  message: GmailMessage,
+  heuristic: Classification,
+): Promise<ClaudeDecision> {
+  // No SDK retries: the timeout applies per attempt, so a retry would let one
+  // stalled message run past EMAIL_AGENT_TIMEOUT_MS. Hermes is the fallback.
+  const client = new Anthropic({ apiKey, timeout: ANALYSIS_TIMEOUT_MS, maxRetries: 0 });
   const response = await client.messages.create({
     model: process.env.EMAIL_AGENT_MODEL ?? 'claude-sonnet-4-5',
     max_tokens: 1_200,

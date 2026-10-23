@@ -357,9 +357,10 @@ Read from the environment of the Hermes cron job that runs the agent. All are op
 |---|---|
 | `ANTHROPIC_API_KEY` | Calls Claude directly. Without it the agent uses the Hermes Anthropic provider. |
 | `EMAIL_AGENT_MODEL` | Model used to classify each message. Defaults to `claude-sonnet-4-5`. |
-| `EMAIL_AGENT_TIMEOUT_MS` | Time limit for one message's model call. Defaults to `120000`. A message that runs over is listed for the owner and retried at the next review. |
+| `EMAIL_AGENT_TIMEOUT_MS` | Time limit for one message's model call. Defaults to `120000`; an invalid value also falls back to it. A message that runs over is listed for the owner and retried at the next review. |
 | `EMAIL_AGENT_QUERY` | Gmail search for the inbox review. Defaults to the last 7 days, excluding Promotions and Social. |
-| `EMAIL_AGENT_MAX` | Most messages read per review. Defaults to `25`. |
+| `EMAIL_AGENT_MAX` | Most new messages analyzed per review. Defaults to `25`. |
+| `EMAIL_AGENT_SEARCH_MAX` | How many matching inbox messages are searched to find new ones, since processed mail stays in the inbox. Defaults to `500`. |
 | `EMAIL_AGENT_STATE_PATH` | Where processed message IDs are kept. Defaults to `email-agent/state.json` under the Hermes home. |
 | `HERMES_HOME` | Hermes profile directory holding the Google OAuth token. Defaults to `~/.hermes`. |
 | `PYTHON_BIN` | Python with the Google API client installed, used for Gmail calls. Defaults to `python`. |

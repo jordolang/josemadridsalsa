@@ -12,8 +12,9 @@ export type AgentState = z.infer<typeof StateSchema>;
 export function selectNewMessages<T extends { id: string }>(
   messages: T[],
   processed: ReadonlySet<string>,
+  limit = Number.POSITIVE_INFINITY,
 ): T[] {
-  return messages.filter((message) => !processed.has(message.id));
+  return messages.filter((message) => !processed.has(message.id)).slice(0, limit);
 }
 
 export async function loadState(path: string): Promise<AgentState> {

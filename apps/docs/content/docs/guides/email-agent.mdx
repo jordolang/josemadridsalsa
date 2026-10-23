@@ -1,0 +1,24 @@
+---
+title: Email Agent
+description: Run the draft-only agent that reviews the main inbox and proposes replies
+---
+
+# Email Agent
+
+`apps/agents/email-agent` reviews the main Google Workspace inbox, asks Claude to classify customer mail, and prints a draft-only digest. It never sends, labels, archives, or deletes email. Hermes cron runs it on a schedule.
+
+## Commands
+
+The agent is its own pnpm package, not an npm workspace, so run its scripts against its directory:
+
+- `pnpm --dir apps/agents/email-agent install` — install its dependencies.
+- `pnpm --dir apps/agents/email-agent dry-run` — inspect current messages without changing local processing state.
+- `pnpm --dir apps/agents/email-agent run run` — process new inbox messages and record their IDs locally.
+- `pnpm --dir apps/agents/email-agent test` — run unit tests.
+- `pnpm --dir apps/agents/email-agent type-check` — check TypeScript.
+
+## Authentication and state
+
+Google OAuth credentials are read from the active Hermes profile. Anthropic authentication uses `ANTHROPIC_API_KEY` when available and otherwise calls the authenticated Hermes Anthropic provider. If a direct call fails for any reason other than a timeout, the agent retries that message through Hermes. Runtime state is stored outside the repository under the active Hermes profile.
+
+A message that can't be fetched or analyzed is listed for the owner and retried at the next review. See [Environment Variables](/docs/configuration/environment-variables) for every setting.
