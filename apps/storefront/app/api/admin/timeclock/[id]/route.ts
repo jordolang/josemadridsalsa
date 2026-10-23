@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, forbidden, unauthorized, serverError } from '@/lib/api'
-import { logAuditWithRequest } from '@/lib/audit'
+import { getRequestMetadata } from '@/lib/audit'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 import { punchCorrectionSchema, resolvePunchCorrection } from '@/lib/timeclock-admin'
@@ -13,6 +13,10 @@ export const dynamic = 'force-dynamic'
  * Correct a punch's times and job duties. Employees can only clock in and out,
  * so this is the one place a punch changes after the fact; every correction
  * writes an audit entry with the before/after values, who made it, and why.
+ *
+ * The overlap check, the update and the audit entry share one serializable
+ * transaction: a correction is never saved without its audit record, and two
+ * concurrent corrections can't both pass the overlap check.
  */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let admin: Awaited<ReturnType<typeof requirePermission>>
@@ -40,51 +44,61 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     })
     if (!existing) return fail('Punch not found', 404)
 
-    // Overlapping punches would pay the same minutes twice.
-    const overlap = await prisma.timeClockEntry.findFirst({
-      where: {
-        userId: existing.userId,
-        id: { not: id },
-        clockInAt: { lt: correction.clockOutAt },
-        OR: [{ clockOutAt: null }, { clockOutAt: { gt: correction.clockInAt } }],
-      },
-      select: { id: true },
-    })
-    if (overlap) return fail('These times overlap another punch for this employee', 409)
-
-    const updated = await prisma.timeClockEntry.update({
-      where: { id },
-      data: {
-        clockInAt: correction.clockInAt,
-        clockOutAt: correction.clockOutAt,
-        notes: correction.notes,
-      },
-      select: { id: true, clockInAt: true, clockOutAt: true, notes: true },
-    })
-
-    await logAuditWithRequest(
-      {
-        userId: admin.id,
-        action: 'TIMECLOCK_CORRECTION',
-        entityType: 'TimeClockEntry',
-        entityId: id,
-        changes: {
-          employeeId: existing.userId,
-          reason: correction.reason,
-          before: {
-            clockInAt: existing.clockInAt.toISOString(),
-            clockOutAt: existing.clockOutAt?.toISOString() ?? null,
-            notes: existing.notes,
+    const { ipAddress, userAgent } = getRequestMetadata(request)
+    const updated = await prisma.$transaction(
+      async (tx) => {
+        // Overlapping punches would pay the same minutes twice.
+        const overlap = await tx.timeClockEntry.findFirst({
+          where: {
+            userId: existing.userId,
+            id: { not: id },
+            clockInAt: { lt: correction.clockOutAt },
+            OR: [{ clockOutAt: null }, { clockOutAt: { gt: correction.clockInAt } }],
           },
-          after: {
-            clockInAt: updated.clockInAt.toISOString(),
-            clockOutAt: updated.clockOutAt!.toISOString(),
-            notes: updated.notes,
+          select: { id: true },
+        })
+        if (overlap) return null
+
+        const entry = await tx.timeClockEntry.update({
+          where: { id },
+          data: {
+            clockInAt: correction.clockInAt,
+            clockOutAt: correction.clockOutAt,
+            notes: correction.notes,
           },
-        },
+          select: { id: true, clockInAt: true, clockOutAt: true, notes: true },
+        })
+
+        await tx.auditLog.create({
+          data: {
+            userId: admin.id,
+            action: 'TIMECLOCK_CORRECTION',
+            entityType: 'TimeClockEntry',
+            entityId: id,
+            ipAddress,
+            userAgent,
+            changes: {
+              employeeId: existing.userId,
+              reason: correction.reason,
+              before: {
+                clockInAt: existing.clockInAt.toISOString(),
+                clockOutAt: existing.clockOutAt?.toISOString() ?? null,
+                notes: existing.notes,
+              },
+              after: {
+                clockInAt: entry.clockInAt.toISOString(),
+                clockOutAt: entry.clockOutAt!.toISOString(),
+                notes: entry.notes,
+              },
+            },
+          },
+        })
+
+        return entry
       },
-      request
+      { isolationLevel: 'Serializable' }
     )
+    if (!updated) return fail('These times overlap another punch for this employee', 409)
 
     return ok({
       id: updated.id,
@@ -93,6 +107,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       notes: updated.notes,
     })
   } catch (error: unknown) {
+    if ((error as { code?: string } | null)?.code === 'P2034') {
+      return fail('Another change to these punches was saved at the same time. Try again.', 409)
+    }
     return serverError('Failed to correct punch', error)
   }
 }

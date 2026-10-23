@@ -5,22 +5,21 @@ vi.mock('@/lib/rbac', () => ({
   requirePermission: vi.fn(async () => ({ id: 'admin-1', role: 'ADMIN' })),
 }))
 
-vi.mock('@/lib/audit', () => ({
-  logAuditWithRequest: vi.fn(),
-}))
-
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+vi.mock('@/lib/prisma', () => {
+  const prisma = {
     timeClockEntry: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
     },
-  },
-}))
+    auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
+  }
+  prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => unknown) => fn(prisma))
+  return { prisma }
+})
 
 import { PATCH } from '@/app/api/admin/timeclock/[id]/route'
-import { logAuditWithRequest } from '@/lib/audit'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/rbac'
 
@@ -68,7 +67,10 @@ describe('PATCH /api/admin/timeclock/:id', () => {
       clockOutAt: new Date('2026-10-09T18:00:00Z'),
       notes: 'Labeled salsa and packed',
     })
-    expect(vi.mocked(logAuditWithRequest).mock.calls[0][0]).toMatchObject({
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'Serializable',
+    })
+    expect(vi.mocked(prisma.auditLog.create).mock.calls[0][0].data).toMatchObject({
       userId: 'admin-1',
       action: 'TIMECLOCK_CORRECTION',
       entityId: 'entry-1',
@@ -95,6 +97,21 @@ describe('PATCH /api/admin/timeclock/:id', () => {
 
     expect(response.status).toBe(409)
     expect(prisma.timeClockEntry.update).not.toHaveBeenCalled()
+    expect(prisma.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it('fails the correction when the audit entry cannot be written', async () => {
+    vi.mocked(prisma.auditLog.create).mockRejectedValueOnce(new Error('audit table unavailable'))
+
+    expect((await patch(correction)).status).toBe(500)
+  })
+
+  it('returns 409 when a concurrent correction conflicts', async () => {
+    vi.mocked(prisma.$transaction).mockRejectedValueOnce(
+      Object.assign(new Error('serialization failure'), { code: 'P2034' })
+    )
+
+    expect((await patch(correction)).status).toBe(409)
   })
 
   it('returns 404 for an unknown punch', async () => {
