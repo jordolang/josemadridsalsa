@@ -150,6 +150,11 @@ export interface Row {
   search: string
   /** Index into the section's `filters`, for client-side chip filtering. */
   buckets: number[]
+  /**
+   * An order that is paid, unshipped and has an address. The orders table sets
+   * it so the shell can mark every such row and export them for Pirate Ship.
+   */
+  shipReady?: boolean
 }
 
 export interface TablePayload {

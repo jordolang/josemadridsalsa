@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Eye } from 'lucide-react'
+import { ChevronDown, Eye, Ship } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -39,11 +39,14 @@ interface OrderRow {
   createdAt: string
   customerName: string
   itemCount: number
+  /** Paid, unshipped and has an address — see `isReadyToShip`. */
+  readyToShip: boolean
 }
 
 interface OrdersTableClientProps {
   orders: OrderRow[]
   canWrite: boolean
+  canExport: boolean
 }
 
 const BULK_STATUSES = [
@@ -54,7 +57,7 @@ const BULK_STATUSES = [
   'CANCELLED',
 ] as const
 
-export function OrdersTableClient({ orders, canWrite }: OrdersTableClientProps) {
+export function OrdersTableClient({ orders, canWrite, canExport }: OrdersTableClientProps) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isProcessing, setIsProcessing] = useState(false)
@@ -63,6 +66,7 @@ export function OrdersTableClient({ orders, canWrite }: OrdersTableClientProps) 
   const allSelected = orders.length > 0 && selectedIds.size === orders.length
   const someSelected = selectedIds.size > 0
   const indeterminate = someSelected && !allSelected
+  const readyIds = orders.filter((o) => o.readyToShip).map((o) => o.id)
 
   function handleSelectAll(checked: boolean) {
     if (checked) {
@@ -129,8 +133,52 @@ export function OrdersTableClient({ orders, canWrite }: OrdersTableClientProps) 
     window.open(`/api/admin/orders/export?ids=${encodeURIComponent(ids)}`, '_blank')
   }
 
+  function handleExportPirateShip() {
+    if (selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    const notReady = orders.filter((o) => selectedIds.has(o.id) && !o.readyToShip).length
+    // A link with `download` rather than window.open, so the desktop shells
+    // save the file instead of opening a blank tab.
+    const link = document.createElement('a')
+    link.href = `/api/admin/shipping/pirate-ship/export?ids=${encodeURIComponent(ids.join(','))}`
+    link.download = `pirateship-batch-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.append(link)
+    link.click()
+    link.remove()
+    toast.success(`Exported ${ids.length} order${ids.length === 1 ? '' : 's'} for Pirate Ship`, {
+      description:
+        notReady > 0
+          ? `${notReady} of them ${notReady === 1 ? 'is' : 'are'} not ready to ship (unpaid, already shipped, or no address). Orders with no address are left out of the file.`
+          : 'Drag the file into pirateship.com, then buy & print labels.',
+    })
+  }
+
   return (
     <div className="space-y-3">
+      {/* Selection criteria */}
+      {canWrite && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Select:</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedIds(new Set(readyIds))}
+            disabled={readyIds.length === 0}
+          >
+            <Ship className="mr-1.5 size-3.5" />
+            Ready to ship ({readyIds.length})
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleSelectAll(true)}
+            disabled={orders.length === 0}
+          >
+            All on this page
+          </Button>
+        </div>
+      )}
+
       {/* Bulk actions bar */}
       {someSelected && canWrite && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2.5">
@@ -167,6 +215,18 @@ export function OrdersTableClient({ orders, canWrite }: OrdersTableClientProps) 
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {canExport && (
+              <Button
+                size="sm"
+                onClick={handleExportPirateShip}
+                disabled={isProcessing}
+                className="gap-1.5"
+              >
+                <Ship className="size-3.5" />
+                Pirate Ship CSV
+              </Button>
+            )}
 
             <Button
               variant="outline"

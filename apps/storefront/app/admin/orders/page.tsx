@@ -18,6 +18,7 @@ import { OrderFilters } from '@/components/admin/OrderFilters'
 import { buildOrderWhere, parseOrderFilters } from '@/lib/orders/order-filters'
 import { isNextControlFlowError } from '@/lib/next-errors'
 import { MobileOrdersList } from '@/components/admin/mobile/MobileOrdersList'
+import { isReadyToShip } from '@/lib/shipping/pirate-ship'
 import { BigCommerceNotice } from '@/components/admin/BigCommerceNotice'
 
 type SearchParams = Record<string, string | undefined>
@@ -95,6 +96,12 @@ export default async function OrdersPage({
       createdAt: order.createdAt.toISOString(),
       customerName: order.user?.name || order.guestEmail || 'Guest',
       itemCount: order._count.items,
+      readyToShip: isReadyToShip({
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        fulfillmentStatus: order.fulfillmentStatus,
+        hasShippingAddress: order.shippingAddressId != null,
+      }),
     }))
 
     // Paging and export both carry every active filter, so page 2 and the CSV always match
@@ -168,7 +175,7 @@ export default async function OrdersPage({
       <OrderFilters />
 
       {/* Orders Table with Bulk Actions */}
-      <OrdersTableClient orders={orderRows} canWrite={canWrite} />
+      <OrdersTableClient orders={orderRows} canWrite={canWrite} canExport={canExport} />
 
       {/* Pagination */}
       {totalPages > 1 && (
