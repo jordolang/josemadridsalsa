@@ -18,6 +18,7 @@ import { gmailThreadUrl } from '@/lib/inbox/gmail'
 import { isMissingTableError } from '@/lib/prisma-errors'
 import { getFundraisingCheckoutFields, normalizeGroupName } from '@/lib/fundraising-site/checkout-fields'
 import { STORE_RECORD_DESCRIPTION } from '@/lib/bigcommerce/fundraising-orders'
+import { isReadyToShip } from '@/lib/shipping/pirate-ship'
 import {
   findPage,
   findSection,
@@ -305,6 +306,12 @@ async function loadOrders(list: ListQuery = DEFAULT_LIST): Promise<TablePayload>
       }),
       search: `${order.orderNumber} ${customer} ${shipTo} ${channel}`,
       buckets: bucketsFor(ORDER_FILTER_CHANNELS, order.salesChannel),
+      shipReady: isReadyToShip({
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        fulfillmentStatus: order.fulfillmentStatus,
+        hasShippingAddress: order.shippingAddress != null,
+      }),
       cells: [
         text(order.orderNumber, { mono: true, dim: true }),
         text(customer, { strong: true }),

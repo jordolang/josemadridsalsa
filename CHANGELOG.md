@@ -19,6 +19,16 @@ the root `package.json` is canonical.
   digest. It never sends, labels, archives, or deletes email. Each model call has a time limit
   (`EMAIL_AGENT_TIMEOUT_MS`, default 2 minutes); a message that can't be analyzed is listed for
   the owner and retried at the next review instead of failing the whole run.
+- **Batch Pirate Ship export from the Orders list, on the web and in the desktop app.** A
+  **Ready to ship** control selects every paid, open, unshipped order that has an address,
+  and **Pirate Ship CSV** in the bulk bar downloads one import file for all selected orders,
+  with the same columns as the single-order export.
+
+### Fixed
+- **Pirate Ship export declared every jar as 16 lb.** `Product.weight` is ounces of contents, but
+  the export read it as pounds, so a six-jar order went out as 96 lb 8 oz. It now weighs parcels
+  with `packJars` (contents, glass, dividers and box), the same model checkout and EasyPost labels
+  use, so six 16oz jars come to 10 lb 14 oz.
 
 ### Changed
 - **Shipping uses the warehouse's real boxes.** Jar orders are sized as 1–3 jars 10×7×5″,

@@ -16,7 +16,7 @@
  */
 
 import { toCsv, detectMapping, mappedCell } from '@/lib/csv'
-import { packJars } from '@/lib/shipping/jar-packing'
+import { DEFAULT_JAR_CONTENTS_OZ, packJars } from '@/lib/shipping/jar-packing'
 
 /**
  * Column headers for the Pirate Ship import file, in output order.
@@ -46,20 +46,14 @@ export const PIRATE_SHIP_HEADERS = [
   'Items',
 ] as const
 
-/**
- * Fallback per-unit shipped weight (pounds) when a product has no weight set.
- * A retail jar of salsa with its glass and packaging runs a bit over a pound.
- */
-export const DEFAULT_UNIT_WEIGHT_LB = 1.2
-
-/** Box + dunnage tare added to every parcel (pounds). */
-export const PACKAGING_TARE_LB = 0.5
-
 /** A single order line as far as parcel math is concerned. */
 export interface ParcelItemInput {
   quantity: number
-  /** Per-unit weight in pounds. Null/undefined falls back to the default. */
-  weightLb?: number | null
+  /**
+   * Per-unit net contents in **ounces** — what `Product.weight` holds (a 16oz
+   * jar is `16`). Null/undefined falls back to a standard jar.
+   */
+  weightOz?: number | null
   lengthIn?: number | null
   widthIn?: number | null
   heightIn?: number | null
@@ -83,14 +77,15 @@ const isPositive = (n: number | null | undefined): n is number =>
 /**
  * Compute a shippable parcel for an order.
  *
- * Weight = sum(per-unit weight x quantity) + packaging tare, where a missing
- * per-unit weight falls back to {@link DEFAULT_UNIT_WEIGHT_LB}. Dimensions use
- * the largest per-product box among the line items when products carry their
- * own dimensions; otherwise the warehouse box for that many jars, from
- * {@link packJars}, so Pirate Ship gets the same box as checkout.
+ * Weight comes from {@link packJars} — contents, glass, dividers and box — the
+ * same model checkout quotes and EasyPost labels use, so Pirate Ship declares
+ * the same parcel. A missing per-unit weight falls back to a standard jar.
+ * Dimensions use the largest per-product box among the line items when
+ * products carry their own dimensions; otherwise the warehouse box for that
+ * many jars.
  */
 export function computeParcel(items: ParcelItemInput[]): ComputedParcel {
-  let totalWeightLb = 0
+  let netContentsOz = 0
   let unitCount = 0
   let maxL = 0
   let maxW = 0
@@ -102,10 +97,7 @@ export function computeParcel(items: ParcelItemInput[]): ComputedParcel {
     if (qty === 0) continue
     unitCount += qty
 
-    const unitWeight = isPositive(item.weightLb)
-      ? item.weightLb
-      : DEFAULT_UNIT_WEIGHT_LB
-    totalWeightLb += unitWeight * qty
+    netContentsOz += (isPositive(item.weightOz) ? item.weightOz : DEFAULT_JAR_CONTENTS_OZ) * qty
 
     if (isPositive(item.lengthIn) || isPositive(item.widthIn) || isPositive(item.heightIn)) {
       anyDims = true
@@ -115,15 +107,13 @@ export function computeParcel(items: ParcelItemInput[]): ComputedParcel {
     }
   }
 
-  totalWeightLb += PACKAGING_TARE_LB
+  const box = packJars(Math.max(unitCount, 1), unitCount > 0 ? netContentsOz : undefined)
 
   // Round total weight up to the nearest ounce; carriers bill by the ounce and
   // rounding down could underpay postage.
-  const totalOunces = Math.max(1, Math.ceil(totalWeightLb * 16))
+  const totalOunces = Math.max(1, Math.ceil(box.weightOz))
   const weightLb = Math.floor(totalOunces / 16)
   const weightOz = totalOunces - weightLb * 16
-
-  const box = packJars(Math.max(unitCount, 1))
 
   return {
     weightLb,
@@ -183,6 +173,33 @@ export function buildPirateShipRow(
     String(parcel.heightIn),
     cell(recipient.itemsSummary),
   ]
+}
+
+/** Order fields that decide whether it belongs in a Pirate Ship batch. */
+export interface ShipReadinessInput {
+  status: string
+  paymentStatus: string
+  fulfillmentStatus: string
+  hasShippingAddress: boolean
+}
+
+const OPEN_ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING']
+const PAID_STATUSES = ['PAID', 'SUCCEEDED', 'PARTIALLY_REFUNDED']
+const UNSHIPPED_FULFILLMENT_STATUSES = ['UNFULFILLED', 'PARTIALLY_FULFILLED']
+
+/**
+ * Whether an order is ready for a Pirate Ship batch: paid, still open, not yet
+ * shipped, and with an address to ship to. The order lists use it for their
+ * "select ready to ship" control; the export itself still skips any order that
+ * has no shipping address.
+ */
+export function isReadyToShip(order: ShipReadinessInput): boolean {
+  return (
+    order.hasShippingAddress &&
+    OPEN_ORDER_STATUSES.includes(order.status) &&
+    PAID_STATUSES.includes(order.paymentStatus) &&
+    UNSHIPPED_FULFILLMENT_STATUSES.includes(order.fulfillmentStatus)
+  )
 }
 
 /** Serialize one or more shipments to a Pirate Ship import CSV. */
