@@ -6,9 +6,11 @@ import {
   endOfBusinessDay,
   formatDateInput,
   formatDecimalHours,
+  formatBusinessDateTimeInput,
   formatDuration,
   formatPunchLocation,
   groupEntriesByDay,
+  parseBusinessDateTimeInput,
   parseDateInput,
   punchDurationMs,
   punchLocationMapUrl,
@@ -363,5 +365,32 @@ describe('punch location', () => {
     expect(punchLocationMapUrl({ latitude: 39.94035, longitude: -82.01319, accuracyMeters: 12 })).toBe(
       'https://maps.google.com/?q=39.94035,-82.01319'
     )
+  })
+})
+
+describe('business datetime inputs', () => {
+  it('reads a wall time as Zanesville time, across daylight saving', () => {
+    expect(parseBusinessDateTimeInput('2026-10-09T09:45')?.toISOString()).toBe('2026-10-09T13:45:00.000Z')
+    expect(parseBusinessDateTimeInput('2026-12-09T09:45')?.toISOString()).toBe('2026-12-09T14:45:00.000Z')
+  })
+
+  it('rejects malformed or impossible values', () => {
+    expect(parseBusinessDateTimeInput('2026-10-09 09:45')).toBeNull()
+    expect(parseBusinessDateTimeInput('2026-02-30T09:45')).toBeNull()
+    expect(parseBusinessDateTimeInput('2026-10-09T24:00')).toBeNull()
+  })
+
+  it('rejects a wall time skipped by spring-forward', () => {
+    expect(parseBusinessDateTimeInput('2026-03-08T02:30')).toBeNull()
+  })
+
+  it('rejects a wall time that occurs twice at fall-back', () => {
+    expect(parseBusinessDateTimeInput('2026-11-01T01:30')).toBeNull()
+    expect(parseBusinessDateTimeInput('2026-11-01T02:30')?.toISOString()).toBe('2026-11-01T07:30:00.000Z')
+  })
+
+  it('formats an instant back to the same wall time', () => {
+    expect(formatBusinessDateTimeInput(new Date('2026-10-09T18:00:00Z'))).toBe('2026-10-09T14:00')
+    expect(formatBusinessDateTimeInput(new Date('2026-10-10T04:05:00Z'))).toBe('2026-10-10T00:05')
   })
 })
