@@ -55,9 +55,9 @@ the tracking import can match shipments back to orders.
 
 ## Parcel calculation
 
-- **Weight** = sum of each product's weight × quantity + packaging tare, rounded up
-  to the nearest ounce. A product with no weight falls back to a default per-unit
-  weight.
+- **Weight** = each jar at its full weight (a standard 13 oz jar ships as 24 oz,
+  the top of its weighed 21–24 oz range) + 5 oz per box + 1 oz of dividers per jar,
+  rounded up to the nearest ounce. A product with no weight is treated as a 13 oz jar.
 - **Dimensions** = the largest per-product box when products carry their own
   length/width/height; otherwise a standard box picked from the total unit count.
 
