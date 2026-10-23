@@ -18,6 +18,11 @@ the root `package.json` is canonical.
   recent punches; admins with `users:read` and `users:write` see it and can fix a punch's times and job duties there (for
   example a forgotten clock-out). A reason is required, overlapping or impossible shifts are
   rejected, and every correction is written to the audit log with the before and after values.
+- **Draft-only email agent** (`apps/agents/email-agent`). Reviews the main inbox, has Claude
+  sort customer mail into routine drafts, owner decisions, and ignorable mail, and prints a
+  digest. It never sends, labels, archives, or deletes email. Each model call has a time limit
+  (`EMAIL_AGENT_TIMEOUT_MS`, default 2 minutes); a message that can't be analyzed is listed for
+  the owner and retried at the next review instead of failing the whole run.
 - **Batch Pirate Ship export from the Orders list, on the web and in the desktop app.** A
   **Ready to ship** control selects every paid, open, unshipped order that has an address,
   and **Pirate Ship CSV** in the bulk bar downloads one import file for all selected orders,
