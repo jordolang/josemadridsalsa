@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   DEFAULT_JAR_CONTENTS_OZ,
+  FULL_JAR_WEIGHT_OZ,
   jarGrossWeightOz,
   JARS_PER_CASE,
   JAR_TARE_OZ,
@@ -11,6 +12,15 @@ import {
 } from '@/lib/shipping/jar-packing'
 
 describe('jarGrossWeightOz', () => {
+  it('ships a standard jar at the top of its weighed range, 24 oz (1.5 lb)', () => {
+    // A full jar weighed 21 oz; fill and contents vary it up to 24 oz. Quote the heavy end so a
+    // label is never under-declared.
+    expect(FULL_JAR_WEIGHT_OZ).toEqual({ min: 21, max: 24 })
+    expect(jarGrossWeightOz(DEFAULT_JAR_CONTENTS_OZ)).toBe(24)
+    expect(jarGrossWeightOz(DEFAULT_JAR_CONTENTS_OZ) / 16).toBe(1.5)
+    expect(jarGrossWeightOz(DEFAULT_JAR_CONTENTS_OZ)).toBeGreaterThanOrEqual(FULL_JAR_WEIGHT_OZ.min)
+  })
+
   it('is far heavier than the jar size, because glass is not free', () => {
     // Product.weight stores 16 — the contents. Shipping on 16 oz under-declares a jar by two
     // thirds, and an under-declared parcel is rejected at the counter.
@@ -48,6 +58,13 @@ describe('packJars', () => {
     const parcel = packJars(jars)
     expect(parcel.box?.name).toBe(name)
     expect(parcel).toMatchObject({ length, width, height, boxes: 1 })
+  })
+
+  it('declares 24 oz per jar plus the box and dividers', () => {
+    // One jar: 24 oz jar + 5 oz box + 1 oz dividers.
+    expect(packJars(1).weightOz).toBe(30)
+    // A case: 12 × 24 + 5 + 12 × 1.
+    expect(packJars(12).weightOz).toBe(305)
   })
 
   it('weighs a case close to a real salsa carton', () => {

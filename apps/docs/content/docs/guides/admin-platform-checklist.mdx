@@ -121,7 +121,8 @@ doing", `/admin/analytics` answers "how are we performing".
 - ✅ Packing model — jars ship in the warehouse boxes: 1–3 jars 10×7×5″, 4–6 jars 12×9×6″, a case
   14×10×8″, two cases 20×15×9″ (`SHIPPING_BOXES` in `lib/shipping/jar-packing.ts`), which sizes
   and weighs the parcel for the customer's quote, the label bought against it, and the Pirate Ship
-  export
+  export. A full jar is weighed at 21–24 oz (1.32–1.5 lb); every quote uses **24 oz per jar**
+  (`FULL_JAR_WEIGHT_OZ.max`), plus 5 oz per box and 1 oz of dividers per jar
 - ✅ Postage bought elsewhere — Pirate Ship has no API, so tracking, carrier, service and **what we
   actually paid** can be recorded by hand and land on the order as a shipment
 - ✅ Fulfillment status, ✅ automated customer notifications

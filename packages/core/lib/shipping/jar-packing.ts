@@ -37,17 +37,8 @@ export function boxForJars(jarCount: number): ShippingBox {
   return SHIPPING_BOXES.find((box) => jarCount <= box.maxJars) ?? LARGEST_BOX
 }
 
-/**
- * Weight of the empty jar, lid and band, ounces.
- *
- * **This is the number to check against a real scale.** `Product.weight` stores `13`, which is the
- * jar *size* — the net contents — not what the carrier weighs. Shipping on 13 oz under-declares a
- * jar by roughly two thirds, and an under-declared parcel is rejected at the counter or surcharged
- * after the fact.
- *
- * Empty regular-mouth pint jar ≈ 9.8 oz, lid and band ≈ 0.7 oz.
- */
-export const JAR_TARE_OZ = 10.5
+/** Net contents of the standard jar, ounces — used only when a caller knows just the count. */
+export const DEFAULT_JAR_CONTENTS_OZ = 13
 
 /**
  * Density of salsa relative to water, for turning fluid ounces of contents into weight.
@@ -57,8 +48,24 @@ export const JAR_TARE_OZ = 10.5
  */
 export const SALSA_SPECIFIC_GRAVITY = 1.04
 
-/** Net contents of the standard jar, ounces — used only when a caller knows just the count. */
-export const DEFAULT_JAR_CONTENTS_OZ = 13
+/**
+ * What one full standard jar weighs on a real scale — glass, lid, band and salsa — in ounces.
+ *
+ * Weighed at 21 oz (about 1.32 lb). Fill level and contents vary a jar by a few percent, so the
+ * range runs to 24 oz (1.5 lb). Quotes and labels use `max`: an under-declared parcel is rejected
+ * at the counter or surcharged after the fact, so the safe direction is heavy.
+ */
+export const FULL_JAR_WEIGHT_OZ = { min: 21, max: 24 } as const
+
+/**
+ * Weight of the empty jar, lid and band, ounces.
+ *
+ * `Product.weight` stores `13`, which is the jar *size* — the net contents — not what the carrier
+ * weighs. The tare is backed out of the weighed full jar, so a standard jar ships at exactly
+ * `FULL_JAR_WEIGHT_OZ.max` and other sizes scale from it.
+ */
+export const JAR_TARE_OZ =
+  Math.round((FULL_JAR_WEIGHT_OZ.max - DEFAULT_JAR_CONTENTS_OZ * SALSA_SPECIFIC_GRAVITY) * 100) / 100
 
 /** Corrugated box itself, ounces. Roughly constant across the sizes used here. */
 export const BOX_TARE_OZ = 5
@@ -66,13 +73,15 @@ export const BOX_TARE_OZ = 5
 /** Dividers and paper per jar, ounces. */
 export const PACKING_PER_JAR_OZ = 1
 
+const round = (value: number) => Math.round(value * 100) / 100
+
 /**
  * Gross shipping weight of one filled jar, in ounces.
  *
  * @param netContentsOz The jar size — 13 for a 13oz jar. This is what `Product.weight` holds.
  */
 export function jarGrossWeightOz(netContentsOz: number): number {
-  return netContentsOz * SALSA_SPECIFIC_GRAVITY + JAR_TARE_OZ
+  return round(netContentsOz * SALSA_SPECIFIC_GRAVITY + JAR_TARE_OZ)
 }
 
 export interface JarParcel {
@@ -87,8 +96,6 @@ export interface JarParcel {
   /** The box the jars go in, for showing staff what to pack. Null when there is nothing to pack. */
   box: ShippingBox | null
 }
-
-const round = (value: number) => Math.round(value * 100) / 100
 
 /**
  * Size the parcel for a number of jars.

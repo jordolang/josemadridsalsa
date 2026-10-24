@@ -35,6 +35,11 @@ the root `package.json` is canonical.
 - **"Last Logged In" on the admin Users page no longer reads Never for everyone.** Nothing wrote
   `User.lastLoginAt`. It is now set on every sign-in and refreshed at most once an hour while a
   signed-in account keeps using the site.
+- **Each full salsa jar now ships at a weighed 24 oz (1.5 lb).** A full jar weighed 21 oz, and fill
+  and contents vary it by a few percent, so jars are classed as 21–24 oz (`FULL_JAR_WEIGHT_OZ`).
+  Checkout quotes, EasyPost labels, the Pirate Ship export and marketplace shipping weights use the
+  24 oz upper bound so a parcel is never under-declared. The jar tare is now derived from that
+  measurement instead of an estimated glass weight. No product data changes.
 - **Email agent review fixes.** New mail older than the newest already-processed batch is now
   found (`EMAIL_AGENT_SEARCH_MAX`); a failed Gmail fetch no longer stops the whole review; a
   failed direct Anthropic call now falls back to Hermes; SDK retries no longer stretch a
