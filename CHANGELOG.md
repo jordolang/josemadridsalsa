@@ -13,6 +13,12 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Security
+- **Patched open Dependabot advisories.** Next.js 16.3.8 → 16.4.3 in every app (critical and high
+  advisories fixed in 16.4.1+), Vitest 5.0.1 → 5.0.5 with its UI, coverage and mocker packages,
+  DOMPurify 3.4.16 → 3.4.17, and the hoisted Vite 8.0.16 → 8.3.5. The email agent's Vitest moves
+  to 5.0.5 too. `@sentry/nextjs` 10.75.2 and Electron 44.5.0 landed separately (#709, #710).
+
 ### Added
 - **Developer accounts can edit a clock-out time from the timeclock window.** On
   `/account/timeclock`, developer accounts get a pencil beside each clock-out to change that
