@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/rbac', () => ({
-  requirePermission: vi.fn(async () => ({ id: 'admin-1', role: 'ADMIN' })),
+  requireRole: vi.fn(async () => ({ id: 'dev-1', role: 'DEVELOPER' })),
 }))
 
 vi.mock('@/lib/prisma', () => {
@@ -21,7 +21,7 @@ vi.mock('@/lib/prisma', () => {
 
 import { PATCH } from '@/app/api/admin/timeclock/[id]/route'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/rbac'
+import { requireRole } from '@/lib/rbac'
 
 const correction = {
   clockInAt: '2026-10-09T09:45',
@@ -71,7 +71,7 @@ describe('PATCH /api/admin/timeclock/:id', () => {
       isolationLevel: 'Serializable',
     })
     expect(vi.mocked(prisma.auditLog.create).mock.calls[0][0].data).toMatchObject({
-      userId: 'admin-1',
+      userId: 'dev-1',
       action: 'TIMECLOCK_CORRECTION',
       entityId: 'entry-1',
       changes: {
@@ -139,12 +139,24 @@ describe('PATCH /api/admin/timeclock/:id', () => {
     expect((await patch(correction)).status).toBe(404)
   })
 
-  it('is closed to accounts without users:write', async () => {
-    vi.mocked(requirePermission).mockRejectedValueOnce(
-      new Error('Forbidden - requires permission: users:write')
+  it('is limited to developer accounts', async () => {
+    await patch(correction)
+
+    expect(requireRole).toHaveBeenCalledWith(['DEVELOPER'])
+  })
+
+  it('refuses admins and every other non-developer role', async () => {
+    vi.mocked(requireRole).mockRejectedValueOnce(
+      new Error('Forbidden - requires one of: DEVELOPER')
     )
 
     expect((await patch(correction)).status).toBe(403)
     expect(prisma.timeClockEntry.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('refuses signed-out requests', async () => {
+    vi.mocked(requireRole).mockRejectedValueOnce(new Error('Unauthorized - not authenticated'))
+
+    expect((await patch(correction)).status).toBe(401)
   })
 })

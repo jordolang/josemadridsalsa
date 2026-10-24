@@ -10,6 +10,7 @@ const TABS = [
   { label: 'Developer Blog', href: '/admin/developer/blog' },
   { label: 'Page Content', href: '/admin/developer/content' },
   { label: 'Salsadocs', href: '/admin/developer/salsadocs' },
+  { label: 'Timeclock', href: '/admin/developer/timeclock' },
 ] as const
 
 function isActive(pathname: string, href: string): boolean {

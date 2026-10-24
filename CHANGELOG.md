@@ -18,8 +18,11 @@ the root `package.json` is canonical.
   `/account/timeclock`, developer accounts get a pencil beside each clock-out to change that
   punch's clock-out time. A reason is required, impossible or overlapping shifts are rejected,
   and the change is audited like an admin correction. No other role can use it.
-- **Admins can correct time clock punches.** The admin user page has a Time Clock card listing
-  recent punches; admins with `users:read` and `users:write` see it and can fix a punch's times and job duties there (for
+- **Timeclock editor in the Developer Console.** `/admin/developer/timeclock` lists every
+  employee's punches for a date range, filterable by employee, with hours per employee, and lets a
+  developer account correct any punch's times and job duties there.
+- **Developers can correct time clock punches.** The admin user page has a Time Clock card listing
+  recent punches; admins with `users:read` and `users:write` see it, and only developer accounts can fix a punch's times and job duties there (for
   example a forgotten clock-out). A reason is required, overlapping or impossible shifts are
   rejected, and every correction is written to the audit log with the before and after values.
 - **Draft-only email agent** (`apps/agents/email-agent`). Reviews the main inbox, has Claude

@@ -18,8 +18,8 @@ const clockOutCorrectionSchema = z.object({
 /**
  * PATCH /api/account/timeclock/:id
  * Change the clock-out time of one of the caller's own punches, from the
- * timeclock window. Developer accounts only: everyone else's punches stay
- * as recorded, and admins correct them through `PATCH /api/admin/timeclock/:id`.
+ * timeclock window. Developer accounts only; other punches are corrected
+ * through the developer-only `PATCH /api/admin/timeclock/:id`.
  *
  * Clock-in and notes are kept as stored. Like the admin correction, the read,
  * overlap check, update and audit entry share one serializable transaction.

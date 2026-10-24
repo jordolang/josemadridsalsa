@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server'
 import { ok, fail, forbidden, unauthorized, serverError } from '@/lib/api'
 import { getRequestMetadata } from '@/lib/audit'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/rbac'
+import { UserRole } from '@prisma/client'
+import { requireRole } from '@/lib/rbac'
 import { punchCorrectionSchema, resolvePunchCorrection } from '@/lib/timeclock-admin'
 
 export const runtime = 'nodejs'
@@ -13,15 +14,16 @@ export const dynamic = 'force-dynamic'
  * Correct a punch's times and job duties. Employees can only clock in and out,
  * so this is the one place a punch changes after the fact; every correction
  * writes an audit entry with the before/after values, who made it, and why.
+ * Developer accounts only: admins can see punch history but not change it.
  *
  * The read, the overlap check, the update and the audit entry share one serializable
  * transaction: a correction is never saved without its audit record, and two
  * concurrent corrections can't both pass the overlap check.
  */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  let admin: Awaited<ReturnType<typeof requirePermission>>
+  let admin: Awaited<ReturnType<typeof requireRole>>
   try {
-    admin = await requirePermission('users:write')
+    admin = await requireRole([UserRole.DEVELOPER])
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : ''
     return message.includes('Unauthorized') ? unauthorized() : forbidden(message || undefined)
