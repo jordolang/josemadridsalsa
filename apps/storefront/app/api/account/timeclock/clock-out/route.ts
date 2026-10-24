@@ -19,7 +19,7 @@ const clockOutSchema = z.object({
  * Close the caller's open punch and attach their notes / job duties and, when
  * the browser supplied one, the device's GPS fix. This is
  * the only moment an employee can write notes — there is deliberately no
- * employee route that updates or deletes a punch once it is closed. Admins
+ * employee route that updates or deletes a punch once it is closed. Developers
  * correct punches through the audited `PATCH /api/admin/timeclock/:id`.
  */
 export async function POST(request: NextRequest) {

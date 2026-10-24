@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Mail, Phone, Calendar, Shield, Edit } from 'lucide-react'
-import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { getCurrentUser, hasPermission, isDeveloper } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import {
   businessDayKey,
@@ -128,8 +128,10 @@ export default async function UserDetailPage({
   }
 
   const canWrite = await hasPermission(currentUser, 'users:write')
-  // Punch history is payroll data: only admins who can correct it see it.
+  // Punch history is payroll data: admins who can edit users see it, and only
+  // developer accounts can correct it.
   const punches = canWrite ? await getRecentPunches(user.id) : []
+  const canCorrectPunches = isDeveloper(currentUser)
   const totalSpent = user.orders.reduce((sum, order) => sum + Number(order.total), 0)
 
   return (
@@ -298,7 +300,7 @@ export default async function UserDetailPage({
                         <TableHead>Out</TableHead>
                         <TableHead className="text-right">Hours</TableHead>
                         <TableHead>Job duties</TableHead>
-                        {canWrite && <TableHead className="w-10" />}
+                        {canCorrectPunches && <TableHead className="w-10" />}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -330,7 +332,7 @@ export default async function UserDetailPage({
                               </p>
                             )}
                           </TableCell>
-                          {canWrite && (
+                          {canCorrectPunches && (
                             <TableCell>
                               <EditPunchDialog
                                 punchId={punch.id}

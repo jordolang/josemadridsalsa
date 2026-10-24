@@ -75,25 +75,32 @@ Three things together make the record tamper-evident for the person clocking in:
 3. **Notes are write-once for the employee.** They arrive as part of the
    clock-out mutation and the employee cannot edit them afterwards.
 
-### Admin corrections
+### Developer corrections
 
-A forgotten clock-out, or a punch made on the wrong day, is corrected by an
-admin with `users:read` and `users:write` from the **Time Clock** card on the
-user's page in the admin console (`/admin/users/[id]`). The card is hidden from
-admins without `users:write`. The pencil on a row opens a dialog to set
-the clock-in, clock-out and job duties, and a reason is required.
+A forgotten clock-out, or a punch made on the wrong day, is corrected by a
+**developer account** (role `DEVELOPER`). Admins can see punch history but
+cannot change it. There are two places to do it, both opening the same dialog
+to set the clock-in, clock-out and job duties, with a required reason:
 
-- Times are entered as Zanesville wall time and converted on the server, so an
-  admin in another time zone still sets the time the employee saw. A time the
-  admin leaves untouched is not sent, so the stored instant, seconds included,
+- **Developer Console → Timeclock** (`/admin/developer/timeclock`): every
+  employee's punches for a date range (the same ±2 month window), filterable by
+  employee, with each employee's hours for the range.
+- The **Time Clock** card on a user's page in the admin console
+  (`/admin/users/[id]`). The card is shown to admins with `users:read` and
+  `users:write`, but only developer accounts get the pencil.
+
+- Times are entered as Zanesville wall time and converted on the server, so a
+  developer in another time zone still sets the time the employee saw. A time the
+  developer leaves untouched is not sent, so the stored instant, seconds included,
   is kept and a notes-only edit never changes paid hours. A wall time that
   names no single instant (the spring-forward gap or the repeated fall-back
   hour) is rejected rather than guessed.
-- `PATCH /api/admin/timeclock/[id]` rejects a clock-out before the clock-in or
+- `PATCH /api/admin/timeclock/[id]` returns 403 for every role but
+  `DEVELOPER`, and rejects a clock-out before the clock-in or
   in the future, a shift over 24 hours, and times that overlap another punch
   for the same employee (overlaps would pay the same minutes twice).
 - Every correction writes an `AuditLog` row with action `TIMECLOCK_CORRECTION`:
-  the admin, the employee, the reason, and the before and after values. The
+  the developer, the employee, the reason, and the before and after values. The
   card shows who last corrected a punch, when, and why.
 
 A correction always sets a clock-out, so it can never create a second open
@@ -104,7 +111,7 @@ punch.
 Developer accounts (role `DEVELOPER`) also see a pencil next to each clock-out
 in their own timeclock window (`/account/timeclock`). It changes only that
 punch's clock-out time, through `PATCH /api/account/timeclock/[id]`, with the
-same rules as an admin correction: a reason is required, the shift must end
+same rules as the corrections above: a reason is required, the shift must end
 after it starts, not in the future and within 24 hours, may not overlap another
 punch, and the change is written to the audit log as `TIMECLOCK_CORRECTION`.
 Every other role gets a 403, and the route only touches the caller's own punches.
@@ -172,10 +179,12 @@ unbounded history, and the UI re-displays the range the server actually used.
 | `lib/timeclock-server.ts` | Range resolution and the page/API view model |
 | `app/api/account/timeclock/route.ts` | `GET` history, `POST` clock in |
 | `app/api/account/timeclock/clock-out/route.ts` | `POST` clock out with notes |
-| `app/api/admin/timeclock/[id]/route.ts` | `PATCH` audited admin correction |
+| `app/api/admin/timeclock/[id]/route.ts` | `PATCH` audited developer correction |
+| `app/admin/developer/timeclock/page.tsx` | Developer Console timeclock editor |
+| `lib/timeclock-developer.ts` | All-employee punch view for that page |
 | `app/api/account/timeclock/[id]/route.ts` | `PATCH` developer-only clock-out edit |
 | `lib/timeclock-admin.ts` | Correction validation |
-| `components/admin/timeclock/EditPunchDialog.tsx` | Admin correction dialog |
+| `components/admin/timeclock/EditPunchDialog.tsx` | Correction dialog |
 | `app/(public)/account/timeclock/page.tsx` | Server component, role gate |
 | `components/account/timeclock/LiveClock.tsx` | Ticking clock, isolated |
 | `components/account/timeclock/getPunchLocation.ts` | One-shot browser GPS fix, never rejects |

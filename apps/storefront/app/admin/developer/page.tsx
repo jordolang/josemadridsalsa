@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import {
   Activity,
   BookOpen,
+  Clock,
   Database,
   ExternalLink,
   FileText,
@@ -45,6 +46,7 @@ const CONTROL_LINKS = [
   { label: 'Developer Blog', href: '/admin/developer/blog', icon: PenSquare, description: 'Write and publish posts' },
   { label: 'Page Content', href: '/admin/developer/content', icon: FileText, description: 'Customize /developer' },
   { label: 'Salsadocs', href: '/admin/developer/salsadocs', icon: BookOpen, description: 'Publish documentation' },
+  { label: 'Timeclock', href: '/admin/developer/timeclock', icon: Clock, description: 'Review and correct staff punches' },
   { label: 'Orders', href: '/admin/orders', icon: ShoppingCart, description: 'Order management' },
   { label: 'Products', href: '/admin/products', icon: Package, description: 'Catalog management' },
   { label: 'Users', href: '/admin/users', icon: Users, description: 'Accounts and roles' },
