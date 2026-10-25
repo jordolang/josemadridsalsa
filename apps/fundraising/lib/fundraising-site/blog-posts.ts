@@ -31,12 +31,8 @@ export const FUNDRAISING_BLOG_POSTS: readonly FundraisingBlogPost[] = [
     summary: 'Spectrum News 1 in Columbus ran a story on Jose Madrid Salsa, including an interview with Mike.',
     body: [
       'Spectrum News 1 in Columbus paid a visit to Jose Madrid Salsa and aired a story on our family-run salsa company in Zanesville, Ohio, including an interview with Mike.',
-      'The full segment is on the Spectrum News 1 website. Give it a watch, then come back and try the salsa for yourself.',
+      'Thanks to everyone who watched. If you saw us on the news, come try the salsa for yourself.',
     ],
-    link: {
-      href: 'https://spectrumnews1.com/columbus/news/2021/07/28/jose-madrid-salsa',
-      label: 'Watch the story on Spectrum News 1',
-    },
   },
   {
     slug: 'my-first-blog-post',

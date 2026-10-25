@@ -63,7 +63,7 @@ export interface NavGroup {
 /** Fundraiser pages live on the fundraising site, its own app and domain. */
 const FUNDRAISING_SITE = getFundraisingSiteUrl();
 
-const NAV_GROUPS: NavGroup[] = [
+export const NAV_GROUPS: NavGroup[] = [
   {
     id: "shop",
     title: "Shop",
@@ -99,7 +99,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: "Find Your Group", href: `${FUNDRAISING_SITE}/groups`, description: "Support a group that's selling" },
       { name: "Fundraiser Sign-Up", href: `${FUNDRAISING_SITE}/sign-up`, description: "Sign your group up in two steps" },
       { name: "Create an Account", href: `${FUNDRAISING_SITE}/auth/fundraiser-signup`, description: "Set up your fundraiser login" },
-      { name: "Fundraiser Login", href: `${FUNDRAISING_SITE}/fundraiser-portal`, description: "Your dashboard, team and orders" },
+      { name: "Fundraiser Login", href: `${FUNDRAISING_SITE}/fundraiser-portal/dashboard`, description: "Your dashboard, team and orders" },
       { name: "Submit Final Order", href: `${FUNDRAISING_SITE}/submit`, description: "Send in your group's order" },
     ],
   },

@@ -568,7 +568,7 @@ New Lebanon, OH**
 
 **Vermillion, OH** 
 
-**Vermillion Farm Market, 2901 Liberty Avenue, 440-967-9659, [https://www.vermilionfarmmarket.net/](https://www.vermilionfarmmarket.net/)**
+**Vermillion Farm Market, 2901 Liberty Avenue, 440-967-9659**
 
 **Warsaw, OH**
 
