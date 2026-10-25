@@ -28,6 +28,10 @@ the root `package.json` is canonical.
   advisories fixed in 16.4.1+), Vitest 5.0.1 → 5.0.5 with its UI, coverage and mocker packages,
   DOMPurify 3.4.16 → 3.4.17, and the hoisted Vite 8.0.16 → 8.3.5. The email agent's Vitest moves
   to 5.0.5 too. `@sentry/nextjs` 10.75.2 and Electron 44.5.0 landed separately (#709, #710).
+- **Patched the October Dependabot advisories.** zod 4.6.6 and nodemailer 10.1.4 (#715),
+  Electron 44.9.1 (#716) and fast-uri 3.1.9 (#717). Every transitive undici copy moves to
+  6.29.1 / 7.30.1 / 8.12.2 (high-severity decompression DoS), the zod 4.1.11 copies pinned by the
+  Vercel CLI packages move to 4.6.6, and the email agent's zod moves to 4.6.6.
 
 ### Added
 - **Developer accounts can edit a clock-out time from the timeclock window.** On
