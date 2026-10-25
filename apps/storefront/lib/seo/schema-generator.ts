@@ -112,7 +112,7 @@ export async function generateOrganizationSchema(): Promise<OrganizationSchema> 
     logo: seoConfig?.defaultOgImage || undefined,
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+1-XXX-XXX-XXXX',
+      telephone: '+1-740-521-4304',
       contactType: 'Customer Service',
     },
     sameAs: [

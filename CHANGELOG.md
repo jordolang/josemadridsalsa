@@ -13,6 +13,16 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Fixed
+- **Fundraiser Login menu link no longer 404s.** It pointed at the bare `/fundraiser-portal` on the
+  fundraising site, which has no index page; it now goes to `/fundraiser-portal/dashboard`, matching
+  the fundraising site's own header.
+- **Organization structured data carries the real phone number.** The JSON-LD `contactPoint` on
+  every page published `+1-XXX-XXX-XXXX`; it now lists the customer-service line, (740) 521-4304.
+- **Dead outbound links removed.** Vermillion Farm Market's website (404) is dropped from the
+  location seed data and the find-us-locally list, and the 2021 Spectrum News 1 article (404) is no
+  longer linked from the About page or the fundraising blog post.
+
 ### Security
 - **Patched open Dependabot advisories.** Next.js 16.3.8 → 16.4.3 in every app (critical and high
   advisories fixed in 16.4.1+), Vitest 5.0.1 → 5.0.5 with its UI, coverage and mocker packages,

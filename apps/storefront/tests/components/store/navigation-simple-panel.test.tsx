@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 
-const { SimplePanel } = await import('@/components/store/navigation')
+const { SimplePanel, NAV_GROUPS } = await import('@/components/store/navigation')
 
 describe('SimplePanel', () => {
   it('draws the featured link first, so desktop users can reach it', () => {
@@ -29,5 +29,10 @@ describe('SimplePanel', () => {
     expect(links[0]).toHaveTextContent('Start a Fundraiser')
     expect(links[0]).toHaveAttribute('href', 'https://fund.example/start')
     expect(links[1]).toHaveTextContent('Fundraising Home')
+  })
+
+  it('sends Fundraiser Login to the portal dashboard, not the bare /fundraiser-portal 404', () => {
+    const login = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.name === 'Fundraiser Login')
+    expect(login?.href).toMatch(/\/fundraiser-portal\/dashboard$/)
   })
 })

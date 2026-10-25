@@ -1,5 +1,4 @@
 import { Metadata } from 'next'
-import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { createMetadata } from '@/lib/metadata'
 
@@ -37,15 +36,7 @@ export default function AboutPage() {
             <div className="inline-flex items-center gap-3 bg-gradient-to-r from-salsa-100 to-chile-100 px-6 py-3 rounded-full mb-8">
               <ExternalLink className="w-5 h-5 text-salsa-600" />
               <p className="text-salsa-800 font-medium">
-                Featured in{' '}
-                <Link 
-                  href="https://spectrumnews1.com/columbus/news/2021/07/28/jose-madrid-salsa?firebaseString=true&cid=app_share"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold hover:text-salsa-600 transition-colors underline"
-                >
-                  Spectrum News 1
-                </Link>
+                Featured in <span className="font-bold">Spectrum News 1</span>
               </p>
             </div>
           </div>
