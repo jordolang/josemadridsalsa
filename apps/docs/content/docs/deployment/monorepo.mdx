@@ -42,7 +42,14 @@ Configured by `apps/storefront/vercel.json`:
 - **`vercel-build`** runs `prisma migrate deploy`, `prisma generate`, the permission
   seed, and finally `next build`.
 - **`git.deploymentEnabled`** allows `main` only — pushes to any other branch do not
-  create a deployment.
+  create a deployment. `"*"` does not match branch names containing `/`, so
+  `"dependabot/**": false` is listed separately.
+
+Dependabot (`.github/dependabot.yml`) opens npm **security updates only**, in two grouped
+PRs: `security-patches` for production dependencies and `dev-security-patches` for
+development dependencies. Because Dependabot branches get no Vercel deployment, the
+production group is gated by CI's **Build and shipping E2E** job, which builds the
+storefront; it only blocks a merge if that check is required in `main`'s branch protection.
 - **`crons`** declares the thirteen scheduled jobs below.
 
 <Callout type="warn">
