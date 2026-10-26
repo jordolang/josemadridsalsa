@@ -80,7 +80,7 @@
     "undici@>=8.0.0 <8.12.2": "8.12.2",
     "uuid@>=7.0.0 <11.0.0": "11.1.1",
     "ws@>=7.0.0 <7.5.11": "7.5.11",
-    "nodemailer@<10.0.6": "10.0.15",
+    "nodemailer@<10.0.6": "10.1.4",
     "@modelcontextprotocol/sdk": "1.31.0"
   },
   "packageManager": "npm@11.12.1"
