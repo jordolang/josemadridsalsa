@@ -31,6 +31,11 @@ The row in `inbound_emails` is written **before** anything is sent. A crash mid-
 visible unhandled email, never a customer who was answered by a system that forgot.
 `gmailMessageId` is unique, so a message is never triaged — or answered — twice.
 
+Because a later sweep skips any message that already has a row, an automatic reply is first
+recorded as **Needs action**, with the drafted reply and a step to send it by hand. It becomes
+**Auto-answered** only after Gmail accepts the send. A sweep cut off in between, such as by the
+route's 300-second limit, leaves an email someone will answer rather than one marked done.
+
 ## When it answers by itself
 
 A reply is sent automatically only when **all** of these hold:

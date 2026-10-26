@@ -6,6 +6,11 @@
  * halfway through leaves a visible, unhandled email rather than a customer who was answered
  * by a system that then forgot it had done so. `gmailMessageId` is unique, so a message the
  * sweep has already seen is skipped on the next tick and can never be answered twice.
+ *
+ * Because the next tick skips it, the row must already say a person is owed something. An
+ * auto-reply is therefore recorded as `NEEDS_ACTION`, carrying the reply and the step that
+ * sends it, and only becomes `AUTO_ANSWERED` once the send succeeds. A run cut off between
+ * the two (the route's time limit) leaves an email someone will answer, not one marked done.
  */
 
 import type { GmailConnection, InboundEmail } from '@prisma/client'
@@ -35,6 +40,10 @@ const SWEEP_LIMIT = 25
 
 /** Body text kept on the row, so an operator can read the message without leaving the panel. */
 const MAX_STORED_BODY = 20_000
+
+const UNSENT_REPLY_SUMMARY =
+  'The automatic reply could not be sent. Read the drafted reply, correct it if needed, and send it yourself.'
+const SEND_MANUALLY_STEP = 'Send the reply to the customer manually — the automatic send failed.'
 
 export interface SweepResult {
   scanned: number
@@ -153,8 +162,8 @@ async function triageMessage(
     autoReplyMinConfidence: connection.autoReplyMinConfidence,
   })
 
-  // Written before anything leaves the building. If the send below fails, this row still
-  // exists and still says a human is owed something.
+  // Written before anything leaves the building. If the send below fails, or the run stops
+  // before it, this row still exists and still says a human is owed something.
   const email = await prisma.inboundEmail.create({
     data: {
       connectionId: connection.id,
@@ -168,16 +177,19 @@ async function triageMessage(
       receivedAt: message.receivedAt,
       category: classification.category,
       severity: classification.severity,
-      status: decision.status,
+      status: decision.send ? 'NEEDS_ACTION' : decision.status,
       confidence: classification.confidence,
       summary: classification.summary,
-      actionSummary: classification.actionSummary ?? decision.reason,
-      draftedReply: decision.send ? null : classification.replyBody,
+      actionSummary: decision.send
+        ? UNSENT_REPLY_SUMMARY
+        : (classification.actionSummary ?? decision.reason),
+      draftedReply: classification.replyBody,
       customerId: context.customer?.id ?? null,
       orderId: context.orders[0]?.id ?? null,
       fundraiserId: context.fundraiser?.id ?? null,
-      steps:
-        decision.status === 'AUTO_ANSWERED' || decision.status === 'IGNORED'
+      steps: decision.send
+        ? { create: [{ position: 0, instruction: SEND_MANUALLY_STEP, isOptional: false }] }
+        : decision.status === 'IGNORED'
           ? undefined
           : {
               create: stepsFor(classification, decision).map((step, index) => ({
@@ -212,33 +224,19 @@ async function triageMessage(
       await prisma.inboundEmail.update({
         where: { id: email.id },
         data: {
+          status: decision.status,
+          actionSummary: classification.actionSummary ?? decision.reason,
+          draftedReply: null,
+          steps: { deleteMany: {} },
           autoReplySent: true,
           autoReplyBody: classification.replyBody,
           autoReplyAt: new Date(),
         },
       })
     } catch (error) {
-      // A failed send is not a quiet failure: the email drops back to needing a person,
-      // and the alert below says so.
+      // A failed send is not a quiet failure: the row was written as needing a person, it
+      // stays that way, and the alert below says so.
       console.error('[inbox] Auto-reply failed to send', email.id, error)
-      await prisma.inboundEmail.update({
-        where: { id: email.id },
-        data: {
-          status: 'NEEDS_ACTION',
-          draftedReply: classification.replyBody,
-          actionSummary:
-            'The automatic reply could not be sent. Read the drafted reply, correct it if needed, and send it yourself.',
-          steps: {
-            create: [
-              {
-                position: 0,
-                instruction: 'Send the reply to the customer manually — the automatic send failed.',
-                isOptional: false,
-              },
-            ],
-          },
-        },
-      })
     }
   } else if (decision.draft && mime) {
     await createDraft(accessToken, message.threadId, mime).catch((error) => {

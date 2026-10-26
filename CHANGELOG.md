@@ -18,6 +18,12 @@ the root `package.json` is canonical.
   and 5pm Eastern), `review-requests` (daily 10:00 UTC) and `fundraiser-lifecycle` (daily 13:00 UTC)
   had route handlers and documented schedules but no entry in `apps/storefront/vercel.json`, so
   Vercel never called them. Their schedules are restored as documented in Scheduled Jobs.
+- **An interrupted inbox sweep no longer drops a customer email.** Inbox triage wrote an
+  auto-answered email's row as `AUTO_ANSWERED` before sending the reply, and later sweeps skip
+  any message that already has a row. A run that stopped between the two, for example at the
+  route's 300-second limit, left the customer unanswered and nobody alerted. The row is now
+  written as needing a person, with the drafted reply and the step that sends it, and becomes
+  `AUTO_ANSWERED` only once the send succeeds.
 - **Dependabot branches no longer get Vercel deployments.** `git.deploymentEnabled` now also sets
   `"dependabot/**": false`; `"*"` matched only branch names without a slash.
 
