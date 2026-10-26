@@ -15,9 +15,16 @@ vi.mock('@/lib/social/platforms', () => ({ getValidAccessToken: getValidAccessTo
 import { publishToAccount } from '@/lib/social/publisher'
 
 const ARTICLE_URL = 'https://www.josemadridsalsa.com/heat-index/big-e-2026'
+const COVER = 'https://blob.example.com/heat-index/big-e-cover.jpg'
+const DEFAULT_IMAGE =
+  'https://can9pwc8drhj1bme.public.blob.vercel-storage.com/site/images/opengraph/josemadridhome.png'
+const ARTICLE = { coverImage: COVER, galleryImages: [], content: 'Come see us.' }
 
 /** A Facebook page account and an article cross-post that links back to it. */
-function arrangeLinkPost(mediaUrls: string[] = []) {
+function arrangeLinkPost(
+  mediaUrls: string[] = [],
+  blogPost: { coverImage: string | null; galleryImages: string[]; content: string } | null = null,
+) {
   prismaMock.socialAccount.findUnique.mockResolvedValue({
     id: 'acct-1',
     accountId: 'page-1',
@@ -31,6 +38,7 @@ function arrangeLinkPost(mediaUrls: string[] = []) {
     linkUrl: ARTICLE_URL,
     hashtags: [],
     media: mediaUrls.map((url, i) => ({ order: i, media: { url } })),
+    blogPost,
   })
   prismaMock.socialPostPublish.findUnique.mockResolvedValue(null)
   prismaMock.socialPostPublish.upsert.mockResolvedValue({})
@@ -131,5 +139,83 @@ describe('publishToAccount — Facebook link posts', () => {
     expect(result.success).toBe(true)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0][0]).toBe('https://graph.facebook.com/v21.0/page-1/photos')
+  })
+})
+
+describe('publishToAccount — Facebook article cross-posts', () => {
+  it('keeps the link card when Facebook read the article cover', async () => {
+    arrangeLinkPost([], ARTICLE)
+    const fetchMock = mockGraphResponses(
+      { id: ARTICLE_URL, image: [{ url: COVER }] },
+      { id: 'page-1_99' },
+    )
+
+    const result = await publishToAccount('post-1', 'acct-1')
+
+    expect(result.success).toBe(true)
+    expect(fetchMock.mock.calls[1][0]).toBe('https://graph.facebook.com/v21.0/page-1/feed')
+    expect(bodies(fetchMock)[1]).toMatchObject({ link: ARTICLE_URL })
+  })
+
+  it('posts the cover as a photo when Facebook read the site default image instead', async () => {
+    arrangeLinkPost([], ARTICLE)
+    const fetchMock = mockGraphResponses(
+      { id: ARTICLE_URL, image: [{ url: DEFAULT_IMAGE }] },
+      { id: 'photo-1' },
+    )
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await publishToAccount('post-1', 'acct-1')
+
+    expect(result).toMatchObject({ success: true, externalPostId: 'photo-1' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1][0]).toBe('https://graph.facebook.com/v21.0/page-1/photos')
+    const photoBody = bodies(fetchMock)[1]
+    expect(photoBody.url).toBe(COVER)
+    expect(photoBody.message).toContain('Jose Madrid Salsa Is at The Big E!')
+    expect(photoBody.message).toContain(ARTICLE_URL)
+    expect(warn.mock.calls[0][0]).toContain(DEFAULT_IMAGE)
+    warn.mockRestore()
+  })
+
+  it('posts the cover as a photo when the scrape fails and the card is unknown', async () => {
+    arrangeLinkPost([], ARTICLE)
+    const fetchMock = mockGraphResponses({ error: { message: 'Scrape timed out' } }, { id: 'photo-1' })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await publishToAccount('post-1', 'acct-1')
+
+    expect(result.externalPostId).toBe('photo-1')
+    expect(fetchMock.mock.calls[1][0]).toBe('https://graph.facebook.com/v21.0/page-1/photos')
+    warn.mockRestore()
+  })
+
+  it('falls back to the link post when Facebook rejects the photo', async () => {
+    arrangeLinkPost([], ARTICLE)
+    const fetchMock = mockGraphResponses(
+      { id: ARTICLE_URL, image: [{ url: DEFAULT_IMAGE }] },
+      { error: { message: 'Invalid image format' } },
+      { id: 'page-1_99' },
+    )
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await publishToAccount('post-1', 'acct-1')
+
+    expect(result).toMatchObject({ success: true, externalPostId: 'page-1_99' })
+    expect(fetchMock.mock.calls[2][0]).toBe('https://graph.facebook.com/v21.0/page-1/feed')
+    warn.mockRestore()
+  })
+
+  it('keeps the link card for an article with no image of its own', async () => {
+    arrangeLinkPost([], { coverImage: null, galleryImages: [], content: 'Text only.' })
+    const fetchMock = mockGraphResponses(
+      { id: ARTICLE_URL, image: [{ url: DEFAULT_IMAGE }] },
+      { id: 'page-1_99' },
+    )
+
+    const result = await publishToAccount('post-1', 'acct-1')
+
+    expect(result.externalPostId).toBe('page-1_99')
+    expect(fetchMock.mock.calls[1][0]).toBe('https://graph.facebook.com/v21.0/page-1/feed')
   })
 })
