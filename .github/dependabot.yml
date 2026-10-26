@@ -17,9 +17,19 @@ updates:
     open-pull-requests-limit: 3
     # Only open PRs for known security vulnerabilities
     versioning-strategy: increase
+    # Production dependencies ship in the storefront bundle, so they arrive as one PR that
+    # merges only once CI's "Build and shipping E2E" job has built the storefront. Development
+    # dependencies never reach production and get their own PR.
     groups:
       security-patches:
         applies-to: security-updates
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+      dev-security-patches:
+        applies-to: security-updates
+        dependency-type: 'development'
         update-types:
           - 'minor'
           - 'patch'
