@@ -2,6 +2,7 @@ import type { SocialMediaPlatform } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getValidAccessToken } from './platforms'
+import { DEFAULT_SHARE_IMAGE, resolveShareImage } from '@/lib/blog/share-image'
 
 type PublishResult = {
   success: boolean
@@ -24,9 +25,12 @@ type PublishResult = {
  * Scraping immediately before the post refreshes that cache, so the card is
  * built from the page's current og:image — the article's own cover.
  *
+ * Returns the image URLs Facebook read from the page, or null when the scrape
+ * failed and what it holds is unknown.
+ *
  * Best effort: a refusal here only risks a stale card, so the post still goes.
  */
-async function refreshLinkPreview(accessToken: string, linkUrl: string): Promise<void> {
+async function refreshLinkPreview(accessToken: string, linkUrl: string): Promise<string[] | null> {
   try {
     const response = await fetch('https://graph.facebook.com/v21.0/', {
       method: 'POST',
@@ -38,13 +42,61 @@ async function refreshLinkPreview(accessToken: string, linkUrl: string): Promise
       console.warn(
         `[social/publisher] could not refresh Facebook's link preview for ${linkUrl}, so the card may show a previously cached image: ${data.error.message}`,
       )
+      return null
     }
+    const images: unknown[] = Array.isArray(data?.image) ? data.image : []
+    return images
+      .map((image) => (image as { url?: unknown })?.url)
+      .filter((url): url is string => typeof url === 'string')
   } catch (error) {
     console.warn(
       `[social/publisher] could not refresh Facebook's link preview for ${linkUrl}, so the card may show a previously cached image:`,
       error,
     )
+    return null
   }
+}
+
+/**
+ * Post a single photo to a Page, with the caption as the post's text.
+ */
+async function publishFacebookPhoto(
+  accessToken: string,
+  pageId: string,
+  imageUrl: string,
+  message: string,
+): Promise<PublishResult> {
+  const photoResponse = await fetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: imageUrl,
+      message,
+      access_token: accessToken,
+    }),
+  })
+  const photoData = await photoResponse.json()
+  if (photoData.error) {
+    return { success: false, error: photoData.error.message }
+  }
+  return {
+    success: true,
+    externalPostId: photoData.id,
+    externalUrl: `https://facebook.com/${photoData.id}`,
+  }
+}
+
+/**
+ * The picture an article cross-post's link card should show: the article's own
+ * share image, or null when the article has none (or the post is not an
+ * article), since the site default is then the expected card anyway.
+ */
+function articleShareImage(
+  blogPost: { coverImage: string | null; galleryImages: string[]; content: string } | null,
+): string | null {
+  if (!blogPost) return null
+  const image = resolveShareImage(blogPost)
+  return image === DEFAULT_SHARE_IMAGE ? null : image
 }
 
 /**
@@ -56,6 +108,7 @@ async function publishToFacebook(
   content: string,
   mediaUrls: string[],
   linkUrl?: string | null,
+  linkImage?: string | null,
 ): Promise<PublishResult> {
   try {
     const url = `https://graph.facebook.com/v21.0/${pageId}/feed`
@@ -69,32 +122,36 @@ async function publishToFacebook(
       body.link = linkUrl
       // Refresh the cached Open Graph data first so the preview card is built
       // from the page as it stands now, not from an earlier scrape of it.
-      await refreshLinkPreview(accessToken, linkUrl)
+      const scrapedImages = await refreshLinkPreview(accessToken, linkUrl)
+
+      // Even a fresh scrape can read a render made before the article had its
+      // cover (Next.js applies a route handler's revalidatePath only once the
+      // request ends), and the card then shows the site's default image. When
+      // Facebook did not pick up the image the link should carry, post that
+      // image as a photo with the link in the text, so the picture on the
+      // post is the article's own whatever Facebook has cached for the URL.
+      if (linkImage && !scrapedImages?.includes(linkImage)) {
+        console.warn(
+          `[social/publisher] Facebook read ${scrapedImages?.join(', ') || 'no image'} for ${linkUrl} instead of ${linkImage}, so it is posted as a photo with the link in the text`,
+        )
+        const photoResult = await publishFacebookPhoto(
+          accessToken,
+          pageId,
+          linkImage,
+          `${content}\n\n${linkUrl}`,
+        )
+        if (photoResult.success) return photoResult
+        console.warn(
+          `[social/publisher] the photo post for ${linkUrl} failed (${photoResult.error}), so it is posted as a link instead`,
+        )
+      }
     }
 
     // If we have images, post as photos
     if (mediaUrls.length > 0 && !linkUrl) {
       // For single photo
       if (mediaUrls.length === 1) {
-        const photoUrl = `https://graph.facebook.com/v21.0/${pageId}/photos`
-        const photoResponse = await fetch(photoUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: mediaUrls[0],
-            message: content,
-            access_token: accessToken,
-          }),
-        })
-        const photoData = await photoResponse.json()
-        if (photoData.error) {
-          return { success: false, error: photoData.error.message }
-        }
-        return {
-          success: true,
-          externalPostId: photoData.id,
-          externalUrl: `https://facebook.com/${photoData.id}`,
-        }
+        return await publishFacebookPhoto(accessToken, pageId, mediaUrls[0], content)
       }
 
       // For multiple photos, upload unpublished then create multi-photo post
@@ -566,6 +623,7 @@ export async function publishToAccount(
         include: { media: true },
         orderBy: { order: 'asc' },
       },
+      blogPost: { select: { coverImage: true, galleryImages: true, content: true } },
     },
   })
 
@@ -634,7 +692,14 @@ export async function publishToAccount(
 
   switch (account.platform) {
     case 'FACEBOOK':
-      result = await publishToFacebook(accessToken, account.accountId, content, mediaUrls, post.linkUrl)
+      result = await publishToFacebook(
+        accessToken,
+        account.accountId,
+        content,
+        mediaUrls,
+        post.linkUrl,
+        articleShareImage(post.blogPost),
+      )
       break
     case 'TWITTER':
       // Blog covers are attached for Google Business; X uses the article link.

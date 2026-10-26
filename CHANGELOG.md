@@ -14,6 +14,10 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Fixed
+- **Facebook cross-posts show the article's cover image.** Publishing now checks which image
+  Facebook read when it re-scraped the article. If that is not the cover (for example the
+  site's default homepage image from a stale render), the post goes out as a photo of the
+  cover with the article link in the text instead of a link card.
 - **Fundraiser Login menu link no longer 404s.** It pointed at the bare `/fundraiser-portal` on the
   fundraising site, which has no index page; it now goes to `/fundraiser-portal/dashboard`, matching
   the fundraising site's own header.
