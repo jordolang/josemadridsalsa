@@ -1,7 +1,40 @@
-import { describe, expect, it } from 'vitest'
+import type { GmailConnection } from '@prisma/client'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { shouldSkip } from '@/lib/inbox/triage'
+import { shouldSkip, sweepMailbox } from '@/lib/inbox/triage'
 import type { GmailMessage } from '@/lib/inbox/gmail'
+
+const { prismaMock, gmailMock, classifyEmail } = vi.hoisted(() => ({
+  prismaMock: {
+    inboundEmail: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+    },
+    gmailConnection: { update: vi.fn() },
+  },
+  gmailMock: {
+    getGmailAccessToken: vi.fn(),
+    listMessages: vi.fn(),
+    getMessage: vi.fn(),
+    sendReply: vi.fn(),
+    createDraft: vi.fn(),
+    ensureLabel: vi.fn(),
+    addLabel: vi.fn(),
+    buildReplyMime: vi.fn(() => 'mime'),
+    gmailThreadUrl: vi.fn(() => 'https://mail.google.com/'),
+  },
+  classifyEmail: vi.fn(),
+}))
+
+vi.mock('@/lib/prisma', () => ({ prisma: prismaMock, default: prismaMock }))
+vi.mock('@/lib/inbox/gmail', () => gmailMock)
+vi.mock('@/lib/inbox/classifier', () => ({ classifyEmail }))
+vi.mock('@/lib/inbox/context', () => ({
+  buildEmailContext: vi.fn(async () => ({ customer: null, orders: [], fundraiser: null })),
+}))
+vi.mock('@/lib/notifications/dispatch', () => ({ notifyOperators: vi.fn() }))
 
 /**
  * The skip rules are what stop the automation talking to itself. A regression here is not
@@ -65,5 +98,89 @@ describe('shouldSkip', () => {
 
   it('skips a message with no parseable sender', () => {
     expect(shouldSkip(message({ fromEmail: '' }), MAILBOX)).toBe(true)
+  })
+})
+
+/**
+ * The sweep skips any message it already has a row for, so whatever the row says when it is
+ * first written is what a person sees if the run stops there. An auto-reply must not be
+ * recorded as answered before the send has happened.
+ */
+describe('sweepMailbox auto-replies', () => {
+  const connection = {
+    id: 'c1',
+    mailbox: MAILBOX,
+    searchQuery: 'in:inbox',
+    autoReplyEnabled: true,
+    autoReplyMinConfidence: 80,
+  } as GmailConnection
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    gmailMock.getGmailAccessToken.mockResolvedValue('token')
+    gmailMock.listMessages.mockResolvedValue([{ id: 'm1' }])
+    gmailMock.getMessage.mockResolvedValue(message())
+    prismaMock.inboundEmail.findMany.mockResolvedValue([])
+    prismaMock.inboundEmail.create.mockResolvedValue({ id: 'e1' })
+    prismaMock.inboundEmail.findUniqueOrThrow.mockResolvedValue({
+      id: 'e1',
+      status: 'NEEDS_ACTION',
+      fromEmail: 'jane@example.com',
+      fromName: 'Jane',
+      subject: 'Hello',
+      summary: 'Asks about an order',
+      gmailThreadId: 't1',
+      steps: [],
+    })
+    prismaMock.gmailConnection.update.mockResolvedValue({})
+    classifyEmail.mockResolvedValue({
+      category: 'GENERAL_QUESTION',
+      severity: 'LOW',
+      confidence: 95,
+      summary: 'Asks about an order',
+      canAnswerWithoutHuman: true,
+      replyBody: 'Thanks for writing!',
+      actionSummary: null,
+      steps: [],
+    })
+  })
+
+  it('records the email as needing a person, with the reply, before sending', async () => {
+    gmailMock.sendReply.mockImplementation(() => new Promise(() => {}))
+
+    void sweepMailbox(connection)
+    await vi.waitFor(() => expect(gmailMock.sendReply).toHaveBeenCalled())
+
+    const { data } = prismaMock.inboundEmail.create.mock.calls[0][0]
+    expect(data.status).toBe('NEEDS_ACTION')
+    expect(data.draftedReply).toBe('Thanks for writing!')
+    expect(data.steps.create).toHaveLength(1)
+    expect(prismaMock.inboundEmail.update).not.toHaveBeenCalled()
+  })
+
+  it('marks it answered and clears the step once the send succeeds', async () => {
+    gmailMock.sendReply.mockResolvedValue(undefined)
+
+    await sweepMailbox(connection)
+
+    const { data } = prismaMock.inboundEmail.update.mock.calls[0][0]
+    expect(data).toMatchObject({
+      status: 'AUTO_ANSWERED',
+      draftedReply: null,
+      steps: { deleteMany: {} },
+      autoReplySent: true,
+    })
+  })
+
+  it('leaves it needing a person when the send fails', async () => {
+    gmailMock.sendReply.mockRejectedValue(new Error('Gmail down'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await sweepMailbox(connection)
+
+    expect(prismaMock.inboundEmail.create.mock.calls[0][0].data.status).toBe('NEEDS_ACTION')
+    expect(prismaMock.inboundEmail.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'AUTO_ANSWERED' }) }),
+    )
   })
 })
