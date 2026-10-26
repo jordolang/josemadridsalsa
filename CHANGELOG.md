@@ -22,6 +22,11 @@ the root `package.json` is canonical.
 - **Dead outbound links removed.** Vermillion Farm Market's website (404) is dropped from the
   location seed data and the find-us-locally list, and the 2021 Spectrum News 1 article (404) is no
   longer linked from the About page or the fundraising blog post.
+- **Storefront production builds resolve `nodemailer` again.** The 10.1.4 security bump left the
+  root `nodemailer` override pinned to 10.0.15, so npm nested 10.1.4 under each workspace instead
+  of hoisting it. Vercel installs only the storefront's dependency tree, which skips
+  `packages/core/node_modules`, so `packages/core/lib/email/sender.ts` could not find it and every
+  deploy failed. The override now targets 10.1.4 and the lockfile places it at the root.
 
 ### Security
 - **Patched open Dependabot advisories.** Next.js 16.3.8 → 16.4.3 in every app (critical and high
