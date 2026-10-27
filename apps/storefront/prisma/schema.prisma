@@ -70,6 +70,7 @@ model User {
   blogReactions           BlogReaction[]                @relation("BlogReactor")
   customer                Customer?
   timeClockEntries        TimeClockEntry[]
+  timeClockPayPeriods     TimeClockPayPeriod[]
 
   @@index([referredById])
   @@map("users")
@@ -106,6 +107,21 @@ model TimeClockEntry {
 
   @@index([userId, clockInAt])
   @@map("time_clock_entries")
+}
+
+/// The start of one of an employee's pay periods. A period runs until the next
+/// one starts, so the current period is the latest row; punches are never
+/// trimmed when a new one begins.
+model TimeClockPayPeriod {
+  id        String   @id @default(cuid())
+  userId    String
+  /// First instant of the business-local day the period starts on.
+  startsAt  DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startsAt])
+  @@map("time_clock_pay_periods")
 }
 
 /// A unified customer/contact record. Distinct from `User` (login accounts):

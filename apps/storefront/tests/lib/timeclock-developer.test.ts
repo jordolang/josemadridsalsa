@@ -4,6 +4,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findMany: vi.fn() },
     timeClockEntry: { findMany: vi.fn() },
+    timeClockPayPeriod: { findFirst: vi.fn() },
   },
 }))
 
@@ -18,6 +19,7 @@ describe('loadDeveloperTimeclock', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(prisma.user.findMany).mockResolvedValue([ana, ben] as never)
+    vi.mocked(prisma.timeClockPayPeriod.findFirst).mockResolvedValue(null)
     vi.mocked(prisma.timeClockEntry.findMany).mockResolvedValue([
       {
         id: 'p3',
@@ -91,5 +93,35 @@ describe('loadDeveloperTimeclock', () => {
     expect(vi.mocked(prisma.timeClockEntry.findMany).mock.calls[0][0]?.where).not.toHaveProperty(
       'userId'
     )
+  })
+
+  it("opens on the selected employee's current pay period", async () => {
+    vi.mocked(prisma.timeClockPayPeriod.findFirst).mockResolvedValue({
+      startsAt: new Date('2026-08-13T04:00:00Z'),
+    } as never)
+
+    const view = await loadDeveloperTimeclock({ userId: 'ben', startInput: null, endInput: null, now })
+
+    expect(view.range).toEqual({ start: '08/13/2026', end: '10/23/2026' })
+  })
+
+  it('opens on all history when anyone has no pay period yet', async () => {
+    vi.mocked(prisma.timeClockPayPeriod.findFirst)
+      .mockResolvedValueOnce({ startsAt: new Date('2026-09-01T04:00:00Z') } as never)
+      .mockResolvedValueOnce(null)
+
+    const view = await loadDeveloperTimeclock({ userId: null, startInput: null, endInput: null, now })
+
+    expect(view.range).toEqual({ start: '08/01/2026', end: '10/23/2026' })
+  })
+
+  it("opens on the earliest running pay period when everyone has one", async () => {
+    vi.mocked(prisma.timeClockPayPeriod.findFirst)
+      .mockResolvedValueOnce({ startsAt: new Date('2026-09-01T04:00:00Z') } as never)
+      .mockResolvedValueOnce({ startsAt: new Date('2026-08-20T04:00:00Z') } as never)
+
+    const view = await loadDeveloperTimeclock({ userId: null, startInput: null, endInput: null, now })
+
+    expect(view.range.start).toBe('08/20/2026')
   })
 })
