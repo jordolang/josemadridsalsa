@@ -70,6 +70,47 @@ export async function sendWelcomeEmail(options: {
   })
 }
 
+/**
+ * Sent instead of a welcome email when someone signs up with an email that already
+ * has an account. Sign-up answers the same either way, so this is how the owner
+ * finds out, whether it was them or someone else.
+ */
+export async function sendExistingAccountSignupEmail(options: { email: string }) {
+  const emailContent = React.createElement(
+    EmailLayout,
+    { previewText: 'You already have a Jose Madrid Salsa account' },
+    React.createElement(EmailHeader, null),
+    React.createElement(
+      Section,
+      { style: { padding: '0', margin: '24px 0' } },
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#dc2626', fontFamily: 'Arial, sans-serif', lineHeight: '1.3' } },
+        'You already have an account'
+      ),
+      React.createElement(
+        Text,
+        { style: { margin: '0 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        'Someone just tried to create a Jose Madrid Salsa account with this email address, but one already exists. If that was you, sign in, or reset your password if you have forgotten it.'
+      ),
+      React.createElement(Button, { href: `${defaultAppUrl}/auth/signin` }, 'Sign in'),
+      React.createElement(
+        Text,
+        { style: { margin: '16px 0 16px', fontSize: '16px', color: '#1f2937', fontFamily: 'Arial, sans-serif', lineHeight: '1.6' } },
+        `Forgot your password? Reset it at ${defaultAppUrl}/auth/forgot-password. If this wasn't you, you can ignore this email. Your account has not changed.`
+      )
+    ),
+    React.createElement(EmailFooter, null)
+  )
+
+  return sendEmail({
+    to: options.email,
+    subject: 'You already have a Jose Madrid Salsa account',
+    react: emailContent,
+    type: 'existing-account-signup',
+  })
+}
+
 export async function sendOrderConfirmationEmail(orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },

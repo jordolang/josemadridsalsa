@@ -20,6 +20,10 @@ the root `package.json` is canonical.
   attempt shows "Too many sign-in attempts" instead of "Invalid email or password". Unknown emails
   and password-less accounts now take as long to reject as a wrong password, so timing no longer
   reveals which emails have an account. Sign-in logs now mask emails (`jo***@example.com`).
+- **Sign-up no longer reveals which emails have an account.** `POST /api/auth/register` answered
+  409 "An account with this email already exists" with no rate limit, so it could check emails in
+  bulk. It now answers an existing email the same as a new one, emails the owner a "You already
+  have an account" notice (at most once a day), and allows 5 sign-ups per IP per hour.
 - **Four scheduled jobs run again.** `inbox-triage` (every 10 minutes), `mail-organizer` (8am, noon
   and 5pm Eastern), `review-requests` (daily 10:00 UTC) and `fundraiser-lifecycle` (daily 13:00 UTC)
   had route handlers and documented schedules but no entry in `apps/storefront/vercel.json`, so

@@ -21,6 +21,8 @@ Rate limit state is stored **in-memory** on the server process. In a multi-serve
 | **Auth Login (per IP)** | 20 | 15 minutes | IP address | `/api/auth/callback/credentials` |
 | **Auth Login (per email)** | 5 | 15 minutes | Email address | `/api/auth/callback/credentials` |
 | **Password Reset** | 3 | 60 minutes | IP address | `/api/auth/forgot-password`, `/api/auth/reset-password` |
+| **Registration** | 5 | 60 minutes | IP address | `/api/auth/register` |
+| **Existing-account notice** | 1 | 24 hours | Email address | `/api/auth/register` (email to an existing account's owner) |
 
 ### How Tiers Work
 

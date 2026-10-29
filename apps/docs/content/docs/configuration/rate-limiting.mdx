@@ -68,6 +68,18 @@ export const RATE_LIMITS = {
     maxRequests: 3,
     windowSeconds: 60 * 60,
   },
+
+  // Registration: 5 sign-ups per hour per IP
+  AUTH_REGISTER: {
+    maxRequests: 5,
+    windowSeconds: 60 * 60,
+  },
+
+  // "You already have an account" notice: 1 per day per email
+  AUTH_EXISTING_ACCOUNT_NOTICE: {
+    maxRequests: 1,
+    windowSeconds: 24 * 60 * 60,
+  },
 }
 ```
 
