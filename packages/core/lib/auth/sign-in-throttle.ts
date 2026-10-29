@@ -79,9 +79,12 @@ export async function isSignInAllowed({
   return true
 }
 
-/** Same cost as customer registration, so a dummy compare takes as long as a real one. */
-const DUMMY_HASH_ROUNDS = 12
-let dummyHash: Promise<string> | null = null
+/**
+ * Cost-12 hash of a random string nobody kept, the same cost as customer
+ * registration, so a dummy compare takes as long as a real one. Precomputed so
+ * the first unknown email on a fresh instance does not also pay for hashing.
+ */
+const DUMMY_HASH = '$2b$12$/dpWvzyR5JMD7q.T0UjwPOPifXNuCH49jE5BcsJC2SyaEt1GEJMOq'
 
 /**
  * Runs a bcrypt compare that always fails, for sign-ins with no account or no
@@ -89,7 +92,6 @@ let dummyHash: Promise<string> | null = null
  * response tells an attacker which emails have no account.
  */
 export async function compareAgainstDummyHash(password: string): Promise<false> {
-  dummyHash ??= bcrypt.hash('jms-no-account-placeholder', DUMMY_HASH_ROUNDS)
-  await bcrypt.compare(password, await dummyHash)
+  await bcrypt.compare(password, DUMMY_HASH)
   return false
 }

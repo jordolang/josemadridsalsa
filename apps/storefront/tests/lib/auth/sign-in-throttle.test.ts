@@ -92,9 +92,12 @@ describe('isSignInAllowed', () => {
 describe('compareAgainstDummyHash', () => {
   it('runs a real bcrypt compare and always fails', async () => {
     const compare = vi.spyOn(bcrypt, 'compare')
+    const hash = vi.spyOn(bcrypt, 'hash')
 
     await expect(compareAgainstDummyHash('hunter2')).resolves.toBe(false)
     expect(compare).toHaveBeenCalledWith('hunter2', expect.stringMatching(/^\$2[aby]\$12\$/))
+    // Regression: hashing lazily made the first unknown email on an instance slower.
+    expect(hash).not.toHaveBeenCalled()
   }, 15_000)
 })
 
