@@ -13,6 +13,12 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **Timeclock pay periods.** Each user's pay period now runs until they click **Start new pay
+  period** on `/account/timeclock`, which can also be backdated to any day since the timeclock
+  went live. The page and the Developer Console editor open on the current period through today.
+  Adds the `time_clock_pay_periods` table (migration `20261027000000_timeclock_pay_periods`).
+
 ### Fixed
 - **Credentials sign-in is limited per IP as well as per email.** Credential stuffing against the
   storefront tried about three passwords per email, under the per-email limit of five per 15
@@ -24,6 +30,10 @@ the root `package.json` is canonical.
   409 "An account with this email already exists" with no rate limit, so it could check emails in
   bulk. It now answers an existing email the same as a new one, emails the owner a "You already
   have an account" notice (at most once a day), and allows 5 sign-ups per IP per hour.
+- **Timeclock hours older than two months no longer look erased.** The timeclock and the
+  Developer Console editor clamped every date range to two months before today, so each day
+  another day of punches dropped out of view. Nothing was deleted. History is now addressable
+  back to 08/01/2026, when the timeclock went live.
 - **Four scheduled jobs run again.** `inbox-triage` (every 10 minutes), `mail-organizer` (8am, noon
   and 5pm Eastern), `review-requests` (daily 10:00 UTC) and `fundraiser-lifecycle` (daily 13:00 UTC)
   had route handlers and documented schedules but no entry in `apps/storefront/vercel.json`, so

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import {
+  businessCalendarDate,
   endOfBusinessDay,
   formatDateInput,
   groupEntriesByDay,
@@ -8,6 +9,7 @@ import {
   startOfBusinessDay,
   timeClockRangeBounds,
   toPunchLocation,
+  type CalendarDate,
   type PunchLocation,
   type TimeClockPunch,
 } from '@/lib/timeclock'
@@ -46,6 +48,8 @@ export interface TimeClockView {
   serverTime: string
   range: { start: string; end: string }
   bounds: { earliest: string; latest: string }
+  /** First day of the current pay period, `MM/DD/YYYY`; null before one is started. */
+  payPeriodStart: string | null
   openEntry: SerializedPunch | null
   days: SerializedDay[]
 }
@@ -97,10 +101,27 @@ export async function findOpenEntry(userId: string) {
 }
 
 /**
+ * First day of the user's current pay period: the latest one that has already
+ * begun. A period runs until the next one starts, so there is no end to read.
+ */
+export async function findCurrentPayPeriodStart(
+  userId: string,
+  now: Date = new Date()
+): Promise<CalendarDate | null> {
+  const period = await prisma.timeClockPayPeriod.findFirst({
+    where: { userId, startsAt: { lte: endOfBusinessDay(businessCalendarDate(now)) } },
+    orderBy: { startsAt: 'desc' },
+    select: { startsAt: true },
+  })
+  return period ? businessCalendarDate(period.startsAt) : null
+}
+
+/**
  * Everything the timeclock page renders: the punches inside the requested pay
- * period, grouped into business-local days, plus any open entry (which is
- * included even when it falls outside the window, so the user always sees that
- * they are on the clock).
+ * period (by default the current one, or all history before one is started),
+ * grouped into business-local days, plus any open entry (which is included
+ * even when it falls outside the window, so the user always sees that they are
+ * on the clock).
  */
 export async function buildTimeClockView(
   userId: string,
@@ -108,7 +129,9 @@ export async function buildTimeClockView(
   endInput: string | null,
   now: Date = new Date()
 ): Promise<TimeClockView> {
-  const { start, end } = resolveRange(startInput, endInput, now)
+  // With no dates asked for, show the whole current pay period.
+  const payPeriodStart = await findCurrentPayPeriodStart(userId, now)
+  const { start, end } = resolveRange(startInput, endInput, now, payPeriodStart)
   const { earliest, latest } = timeClockRangeBounds(now)
 
   const [entries, openEntry] = await Promise.all([
@@ -135,6 +158,7 @@ export async function buildTimeClockView(
     serverTime: now.toISOString(),
     range: { start: formatDateInput(start), end: formatDateInput(end) },
     bounds: { earliest: formatDateInput(earliest), latest: formatDateInput(latest) },
+    payPeriodStart: payPeriodStart ? formatDateInput(payPeriodStart) : null,
     openEntry: openEntry ? serialize(openEntry, 0) : null,
     days,
   }

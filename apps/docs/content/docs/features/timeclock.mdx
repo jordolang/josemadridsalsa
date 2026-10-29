@@ -83,7 +83,7 @@ cannot change it. There are two places to do it, both opening the same dialog
 to set the clock-in, clock-out and job duties, with a required reason:
 
 - **Developer Console → Timeclock** (`/admin/developer/timeclock`): every
-  employee's punches for a date range (the same ±2 month window), filterable by
+  employee's punches for a date range (the same window as below), filterable by
   employee, with each employee's hours for the range.
 - The **Time Clock** card on a user's page in the admin console
   (`/admin/users/[id]`). The card is shown to admins with `users:read` and
@@ -167,9 +167,24 @@ into slashes as they type, and <kbd>Enter</kbd> applies the range. There is no
 calendar picker. Impossible dates such as `02/30/2026` are rejected rather than
 rolled over into the next month.
 
-The addressable window is two months either side of today. The server clamps
-whatever it receives to that window, so a hand-crafted query cannot page through
-unbounded history, and the UI re-displays the range the server actually used.
+Each user's **current pay period** runs from the day they start it until they
+start the next one. **Start new pay period** on the timeclock page asks for the
+first day (today by default; it can be backdated to any day since the timeclock
+went live on 08/01/2026, but not set in the future), stores it in
+`time_clock_pay_periods`, and writes a `TIMECLOCK_PAY_PERIOD_START` audit entry.
+Starting a period never removes punches; it only moves where the default view
+and its total begin. Before a user has started one, the default view shows all
+of their history.
+
+With no dates in the request, the page opens on the current pay period through
+today. The Developer Console opens on the selected employee's current period,
+or with everyone shown, on the earliest one still running (all history if
+anyone has not started one).
+
+The addressable window runs from 08/01/2026, the day the timeclock went live,
+through two months after today. The start never moves, so older punches stay
+viewable. The server clamps whatever it receives to that window, and the UI
+re-displays the range the server actually used.
 
 ## Files
 
@@ -179,6 +194,7 @@ unbounded history, and the UI re-displays the range the server actually used.
 | `lib/timeclock-server.ts` | Range resolution and the page/API view model |
 | `app/api/account/timeclock/route.ts` | `GET` history, `POST` clock in |
 | `app/api/account/timeclock/clock-out/route.ts` | `POST` clock out with notes |
+| `app/api/account/timeclock/pay-period/route.ts` | `POST` start a new pay period |
 | `app/api/admin/timeclock/[id]/route.ts` | `PATCH` audited developer correction |
 | `app/admin/developer/timeclock/page.tsx` | Developer Console timeclock editor |
 | `lib/timeclock-developer.ts` | All-employee punch view for that page |
