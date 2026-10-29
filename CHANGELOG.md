@@ -14,6 +14,12 @@ the root `package.json` is canonical.
 ## [Unreleased]
 
 ### Fixed
+- **Credentials sign-in is limited per IP as well as per email.** Credential stuffing against the
+  storefront tried about three passwords per email, under the per-email limit of five per 15
+  minutes. Each IP now gets 20 sign-in attempts per 15 minutes across all emails, and a throttled
+  attempt shows "Too many sign-in attempts" instead of "Invalid email or password". Unknown emails
+  and password-less accounts now take as long to reject as a wrong password, so timing no longer
+  reveals which emails have an account. Sign-in logs now mask emails (`jo***@example.com`).
 - **Four scheduled jobs run again.** `inbox-triage` (every 10 minutes), `mail-organizer` (8am, noon
   and 5pm Eastern), `review-requests` (daily 10:00 UTC) and `fundraiser-lifecycle` (daily 13:00 UTC)
   had route handlers and documented schedules but no entry in `apps/storefront/vercel.json`, so

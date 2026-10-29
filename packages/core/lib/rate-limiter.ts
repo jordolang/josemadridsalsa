@@ -131,6 +131,12 @@ export const RATE_LIMITS = {
     windowSeconds: 15 * 60,
   },
 
+  // Authentication: 20 login attempts per 15 minutes per IP, across all emails
+  AUTH_LOGIN_IP: {
+    maxRequests: 20,
+    windowSeconds: 15 * 60,
+  },
+
   // Password reset: 3 requests per hour
   PASSWORD_RESET: {
     maxRequests: 3,
