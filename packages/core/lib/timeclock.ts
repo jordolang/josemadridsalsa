@@ -9,8 +9,14 @@
 
 export const TIMECLOCK_TIMEZONE = 'America/New_York'
 
-/** How far back and forward the history view is allowed to look. */
+/** How far ahead of today the history view is allowed to look. */
 export const TIMECLOCK_RANGE_MONTHS = 2
+
+/**
+ * The day the timeclock went live. History is never trimmed, so every punch
+ * from here on stays addressable; there is nothing earlier to page through.
+ */
+export const TIMECLOCK_EPOCH: CalendarDate = { year: 2026, month: 8, day: 1 }
 
 export interface TimeClockPunch {
   id: string
@@ -221,13 +227,13 @@ export function addMonths(date: CalendarDate, months: number): CalendarDate {
 }
 
 /**
- * The window the history view may address: two months either side of `now`,
- * in business-local terms.
+ * The window the history view may address: from the day the timeclock went
+ * live through two months after `now`, in business-local terms.
  */
 export function timeClockRangeBounds(now: Date): { earliest: CalendarDate; latest: CalendarDate } {
   const today = businessCalendarDate(now)
   return {
-    earliest: addMonths(today, -TIMECLOCK_RANGE_MONTHS),
+    earliest: TIMECLOCK_EPOCH,
     latest: addMonths(today, TIMECLOCK_RANGE_MONTHS),
   }
 }
@@ -237,7 +243,7 @@ export function compareCalendarDates(a: CalendarDate, b: CalendarDate): number {
   return a.year - b.year || a.month - b.month || a.day - b.day
 }
 
-/** Clamp a calendar date into the allowed ±2 month window. */
+/** Clamp a calendar date into the addressable window. */
 export function clampToRange(date: CalendarDate, now: Date): CalendarDate {
   const { earliest, latest } = timeClockRangeBounds(now)
   if (compareCalendarDates(date, earliest) < 0) return earliest
@@ -246,21 +252,23 @@ export function clampToRange(date: CalendarDate, now: Date): CalendarDate {
 }
 
 /**
- * Resolve the pay period a request asked for. Anything unparseable falls back
- * to a sensible default, and both ends are clamped to the ±2 month window so a
- * hand-crafted query can't page through unbounded history.
+ * Resolve the pay period a request asked for. A missing or unparseable start
+ * falls back to `defaultStart` (the current pay period's first day) or, without
+ * one, to the first day of history; a missing end falls back to today. Both
+ * ends are clamped to the addressable window.
  */
 export function resolveRange(
   startInput: string | null,
   endInput: string | null,
-  now: Date
+  now: Date,
+  defaultStart?: CalendarDate | null
 ): { start: CalendarDate; end: CalendarDate } {
   const { earliest } = timeClockRangeBounds(now)
 
   const requestedStart = startInput ? parseDateInput(startInput) : null
   const requestedEnd = endInput ? parseDateInput(endInput) : null
 
-  const start = clampToRange(requestedStart ?? earliest, now)
+  const start = clampToRange(requestedStart ?? defaultStart ?? earliest, now)
   let end = clampToRange(requestedEnd ?? businessCalendarDate(now), now)
 
   // A backwards range would silently return nothing; treat it as a single day.

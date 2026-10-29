@@ -15,6 +15,7 @@ import {
   punchDurationMs,
   punchLocationMapUrl,
   resolveRange,
+  TIMECLOCK_EPOCH,
   startOfBusinessDay,
   sumDayPayrollHours,
   timeClockRangeBounds,
@@ -209,29 +210,36 @@ describe('totalDurationMs', () => {
 })
 
 describe('range bounds', () => {
-  const now = new Date('2026-08-01T16:00:00Z')
+  const now = new Date('2026-10-27T16:00:00Z')
 
-  it('spans two months either side of today', () => {
+  it('reaches back to the day the timeclock went live and two months ahead', () => {
     expect(timeClockRangeBounds(now)).toEqual({
-      earliest: { year: 2026, month: 6, day: 1 },
-      latest: { year: 2026, month: 10, day: 1 },
+      earliest: { year: 2026, month: 8, day: 1 },
+      latest: { year: 2026, month: 12, day: 27 },
     })
+  })
+
+  // Regression: the window used to start two months before today, so each day
+  // another day of punches dropped out of view and looked erased.
+  it('keeps the earliest bound fixed as time passes', () => {
+    const muchLater = new Date('2027-06-01T16:00:00Z')
+    expect(timeClockRangeBounds(muchLater).earliest).toEqual(TIMECLOCK_EPOCH)
   })
 
   it('clamps dates outside the window', () => {
     expect(clampToRange({ year: 2025, month: 1, day: 1 }, now)).toEqual({
       year: 2026,
-      month: 6,
+      month: 8,
       day: 1,
     })
-    expect(clampToRange({ year: 2027, month: 1, day: 1 }, now)).toEqual({
+    expect(clampToRange({ year: 2027, month: 6, day: 1 }, now)).toEqual({
       year: 2026,
-      month: 10,
-      day: 1,
+      month: 12,
+      day: 27,
     })
-    expect(clampToRange({ year: 2026, month: 7, day: 15 }, now)).toEqual({
+    expect(clampToRange({ year: 2026, month: 8, day: 15 }, now)).toEqual({
       year: 2026,
-      month: 7,
+      month: 8,
       day: 15,
     })
   })
@@ -279,47 +287,63 @@ describe('sumDayPayrollHours', () => {
 })
 
 describe('resolveRange', () => {
-  const now = new Date('2026-08-01T16:00:00Z')
+  const now = new Date('2026-10-27T16:00:00Z')
 
-  it('defaults to the earliest allowed date through today', () => {
+  it('defaults to all history through today before a pay period is started', () => {
     expect(resolveRange(null, null, now)).toEqual({
-      start: { year: 2026, month: 6, day: 1 },
-      end: { year: 2026, month: 8, day: 1 },
+      start: { year: 2026, month: 8, day: 1 },
+      end: { year: 2026, month: 10, day: 27 },
     })
   })
 
-  it('honours a pay period the user typed', () => {
-    expect(resolveRange('07/13/2026', '07/26/2026', now)).toEqual({
-      start: { year: 2026, month: 7, day: 13 },
-      end: { year: 2026, month: 7, day: 26 },
+  it('defaults to the current pay period when one is given', () => {
+    expect(resolveRange(null, null, now, { year: 2026, month: 8, day: 13 })).toEqual({
+      start: { year: 2026, month: 8, day: 13 },
+      end: { year: 2026, month: 10, day: 27 },
+    })
+  })
+
+  it('honours a pay period the user typed over the default', () => {
+    expect(
+      resolveRange('09/13/2026', '09/26/2026', now, { year: 2026, month: 8, day: 13 })
+    ).toEqual({
+      start: { year: 2026, month: 9, day: 13 },
+      end: { year: 2026, month: 9, day: 26 },
+    })
+  })
+
+  it('keeps a pay period that started more than two months ago', () => {
+    expect(resolveRange('08/13/2026', '10/27/2026', now)).toEqual({
+      start: { year: 2026, month: 8, day: 13 },
+      end: { year: 2026, month: 10, day: 27 },
     })
   })
 
   it('falls back rather than throwing on unparseable input', () => {
     expect(resolveRange('not-a-date', '2026-07-26', now)).toEqual({
-      start: { year: 2026, month: 6, day: 1 },
-      end: { year: 2026, month: 8, day: 1 },
+      start: { year: 2026, month: 8, day: 1 },
+      end: { year: 2026, month: 10, day: 27 },
     })
   })
 
   it('clamps a request that reaches outside the allowed window', () => {
     expect(resolveRange('01/01/2020', '12/31/2030', now)).toEqual({
-      start: { year: 2026, month: 6, day: 1 },
-      end: { year: 2026, month: 10, day: 1 },
+      start: { year: 2026, month: 8, day: 1 },
+      end: { year: 2026, month: 12, day: 27 },
     })
   })
 
   it('collapses a backwards range to a single day instead of returning nothing', () => {
-    expect(resolveRange('07/26/2026', '07/13/2026', now)).toEqual({
-      start: { year: 2026, month: 7, day: 26 },
-      end: { year: 2026, month: 7, day: 26 },
+    expect(resolveRange('09/26/2026', '09/13/2026', now)).toEqual({
+      start: { year: 2026, month: 9, day: 26 },
+      end: { year: 2026, month: 9, day: 26 },
     })
   })
 
   it('allows a range that looks forward, since the window extends ahead', () => {
-    expect(resolveRange('08/01/2026', '09/15/2026', now)).toEqual({
-      start: { year: 2026, month: 8, day: 1 },
-      end: { year: 2026, month: 9, day: 15 },
+    expect(resolveRange('10/01/2026', '11/15/2026', now)).toEqual({
+      start: { year: 2026, month: 10, day: 1 },
+      end: { year: 2026, month: 11, day: 15 },
     })
   })
 })

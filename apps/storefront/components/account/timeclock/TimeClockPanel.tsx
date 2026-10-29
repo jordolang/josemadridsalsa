@@ -26,10 +26,12 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  businessCalendarDate,
   businessDayKey,
   formatBusinessDateTimeInput,
   formatBusinessTime,
   formatDayLabel,
+  formatDateInput,
   formatDecimalHours,
   formatDuration,
   formatPunchLocation,
@@ -91,6 +93,9 @@ export function TimeClockPanel({
   const [editClockOut, setEditClockOut] = useState("");
   const [editReason, setEditReason] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  const [newPeriodOpen, setNewPeriodOpen] = useState(false);
+  const [newPeriodStart, setNewPeriodStart] = useState("");
+  const [newPeriodError, setNewPeriodError] = useState<string | null>(null);
 
   const rangeIsValid = parseDateInput(start) !== null && parseDateInput(end) !== null;
 
@@ -189,6 +194,38 @@ export function TimeClockPanel({
     }
   };
 
+  const today = () => formatDateInput(businessCalendarDate(new Date()));
+
+  const openNewPeriod = () => {
+    setNewPeriodStart(today());
+    setNewPeriodError(null);
+    setNewPeriodOpen(true);
+  };
+
+  const startNewPeriod = async () => {
+    setBusy(true);
+    setNewPeriodError(null);
+    try {
+      const response = await fetch("/api/account/timeclock/pay-period", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ start: newPeriodStart }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error ?? "Failed to start pay period");
+      // Show the new period from its first day through today.
+      const next = await load(data.start, today());
+      setView(next);
+      setStart(next.range.start);
+      setEnd(next.range.end);
+      setNewPeriodOpen(false);
+    } catch (e) {
+      setNewPeriodError(e instanceof Error ? e.message : "Failed to start pay period");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onClock = view.openEntry !== null;
   // Summed from the day rows on screen, so the column reconciles.
   const periodHours = sumDayPayrollHours(view.days);
@@ -237,10 +274,21 @@ export function TimeClockPanel({
       </Card>
 
       <Card className="p-6">
-        <h2 className="text-lg font-medium">Pay Period</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Type any dates between {view.bounds.earliest} and {view.bounds.latest}.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">Pay Period</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {view.payPeriodStart
+                ? `Current pay period started ${view.payPeriodStart} and runs until you start a new one.`
+                : "No pay period started yet, so all of your hours are shown."}{" "}
+              All punches are kept; type any dates between {view.bounds.earliest} and{" "}
+              {view.bounds.latest} to look back.
+            </p>
+          </div>
+          <Button variant="outline" disabled={busy} onClick={openNewPeriod}>
+            Start new pay period
+          </Button>
+        </div>
 
         <div className="mt-4 flex flex-wrap items-end gap-4">
           <div className="grid gap-1.5">
@@ -438,6 +486,45 @@ export function TimeClockPanel({
               onClick={saveClockOut}
             >
               {busy ? "Saving…" : "Save clock-out"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={newPeriodOpen} onOpenChange={open => !busy && setNewPeriodOpen(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start New Pay Period</DialogTitle>
+            <DialogDescription>
+              The new period runs from this day until you start the next one. Earlier punches are
+              kept and can still be viewed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="timeclock-new-period">First day of the period</Label>
+            <Input
+              id="timeclock-new-period"
+              value={newPeriodStart}
+              onChange={e => setNewPeriodStart(maskDateInput(e.target.value))}
+              placeholder="MM/DD/YYYY"
+              inputMode="numeric"
+              autoComplete="off"
+              className="w-40 font-mono"
+            />
+          </div>
+
+          {newPeriodError ? <p className="text-sm text-red-600">{newPeriodError}</p> : null}
+
+          <DialogFooter>
+            <Button variant="secondary" disabled={busy} onClick={() => setNewPeriodOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={busy || parseDateInput(newPeriodStart) === null}
+              onClick={startNewPeriod}
+            >
+              {busy ? "Starting…" : "Start pay period"}
             </Button>
           </DialogFooter>
         </DialogContent>

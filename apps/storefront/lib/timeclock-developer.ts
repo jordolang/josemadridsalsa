@@ -1,13 +1,16 @@
 import { UserRole } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import {
+  compareCalendarDates,
   endOfBusinessDay,
   formatDateInput,
   punchDurationMs,
   resolveRange,
   startOfBusinessDay,
   timeClockRangeBounds,
+  type CalendarDate,
 } from '@/lib/timeclock'
+import { findCurrentPayPeriodStart } from '@/lib/timeclock-server'
 
 /** Roles that can clock in (see `isStaff`), so the ones with punches to edit. */
 const CLOCK_ROLES: UserRole[] = [UserRole.STAFF, UserRole.ADMIN, UserRole.DEVELOPER]
@@ -38,7 +41,9 @@ function displayName(user: { name: string | null; email: string }): string {
 /**
  * Everything the Developer Console timeclock page renders: every employee's
  * punches in the requested period (or one employee's), newest first. The range
- * is clamped to the same ±2 month window as the employee view.
+ * is clamped to the same window as the employee view. With no start given it
+ * opens on the current pay period: the selected employee's, or for everyone the
+ * earliest one still running, so no one's current hours are cut off.
  */
 export async function loadDeveloperTimeclock({
   userId,
@@ -51,7 +56,6 @@ export async function loadDeveloperTimeclock({
   endInput: string | null
   now?: Date
 }): Promise<DeveloperTimeclockView> {
-  const { start, end } = resolveRange(startInput, endInput, now)
   const { earliest, latest } = timeClockRangeBounds(now)
 
   const users = await prisma.user.findMany({
@@ -61,6 +65,20 @@ export async function loadDeveloperTimeclock({
   })
   const employees = users.map((user) => ({ id: user.id, name: displayName(user) }))
   const selectedUserId = userId && employees.some((e) => e.id === userId) ? userId : null
+
+  const periodStarts = await Promise.all(
+    (selectedUserId ? [selectedUserId] : employees.map((e) => e.id)).map((id) =>
+      findCurrentPayPeriodStart(id, now)
+    )
+  )
+  // Anyone without a pay period yet has all of their history in play.
+  const defaultStart = periodStarts.some((s) => s === null)
+    ? earliest
+    : (periodStarts as CalendarDate[]).reduce(
+        (min, s) => (compareCalendarDates(s, min) < 0 ? s : min),
+        latest
+      )
+  const { start, end } = resolveRange(startInput, endInput, now, defaultStart)
 
   const entries = await prisma.timeClockEntry.findMany({
     where: {
