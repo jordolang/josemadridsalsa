@@ -28,6 +28,16 @@ the root `package.json` is canonical.
   Adds the `time_clock_pay_periods` table (migration `20261027000000_timeclock_pay_periods`).
 
 ### Fixed
+- **Credentials sign-in is limited per IP as well as per email.** Credential stuffing against the
+  storefront tried about three passwords per email, under the per-email limit of five per 15
+  minutes. Each IP now gets 20 sign-in attempts per 15 minutes across all emails, and a throttled
+  attempt shows "Too many sign-in attempts" instead of "Invalid email or password". Unknown emails
+  and password-less accounts now take as long to reject as a wrong password, so timing no longer
+  reveals which emails have an account. Sign-in logs now mask emails (`jo***@example.com`).
+- **Sign-up no longer reveals which emails have an account.** `POST /api/auth/register` answered
+  409 "An account with this email already exists" with no rate limit, so it could check emails in
+  bulk. It now answers an existing email the same as a new one, emails the owner a "You already
+  have an account" notice (at most once a day), and allows 5 sign-ups per IP per hour.
 - **Timeclock hours older than two months no longer look erased.** The timeclock and the
   Developer Console editor clamped every date range to two months before today, so each day
   another day of punches dropped out of view. Nothing was deleted. History is now addressable

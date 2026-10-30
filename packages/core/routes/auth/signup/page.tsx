@@ -82,7 +82,11 @@ function SignUpFormInner() {
       })
 
       if (signInResult?.error) {
-        setError('Account created, but automatic sign in failed. Please sign in manually.')
+        // Also the path for an email that already had an account: sign-up answers the
+        // same either way, and the owner gets an email explaining what to do.
+        setError(
+          "We couldn't sign you in automatically. If you already have an account with this email, sign in or reset your password."
+        )
         setIsSubmitting(false)
         return
       }

@@ -7,7 +7,13 @@ import AppleProvider from 'next-auth/providers/apple'
 import type { NextAuthOptions } from 'next-auth'
 import type { Provider } from 'next-auth/providers/index'
 import bcrypt from 'bcryptjs'
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
+import {
+  compareAgainstDummyHash,
+  getSignInClientIp,
+  isSignInAllowed,
+  maskEmail,
+  SIGN_IN_THROTTLED,
+} from '@/lib/auth/sign-in-throttle'
 import { DEVELOPER_ACCOUNT_EMAIL } from '@/lib/developer/constants'
 import { getConfiguredOAuthProviders, type OAuthProviderId } from '@/lib/auth/oauth-providers'
 import { isLastSeenStale, recordLastSeen } from '@/lib/auth/last-seen'
@@ -121,7 +127,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
         totp: { label: 'Authentication code', type: 'text' },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, req) => {
         try {
           if (!credentials?.email || !credentials?.password) {
             console.error('[Auth] Missing credentials')
@@ -130,18 +136,13 @@ export const authOptions: NextAuthOptions = {
 
           // Normalize email to lowercase for case-insensitive matching (matches registration flow)
           const normalizedEmail = credentials.email.toLowerCase().trim()
-          console.log('[Auth] Attempting login for:', normalizedEmail)
+          const logEmail = maskEmail(normalizedEmail)
+          console.log('[Auth] Attempting login for:', logEmail)
 
-          // Rate limiting: 5 login attempts per 15 minutes per email
-          const rateLimitResult = await checkRateLimit({
-            identifier: `auth:login:${normalizedEmail}`,
-            maxRequests: RATE_LIMITS.AUTH_LOGIN.maxRequests,
-            windowSeconds: RATE_LIMITS.AUTH_LOGIN.windowSeconds,
-          })
-
-          if (!rateLimitResult.allowed) {
-            console.error('[Auth] Rate limit exceeded for:', normalizedEmail, `- ${rateLimitResult.remaining} attempts remaining, resets in ${rateLimitResult.resetIn}s`)
-            return null
+          // Rate limiting: 20 attempts per 15 minutes per IP, 5 per 15 minutes per email
+          const ip = getSignInClientIp(req?.headers)
+          if (!(await isSignInAllowed({ email: normalizedEmail, ip }))) {
+            throw new Error(SIGN_IN_THROTTLED)
           }
 
           const prisma = await getPrisma()
@@ -157,19 +158,23 @@ export const authOptions: NextAuthOptions = {
             }
           })
 
+          // Both still pay for a bcrypt compare, so response time does not reveal
+          // which emails have an account.
           if (!user) {
-            console.error('[Auth] User not found:', normalizedEmail)
+            console.error('[Auth] User not found:', logEmail)
+            await compareAgainstDummyHash(credentials.password)
             return null
           }
 
           if (!user.password) {
-            console.error('[Auth] User has no password set:', normalizedEmail)
+            console.error('[Auth] User has no password set:', logEmail)
+            await compareAgainstDummyHash(credentials.password)
             return null
           }
 
           const isValid = await bcrypt.compare(credentials.password, user.password)
           if (!isValid) {
-            console.error('[Auth] Invalid password for:', normalizedEmail)
+            console.error('[Auth] Invalid password for:', logEmail)
             return null
           }
 
@@ -186,12 +191,12 @@ export const authOptions: NextAuthOptions = {
 
             const { verifyTwoFactorChallenge } = await import('@/lib/auth/two-factor')
             if (!(await verifyTwoFactorChallenge(user.id, token))) {
-              console.error('[Auth] Invalid two-factor code for:', normalizedEmail)
+              console.error('[Auth] Invalid two-factor code for:', logEmail)
               throw new Error('TWO_FACTOR_INVALID')
             }
           }
 
-          console.log('[Auth] Login successful for:', normalizedEmail)
+          console.log('[Auth] Login successful for:', logEmail)
           return {
             id: user.id,
             email: user.email,
@@ -204,7 +209,9 @@ export const authOptions: NextAuthOptions = {
           // discover that a code is required.
           if (
             error instanceof Error &&
-            (error.message === 'TWO_FACTOR_REQUIRED' || error.message === 'TWO_FACTOR_INVALID')
+            (error.message === 'TWO_FACTOR_REQUIRED' ||
+              error.message === 'TWO_FACTOR_INVALID' ||
+              error.message === SIGN_IN_THROTTLED)
           ) {
             throw error
           }

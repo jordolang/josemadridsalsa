@@ -86,6 +86,12 @@ function SignInFormInner() {
           return
         }
 
+        if (result.error.includes('SIGN_IN_THROTTLED')) {
+          setError('Too many sign-in attempts. Please wait 15 minutes and try again, or reset your password.')
+          setIsLoading(false)
+          return
+        }
+
         // Provide more specific error messages
         if (result.error === 'CredentialsSignin') {
           setError('Invalid email or password. Please try again.')

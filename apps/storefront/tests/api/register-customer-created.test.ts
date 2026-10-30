@@ -13,6 +13,8 @@ const userCreate = vi.fn()
 const emitDomainEvent = vi.fn()
 const sendWelcomeEmail = vi.fn()
 const logEngagementRequest = vi.fn()
+const sendExistingAccountSignupEmail = vi.fn()
+const checkRateLimit = vi.fn()
 
 vi.mock('@/lib/prisma', () => {
   const client = { user: { findUnique: userFindUnique, create: userCreate } }
@@ -20,7 +22,16 @@ vi.mock('@/lib/prisma', () => {
 })
 
 vi.mock('@/lib/domain-events/emit', () => ({ emitDomainEvent }))
-vi.mock('@/lib/email/automation', () => ({ sendWelcomeEmail }))
+vi.mock('@/lib/email/automation', () => ({ sendWelcomeEmail, sendExistingAccountSignupEmail }))
+vi.mock('@/lib/rate-limiter', () => ({
+  checkRateLimit,
+  createRateLimitHeaders: vi.fn(() => ({})),
+  getClientIdentifier: vi.fn(() => '203.0.113.7'),
+  RATE_LIMITS: {
+    AUTH_REGISTER: { maxRequests: 5, windowSeconds: 3600 },
+    AUTH_EXISTING_ACCOUNT_NOTICE: { maxRequests: 1, windowSeconds: 86400 },
+  },
+}))
 vi.mock('@/lib/engagements', () => ({ logEngagementRequest }))
 
 // Hashing a password with 12 rounds is slow and is not what these tests are about.
@@ -47,6 +58,8 @@ beforeEach(() => {
   userCreate.mockResolvedValue({ id: 'user_1', email: 'new.customer@example.com' })
   sendWelcomeEmail.mockResolvedValue({ success: true })
   logEngagementRequest.mockResolvedValue(undefined)
+  sendExistingAccountSignupEmail.mockResolvedValue({ success: true })
+  checkRateLimit.mockResolvedValue({ allowed: true, remaining: 4, resetIn: 3600, current: 1 })
 })
 
 describe('POST /api/auth/register', () => {
@@ -86,11 +99,54 @@ describe('POST /api/auth/register', () => {
   it('records nothing when the address is already registered', async () => {
     userFindUnique.mockResolvedValue({ id: 'existing' })
 
-    const response = await POST(registration())
+    await POST(registration())
 
-    expect(response.status).toBe(409)
+    expect(userCreate).not.toHaveBeenCalled()
     expect(emitDomainEvent).not.toHaveBeenCalled()
     expect(sendWelcomeEmail).not.toHaveBeenCalled()
+  })
+
+  // Regression: a 409 "already exists" let anyone test which emails have an account.
+  it('answers an existing address exactly as a new one', async () => {
+    const fresh = await POST(registration())
+    userFindUnique.mockResolvedValue({ id: 'existing' })
+    const existing = await POST(registration())
+
+    expect(existing.status).toBe(fresh.status)
+    expect(await existing.json()).toEqual(await fresh.json())
+  })
+
+  it('tells the owner of an existing account, once a day', async () => {
+    userFindUnique.mockResolvedValue({ id: 'existing' })
+
+    await POST(registration())
+    expect(checkRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'auth:register:existing:new.customer@example.com' })
+    )
+    expect(sendExistingAccountSignupEmail).toHaveBeenCalledWith({ email: 'new.customer@example.com' })
+
+    sendExistingAccountSignupEmail.mockClear()
+    checkRateLimit
+      .mockResolvedValueOnce({ allowed: true, remaining: 4, resetIn: 3600, current: 1 })
+      .mockResolvedValueOnce({ allowed: false, remaining: 0, resetIn: 80000, current: 1 })
+    const response = await POST(registration())
+
+    expect(response.status).toBe(201)
+    expect(sendExistingAccountSignupEmail).not.toHaveBeenCalled()
+  })
+
+  it('limits sign-ups per IP', async () => {
+    checkRateLimit.mockResolvedValueOnce({ allowed: false, remaining: 0, resetIn: 1200, current: 5 })
+
+    const response = await POST(registration())
+
+    expect(response.status).toBe(429)
+    expect(checkRateLimit).toHaveBeenCalledWith({
+      identifier: 'auth:register:203.0.113.7',
+      maxRequests: 5,
+      windowSeconds: 3600,
+    })
+    expect(userFindUnique).not.toHaveBeenCalled()
   })
 
   it('records nothing when the submission is invalid', async () => {

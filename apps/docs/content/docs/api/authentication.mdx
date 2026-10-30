@@ -45,6 +45,10 @@ The API does not currently support standalone API keys for third-party integrati
     ```
 
     Registration validates input with Zod, hashes the password, assigns the `CUSTOMER` role, and sends a welcome email.
+
+    - Limited to 5 sign-ups per IP per hour; over the limit it returns `429`.
+    - An email that already has an account gets the same `201 { "success": true }` as a new one, so the endpoint cannot be used to test which emails are registered. No account is created or changed. Instead the owner gets a "You already have an account" email with sign-in and password reset links, at most once per email per day.
+    - The signup page then tries to sign in. If that fails, it tells the person to sign in or reset their password if they already have an account.
   </Tab>
   <Tab value="OAuth Providers">
     ### Supported OAuth Providers
