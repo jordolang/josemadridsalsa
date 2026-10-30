@@ -1,7 +1,7 @@
 {
   "name": "jose-madrid-platform",
-  "version": "2.2.0",
-  "projectVersion": "2.2",
+  "version": "2.3.0",
+  "projectVersion": "2.3",
   "private": true,
   "workspaces": [
     "apps/*",
