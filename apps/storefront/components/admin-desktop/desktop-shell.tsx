@@ -503,10 +503,16 @@ export function DesktopShell({
   useEffect(() => {
     const bridge = window.jmsDesktop
     const canSee = (id: DesktopSectionId) => !permitted || permitted.has(id)
-    for (const alert of badgeAlerts(lastBadges.current, badgeCounts, canSee)) bridge?.notify?.(alert)
-    lastBadges.current = badgeCounts
-    bridge?.setBadge?.(attentionCount(badgeCounts, canSee))
-  }, [badgeCounts, permitted])
+    // The verification queue needs more than its section does, so an account
+    // that cannot open it is not told about it either.
+    const counts =
+      !allowedPageIds || allowedPageIds.has('fundraisers.verifications')
+        ? badgeCounts
+        : { ...badgeCounts, verifications: undefined }
+    for (const alert of badgeAlerts(lastBadges.current, counts, canSee)) bridge?.notify?.(alert)
+    lastBadges.current = counts
+    bridge?.setBadge?.(attentionCount(counts, canSee))
+  }, [badgeCounts, permitted, allowedPageIds])
 
   // ------------------------------------------------------------ receipts
 
