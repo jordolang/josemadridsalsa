@@ -13,6 +13,8 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+## [2.3] — 2026-10-30
+
 ### Added
 - **Show checkout in the desktop admin apps.** Load the van by scanning the label on each case:
   each scan is one case, a scan with ⌘ (Ctrl on Windows) held is half a case. Plan the load first
