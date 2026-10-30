@@ -69,12 +69,8 @@ private struct AdminCommands: Commands {
       ForEach(AdminSections.groups) { group in
         Section(group.label) {
           ForEach(group.sections) { section in
-            let button = Button(section.label) { go(to: section.path) }
-            if let shortcut = section.shortcut {
-              button.keyboardShortcut(KeyEquivalent(shortcut), modifiers: .command)
-            } else {
-              button
-            }
+            Button(section.label) { go(to: section.path) }
+              .keyboardShortcut(shortcut(for: section))
           }
         }
       }
@@ -94,6 +90,13 @@ private struct AdminCommands: Commands {
         Task { await UpdateChecker.shared.check(interactive: true) }
       }
     }
+  }
+
+  /// A section's ⌘ shortcut, or none while the window in front is scanning
+  /// with ⌘ held (show checkout), so ⌘+digits reach the page instead.
+  private func shortcut(for section: AdminSection) -> KeyboardShortcut? {
+    guard let key = section.shortcut, browser?.capturesScanner != true else { return nil }
+    return KeyboardShortcut(KeyEquivalent(key), modifiers: .command)
   }
 
   /// Move the window in front, or open one if every window is closed.

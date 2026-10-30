@@ -17,6 +17,10 @@ final class BrowserController: ObservableObject {
   @Published private(set) var currentURL: URL?
   @Published var errorMessage: String?
   @Published private(set) var connectionState = ConnectionState.connecting
+  /// True while the page's show checkout sheet is open. The Go menu drops its
+  /// ⌘1–⌘9 shortcuts meanwhile, so a scan made with ⌘ held reaches the page as
+  /// digits rather than jumping sections.
+  @Published var capturesScanner = false
 
   weak var webView: WKWebView?
 
@@ -115,7 +119,8 @@ struct AdminBrowser: NSViewRepresentable {
             reprint: job.reprint === true
           });
         },
-        printDocument: function (html) { post({ type: 'printDocument', html: String(html || '') }); }
+        printDocument: function (html) { post({ type: 'printDocument', html: String(html || '') }); },
+        setScanCapture: function (on) { post({ type: 'scanCapture', on: on === true }); }
       }),
       writable: false, configurable: false
     });
@@ -200,6 +205,8 @@ struct AdminBrowser: NSViewRepresentable {
       case "printReceipt":
         guard let job = ReceiptJob.parse(body) else { return }
         ReceiptPrinter.print(job)
+      case "scanCapture":
+        controller.capturesScanner = body["on"] as? Bool ?? false
       case "printDocument":
         // The packing slip is a few kilobytes; the cap only stops a runaway page.
         guard let html = body["html"] as? String, !html.isEmpty, html.utf8.count <= 512 * 1024 else { return }
@@ -298,6 +305,9 @@ struct AdminBrowser: NSViewRepresentable {
     // MARK: Load lifecycle
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
+      // A page that asked for scan capture and then navigated away never says
+      // it is done, so the shortcuts come back with every new page.
+      controller.capturesScanner = false
       controller.update(from: webView)
     }
 

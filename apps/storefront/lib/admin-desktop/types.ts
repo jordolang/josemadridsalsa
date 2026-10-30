@@ -105,6 +105,11 @@ export type DesktopCommand =
    * postage. Without an order it starts by asking for the order ticket.
    */
   | { kind: 'pack'; orderId?: string }
+  /**
+   * Show checkout: scan the label on every case going to a show, then date
+   * them, and save the lot onto the show's packing manifest.
+   */
+  | { kind: 'showCheckout' }
   /** Print an order's ticket again on the desktop app's receipt printer. */
   | { kind: 'receipt'; orderId: string }
   /**
