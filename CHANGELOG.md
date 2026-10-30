@@ -18,6 +18,9 @@ the root `package.json` is canonical.
   rebuilt from the site's own orders (website, fundraiser and BigCommerce-mirrored). Every
   refresh purges all previous entries first. Refresh it from **Mailing Lists**; it also rebuilds
   itself whenever a campaign is created on it. Opted-out people stay on it as unsubscribed.
+- **Fundraising Open Orders mailing list.** A separate list with only open fundraising orders
+  (fundraiser sales on this site and orders from the fundraising BigCommerce store), purged and
+  rebuilt the same way.
 - **Audience check before a campaign sends.** Launching a campaign now shows the recipient
   count, a sample of names, and how many have an open order, with a filter to send only to
   them (on by default for shipping and order updates). The send button, the send API and the

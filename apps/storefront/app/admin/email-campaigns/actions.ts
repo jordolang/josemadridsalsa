@@ -18,7 +18,7 @@ import {
   type SubscriberLike,
   type VariableMappings,
 } from '@/lib/email/variable-mapping'
-import { OPEN_ORDERS_LIST_ID, refreshOpenOrdersList } from '@/lib/email/open-orders'
+import { isOpenOrdersListId, refreshOpenOrdersList } from '@/lib/email/open-orders'
 import { AUDIENCE_NOT_CONFIRMED_MESSAGE, hasConfirmedAudience } from '@/lib/email/audience-check'
 
 /**
@@ -107,13 +107,13 @@ export async function createCampaign(formData: FormData) {
         where: { id: listId },
         select: { id: true },
       })
-      if (!list && listId !== OPEN_ORDERS_LIST_ID) {
+      if (!list && !isOpenOrdersListId(listId)) {
         return { error: 'Mailing list not found' }
       }
-      // The Open Orders list is rebuilt for every campaign that uses it, so it
-      // holds only people whose order is still open right now.
-      if (listId === OPEN_ORDERS_LIST_ID) {
-        await refreshOpenOrdersList(user.id)
+      // The open-orders lists are rebuilt for every campaign that uses them, so
+      // they hold only people whose order is still open right now.
+      if (isOpenOrdersListId(listId)) {
+        await refreshOpenOrdersList(user.id, listId)
       }
       // Only the size is needed here; the subscribers themselves are streamed
       // into recipients after the campaign row exists.

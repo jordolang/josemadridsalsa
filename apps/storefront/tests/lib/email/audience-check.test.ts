@@ -18,7 +18,7 @@ vi.mock('@/lib/prisma', () => {
   return { prisma: client, default: client }
 })
 vi.mock('@/lib/email/open-orders', () => ({
-  OPEN_ORDERS_LIST_ID: 'open-orders',
+  isOpenOrdersListId: (id: string | null) => id === 'open-orders' || id === 'fundraising-open-orders',
   loadOpenOrderEmails,
   normalizeEmail: (e: string | null) => e?.trim().toLowerCase() || null,
 }))

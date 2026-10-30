@@ -150,9 +150,16 @@ People who opted out (email suppressions, unsubscribe-all preferences, or a non-
 customer `emailStatus`) are kept as `UNSUBSCRIBED`, `BOUNCED` or `COMPLAINED` rows so campaigns
 skip them.
 
-The list refreshes when you click **Refresh Open Orders List** on `/admin/communications/lists`
-(which also creates it the first time), and automatically whenever a campaign is created on it,
-from the campaign page or the desktop admin.
+### Fundraising Open Orders
+
+A second, separate list, **Fundraising Open Orders** (fixed id `fundraising-open-orders`), holds
+only open fundraising orders: the same open rules plus any of `salesChannel = FUNDRAISER`, a
+`fundraiserId`, or `importSource = 'bigcommerce-fundraising'` (copies of orders from the separate
+fundraising BigCommerce store). The main Open Orders list still includes fundraising orders.
+
+Both lists refresh when you click **Refresh Open Orders Lists** on `/admin/communications/lists`
+(which also creates them the first time), and each rebuilds itself whenever a campaign is created
+on it, from the campaign page or the desktop admin.
 
 ## Suppression Lists
 

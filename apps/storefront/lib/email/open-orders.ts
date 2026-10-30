@@ -11,10 +11,12 @@ import type { Prisma, SubscriberStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { subscriberStatusFor } from '@/lib/customers/customer-list'
 
-/** Fixed id so the list can be found (and refreshed) without trusting its name. */
+/** Fixed ids so the lists can be found (and refreshed) without trusting their names. */
 export const OPEN_ORDERS_LIST_ID = 'open-orders'
 export const OPEN_ORDERS_LIST_NAME = 'Open Orders'
 export const OPEN_ORDERS_SOURCE = 'open-orders'
+export const FUNDRAISING_OPEN_ORDERS_LIST_ID = 'fundraising-open-orders'
+export const FUNDRAISING_OPEN_ORDERS_LIST_NAME = 'Fundraising Open Orders'
 
 /**
  * An order is open when it has been paid for and has not gone out yet:
@@ -29,6 +31,47 @@ export const OPEN_ORDER_WHERE: Prisma.OrderWhereInput = {
   status: { in: ['PENDING', 'CONFIRMED', 'PROCESSING'] },
   fulfillmentStatus: { in: ['UNFULFILLED', 'PARTIALLY_FULFILLED'] },
   salesChannel: { notIn: ['POS', 'EVENT'] },
+}
+
+/**
+ * A fundraising order: a sale credited to a fundraiser on this site, or a copy
+ * of an order from the separate fundraising BigCommerce store (which the mirror
+ * marks FUNDRAISER even when the buyer named no group it could match).
+ */
+export const FUNDRAISING_ORDER_WHERE: Prisma.OrderWhereInput = {
+  OR: [
+    { salesChannel: 'FUNDRAISER' },
+    { fundraiserId: { not: null } },
+    // `BIGCOMMERCE_FUNDRAISING_ORDER_SOURCE` in lib/bigcommerce/orders.ts, written out so
+    // this module does not pull in the BigCommerce client.
+    { importSource: 'bigcommerce-fundraising' },
+  ],
+}
+
+export type OpenOrdersListId = typeof OPEN_ORDERS_LIST_ID | typeof FUNDRAISING_OPEN_ORDERS_LIST_ID
+
+const OPEN_ORDER_LISTS: Record<
+  OpenOrdersListId,
+  { name: string; description: string; where: Prisma.OrderWhereInput }
+> = {
+  [OPEN_ORDERS_LIST_ID]: {
+    name: OPEN_ORDERS_LIST_NAME,
+    description: 'Rebuilt from paid orders that have not shipped yet. Every refresh replaces all entries.',
+    where: OPEN_ORDER_WHERE,
+  },
+  [FUNDRAISING_OPEN_ORDERS_LIST_ID]: {
+    name: FUNDRAISING_OPEN_ORDERS_LIST_NAME,
+    description:
+      'Rebuilt from paid fundraising orders that have not shipped yet. Every refresh replaces all entries.',
+    where: { AND: [OPEN_ORDER_WHERE, FUNDRAISING_ORDER_WHERE] },
+  },
+}
+
+export const OPEN_ORDERS_LIST_IDS = Object.keys(OPEN_ORDER_LISTS) as OpenOrdersListId[]
+
+/** True for a list that is rebuilt from orders rather than edited by hand. */
+export function isOpenOrdersListId(listId: string | null | undefined): listId is OpenOrdersListId {
+  return !!listId && listId in OPEN_ORDER_LISTS
 }
 
 export interface OpenOrderRow {
@@ -173,15 +216,17 @@ export interface OpenOrdersRefreshResult {
 const INSERT_BATCH = 1000
 
 /**
- * Purge the Open Orders list and rebuild it from the orders that are open now.
+ * Purge an open-orders list and rebuild it from the orders that are open now.
  * Creates the list on first use. The purge and the rebuild run in one
  * transaction, so a failure leaves the previous list intact.
  */
 export async function refreshOpenOrdersList(
   createdById?: string | null,
+  listId: OpenOrdersListId = OPEN_ORDERS_LIST_ID,
 ): Promise<OpenOrdersRefreshResult> {
+  const config = OPEN_ORDER_LISTS[listId]
   const orders = await prisma.order.findMany({
-    where: OPEN_ORDER_WHERE,
+    where: config.where,
     orderBy: { createdAt: 'asc' },
     select: {
       orderNumber: true,
@@ -200,7 +245,7 @@ export async function refreshOpenOrdersList(
   const rows = contacts.map((c) => {
     const status = optOuts.get(c.email) ?? 'SUBSCRIBED'
     return {
-      listId: OPEN_ORDERS_LIST_ID,
+      listId,
       email: c.email,
       firstName: c.firstName,
       lastName: c.lastName,
@@ -216,17 +261,16 @@ export async function refreshOpenOrdersList(
   await prisma.$transaction(
     async (tx) => {
       await tx.mailingList.upsert({
-        where: { id: OPEN_ORDERS_LIST_ID },
+        where: { id: listId },
         create: {
-          id: OPEN_ORDERS_LIST_ID,
-          name: OPEN_ORDERS_LIST_NAME,
-          description:
-            'Rebuilt from paid orders that have not shipped yet. Every refresh replaces all entries.',
+          id: listId,
+          name: config.name,
+          description: config.description,
           createdById: createdById ?? null,
         },
         update: {},
       })
-      await tx.mailingListSubscriber.deleteMany({ where: { listId: OPEN_ORDERS_LIST_ID } })
+      await tx.mailingListSubscriber.deleteMany({ where: { listId } })
       for (let i = 0; i < rows.length; i += INSERT_BATCH) {
         await tx.mailingListSubscriber.createMany({ data: rows.slice(i, i + INSERT_BATCH) })
       }
@@ -236,7 +280,7 @@ export async function refreshOpenOrdersList(
 
   const subscribed = rows.filter((r) => r.status === 'SUBSCRIBED').length
   return {
-    listId: OPEN_ORDERS_LIST_ID,
+    listId,
     openOrders: orders.length,
     contacts: rows.length,
     subscribed,

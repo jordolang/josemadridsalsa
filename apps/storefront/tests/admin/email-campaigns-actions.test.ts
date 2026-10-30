@@ -73,7 +73,7 @@ vi.mock('@/lib/email/audience-check', () => ({
   AUDIENCE_NOT_CONFIRMED_MESSAGE: 'Review the audience before sending',
 }))
 vi.mock('@/lib/email/open-orders', () => ({
-  OPEN_ORDERS_LIST_ID: 'open-orders',
+  isOpenOrdersListId: (id: string | null) => id === 'open-orders' || id === 'fundraising-open-orders',
   refreshOpenOrdersList,
 }))
 
@@ -334,10 +334,22 @@ describe('createCampaign on the Open Orders list', () => {
 
     const result = await createCampaign(listForm({ listId: 'open-orders' }))
 
-    expect(refreshOpenOrdersList).toHaveBeenCalledWith('user-1')
+    expect(refreshOpenOrdersList).toHaveBeenCalledWith('user-1', 'open-orders')
     expect(refreshOpenOrdersList.mock.invocationCallOrder[0]).toBeLessThan(
       subscriberCount.mock.invocationCallOrder.at(-1)!,
     )
     expect(result).toMatchObject({ success: true, recipientsCount: 3 })
+  })
+})
+
+describe('createCampaign on the Fundraising Open Orders list', () => {
+  it('rebuilds the fundraising list, not the main one', async () => {
+    listFindUnique.mockResolvedValueOnce(null as unknown as { id: string })
+    subscriberCount.mockReset().mockImplementation(async () => 2)
+    subscriberFindMany.mockReset().mockImplementation(async () => page(0, 2))
+
+    await createCampaign(listForm({ listId: 'fundraising-open-orders' }))
+
+    expect(refreshOpenOrdersList).toHaveBeenCalledWith('user-1', 'fundraising-open-orders')
   })
 })

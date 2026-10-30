@@ -24,8 +24,11 @@ vi.mock('@/lib/prisma', () => {
 })
 
 const {
+  FUNDRAISING_OPEN_ORDERS_LIST_ID,
+  FUNDRAISING_ORDER_WHERE,
   OPEN_ORDER_WHERE,
   OPEN_ORDERS_LIST_ID,
+  isOpenOrdersListId,
   buildOpenOrderContacts,
   loadOpenOrderEmails,
   orderEmail,
@@ -165,5 +168,51 @@ describe('refreshOpenOrdersList', () => {
     expect(subscriberDeleteMany).toHaveBeenCalled()
     expect(subscriberCreateMany).not.toHaveBeenCalled()
     expect(result.contacts).toBe(0)
+  })
+})
+
+describe('the Fundraising Open Orders list', () => {
+  it('counts site fundraiser sales and fundraising-store copies as fundraising', () => {
+    expect(FUNDRAISING_ORDER_WHERE).toEqual({
+      OR: [
+        { salesChannel: 'FUNDRAISER' },
+        { fundraiserId: { not: null } },
+        { importSource: 'bigcommerce-fundraising' },
+      ],
+    })
+  })
+
+  it('is recognised as an open-orders list', () => {
+    expect(isOpenOrdersListId(FUNDRAISING_OPEN_ORDERS_LIST_ID)).toBe(true)
+    expect(isOpenOrdersListId(OPEN_ORDERS_LIST_ID)).toBe(true)
+    expect(isOpenOrdersListId('allsubs20261028')).toBe(false)
+    expect(isOpenOrdersListId(null)).toBe(false)
+  })
+
+  it('purges and rebuilds only its own list from open fundraising orders', async () => {
+    orderFindMany.mockResolvedValue([
+      order({ orderNumber: 'BCF-12', salesChannel: 'FUNDRAISER', guestEmail: 'parent@example.com' }),
+    ])
+
+    const result = await refreshOpenOrdersList('user-1', FUNDRAISING_OPEN_ORDERS_LIST_ID)
+
+    expect(orderFindMany.mock.calls[0][0].where).toEqual({
+      AND: [OPEN_ORDER_WHERE, FUNDRAISING_ORDER_WHERE],
+    })
+    expect(listUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: FUNDRAISING_OPEN_ORDERS_LIST_ID },
+        create: expect.objectContaining({ name: 'Fundraising Open Orders' }),
+      }),
+    )
+    expect(subscriberDeleteMany).toHaveBeenCalledWith({
+      where: { listId: FUNDRAISING_OPEN_ORDERS_LIST_ID },
+    })
+    expect(subscriberCreateMany.mock.calls[0][0].data[0]).toMatchObject({
+      listId: FUNDRAISING_OPEN_ORDERS_LIST_ID,
+      email: 'parent@example.com',
+      tags: ['fundraiser'],
+    })
+    expect(result.listId).toBe(FUNDRAISING_OPEN_ORDERS_LIST_ID)
   })
 })

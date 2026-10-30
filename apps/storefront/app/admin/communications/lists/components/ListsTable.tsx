@@ -41,17 +41,23 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
   const [openOrdersMessage, setOpenOrdersMessage] = useState<string | null>(null)
 
   const handleRefreshOpenOrders = () => {
-    if (!confirm('Replace every entry on the Open Orders list with the people who have an open order right now?')) return
+    if (!confirm('Replace every entry on the Open Orders and Fundraising Open Orders lists with the people who have an open order right now?')) return
     setOpenOrdersMessage(null)
     startTransition(async () => {
       try {
-        const r = await refreshOpenOrdersListAction()
+        const results = await refreshOpenOrdersListAction()
+        const names = new Map(lists.map((l) => [l.id, l.name]))
         setOpenOrdersMessage(
-          `Open Orders rebuilt: ${r.openOrders} open orders, ${r.contacts} people (${r.subscribed} subscribed, ${r.optedOut} opted out).`,
+          results
+            .map(
+              (r) =>
+                `${names.get(r.listId) ?? r.listId}: ${r.openOrders} open orders, ${r.contacts} people (${r.subscribed} subscribed, ${r.optedOut} opted out).`,
+            )
+            .join(' '),
         )
       } catch (error) {
         console.error('Failed to refresh Open Orders list', error)
-        setOpenOrdersMessage('Could not rebuild the Open Orders list.')
+        setOpenOrdersMessage('Could not rebuild the open orders lists.')
       }
     })
   }
@@ -85,7 +91,7 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleRefreshOpenOrders} disabled={isPending}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Open Orders List
+            Refresh Open Orders Lists
           </Button>
           <Button variant="outline" onClick={() => setIsCcImportOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />

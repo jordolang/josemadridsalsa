@@ -10,7 +10,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { loadOpenOrderEmails, normalizeEmail, OPEN_ORDERS_LIST_ID } from '@/lib/email/open-orders'
+import { isOpenOrdersListId, loadOpenOrderEmails, normalizeEmail } from '@/lib/email/open-orders'
 
 export const AUDIENCE_CONFIRMED_ACTION = 'email_campaign.audience_confirmed'
 export const AUDIENCE_ENTITY_TYPE = 'email_campaign'
@@ -135,7 +135,7 @@ export async function getAudienceCheck(campaignId: string): Promise<AudienceChec
     hasConfirmedAudience(campaign),
   ])
   const { withOpenOrder, withoutOpenOrder } = splitByOpenOrder(recipients, openOrderEmails)
-  const isOpenOrdersList = campaign.listId === OPEN_ORDERS_LIST_ID
+  const isOpenOrdersList = isOpenOrdersListId(campaign.listId)
 
   return {
     campaignId,
