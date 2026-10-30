@@ -335,6 +335,12 @@ campaign offline. Both follow the same rules as `/admin/fundraisers/accounts`, i
 refusing an approval when the package has a salsa with no active product, and both need
 `orders:write`.
 
+**Deny as spam** (⌘⌫) is for sign-ups that should never come back to the queue. It deletes the
+login, the draft campaign and the account, so the row disappears and the address could sign up
+again. It is offered only for accounts that were never approved, and it refuses (suggesting
+Decline instead) when the campaign or login has an order or the login is not fundraiser-only.
+It cannot be undone, and also needs `orders:write`.
+
 ### Show checkout: loading the van by scanning cases
 
 **Show checkout** on Events & Shows (or on Packing manifests) fills in a show's packing manifest

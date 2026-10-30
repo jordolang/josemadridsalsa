@@ -79,3 +79,42 @@ export async function reviewFundraiserAccount(accountId: string, action: Account
 
   return { account, kit }
 }
+
+/**
+ * Throws away a sign-up nobody should review again — spam, mostly. The login,
+ * the draft campaign and the account behind them are deleted, so the address
+ * can sign up afresh and the queue no longer carries it.
+ *
+ * Only for sign-ups that never went live: an account that was ever approved, or
+ * a campaign or login that has taken an order, is suspended instead, so no sale
+ * loses the records it points at.
+ */
+export async function denyFundraiserAccount(accountId: string) {
+  const account = await prisma.fundraiserAccount.findUnique({
+    where: { id: accountId },
+    include: {
+      fundraiser: { select: { id: true, name: true, _count: { select: { orders: true } } } },
+      user: { select: { id: true, email: true, role: true, _count: { select: { orders: true } } } },
+    },
+  })
+
+  if (!account) throw new AccountReviewError('Account not found.', 404)
+
+  if (account.status === 'APPROVED' || account.approvedAt) {
+    throw new AccountReviewError(`${account.fundraiser.name} has been approved before, so suspend it instead.`, 409)
+  }
+  if (account.user.role !== 'FUNDRAISER') {
+    throw new AccountReviewError(`${account.user.email} is not a fundraiser-only login, so suspend it instead.`, 409)
+  }
+  if (account.fundraiser._count.orders > 0 || account.user._count.orders > 0) {
+    throw new AccountReviewError(`${account.fundraiser.name} has orders, so suspend it instead.`, 409)
+  }
+
+  // Both deletes cascade to the account row.
+  await prisma.$transaction([
+    prisma.fundraiser.delete({ where: { id: account.fundraiserId } }),
+    prisma.user.delete({ where: { id: account.userId } }),
+  ])
+
+  return { name: account.fundraiser.name, email: account.user.email }
+}

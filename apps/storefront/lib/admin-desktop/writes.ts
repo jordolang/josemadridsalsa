@@ -53,7 +53,7 @@ import {
 } from '@/lib/loyalty-rewards'
 import { rewardInputSchema } from '@/lib/loyalty-rewards-schema'
 import { generateGameCode } from '@/lib/arena/game-codes'
-import { AccountReviewError, reviewFundraiserAccount } from '@/lib/fundraising/account-review'
+import { AccountReviewError, denyFundraiserAccount, reviewFundraiserAccount } from '@/lib/fundraising/account-review'
 import { PRODUCT_IMAGE_LIMIT, slugify, type WriteOpId } from './forms'
 import type { DesktopSectionId } from './sections'
 
@@ -1290,6 +1290,18 @@ const fundraiserHandlers: Record<string, WriteHandler> = {
       const id = requireRecord(context)
       const { account } = await reviewFundraiserAccount(id, 'suspend', context.actor.id).catch(reviewFailed)
       return { message: `${account.fundraiser.name} declined`, recordId: id }
+    },
+  }),
+
+  'fundraiserAccount.deny': handler({
+    permission: 'orders:write',
+    entity: 'FundraiserAccount',
+    action: 'delete',
+    schema: z.object({}),
+    async run(_values, context) {
+      const id = requireRecord(context)
+      const { name, email } = await denyFundraiserAccount(id).catch(reviewFailed)
+      return { message: `${name} denied · ${email} removed` }
     },
   }),
 }

@@ -9,7 +9,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const prismaMock = {
   $transaction: vi.fn(async (ops: unknown[]) => ops),
   fundraiserAccount: { findUnique: vi.fn(), update: vi.fn((args) => ({ op: 'account', ...args })) },
-  fundraiser: { update: vi.fn((args) => ({ op: 'fundraiser', ...args })) },
+  fundraiser: {
+    update: vi.fn((args) => ({ op: 'fundraiser', ...args })),
+    delete: vi.fn((args) => ({ op: 'delete-fundraiser', ...args })),
+  },
+  user: { delete: vi.fn((args) => ({ op: 'delete-user', ...args })) },
   fundraiserProduct: { createMany: vi.fn((args) => ({ op: 'products', ...args })) },
 }
 vi.mock('@/lib/prisma', () => ({ __esModule: true, default: prismaMock, prisma: prismaMock }))
@@ -18,7 +22,7 @@ const resolveKitCatalog = vi.fn()
 const shouldBlockApproval = vi.fn(() => false)
 vi.mock('@/lib/fundraising/kit-catalog.server', () => ({ resolveKitCatalog, shouldBlockApproval }))
 
-const { AccountReviewError, reviewFundraiserAccount } = await import('@/lib/fundraising/account-review')
+const { AccountReviewError, denyFundraiserAccount, reviewFundraiserAccount } = await import('@/lib/fundraising/account-review')
 
 const pending = {
   id: 'a1',
@@ -76,5 +80,50 @@ describe('reviewFundraiserAccount', () => {
   it('says so when the account is gone', async () => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(null)
     await expect(reviewFundraiserAccount('nope', 'approve', 'admin-1')).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('denyFundraiserAccount', () => {
+  const spam = (overrides: Record<string, unknown> = {}) => ({
+    id: 'a1',
+    status: 'PENDING',
+    approvedAt: null,
+    userId: 'u9',
+    fundraiserId: 'f1',
+    fundraiser: { id: 'f1', name: 'Free Crypto', _count: { orders: 0 } },
+    user: { id: 'u9', email: 'bot@spam.test', role: 'FUNDRAISER', _count: { orders: 0 } },
+    ...overrides,
+  })
+
+  it('deletes the campaign and the login of a sign-up that never went live', async () => {
+    prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam())
+
+    await expect(denyFundraiserAccount('a1')).resolves.toEqual({ name: 'Free Crypto', email: 'bot@spam.test' })
+    expect(prismaMock.fundraiser.delete).toHaveBeenCalledWith({ where: { id: 'f1' } })
+    expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 'u9' } })
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
+  })
+
+  it('also clears one that was declined earlier', async () => {
+    prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam({ status: 'SUSPENDED' }))
+    await denyFundraiserAccount('a1')
+    expect(prismaMock.user.delete).toHaveBeenCalled()
+  })
+
+  it.each([
+    ['was ever approved', spam({ status: 'SUSPENDED', approvedAt: new Date('2026-10-01') })],
+    ['is approved', spam({ status: 'APPROVED' })],
+    ['logs in as staff', spam({ user: { id: 'u9', email: 'x@y.z', role: 'ADMIN', _count: { orders: 0 } } })],
+    ['has orders', spam({ fundraiser: { id: 'f1', name: 'Free Crypto', _count: { orders: 2 } } })],
+    ['has a login with orders', spam({ user: { id: 'u9', email: 'x@y.z', role: 'FUNDRAISER', _count: { orders: 1 } } })],
+  ])('refuses one that %s', async (_case, account) => {
+    prismaMock.fundraiserAccount.findUnique.mockResolvedValue(account)
+    await expect(denyFundraiserAccount('a1')).rejects.toMatchObject({ status: 409 })
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('says so when the account is gone', async () => {
+    prismaMock.fundraiserAccount.findUnique.mockResolvedValue(null)
+    await expect(denyFundraiserAccount('nope')).rejects.toMatchObject({ status: 404 })
   })
 })
