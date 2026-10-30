@@ -117,6 +117,9 @@ describe('canSeePage', () => {
     // past the section's own gate.
     expect(canSeePage('users.credentials', ['credentials:read'])).toBe(false)
     expect(canSeePage('users.credentials', ['users:read', 'credentials:read'])).toBe(true)
+    // The verification queue lists contact emails, so it asks what the web route asks.
+    expect(canSeePage('fundraisers.verifications', ['orders:read'])).toBe(false)
+    expect(canSeePage('fundraisers.verifications', ['orders:read', 'orders:write'])).toBe(true)
   })
 
   it('refuses a page that asks for more than its section', () => {

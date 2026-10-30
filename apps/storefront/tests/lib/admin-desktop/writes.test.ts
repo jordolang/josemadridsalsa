@@ -61,6 +61,12 @@ vi.mock('@/lib/orders/fulfillment', () => ({
   transitionForOrderStatus: vi.fn((status: string) => (status === 'SHIPPED' ? 'shipped' : null)),
 }))
 
+const reviewFundraiserAccount = vi.fn()
+vi.mock('@/lib/fundraising/account-review', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/fundraising/account-review')>()),
+  reviewFundraiserAccount,
+}))
+
 vi.mock('@/lib/developer/constants', () => ({
   canEraseData: (email: string) => email === 'owner@josemadridsalsa.com',
 }))
@@ -1061,6 +1067,36 @@ describe('what the audit row keeps', () => {
         expect(handler.redact, `${op} logs its password in the clear`).toContain('password')
       }
     }
+  })
+})
+
+describe('fundraiser verifications', () => {
+  it('approves through the shared review and says what it stocked', async () => {
+    reviewFundraiserAccount.mockResolvedValue({
+      account: { fundraiser: { name: 'Eagles Band' } },
+      kit: { catalog: new Array(16).fill({}) },
+    })
+
+    const outcome = await WRITE_HANDLERS['fundraiserAccount.approve'].execute({}, { ...actor, recordId: 'a1' })
+
+    expect(reviewFundraiserAccount).toHaveBeenCalledWith('a1', 'approve', 'u1')
+    expect(outcome).toEqual({ message: 'Eagles Band approved · 16 salsas stocked', recordId: 'a1' })
+  })
+
+  it('declines by suspending', async () => {
+    reviewFundraiserAccount.mockResolvedValue({ account: { fundraiser: { name: 'Eagles Band' } }, kit: null })
+    const outcome = await WRITE_HANDLERS['fundraiserAccount.suspend'].execute({}, { ...actor, recordId: 'a1' })
+    expect(reviewFundraiserAccount).toHaveBeenCalledWith('a1', 'suspend', 'u1')
+    expect(outcome.message).toBe('Eagles Band declined')
+  })
+
+  it('shows the operator why an approval was refused', async () => {
+    const { AccountReviewError } = await import('@/lib/fundraising/account-review')
+    reviewFundraiserAccount.mockRejectedValue(new AccountReviewError('These 16-flavor kit salsas have no active product: mango', 409))
+
+    await expect(
+      WRITE_HANDLERS['fundraiserAccount.approve'].execute({}, { ...actor, recordId: 'a1' }),
+    ).rejects.toThrow(new WriteError('These 16-flavor kit salsas have no active product: mango'))
   })
 })
 

@@ -78,7 +78,7 @@ has a URL of its own (see [Opening a page directly](#opening-a-page-directly)).
 | Orders | Orders · Returns & RMAs · Shipping labels |
 | Purchase Orders | Purchase orders · Suppliers |
 | Customers | Customers · Loyalty rewards |
-| Fundraisers | Fundraisers · Battle arena · Arena game codes |
+| Fundraisers | Fundraisers · Battle arena · Arena game codes · Verifications |
 | Events & Shows | Calendar · Packing manifests |
 | Wholesale | Accounts · Store locator |
 | Financials | Ledger · Reconciliation |
@@ -323,6 +323,18 @@ shipping address, unpaid, cancelled or already shipped cannot be packed here.
 The packing slip is the insert for the box: what is in it, the tracking number and the customer's
 note, with no prices. It prints in a window of its own with scripts off.
 
+### Verifying new fundraiser accounts
+
+Every account made at `/auth/fundraiser-signup` starts out waiting, with its campaign held as a
+draft. While you are anywhere in Fundraisers, the **Fundraiser verifications (N)** button in the
+title bar shows how many are waiting — outlined in red when there are any — and opens the
+Verifications page. Waiting accounts are listed first, oldest first. **Approve** (or ⏎) makes
+the campaign live, stocks its store with the flavor package chosen at sign-up and lets the
+contact sign in to the fundraiser portal; **Decline** suspends the account and keeps the
+campaign offline. Both follow the same rules as `/admin/fundraisers/accounts`, including
+refusing an approval when the package has a salsa with no active product, and both need
+`orders:write`.
+
 ### Show checkout: loading the van by scanning cases
 
 **Show checkout** on Events & Shows (or on Packing manifests) fills in a show's packing manifest
@@ -472,11 +484,11 @@ Sign in once with the same account used on the web. The session persists across 
 
 ### Notifications and the badge
 
-When an order arrives that needs fulfilling, or a customer message arrives, the app shows a
-system notification — *New order to fulfil · 3 waiting to ship* — and clicking it opens that
-section. The dock icon (macOS) or taskbar button (Windows, as a red dot) shows how many orders
-and messages are waiting. It keeps working while the window is minimised or behind others: the
-page checks the counts every minute even when hidden. Only sections your account can open count,
+When an order arrives that needs fulfilling, a customer message arrives or a new fundraiser
+account signs up, the app shows a system notification — *New order to fulfil · 3 waiting to
+ship* — and clicking it opens that section. The dock icon (macOS) or taskbar button (Windows, as
+a red dot) shows how many orders, messages and fundraiser verifications are waiting. It keeps
+working while the window is minimised or behind others: the page checks the counts every minute even when hidden. Only sections your account can open count,
 the counts the window opened with are never announced, and with several windows open each alert
 appears once. macOS asks for notification permission the first time there is something to show.
 

@@ -503,10 +503,16 @@ export function DesktopShell({
   useEffect(() => {
     const bridge = window.jmsDesktop
     const canSee = (id: DesktopSectionId) => !permitted || permitted.has(id)
-    for (const alert of badgeAlerts(lastBadges.current, badgeCounts, canSee)) bridge?.notify?.(alert)
-    lastBadges.current = badgeCounts
-    bridge?.setBadge?.(attentionCount(badgeCounts, canSee))
-  }, [badgeCounts, permitted])
+    // The verification queue needs more than its section does, so an account
+    // that cannot open it is not told about it either.
+    const counts =
+      !allowedPageIds || allowedPageIds.has('fundraisers.verifications')
+        ? badgeCounts
+        : { ...badgeCounts, verifications: undefined }
+    for (const alert of badgeAlerts(lastBadges.current, counts, canSee)) bridge?.notify?.(alert)
+    lastBadges.current = counts
+    bridge?.setBadge?.(attentionCount(counts, canSee))
+  }, [badgeCounts, permitted, allowedPageIds])
 
   // ------------------------------------------------------------ receipts
 
@@ -1342,6 +1348,12 @@ export function DesktopShell({
     .join('')
     .toUpperCase()
 
+  // The verification queue is one tap from anywhere in Fundraisers, with the
+  // number waiting on the button itself rather than buried in the page strip.
+  const showVerifications =
+    currentSection.id === 'fundraisers' && (!allowedPageIds || allowedPageIds.has('fundraisers.verifications'))
+  const waitingVerifications = badgeCounts.verifications ?? 0
+
   const rowSummary = !isRowView
     ? section.path
     : list?.q && list.q === query.trim()
@@ -1371,6 +1383,18 @@ export function DesktopShell({
             <span className="jmsd-mono" style={{ color: 'var(--goldt)', fontSize: 10.5 }}>
               {working ? 'saving…' : 'loading…'}
             </span>
+          ) : null}
+          {showVerifications ? (
+            <button
+              type="button"
+              className="jmsd-verify-button"
+              data-waiting={waitingVerifications > 0 || undefined}
+              aria-pressed={section.page === 'fundraisers.verifications'}
+              title="New fundraiser accounts waiting to be approved"
+              onClick={() => runCommand({ kind: 'page', page: 'fundraisers.verifications' })}
+            >
+              Fundraiser verifications ({waitingVerifications})
+            </button>
           ) : null}
         </div>
 

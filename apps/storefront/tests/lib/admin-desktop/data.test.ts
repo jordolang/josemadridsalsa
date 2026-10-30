@@ -60,9 +60,9 @@ const prismaMock = {
   banner: { findMany: vi.fn() },
   blogPost: { count: vi.fn(), findMany: vi.fn() },
   brandKit: { findFirst: vi.fn() },
-  chatThread: { findMany: vi.fn() },
+  chatThread: { count: vi.fn(), findMany: vi.fn() },
   contactSubmission: { findMany: vi.fn() },
-  conversation: { findMany: vi.fn() },
+  conversation: { count: vi.fn(), findMany: vi.fn() },
   credentialAccessGrant: { findMany: vi.fn() },
   developerBlogPost: { count: vi.fn() },
   customer: { count: vi.fn(), findMany: vi.fn() },
@@ -79,6 +79,7 @@ const prismaMock = {
   formCapture: { groupBy: vi.fn() },
   formTemplate: { findMany: vi.fn() },
   fundraiser: { count: vi.fn(), findMany: vi.fn() },
+  fundraiserAccount: { count: vi.fn(), findMany: vi.fn() },
   fundraiserParticipant: { count: vi.fn(), findMany: vi.fn() },
   fundraiserTeam: { findMany: vi.fn() },
   arenaGameCode: { findMany: vi.fn() },
@@ -139,7 +140,7 @@ vi.mock('@/lib/fundraising-site/checkout-fields', async (importOriginal) => ({
   getFundraisingCheckoutFields: checkoutFields.getFundraisingCheckoutFields,
 }))
 
-const { loadSection } = await import('@/lib/admin-desktop/data')
+const { loadBadges, loadSection } = await import('@/lib/admin-desktop/data')
 const { isBindableShortcut } = await import('@/lib/admin-desktop/shortcuts')
 
 /** Shared row fixtures — the sections whose rows carry an href. */
@@ -1336,6 +1337,60 @@ describe('fundraisers', () => {
     expect(prismaMock.fundraiser.findMany.mock.calls[0][0].where).toEqual({ OR: [{ status: 'ACTIVE' }] })
     expect(payload.body.rows).toHaveLength(1)
     expect(payload.body.rows[0].cells[7].text).toBe('Ended')
+  })
+
+  describe('verifications', () => {
+    const account = (overrides: Record<string, unknown>) => ({
+      id: 'a1',
+      status: 'PENDING',
+      createdAt: new Date('2026-10-20T12:00:00Z'),
+      approvedAt: null,
+      user: { name: 'Pat Coach', email: 'pat@example.com' },
+      fundraiser: {
+        name: 'Eagles Band',
+        organizationName: 'Eagles Boosters',
+        flavorPackage: '16',
+        fulfillmentMethod: 'ONLINE_ONLY',
+      },
+      ...overrides,
+    })
+
+    it('puts waiting accounts first, oldest first, with Approve and Decline', async () => {
+      prismaMock.fundraiserAccount.findMany
+        .mockResolvedValueOnce([
+          account({ id: 'oldest', createdAt: new Date('2026-10-18T12:00:00Z') }),
+          account({ id: 'newest', createdAt: new Date('2026-10-28T12:00:00Z') }),
+        ])
+        .mockResolvedValueOnce([
+          account({ id: 'approved', status: 'APPROVED', approvedAt: new Date('2026-10-25T12:00:00Z') }),
+        ])
+
+      const payload = await loadSection('fundraisers.verifications')
+      // Regression: waiting accounts were read inside the list window, so a long
+      // history of reviewed ones could push them off the queue.
+      const [waitingQuery, reviewedQuery] = prismaMock.fundraiserAccount.findMany.mock.calls.map((call) => call[0])
+      expect(waitingQuery).toMatchObject({ where: { status: 'PENDING' }, orderBy: { createdAt: 'asc' } })
+      expect(waitingQuery.take).toBeUndefined()
+      expect(reviewedQuery).toMatchObject({ where: { status: { not: 'PENDING' } }, take: 248 })
+      if (payload.body.view !== 'table') throw new Error('expected a table payload')
+      const { rows, totals } = payload.body
+
+      expect(rows.map((row) => row.id)).toEqual(['oldest', 'newest', 'approved'])
+      expect(rows[0].buckets).toEqual([0, 1])
+      expect(rows[0].inspector.actions?.map((action) => action.label)).toEqual(['Approve', 'Decline', 'Campaigns'])
+      expect(rows[0].open).toMatchObject({ kind: 'write', op: 'fundraiserAccount.approve', recordId: 'oldest' })
+      // An approved account can only be suspended, and ⏎ does not re-approve it.
+      expect(rows[2].inspector.actions?.map((action) => action.label)).toEqual(['Suspend', 'Campaigns'])
+      expect(rows[2].open).toBeUndefined()
+      expect(totals.at(-1)?.text).toBe('2 waiting')
+    })
+
+    it('counts waiting accounts for the titlebar button', async () => {
+      prismaMock.fundraiserAccount.count.mockResolvedValue(5)
+      const badges = await loadBadges()
+      expect(prismaMock.fundraiserAccount.count).toHaveBeenCalledWith({ where: { status: 'PENDING' } })
+      expect(badges.verifications).toBe(5)
+    })
   })
 
   it('keeps participants on their own page', async () => {

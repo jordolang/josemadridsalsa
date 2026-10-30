@@ -53,6 +53,7 @@ import {
 } from '@/lib/loyalty-rewards'
 import { rewardInputSchema } from '@/lib/loyalty-rewards-schema'
 import { generateGameCode } from '@/lib/arena/game-codes'
+import { AccountReviewError, reviewFundraiserAccount } from '@/lib/fundraising/account-review'
 import { PRODUCT_IMAGE_LIMIT, slugify, type WriteOpId } from './forms'
 import type { DesktopSectionId } from './sections'
 
@@ -1264,6 +1265,39 @@ const fundraiserHandlers: Record<string, WriteHandler> = {
       return { message: `${participant.name} removed` }
     },
   }),
+
+  // A new fundraiser account waits here until someone verifies it. Same gate and
+  // same rules as /admin/fundraisers/accounts: see `lib/fundraising/account-review.ts`.
+  'fundraiserAccount.approve': handler({
+    permission: 'orders:write',
+    entity: 'FundraiserAccount',
+    action: 'update',
+    schema: z.object({}),
+    async run(_values, context) {
+      const id = requireRecord(context)
+      const { account, kit } = await reviewFundraiserAccount(id, 'approve', context.actor.id).catch(reviewFailed)
+      const stocked = kit?.catalog.length ? ` · ${kit.catalog.length} salsas stocked` : ''
+      return { message: `${account.fundraiser.name} approved${stocked}`, recordId: id }
+    },
+  }),
+
+  'fundraiserAccount.suspend': handler({
+    permission: 'orders:write',
+    entity: 'FundraiserAccount',
+    action: 'update',
+    schema: z.object({}),
+    async run(_values, context) {
+      const id = requireRecord(context)
+      const { account } = await reviewFundraiserAccount(id, 'suspend', context.actor.id).catch(reviewFailed)
+      return { message: `${account.fundraiser.name} declined`, recordId: id }
+    },
+  }),
+}
+
+/** A review the rules refused is the operator's to act on; anything else is a fault. */
+function reviewFailed(error: unknown): never {
+  if (error instanceof AccountReviewError) throw new WriteError(error.message)
+  throw error
 }
 
 // ---------------------------------------------------------------------------
