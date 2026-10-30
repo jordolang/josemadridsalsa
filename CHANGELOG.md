@@ -13,6 +13,13 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **Fundraiser verifications in the desktop admin apps.** In Fundraisers, a **Fundraiser
+  verifications (N)** button in the title bar opens a queue of new fundraiser accounts waiting to
+  be approved, oldest first. Approve or decline in place; approval stocks the store from the
+  chosen flavor package exactly as the web admin does. A new sign-up also raises a desktop
+  notification and counts toward the dock or taskbar badge.
+
 ## [2.3] — 2026-10-30
 
 ### Added

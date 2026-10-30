@@ -272,6 +272,8 @@ export interface DesktopBadges {
   orders?: number
   inventory?: number
   fundraisers?: number
+  /** Fundraiser accounts that signed up and are waiting to be approved. */
+  verifications?: number
   /** Open support conversations plus live chats waiting on a reply. */
   messages?: number
 }

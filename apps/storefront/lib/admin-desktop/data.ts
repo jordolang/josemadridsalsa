@@ -5392,6 +5392,132 @@ async function loadArenaGameCodes(list: ListQuery = DEFAULT_LIST): Promise<Table
 }
 
 // ---------------------------------------------------------------------------
+// Fundraisers · Verifications
+// ---------------------------------------------------------------------------
+
+const VERIFICATION_FILTERS = ['All accounts', 'Waiting', 'Approved', 'Suspended']
+
+const ACCOUNT_STATUS: Record<string, { label: string; tone: Tone; bucket: number }> = {
+  PENDING: { label: 'Waiting', tone: 'warn', bucket: 1 },
+  APPROVED: { label: 'Approved', tone: 'good', bucket: 2 },
+  SUSPENDED: { label: 'Suspended', tone: 'muted', bucket: 3 },
+}
+
+/**
+ * Fundraiser accounts made at /auth/fundraiser-signup. Each starts PENDING with
+ * a DRAFT campaign behind it, and nothing goes live until one is approved here
+ * or on /admin/fundraisers/accounts. Waiting accounts sort to the top, oldest
+ * first, so the queue reads in the order people asked.
+ */
+async function loadFundraiserVerifications(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
+  const accounts = await safe(
+    () =>
+      prisma.fundraiserAccount.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: list.limit,
+        include: {
+          user: { select: { name: true, email: true } },
+          fundraiser: {
+            select: { name: true, organizationName: true, flavorPackage: true, fulfillmentMethod: true },
+          },
+        },
+      }),
+    [],
+  )
+
+  const queue = [
+    ...accounts.filter((account) => account.status === 'PENDING').reverse(),
+    ...accounts.filter((account) => account.status !== 'PENDING'),
+  ]
+
+  const columns: Column[] = [
+    { label: 'Fundraiser', width: 'minmax(0,1.4fr)' },
+    { label: 'Organization', width: 'minmax(0,1.2fr)' },
+    { label: 'Signed up by', width: 'minmax(0,1.4fr)' },
+    { label: 'Package', width: '100px' },
+    { label: 'Signed up', width: '110px' },
+    { label: 'Status', width: '110px' },
+  ]
+
+  const rows: Row[] = queue.map((account) => {
+    const status = ACCOUNT_STATUS[account.status] ?? { label: humanise(account.status), tone: 'neutral', bucket: 0 }
+    const { fundraiser, user } = account
+    const name = fundraiser.name
+    const kit = fundraiser.flavorPackage ? `${fundraiser.flavorPackage} flavors` : '—'
+    const approve = {
+      label: account.status === 'SUSPENDED' ? 'Approve again' : 'Approve',
+      shortcut: '⌘⏎',
+      command: write('fundraiserAccount.approve', account.id, {
+        confirm: `Approve ${name}? Their campaign goes live, its store is stocked with the ${kit} package and ${user.email} can sign in to the fundraiser portal.`,
+      }),
+    }
+    const decline = {
+      label: account.status === 'PENDING' ? 'Decline' : 'Suspend',
+      danger: true,
+      command: write('fundraiserAccount.suspend', account.id, {
+        confirm: `${account.status === 'PENDING' ? 'Decline' : 'Suspend'} ${name}? ${user.email} loses portal access and the campaign stays offline.`,
+        danger: true,
+      }),
+    }
+
+    return {
+      id: account.id,
+      search: `${name} ${fundraiser.organizationName ?? ''} ${user.name ?? ''} ${user.email}`,
+      buckets: [0, status.bucket],
+      open: account.status === 'APPROVED' ? undefined : approve.command,
+      cells: [
+        text(name, { strong: true }),
+        text(fundraiser.organizationName ?? '—', { dim: true }),
+        text(user.name ? `${user.name} · ${user.email}` : user.email, { dim: true }),
+        text(kit, { mono: true }),
+        text(shortDate(account.createdAt), { sort: at(account.createdAt), mono: true, dim: true }),
+        statusCell(status.label, status.tone),
+      ],
+      inspector: {
+        title: name,
+        tag: status.label,
+        tagTone: status.tone,
+        groups: [
+          {
+            label: 'ACCOUNT',
+            fields: [
+              { label: 'Organization', value: fundraiser.organizationName ?? '—' },
+              { label: 'Contact', value: user.name ?? '—' },
+              { label: 'Email', value: user.email, mono: true },
+              { label: 'Signed up', value: stamp(account.createdAt), mono: true },
+              { label: 'Approved', value: account.approvedAt ? stamp(account.approvedAt) : '—', mono: true },
+            ],
+          },
+          {
+            label: 'CAMPAIGN',
+            fields: [
+              { label: 'Package', value: kit },
+              {
+                label: 'Fulfillment',
+                value: fundraiser.fulfillmentMethod ? humanise(fundraiser.fulfillmentMethod) : '—',
+              },
+            ],
+          },
+        ],
+        actions: [
+          ...(account.status === 'APPROVED' ? [] : [approve]),
+          ...(account.status === 'SUSPENDED' ? [] : [decline]),
+          { label: 'Campaigns', command: jump('fundraisers') },
+        ],
+      },
+    }
+  })
+
+  const waiting = queue.filter((account) => account.status === 'PENDING').length
+  return {
+    view: 'table',
+    columns,
+    rows,
+    totals: [text(`${count(rows.length)} accounts`), text(''), text(''), text(''), text(''), text(`${count(waiting)} waiting`)],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Events · Packing manifests
 // ---------------------------------------------------------------------------
 
@@ -10260,6 +10386,12 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
           back,
         ],
       }
+    case 'fundraisers.verifications':
+      return {
+        eyebrow: 'NEW FUNDRAISER ACCOUNTS',
+        filters: VERIFICATION_FILTERS,
+        actions: [{ label: 'Fundraisers', icon: 'i-gift', command: jump('fundraisers') }],
+      }
     case 'events.manifests':
       return {
         eyebrow,
@@ -10598,6 +10730,8 @@ async function loadPageBody(pageId: string, list: ListQuery): Promise<SectionPay
       return loadArena(list)
     case 'fundraisers.codes':
       return loadArenaGameCodes(list)
+    case 'fundraisers.verifications':
+      return loadFundraiserVerifications(list)
     case 'events.manifests':
       return loadManifests(list)
     case 'wholesale.locations':
@@ -10716,7 +10850,7 @@ export async function loadSection(
 
 /** Sidebar badges — the few counts worth a red dot next to the section name. */
 export async function loadBadges(): Promise<DesktopBadges> {
-  const [orders, lowStock, fundraisers, conversations, chats] = await Promise.all([
+  const [orders, lowStock, fundraisers, conversations, chats, verifications] = await Promise.all([
     safe(
       () =>
         prisma.order.count({
@@ -10735,6 +10869,7 @@ export async function loadBadges(): Promise<DesktopBadges> {
     safe(() => prisma.fundraiser.count({ where: { status: 'ACTIVE' } }), 0),
     safe(() => prisma.conversation.count({ where: { status: 'OPEN' } }), 0),
     safe(() => prisma.chatThread.count({ where: { status: 'WAITING' } }), 0),
+    safe(() => prisma.fundraiserAccount.count({ where: { status: 'PENDING' } }), 0),
   ])
 
   const below = lowStock.filter(
@@ -10746,5 +10881,6 @@ export async function loadBadges(): Promise<DesktopBadges> {
     inventory: below || undefined,
     fundraisers: fundraisers || undefined,
     messages: conversations + chats || undefined,
+    verifications: verifications || undefined,
   }
 }

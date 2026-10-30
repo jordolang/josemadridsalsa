@@ -11,6 +11,16 @@ describe('badgeAlerts', () => {
     ])
   })
 
+  it('sends a new fundraiser account straight to the verification queue', () => {
+    expect(badgeAlerts({ verifications: 1 }, { verifications: 2 }, all)).toEqual([
+      {
+        title: 'New fundraiser to verify',
+        body: '2 waiting in Fundraiser verifications',
+        path: '/admin-desktop?section=fundraisers&page=fundraisers.verifications',
+      },
+    ])
+  })
+
   it('treats a missing count as zero, so the first order is news', () => {
     expect(badgeAlerts({}, { orders: 1 }, all)).toHaveLength(1)
   })

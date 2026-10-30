@@ -20,8 +20,10 @@ export interface DesktopAlert {
 
 /** The badge counts worth interrupting someone for, and how to say so. */
 const WATCHED: {
-  key: 'orders' | 'messages'
+  key: 'orders' | 'messages' | 'verifications'
   section: DesktopSectionId
+  /** A page inside the section, when the work lives on one. */
+  page?: string
   title: (added: number) => string
   body: (total: number) => string
 }[] = [
@@ -37,6 +39,13 @@ const WATCHED: {
     title: (added) => (added === 1 ? 'New customer message' : `${added} new customer messages`),
     body: (total) => `${total} open in Messages`,
   },
+  {
+    key: 'verifications',
+    section: 'fundraisers',
+    page: 'fundraisers.verifications',
+    title: (added) => (added === 1 ? 'New fundraiser to verify' : `${added} new fundraisers to verify`),
+    body: (total) => `${total} waiting in Fundraiser verifications`,
+  },
 ]
 
 /**
@@ -48,10 +57,11 @@ export function badgeAlerts(
   after: DesktopBadges,
   canSee: (section: DesktopSectionId) => boolean,
 ): DesktopAlert[] {
-  return WATCHED.filter(({ section }) => canSee(section)).flatMap(({ key, section, title, body }) => {
+  return WATCHED.filter(({ section }) => canSee(section)).flatMap(({ key, section, page, title, body }) => {
     const added = (after[key] ?? 0) - (before[key] ?? 0)
     if (added <= 0) return []
-    return [{ title: title(added), body: body(after[key] ?? 0), path: `/admin-desktop?section=${section}` }]
+    const path = `/admin-desktop?section=${section}${page ? `&page=${page}` : ''}`
+    return [{ title: title(added), body: body(after[key] ?? 0), path }]
   })
 }
 

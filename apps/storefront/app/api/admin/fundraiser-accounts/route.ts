@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { FundraiserAccountStatus } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
 import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
-import { resolveKitCatalog, shouldBlockApproval } from '@/lib/fundraising/kit-catalog.server'
+import { AccountReviewError, reviewFundraiserAccount } from '@/lib/fundraising/account-review'
 
 
 export async function GET(request: NextRequest) {
@@ -55,60 +55,7 @@ export async function PATCH(request: Request) {
 
     const { accountId, action } = parsed.data
 
-    const account = await prisma.fundraiserAccount.findUnique({
-      where: { id: accountId },
-      include: { fundraiser: true },
-    })
-
-    if (!account) {
-      return NextResponse.json({ error: 'Account not found.' }, { status: 404 })
-    }
-
-    // The package chosen at sign-up stocks the store, so nobody ticks salsas one by one.
-    // Only on approval, and only rows that do not exist yet: a re-approval after a suspension
-    // must not undo salsas an admin has since switched off.
-    const kit = action === 'approve' ? await resolveKitCatalog(account.fundraiser.flavorPackage) : null
-    if (kit && shouldBlockApproval(kit.missingSlugs, kit.kitSize)) {
-      return NextResponse.json(
-        {
-          error: `These ${account.fundraiser.flavorPackage}-flavor kit salsas have no active product: ${kit.missingSlugs.join(', ')}`,
-        },
-        { status: 409 }
-      )
-    }
-
-    if (action === 'approve' && kit) {
-      await prisma.$transaction([
-        prisma.fundraiserAccount.update({
-          where: { id: accountId },
-          data: {
-            status: 'APPROVED',
-            approvedAt: new Date(),
-            approvedBy: user.id,
-          },
-        }),
-        // Activate the linked fundraiser when account is approved
-        prisma.fundraiser.update({
-          where: { id: account.fundraiserId },
-          data: { status: 'ACTIVE', isActive: true },
-        }),
-        prisma.fundraiserProduct.createMany({
-          data: kit.catalog.map((row) => ({ ...row, fundraiserId: account.fundraiserId })),
-          skipDuplicates: true,
-        }),
-      ])
-    } else if (action === 'suspend') {
-      await prisma.$transaction([
-        prisma.fundraiserAccount.update({
-          where: { id: accountId },
-          data: { status: 'SUSPENDED' },
-        }),
-        prisma.fundraiser.update({
-          where: { id: account.fundraiserId },
-          data: { isActive: false },
-        }),
-      ])
-    }
+    const { account, kit } = await reviewFundraiserAccount(accountId, action, user.id)
 
     // Approving grants portal access and activates the campaign; suspending revokes both.
     await logAuditWithRequest(
@@ -132,6 +79,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof AccountReviewError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('Error updating fundraiser account:', error)
     const message = error instanceof Error ? error.message : 'Internal server error'
     const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500
