@@ -1355,7 +1355,7 @@ describe('fundraisers', () => {
       ...overrides,
     })
 
-    it('puts waiting accounts first, oldest first, with Approve and Decline', async () => {
+    it('puts waiting accounts first, oldest first, with Approve, Decline and Deny as spam', async () => {
       prismaMock.fundraiserAccount.findMany
         .mockResolvedValueOnce([
           account({ id: 'oldest', createdAt: new Date('2026-10-18T12:00:00Z') }),
@@ -1377,9 +1377,10 @@ describe('fundraisers', () => {
 
       expect(rows.map((row) => row.id)).toEqual(['oldest', 'newest', 'approved'])
       expect(rows[0].buckets).toEqual([0, 1])
-      expect(rows[0].inspector.actions?.map((action) => action.label)).toEqual(['Approve', 'Decline', 'Campaigns'])
+      expect(rows[0].inspector.actions?.map((action) => action.label)).toEqual(['Approve', 'Decline', 'Deny as spam', 'Campaigns'])
+      expect(rows[0].inspector.actions?.[2]).toMatchObject({ shortcut: '⌘⌫', command: { op: 'fundraiserAccount.deny' } })
       expect(rows[0].open).toMatchObject({ kind: 'write', op: 'fundraiserAccount.approve', recordId: 'oldest' })
-      // An approved account can only be suspended, and ⏎ does not re-approve it.
+      // An approved account can only be suspended, never denied, and ⏎ does not re-approve it.
       expect(rows[2].inspector.actions?.map((action) => action.label)).toEqual(['Suspend', 'Campaigns'])
       expect(rows[2].open).toBeUndefined()
       expect(totals.at(-1)?.text).toBe('2 waiting')

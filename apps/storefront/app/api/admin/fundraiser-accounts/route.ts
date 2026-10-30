@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { FundraiserAccountStatus } from '@prisma/client'
 import { requirePermission } from '@/lib/rbac'
 import { createChangeSnapshot, logAuditWithRequest } from '@/lib/audit'
-import { AccountReviewError, reviewFundraiserAccount } from '@/lib/fundraising/account-review'
+import { AccountReviewError, denyFundraiserAccount, reviewFundraiserAccount } from '@/lib/fundraising/account-review'
 
 
 export async function GET(request: NextRequest) {
@@ -83,6 +83,47 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
     console.error('Error updating fundraiser account:', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
+    const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500
+    return NextResponse.json({ error: message }, { status })
+  }
+}
+
+const DenySchema = z.object({ accountId: z.string().min(1) })
+
+/** Denies a never-approved sign-up as spam: its login, draft campaign and account are deleted. */
+export async function DELETE(request: Request) {
+  try {
+    const user = await requirePermission('orders:write')
+    const parsed = DenySchema.safeParse(await request.json().catch(() => null))
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request data.', details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const { accountId } = parsed.data
+    const denied = await denyFundraiserAccount(accountId, user.email)
+
+    await logAuditWithRequest(
+      {
+        userId: user.id,
+        action: 'delete',
+        entityType: 'fundraiser_account',
+        entityId: accountId,
+        changes: { deniedAsSpam: true, fundraiser: denied.name, email: denied.email },
+      },
+      request
+    )
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    if (error instanceof AccountReviewError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    console.error('Error denying fundraiser account:', error)
     const message = error instanceof Error ? error.message : 'Internal server error'
     const status = message.includes('Unauthorized') ? 401 : message.includes('Forbidden') ? 403 : 500
     return NextResponse.json({ error: message }, { status })

@@ -122,6 +122,32 @@ export default function FundraiserAccountsPage() {
     }
   }
 
+  async function handleDeny(account: FundraiserAccountData) {
+    const confirmed = window.confirm(
+      `Deny ${account.fundraiser.organizationName} as spam? The sign-up, its draft campaign and the ${account.user.email} login are deleted. This cannot be undone.`,
+    )
+    if (!confirmed) return
+
+    setActionLoading(account.id)
+    try {
+      const res = await fetch('/api/admin/fundraiser-accounts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId: account.id }),
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(data.error || 'Deny failed')
+      }
+      toast.success(`${account.fundraiser.organizationName} denied`)
+      await reloadAccounts()
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Deny failed')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -220,6 +246,17 @@ export default function FundraiserAccountsPage() {
                       disabled={actionLoading === account.id}
                     >
                       {actionLoading === account.id ? 'Processing...' : 'Reactivate'}
+                    </Button>
+                  )}
+                  {/* Only a sign-up that never went live can be thrown away. */}
+                  {account.status !== 'APPROVED' && !account.approvedAt && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeny(account)}
+                      disabled={actionLoading === account.id}
+                    >
+                      Deny as spam
                     </Button>
                   )}
                 </div>

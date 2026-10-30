@@ -2324,6 +2324,7 @@ export const DIRECT_OPS = [
   'team.suspend',
   'fundraiserAccount.approve',
   'fundraiserAccount.suspend',
+  'fundraiserAccount.deny',
   'gameCode.revoke',
   'gameCode.restore',
   'automation.activate',

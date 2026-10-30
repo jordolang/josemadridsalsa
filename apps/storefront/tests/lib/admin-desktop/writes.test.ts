@@ -62,9 +62,11 @@ vi.mock('@/lib/orders/fulfillment', () => ({
 }))
 
 const reviewFundraiserAccount = vi.fn()
+const denyFundraiserAccount = vi.fn()
 vi.mock('@/lib/fundraising/account-review', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/fundraising/account-review')>()),
   reviewFundraiserAccount,
+  denyFundraiserAccount,
 }))
 
 vi.mock('@/lib/developer/constants', () => ({
@@ -1088,6 +1090,13 @@ describe('fundraiser verifications', () => {
     const outcome = await WRITE_HANDLERS['fundraiserAccount.suspend'].execute({}, { ...actor, recordId: 'a1' })
     expect(reviewFundraiserAccount).toHaveBeenCalledWith('a1', 'suspend', 'u1')
     expect(outcome.message).toBe('Eagles Band declined')
+  })
+
+  it('denies spam by deleting the sign-up and says whose login went', async () => {
+    denyFundraiserAccount.mockResolvedValue({ name: 'Free Crypto', email: 'bot@spam.test' })
+    const outcome = await WRITE_HANDLERS['fundraiserAccount.deny'].execute({}, { ...actor, recordId: 'a1' })
+    expect(denyFundraiserAccount).toHaveBeenCalledWith('a1', actor.actor.email)
+    expect(outcome.message).toBe('Free Crypto denied · bot@spam.test removed')
   })
 
   it('shows the operator why an approval was refused', async () => {

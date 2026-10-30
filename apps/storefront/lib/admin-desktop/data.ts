@@ -5470,6 +5470,18 @@ async function loadFundraiserVerifications(list: ListQuery = DEFAULT_LIST): Prom
         danger: true,
       }),
     }
+    // Spam is most of what arrives, so a sign-up that never went live can be
+    // thrown away outright rather than parked as Suspended.
+    const deny = {
+      label: 'Deny as spam',
+      shortcut: '⌘⌫',
+      danger: true,
+      command: write('fundraiserAccount.deny', account.id, {
+        confirm: `Deny ${name} as spam? The sign-up, its draft campaign and the ${user.email} login are deleted. This cannot be undone. Owner accounts only.`,
+        danger: true,
+      }),
+    }
+    const deniable = account.status !== 'APPROVED' && !account.approvedAt
 
     return {
       id: account.id,
@@ -5513,6 +5525,7 @@ async function loadFundraiserVerifications(list: ListQuery = DEFAULT_LIST): Prom
         actions: [
           ...(account.status === 'APPROVED' ? [] : [approve]),
           ...(account.status === 'SUSPENDED' ? [] : [decline]),
+          ...(deniable ? [deny] : []),
           { label: 'Campaigns', command: jump('fundraisers') },
         ],
       },
