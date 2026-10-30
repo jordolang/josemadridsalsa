@@ -323,6 +323,39 @@ shipping address, unpaid, cancelled or already shipped cannot be packed here.
 The packing slip is the insert for the box: what is in it, the tracking number and the customer's
 note, with no prices. It prints in a window of its own with scripts off.
 
+### Show checkout: loading the van by scanning cases
+
+**Show checkout** on Events & Shows (or on Packing manifests) fills in a show's packing manifest
+by scanning the label on each case as it goes on the cart.
+
+1. Enter your name, the date and pick the show. Shows come from Events & Shows, so add a show
+   there first if it is missing.
+2. Choose **Scan as you go**, or **Plan the load first** to set how many cases of each salsa to
+   take (halves allowed). A show whose manifest is still a draft starts with the draft's
+   quantities as the plan.
+3. Scan the label on each case. Each scan is **one case**. Hold **⌘** (Ctrl on Windows) while
+   scanning for **half a case** (6 jars). Every scan answers at once: a large green line and one
+   beep for a case, an amber line and two beeps for a half case, and a red line with a low tone
+   for a label it does not know (nothing is added). Fix a mistake with −.
+4. When the cart is full, scan **Dates** on the code sheet (or click **Enter dates**). Scan a
+   case's label, then type its month and day (`02/15` or `0215`), or scan two codes off the
+   sheet, 02 then 15. The year is always filled in as three years from the checkout date. When
+   every case is dated the sheet goes back to scanning for the next cart.
+5. **Check out** saves the cart to the show's manifest as cases and jars taken, marks it
+   Packed/Out, and sets each salsa's expiration date to its earliest case date. Who checked out,
+   when and every case date go into the manifest notes. Checking out again for the same show (a
+   second load) adds to what already went out; a draft manifest is replaced by the first
+   checkout.
+
+A case label matches on the jar UPC, the SKU, or a 14-digit case code (GTIN-14) built from the
+jar UPC. **Print code sheet** prints a letter page with the Dates code, a Half case code (the next
+scan counts as half, for when ⌘ is not to hand) and 01 to 31.
+
+While the sheet is open the desktop apps turn off their ⌘1–⌘9 (Ctrl+1–Ctrl+9) section
+shortcuts, so a ⌘-held scan reaches the page as digits. That needs the desktop app version that
+ships with this feature; an older app, or a browser tab, may jump sections instead, so use the
+Half case code there.
+
 ### Creating and editing, in the window
 
 The shell writes. Creating a fundraiser, editing a product, adjusting stock, receiving a

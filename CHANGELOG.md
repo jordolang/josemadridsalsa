@@ -13,7 +13,15 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+## [2.3] — 2026-10-30
+
 ### Added
+- **Show checkout in the desktop admin apps.** Load the van by scanning the label on each case:
+  each scan is one case, a scan with ⌘ (Ctrl on Windows) held is half a case. Plan the load first
+  or scan as you go, then scan the Dates code to enter each case's month and day (the year is
+  filled in three years out), by typing or from a printable code sheet. Check out saves onto the
+  show's packing manifest. The macOS and Windows apps turn off their ⌘1–⌘9 section shortcuts while
+  the sheet is open, so they need a new desktop build for ⌘-held scans.
 - **Timeclock pay periods.** Each user's pay period now runs until they click **Start new pay
   period** on `/account/timeclock`, which can also be backdated to any day since the timeclock
   went live. The page and the Developer Console editor open on the current period through today.

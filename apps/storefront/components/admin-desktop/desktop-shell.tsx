@@ -45,6 +45,7 @@ import { Icon, IconSprite } from './icons'
 import { RecordSheet, type SheetRequest } from './record-sheet'
 import { ScanSheet } from './scan-sheet'
 import { PackSheet } from './pack-sheet'
+import { ShowCheckoutSheet } from './show-checkout-sheet'
 import { MailView } from './mail-view'
 import {
   AnalyticsView,
@@ -93,6 +94,12 @@ declare global {
       printReceipt?: (job: ReceiptJob & { reprint?: boolean }) => void
       /** Print a self-contained HTML page (the packing slip) on the document printer. */
       printDocument?: (html: string) => void
+      /**
+       * True while the show checkout sheet is open: the app stops its menu
+       * taking ⌘1–⌘9 (Ctrl on Windows), so a scan made with ⌘ held reaches the
+       * page as digits instead of jumping sections.
+       */
+      setScanCapture?: (on: boolean) => void
     }
   }
 }
@@ -257,6 +264,7 @@ export function DesktopShell({
   const [scanning, setScanning] = useState(false)
   /** The pack sheet, open on an order or (with no id) asking for one. */
   const [packing, setPacking] = useState<{ orderId?: string } | null>(null)
+  const [checkingOut, setCheckingOut] = useState(false)
   const [confirming, setConfirming] = useState<PendingConfirm | null>(null)
   const [working, setWorking] = useState(false)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
@@ -695,6 +703,10 @@ export function DesktopShell({
           setPacking({ orderId: command.orderId })
           return
 
+        case 'showCheckout':
+          setCheckingOut(true)
+          return
+
         case 'receipt': {
           const print = window.jmsDesktop?.printReceipt
           if (!print) {
@@ -1113,7 +1125,7 @@ export function DesktopShell({
   )
 
   /** True while a sheet or a confirmation owns the keyboard. */
-  const modalOpen = sheet !== null || confirming !== null || scanning || packing !== null
+  const modalOpen = sheet !== null || confirming !== null || scanning || packing !== null || checkingOut
 
   // Keep what is on screen current without anyone pressing F5: on a timer while
   // the window is visible, and at once when it comes back after a while away.
@@ -1745,6 +1757,17 @@ export function DesktopShell({
           onClose={() => setPacking(null)}
           onShipped={(message) => {
             setPacking(null)
+            flash(message)
+            void reload()
+          }}
+        />
+      ) : null}
+
+      {checkingOut ? (
+        <ShowCheckoutSheet
+          onClose={() => setCheckingOut(false)}
+          onSaved={(message) => {
+            setCheckingOut(false)
             flash(message)
             void reload()
           }}

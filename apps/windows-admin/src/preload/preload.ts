@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('jmsDesktop', {
   printLabel: (url: unknown) => ipcRenderer.send('desktop:print-label', url),
   printReceipt: (job: unknown) => ipcRenderer.send('desktop:print-receipt', job),
   printDocument: (html: unknown) => ipcRenderer.send('desktop:print-document', html),
+  setScanCapture: (on: unknown) => ipcRenderer.send('desktop:scan-capture', on === true),
 })
 
 contextBridge.exposeInMainWorld('desktop', {

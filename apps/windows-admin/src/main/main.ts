@@ -159,6 +159,12 @@ function openWindow(url = settings.endpoint): BrowserWindow {
     if (isSafeExternalUrl(target)) void shell.openExternal(target)
   })
 
+  // A page that asked for scan capture and then navigated away (or reloaded)
+  // never says it is done, so the menu comes back with every new page.
+  window.webContents.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) window.webContents.setIgnoreMenuShortcuts(false)
+  })
+
   window.webContents.on('did-fail-load', (_event, errorCode, description, validatedURL, isMainFrame) => {
     // -3 is ERR_ABORTED, which a redirect or a cancelled navigation raises routinely.
     if (!isMainFrame || errorCode === -3) return
@@ -462,6 +468,15 @@ function registerIpc(): void {
     const sender = trustedSender(event)
     const job = sender ? parseReceiptJob(settings.endpoint, sender, value) : null
     if (job) void printReceipt(job)
+  })
+
+  // The show checkout sheet scans with Ctrl held for a half case. The Go menu
+  // would take Ctrl+1–Ctrl+9 first and jump sections mid-scan, so while the
+  // sheet is open the window's menu shortcuts stand down.
+  ipcMain.on('desktop:scan-capture', (event, value: unknown) => {
+    const sender = trustedSender(event)
+    if (!sender || !isInternalUrl(settings.endpoint, sender)) return
+    event.sender.setIgnoreMenuShortcuts(value === true)
   })
 
   ipcMain.on('desktop:print-document', (event, value: unknown) => {

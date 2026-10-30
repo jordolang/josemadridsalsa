@@ -9909,6 +9909,7 @@ function meta(section: DesktopSection): SectionMeta {
         filters: EVENT_FILTERS,
         actions: [
           { label: 'New show', icon: 'i-plus', command: form('event.create'), primary: true },
+          { label: 'Show checkout', icon: 'i-boxes', command: { kind: 'showCheckout' } },
           { label: 'Calendar sync', icon: 'i-calendar', command: link('/admin/events/calendar') },
           open,
         ],
@@ -10264,6 +10265,7 @@ function pageMeta(section: DesktopSection, entry: DesktopPage): SectionMeta {
         eyebrow,
         filters: MANIFEST_FILTERS,
         actions: [
+          { label: 'Show checkout', icon: 'i-boxes', command: { kind: 'showCheckout' }, primary: true },
           { label: 'Calendar', icon: 'i-calendar', command: jump('events') },
           { label: 'Inventory', icon: 'i-boxes', command: jump('inventory') },
         ],
