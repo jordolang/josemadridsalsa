@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { triggerCampaignContinuation } from '@/lib/email/queue'
 import { isAuthorizedCronRequest } from '@/lib/cron/auth'
+import { hasConfirmedAudience } from '@/lib/email/audience-check'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -45,9 +46,17 @@ export async function GET(request: NextRequest) {
     const dueCampaigns = await prisma.emailCampaign.findMany({
       where: { status: 'SCHEDULED', scheduledAt: { lte: now } },
       take: 25,
-      select: { id: true, startedAt: true },
+      select: { id: true, startedAt: true, totalRecipients: true },
     })
+    let held = 0
     for (const c of dueCampaigns) {
+      // A scheduled campaign whose audience nobody reviewed stays SCHEDULED
+      // until someone confirms it on the campaign page.
+      if (!c.startedAt && !(await hasConfirmedAudience(c))) {
+        held++
+        console.warn(`Campaign ${c.id} is due but its audience has not been confirmed; holding it.`)
+        continue
+      }
       await prisma.emailCampaign.update({
         where: { id: c.id },
         data: { status: 'SENDING', startedAt: c.startedAt ?? now },
@@ -72,7 +81,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       recovered: recovered.count,
-      started: dueCampaigns.length,
+      started: dueCampaigns.length - held,
+      held,
       driven: active.length,
     })
   } catch (error) {

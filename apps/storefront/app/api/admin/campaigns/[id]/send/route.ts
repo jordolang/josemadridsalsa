@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
 import { logAuditWithRequest } from '@/lib/audit'
 import { triggerCampaignContinuation } from '@/lib/email/queue'
+import { AUDIENCE_NOT_CONFIRMED_MESSAGE, hasConfirmedAudience } from '@/lib/email/audience-check'
 
 export async function POST(
   request: NextRequest,
@@ -22,6 +23,12 @@ export async function POST(
         { error: `Cannot send campaign in ${campaign.status} status` },
         { status: 400 }
       )
+    }
+
+    // A first send needs a reviewed audience. A campaign that already started
+    // (resuming after a pause) was checked when it first went out.
+    if (!campaign.startedAt && !(await hasConfirmedAudience(campaign))) {
+      return NextResponse.json({ error: AUDIENCE_NOT_CONFIRMED_MESSAGE }, { status: 409 })
     }
 
     // Recover any recipients left mid-flight by a previously interrupted run.

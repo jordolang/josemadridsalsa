@@ -113,6 +113,54 @@ The `runCampaignSender()` function (`lib/email/campaign-sender.ts`) processes le
    - Updates lead status to `EMAIL_SENT` or `EMAIL_FAILED`
    - Emits progress events via the scraper event bus
 
+## Audience Check Before Sending
+
+Every campaign's first send needs a reviewed audience (`lib/email/audience-check.ts`). **Launch
+Campaign** on `/admin/email-campaigns/[id]` opens a check that shows:
+
+- the recipient count and the list it came from,
+- a sample of up to 10 recipients, named people first,
+- how many recipients have an open order and how many do not,
+- **Only send to people with an open order**, which removes recipients without one. It is on by
+  default for campaigns on the Open Orders list, and for campaigns whose name or subject reads
+  like a shipping or order update (ship, deliver, tracking, delay, "your order").
+
+Confirming is recorded in the audit log (`email_campaign.audience_confirmed`) with the exact
+recipient count approved. The Launch button, `POST /api/admin/campaigns/[id]/send` and the
+scheduled-send cron all refuse a campaign that has not started and has no confirmation for its
+current count. A scheduled campaign without one stays `SCHEDULED` and shows **Review Audience** on
+its page. Resuming a paused campaign does not ask again.
+
+## Open Orders List
+
+The **Open Orders** mailing list (fixed id `open-orders`) holds everyone whose order has not shipped
+yet (`lib/email/open-orders.ts`). It is never edited by hand: each refresh purges every entry and
+rebuilds it from the site's own orders, including fundraiser and BigCommerce-mirrored orders.
+
+An order is open when all of these hold:
+
+- payment is `PAID` or `PARTIALLY_REFUNDED`,
+- status is `PENDING`, `CONFIRMED` or `PROCESSING`,
+- fulfillment is `UNFULFILLED` or `PARTIALLY_FULFILLED`,
+- the sales channel is not `POS` or `EVENT` (taken home at the table).
+
+Each person appears once, with the email from their account or guest checkout and the shipping
+name. Tags carry the sales channel, and `customFields.orderNumbers` lists their open orders.
+People who opted out (email suppressions, unsubscribe-all preferences, or a non-mailable
+customer `emailStatus`) are kept as `UNSUBSCRIBED`, `BOUNCED` or `COMPLAINED` rows so campaigns
+skip them.
+
+### Fundraising Open Orders
+
+A second, separate list, **Fundraising Open Orders** (fixed id `fundraising-open-orders`), holds
+only open fundraising orders: the same open rules plus any of `salesChannel = FUNDRAISER`, a
+`fundraiserId`, or `importSource = 'bigcommerce-fundraising'` (copies of orders from the separate
+fundraising BigCommerce store). The main Open Orders list still includes fundraising orders.
+
+Both lists refresh when you click **Refresh Open Orders Lists** on `/admin/communications/lists`
+(which also creates them the first time), and each rebuilds itself whenever a campaign is created
+on it, from the campaign page or the desktop admin.
+
 ## Suppression Lists
 
 The `checkSuppression()` function (`lib/email/suppression.ts`) checks whether an email address should be excluded from sending (unsubscribed, bounced, or complained).
