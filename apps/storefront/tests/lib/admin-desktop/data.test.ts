@@ -1356,13 +1356,22 @@ describe('fundraisers', () => {
     })
 
     it('puts waiting accounts first, oldest first, with Approve and Decline', async () => {
-      prismaMock.fundraiserAccount.findMany.mockResolvedValue([
-        account({ id: 'newest', createdAt: new Date('2026-10-28T12:00:00Z') }),
-        account({ id: 'approved', status: 'APPROVED', approvedAt: new Date('2026-10-25T12:00:00Z') }),
-        account({ id: 'oldest', createdAt: new Date('2026-10-18T12:00:00Z') }),
-      ])
+      prismaMock.fundraiserAccount.findMany
+        .mockResolvedValueOnce([
+          account({ id: 'oldest', createdAt: new Date('2026-10-18T12:00:00Z') }),
+          account({ id: 'newest', createdAt: new Date('2026-10-28T12:00:00Z') }),
+        ])
+        .mockResolvedValueOnce([
+          account({ id: 'approved', status: 'APPROVED', approvedAt: new Date('2026-10-25T12:00:00Z') }),
+        ])
 
       const payload = await loadSection('fundraisers.verifications')
+      // Regression: waiting accounts were read inside the list window, so a long
+      // history of reviewed ones could push them off the queue.
+      const [waitingQuery, reviewedQuery] = prismaMock.fundraiserAccount.findMany.mock.calls.map((call) => call[0])
+      expect(waitingQuery).toMatchObject({ where: { status: 'PENDING' }, orderBy: { createdAt: 'asc' } })
+      expect(waitingQuery.take).toBeUndefined()
+      expect(reviewedQuery).toMatchObject({ where: { status: { not: 'PENDING' } }, take: 248 })
       if (payload.body.view !== 'table') throw new Error('expected a table payload')
       const { rows, totals } = payload.body
 

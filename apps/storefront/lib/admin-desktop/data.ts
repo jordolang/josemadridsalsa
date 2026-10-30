@@ -5410,25 +5410,36 @@ const ACCOUNT_STATUS: Record<string, { label: string; tone: Tone; bucket: number
  * first, so the queue reads in the order people asked.
  */
 async function loadFundraiserVerifications(list: ListQuery = DEFAULT_LIST): Promise<TablePayload> {
-  const accounts = await safe(
+  const include = {
+    user: { select: { name: true, email: true } },
+    fundraiser: {
+      select: { name: true, organizationName: true, flavorPackage: true, fulfillmentMethod: true },
+    },
+  } satisfies Prisma.FundraiserAccountInclude
+
+  // Every waiting account, whatever the window: the list limit only trims the
+  // reviewed ones, so a busy history can never push the queue off the page.
+  const pending = await safe(
     () =>
       prisma.fundraiserAccount.findMany({
+        where: { status: 'PENDING' },
+        orderBy: { createdAt: 'asc' },
+        include,
+      }),
+    [],
+  )
+  const reviewed = await safe(
+    () =>
+      prisma.fundraiserAccount.findMany({
+        where: { status: { not: 'PENDING' } },
         orderBy: { createdAt: 'desc' },
-        take: list.limit,
-        include: {
-          user: { select: { name: true, email: true } },
-          fundraiser: {
-            select: { name: true, organizationName: true, flavorPackage: true, fulfillmentMethod: true },
-          },
-        },
+        take: Math.max(list.limit - pending.length, 0),
+        include,
       }),
     [],
   )
 
-  const queue = [
-    ...accounts.filter((account) => account.status === 'PENDING').reverse(),
-    ...accounts.filter((account) => account.status !== 'PENDING'),
-  ]
+  const queue = [...pending, ...reviewed]
 
   const columns: Column[] = [
     { label: 'Fundraiser', width: 'minmax(0,1.4fr)' },
