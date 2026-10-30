@@ -176,6 +176,16 @@ export async function confirmAudience(params: {
     throw new AudienceCheckError('Only a campaign that has not started sending can be reviewed')
   }
 
+  // A create that died part-way leaves fewer rows than `totalRecipients`. The
+  // launch guard refuses that draft, and rewriting the total below would hide it.
+  const materialised = await prisma.emailRecipient.count({ where: { campaignId } })
+  if (materialised !== campaign.totalRecipients) {
+    throw new AudienceCheckError(
+      `Campaign is incomplete: ${materialised} of ${campaign.totalRecipients} recipients were saved. ` +
+        'Delete it and create it again.',
+    )
+  }
+
   const recipients = await loadPendingRecipients(campaignId)
   if (recipients.length !== expectedRecipients) {
     throw new AudienceCheckError(

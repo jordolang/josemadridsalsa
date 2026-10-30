@@ -51,7 +51,10 @@ export function AudienceCheckDialog({ campaignId, mode, open, onOpenChange }: Au
         return
       }
       setCheck(result.check)
-      setOnlyOpenOrders(result.check.suggestOnlyOpenOrders && result.check.withOpenOrder > 0)
+      // On even when nobody has an open order: the send button then stays disabled
+      // until someone deliberately unticks it, rather than quietly sending a
+      // shipping update to everyone.
+      setOnlyOpenOrders(result.check.suggestOnlyOpenOrders)
     })
   }, [open, campaignId])
 
@@ -136,7 +139,6 @@ export function AudienceCheckDialog({ campaignId, mode, open, onOpenChange }: Au
               <Checkbox
                 id="only-open-orders"
                 checked={onlyOpenOrders}
-                disabled={check.withOpenOrder === 0}
                 onCheckedChange={(v) => setOnlyOpenOrders(v === true)}
               />
               <Label htmlFor="only-open-orders" className="text-sm font-normal leading-snug">
@@ -150,6 +152,12 @@ export function AudienceCheckDialog({ campaignId, mode, open, onOpenChange }: Au
                 )}
               </Label>
             </div>
+
+            {check.suggestOnlyOpenOrders && check.withOpenOrder === 0 && (
+              <p className="text-sm text-destructive">
+                This looks like a shipping or order update, but nobody on it has an open order.
+              </p>
+            )}
 
             <div className="flex items-start gap-2">
               <Checkbox

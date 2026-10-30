@@ -132,7 +132,7 @@ describe('confirmAudience', () => {
 
   it('removes recipients without an open order and records the new count', async () => {
     campaignFindUnique.mockResolvedValue(draft)
-    recipientCount.mockResolvedValue(2)
+    recipientCount.mockResolvedValueOnce(3).mockResolvedValueOnce(2)
 
     const result = await confirmAudience({
       campaignId: 'c1',
@@ -165,8 +165,20 @@ describe('confirmAudience', () => {
     expect(auditCreate.mock.calls[0][0].data.changes).toMatchObject({ recipientCount: 3 })
   })
 
+  it('refuses a draft whose recipients were only half written', async () => {
+    campaignFindUnique.mockResolvedValue(draft)
+    recipientCount.mockResolvedValue(1)
+
+    await expect(
+      confirmAudience({ campaignId: 'c1', userId: 'u1', expectedRecipients: 1, onlyOpenOrders: false }),
+    ).rejects.toThrow('1 of 3 recipients')
+    expect(campaignUpdate).not.toHaveBeenCalled()
+    expect(auditCreate).not.toHaveBeenCalled()
+  })
+
   it('refuses when the audience changed since it was shown', async () => {
     campaignFindUnique.mockResolvedValue(draft)
+    recipientCount.mockResolvedValue(3)
 
     await expect(
       confirmAudience({ campaignId: 'c1', userId: 'u1', expectedRecipients: 5, onlyOpenOrders: false }),
@@ -176,6 +188,7 @@ describe('confirmAudience', () => {
 
   it('refuses to filter down to nobody', async () => {
     campaignFindUnique.mockResolvedValue(draft)
+    recipientCount.mockResolvedValue(3)
     loadOpenOrderEmails.mockResolvedValue(new Set())
 
     await expect(
