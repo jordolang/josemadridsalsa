@@ -18,6 +18,8 @@ import {
   type SubscriberLike,
   type VariableMappings,
 } from '@/lib/email/variable-mapping'
+import { OPEN_ORDERS_LIST_ID, refreshOpenOrdersList } from '@/lib/email/open-orders'
+import { AUDIENCE_NOT_CONFIRMED_MESSAGE, hasConfirmedAudience } from '@/lib/email/audience-check'
 
 /**
  * Load every DiscountCode referenced by a `discountCode` mapping into a
@@ -105,8 +107,13 @@ export async function createCampaign(formData: FormData) {
         where: { id: listId },
         select: { id: true },
       })
-      if (!list) {
+      if (!list && listId !== OPEN_ORDERS_LIST_ID) {
         return { error: 'Mailing list not found' }
+      }
+      // The Open Orders list is rebuilt for every campaign that uses it, so it
+      // holds only people whose order is still open right now.
+      if (listId === OPEN_ORDERS_LIST_ID) {
+        await refreshOpenOrdersList(user.id)
       }
       // Only the size is needed here; the subscribers themselves are streamed
       // into recipients after the campaign row exists.
@@ -252,6 +259,10 @@ export async function launchCampaign(campaignId: string) {
           `Campaign is incomplete: ${materialised} of ${campaign.totalRecipients} recipients were saved. ` +
           'Delete it and create it again before launching.',
       }
+    }
+
+    if (!(await hasConfirmedAudience(campaign))) {
+      return { error: AUDIENCE_NOT_CONFIRMED_MESSAGE }
     }
 
     // Recover any recipients left mid-flight by a previously interrupted run.

@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser, hasPermission } from '@/lib/rbac'
+import { logAudit } from '@/lib/audit'
+import { refreshOpenOrdersList } from '@/lib/email/open-orders'
 
 export async function createMailingList(formData: FormData) {
   const user = await getCurrentUser()
@@ -38,4 +40,24 @@ export async function deleteMailingList(id: string) {
   })
 
   revalidatePath('/admin/communications/lists')
+}
+
+/** Purge the Open Orders list and rebuild it from the orders that are open now. */
+export async function refreshOpenOrdersListAction() {
+  const user = await getCurrentUser()
+  if (!user || !(await hasPermission(user, 'content:write'))) {
+    throw new Error('Unauthorized')
+  }
+
+  const result = await refreshOpenOrdersList(user.id)
+  await logAudit({
+    userId: user.id,
+    action: 'mailingList.openOrders.refresh',
+    entityType: 'mailingList',
+    entityId: result.listId,
+    changes: { ...result },
+  })
+
+  revalidatePath('/admin/communications/lists')
+  return result
 }

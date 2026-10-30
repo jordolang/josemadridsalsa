@@ -13,6 +13,17 @@ the root `package.json` is canonical.
 
 ## [Unreleased]
 
+### Added
+- **Open Orders mailing list.** A list of everyone with a paid order that has not shipped yet,
+  rebuilt from the site's own orders (website, fundraiser and BigCommerce-mirrored). Every
+  refresh purges all previous entries first. Refresh it from **Mailing Lists**; it also rebuilds
+  itself whenever a campaign is created on it. Opted-out people stay on it as unsubscribed.
+- **Audience check before a campaign sends.** Launching a campaign now shows the recipient
+  count, a sample of names, and how many have an open order, with a filter to send only to
+  them (on by default for shipping and order updates). The send button, the send API and the
+  scheduled-send cron all refuse a first send nobody confirmed. Prompted by the Oct 28 thank-you
+  email reaching people with no order.
+
 ## [2.3] — 2026-10-30
 
 ### Added

@@ -26,6 +26,8 @@ vi.mock('@/lib/prisma', () => {
 
 vi.mock('@/lib/email/queue', () => ({ triggerCampaignContinuation }))
 vi.mock('@/lib/cron/auth', () => ({ isAuthorizedCronRequest }))
+const hasConfirmedAudience = vi.fn()
+vi.mock('@/lib/email/audience-check', () => ({ hasConfirmedAudience }))
 
 const { GET } = await import('@/app/api/cron/email-campaigns/route')
 
@@ -54,6 +56,7 @@ beforeEach(() => {
   recipientUpdateMany.mockResolvedValue({ count: 0 })
   campaignUpdate.mockResolvedValue({})
   triggerCampaignContinuation.mockResolvedValue(undefined)
+  hasConfirmedAudience.mockResolvedValue(true)
 })
 
 describe('GET /api/cron/email-campaigns', () => {
@@ -64,6 +67,16 @@ describe('GET /api/cron/email-campaigns', () => {
 
     expect(response.status).toBe(401)
     expect(campaignFindMany).not.toHaveBeenCalled()
+  })
+
+  it('holds a due scheduled campaign whose audience nobody confirmed', async () => {
+    queryResults({ due: [{ id: 'camp_1', startedAt: null, totalRecipients: 1638 }] })
+    hasConfirmedAudience.mockResolvedValueOnce(false)
+
+    const response = await GET(cronRequest())
+
+    expect(campaignUpdate).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toMatchObject({ started: 0, held: 1 })
   })
 
   it('starts a scheduled campaign whose time has come', async () => {

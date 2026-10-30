@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { hasConfirmedAudience } from '@/lib/email/audience-check'
 import { CampaignActions } from './_components/campaign-actions'
 
 async function getCampaign(id: string) {
@@ -179,6 +180,10 @@ export default async function CampaignDetailPage({
       ? (campaign.sentCount / campaign.totalRecipients) * 100
       : 0
   const failedCount = statusCounts['FAILED'] || 0
+  const needsAudienceReview =
+    campaign.status === 'SCHEDULED' &&
+    !campaign.startedAt &&
+    !(await hasConfirmedAudience(campaign))
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -204,6 +209,7 @@ export default async function CampaignDetailPage({
             campaignId={campaign.id}
             status={campaign.status}
             failedCount={failedCount}
+            needsAudienceReview={needsAudienceReview}
           />
         )}
       </div>

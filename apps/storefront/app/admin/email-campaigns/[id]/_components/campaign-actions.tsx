@@ -2,29 +2,37 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Send, Pause, Play, Square, Trash2, RotateCcw } from 'lucide-react'
+import { Send, Pause, Play, Square, Trash2, RotateCcw, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  launchCampaign,
   resumeCampaign,
   pauseCampaign,
   cancelCampaign,
   deleteCampaign,
 } from '../../actions'
 import { retryCampaignFailuresAction } from '../actions'
+import { AudienceCheckDialog } from './audience-check-dialog'
 
 interface CampaignActionsProps {
   campaignId: string
   status: string
   failedCount: number
+  /** A scheduled campaign that has not started and whose audience nobody has confirmed. */
+  needsAudienceReview: boolean
 }
 
-export function CampaignActions({ campaignId, status, failedCount }: CampaignActionsProps) {
+export function CampaignActions({
+  campaignId,
+  status,
+  failedCount,
+  needsAudienceReview,
+}: CampaignActionsProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [audienceMode, setAudienceMode] = useState<'launch' | 'confirm' | null>(null)
 
   const handleAction = (action: () => Promise<{ error?: string; success?: boolean }>) => {
     setError(null)
@@ -67,10 +75,19 @@ export function CampaignActions({ campaignId, status, failedCount }: CampaignAct
     <div className="flex flex-col items-end gap-2">
       <div className="flex items-center gap-2">
         {/* Start: Launch a DRAFT campaign */}
+        {/* Launching always goes through the audience check first. */}
         {status === 'DRAFT' && (
-          <Button onClick={() => handleAction(() => launchCampaign(campaignId))} disabled={isPending}>
+          <Button onClick={() => setAudienceMode('launch')} disabled={isPending}>
             <Send className="mr-2 h-4 w-4" />
-            {isPending ? 'Launching...' : 'Launch Campaign'}
+            Launch Campaign
+          </Button>
+        )}
+
+        {/* A scheduled send is held by the cron until its audience is confirmed. */}
+        {status === 'SCHEDULED' && needsAudienceReview && (
+          <Button onClick={() => setAudienceMode('confirm')} disabled={isPending}>
+            <Users className="mr-2 h-4 w-4" />
+            Review Audience
           </Button>
         )}
 
@@ -129,9 +146,24 @@ export function CampaignActions({ campaignId, status, failedCount }: CampaignAct
         )}
       </div>
 
+      {status === 'SCHEDULED' && needsAudienceReview && (
+        <p className="text-sm text-muted-foreground">
+          This campaign will not send until its audience is reviewed.
+        </p>
+      )}
+
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}
+
+      <AudienceCheckDialog
+        campaignId={campaignId}
+        mode={audienceMode ?? 'launch'}
+        open={audienceMode !== null}
+        onOpenChange={(open) => {
+          if (!open) setAudienceMode(null)
+        }}
+      />
     </div>
   )
 }

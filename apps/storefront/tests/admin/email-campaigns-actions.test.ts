@@ -66,6 +66,16 @@ vi.mock('@/lib/email/sender', () => ({
 vi.mock('@/lib/email/queue', () => ({
   triggerCampaignContinuation: vi.fn(async () => undefined),
 }))
+const hasConfirmedAudience = vi.fn(async () => true)
+const refreshOpenOrdersList = vi.fn(async () => ({}))
+vi.mock('@/lib/email/audience-check', () => ({
+  hasConfirmedAudience,
+  AUDIENCE_NOT_CONFIRMED_MESSAGE: 'Review the audience before sending',
+}))
+vi.mock('@/lib/email/open-orders', () => ({
+  OPEN_ORDERS_LIST_ID: 'open-orders',
+  refreshOpenOrdersList,
+}))
 
 const { createCampaign, launchCampaign } = await import(
   '@/app/admin/email-campaigns/actions'
@@ -294,5 +304,40 @@ describe('launchCampaign', () => {
 
     expect(result).toMatchObject({ success: true })
     expect(campaignUpdate).toHaveBeenCalled()
+  })
+
+  // Regression: the Oct 28 thank-you email went out with nobody looking at who
+  // was on the list. A launch now needs a recorded audience review.
+  it('refuses a draft whose audience nobody confirmed', async () => {
+    campaignFindUnique.mockResolvedValue({
+      id: 'campaign-1',
+      status: 'DRAFT',
+      totalRecipients: 1638,
+      startedAt: null,
+    })
+    recipientCount.mockResolvedValue(1638)
+    hasConfirmedAudience.mockResolvedValueOnce(false)
+
+    const result = await launchCampaign('campaign-1')
+
+    expect(result.error).toContain('Review the audience')
+    expect(campaignUpdate).not.toHaveBeenCalled()
+  })
+})
+
+describe('createCampaign on the Open Orders list', () => {
+  it('rebuilds the list before counting its subscribers', async () => {
+    listFindUnique.mockResolvedValueOnce(null as unknown as { id: string })
+    // Earlier tests leave queued one-off results behind.
+    subscriberCount.mockReset().mockImplementation(async () => 3)
+    subscriberFindMany.mockReset().mockImplementation(async () => page(0, 3))
+
+    const result = await createCampaign(listForm({ listId: 'open-orders' }))
+
+    expect(refreshOpenOrdersList).toHaveBeenCalledWith('user-1')
+    expect(refreshOpenOrdersList.mock.invocationCallOrder[0]).toBeLessThan(
+      subscriberCount.mock.invocationCallOrder.at(-1)!,
+    )
+    expect(result).toMatchObject({ success: true, recipientsCount: 3 })
   })
 })

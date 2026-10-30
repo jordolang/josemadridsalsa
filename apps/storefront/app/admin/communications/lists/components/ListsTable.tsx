@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Trash2, Users, Upload } from 'lucide-react'
+import { Trash2, Users, Upload, RefreshCw } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { createMailingList, deleteMailingList } from '../actions'
+import { createMailingList, deleteMailingList, refreshOpenOrdersListAction } from '../actions'
 import { ConstantContactImportModal } from './ConstantContactImportModal'
 
 type ListWithStats = MailingList & {
@@ -38,6 +38,23 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
   const [isPending, startTransition] = useTransition()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCcImportOpen, setIsCcImportOpen] = useState(false)
+  const [openOrdersMessage, setOpenOrdersMessage] = useState<string | null>(null)
+
+  const handleRefreshOpenOrders = () => {
+    if (!confirm('Replace every entry on the Open Orders list with the people who have an open order right now?')) return
+    setOpenOrdersMessage(null)
+    startTransition(async () => {
+      try {
+        const r = await refreshOpenOrdersListAction()
+        setOpenOrdersMessage(
+          `Open Orders rebuilt: ${r.openOrders} open orders, ${r.contacts} people (${r.subscribed} subscribed, ${r.optedOut} opted out).`,
+        )
+      } catch (error) {
+        console.error('Failed to refresh Open Orders list', error)
+        setOpenOrdersMessage('Could not rebuild the Open Orders list.')
+      }
+    })
+  }
 
   const handleCreate = async (formData: FormData) => {
     startTransition(async () => {
@@ -66,6 +83,10 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
       <div className="mb-4 flex flex-col items-center justify-between gap-2 sm:flex-row">
         <h2 className="text-xl font-semibold">Existing Lists</h2>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleRefreshOpenOrders} disabled={isPending}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Open Orders List
+          </Button>
           <Button variant="outline" onClick={() => setIsCcImportOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import from Constant Contact
@@ -105,6 +126,10 @@ export function ListsTable({ lists }: { lists: ListWithStats[] }) {
           </Dialog>
         </div>
       </div>
+
+      {openOrdersMessage && (
+        <p className="mb-4 text-sm text-muted-foreground">{openOrdersMessage}</p>
+      )}
 
       <ConstantContactImportModal
         lists={lists.map((l) => ({ id: l.id, name: l.name }))}

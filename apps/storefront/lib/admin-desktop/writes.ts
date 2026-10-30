@@ -41,6 +41,7 @@ import {
 import { generatePoNumber } from '@/lib/purchasing/receiving'
 import { createInvoice, INVOICE_STATUSES, invoiceLinesSchema, priceInvoiceLines } from '@/lib/invoices/create-invoice'
 import { insertRecipientsFromList } from '@/lib/email/recipients'
+import { OPEN_ORDERS_LIST_ID, refreshOpenOrdersList } from '@/lib/email/open-orders'
 import { canClearNotification, completeStep, reopenStep } from '@/lib/inbox/resolution'
 import { markAllNotificationsRead } from '@/lib/notifications/dispatch'
 import { checkPostSeo } from '@/lib/blog/schemas'
@@ -2034,6 +2035,8 @@ const campaignHandlers: Record<string, WriteHandler> = {
       if (values.scheduledAt && !values.listId) {
         throw new WriteError('A scheduled campaign needs a mailing list to send to.', 'listId')
       }
+      // Rebuilt per campaign so it only holds people whose order is still open.
+      if (values.listId === OPEN_ORDERS_LIST_ID) await refreshOpenOrdersList(actor.id)
 
       const campaign = await prisma.emailCampaign
         .create({
