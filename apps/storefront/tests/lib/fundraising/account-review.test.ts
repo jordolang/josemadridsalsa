@@ -8,12 +8,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const prismaMock = {
   $transaction: vi.fn(async (ops: unknown) => (typeof ops === 'function' ? ops(prismaMock) : ops)),
-  fundraiserAccount: { findUnique: vi.fn(), update: vi.fn((args) => ({ op: 'account', ...args })) },
+  fundraiserAccount: {
+    findUnique: vi.fn(),
+    update: vi.fn((args) => ({ op: 'account', ...args })),
+    deleteMany: vi.fn(async () => ({ count: 1 })),
+  },
   fundraiser: {
     update: vi.fn((args) => ({ op: 'fundraiser', ...args })),
-    delete: vi.fn((args) => ({ op: 'delete-fundraiser', ...args })),
+    deleteMany: vi.fn(async () => ({ count: 1 })),
   },
-  user: { delete: vi.fn((args) => ({ op: 'delete-user', ...args })) },
+  user: { deleteMany: vi.fn(async () => ({ count: 1 })) },
   fundraiserProduct: { createMany: vi.fn((args) => ({ op: 'products', ...args })) },
 }
 vi.mock('@/lib/prisma', () => ({ __esModule: true, default: prismaMock, prisma: prismaMock }))
@@ -100,15 +104,20 @@ describe('denyFundraiserAccount', () => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam())
 
     await expect(denyFundraiserAccount('a1', OWNER)).resolves.toEqual({ name: 'Free Crypto', email: 'bot@spam.test' })
-    expect(prismaMock.fundraiser.delete).toHaveBeenCalledWith({ where: { id: 'f1' } })
-    expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 'u9' } })
+    expect(prismaMock.fundraiserAccount.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'a1', status: { not: 'APPROVED' }, approvedAt: null },
+    })
+    expect(prismaMock.fundraiser.deleteMany).toHaveBeenCalledWith({ where: { id: 'f1', orders: { none: {} } } })
+    expect(prismaMock.user.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'u9', role: 'FUNDRAISER', orders: { none: {} } },
+    })
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
   })
 
   it('also clears one that was declined earlier', async () => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam({ status: 'SUSPENDED' }))
     await denyFundraiserAccount('a1', OWNER)
-    expect(prismaMock.user.delete).toHaveBeenCalled()
+    expect(prismaMock.user.deleteMany).toHaveBeenCalled()
   })
 
   it.each([
@@ -120,7 +129,31 @@ describe('denyFundraiserAccount', () => {
   ])('refuses one that %s', async (_case, account) => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(account)
     await expect(denyFundraiserAccount('a1', OWNER)).rejects.toMatchObject({ status: 409 })
-    expect(prismaMock.fundraiser.delete).not.toHaveBeenCalled()
+    expect(prismaMock.fundraiser.deleteMany).not.toHaveBeenCalled()
+  })
+
+  // Regression: the checks were read before the transaction that deleted, so an
+  // approval landing in between was deleted along with its campaign and login.
+  it('stops, and deletes nothing more, when the account was approved after it was read', async () => {
+    prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam())
+    prismaMock.fundraiserAccount.deleteMany.mockResolvedValueOnce({ count: 0 })
+
+    await expect(denyFundraiserAccount('a1', OWNER)).rejects.toMatchObject({
+      status: 409,
+      message: expect.stringContaining('approved just now'),
+    })
+    expect(prismaMock.fundraiser.deleteMany).not.toHaveBeenCalled()
+    expect(prismaMock.user.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('rolls back when an order arrived after it was read', async () => {
+    prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam())
+    prismaMock.fundraiser.deleteMany.mockResolvedValueOnce({ count: 0 })
+
+    await expect(denyFundraiserAccount('a1', OWNER)).rejects.toMatchObject({
+      status: 409,
+      message: expect.stringContaining('took an order just now'),
+    })
   })
 
   it('is held to the owner accounts, because it deletes a login', async () => {

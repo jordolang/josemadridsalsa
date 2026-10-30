@@ -90,8 +90,14 @@ export async function reviewFundraiserAccount(accountId: string, action: Account
  * (`canEraseData`), so it is here too. And only for sign-ups that never went
  * live: an account that was ever approved, or a campaign or login that has
  * taken an order, is suspended instead, so no sale loses the records it points
- * at. The checks run inside the transaction that deletes, so an order placed in
- * between cannot slip past them.
+ * at.
+ *
+ * Reading first and deleting second would leave a gap another operator's
+ * approval could land in, so each delete repeats its condition. Postgres
+ * re-reads a row another transaction changed before deleting it: an approval
+ * committed after the read below leaves no row matching, nothing is deleted
+ * and the transaction is rolled back. Deleting the account row first also means
+ * an approval that arrives afterwards finds nothing to approve.
  */
 export async function denyFundraiserAccount(accountId: string, actorEmail: string | null | undefined) {
   if (!canEraseData(actorEmail)) {
@@ -119,9 +125,21 @@ export async function denyFundraiserAccount(accountId: string, actorEmail: strin
       throw new AccountReviewError(`${account.fundraiser.name} has orders, so suspend it instead.`, 409)
     }
 
-    // Both deletes cascade to the account row.
-    await tx.fundraiser.delete({ where: { id: account.fundraiserId } })
-    await tx.user.delete({ where: { id: account.userId } })
+    const name = account.fundraiser.name
+    const unreviewed = await tx.fundraiserAccount.deleteMany({
+      where: { id: accountId, status: { not: 'APPROVED' }, approvedAt: null },
+    })
+    if (unreviewed.count === 0) {
+      throw new AccountReviewError(`${name} was approved just now, so it was not denied. Suspend it instead.`, 409)
+    }
+
+    const campaign = await tx.fundraiser.deleteMany({ where: { id: account.fundraiserId, orders: { none: {} } } })
+    const login = await tx.user.deleteMany({
+      where: { id: account.userId, role: 'FUNDRAISER', orders: { none: {} } },
+    })
+    if (campaign.count === 0 || login.count === 0) {
+      throw new AccountReviewError(`${name} took an order just now, so it was not denied. Suspend it instead.`, 409)
+    }
 
     return { name: account.fundraiser.name, email: account.user.email }
   })
