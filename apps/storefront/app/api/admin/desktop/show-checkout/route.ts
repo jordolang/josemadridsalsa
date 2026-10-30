@@ -98,6 +98,9 @@ export async function GET() {
   }
 }
 
+/** The show's manifest is already Returned, found inside the transaction. */
+class ReturnedError extends Error {}
+
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Dates are yyyy-mm-dd')
 
 const Checkout = z.object({
@@ -122,22 +125,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const [event, rows] = await Promise.all([
-      prisma.featuredEvent.findUnique({
-        where: { id: input.eventId },
-        select: { id: true, title: true, manifest: { include: { items: true } } },
-      }),
+      prisma.featuredEvent.findUnique({ where: { id: input.eventId }, select: { id: true, title: true } }),
       prisma.product.findMany({
         where: { id: { in: [...new Set(input.cases.map((entry) => entry.productId))] } },
         select: { id: true, name: true, sku: true, barcode: true, unitsPerCase: true },
       }),
     ])
     if (!event) return NextResponse.json({ error: 'That show no longer exists' }, { status: 404 })
-    if (event.manifest?.status === 'RETURNED') {
-      return NextResponse.json(
-        { error: `${event.title} is already marked Returned. Reopen its manifest before checking more salsa out.` },
-        { status: 409 },
-      )
-    }
     if (rows.length !== new Set(input.cases.map((entry) => entry.productId)).size) {
       return NextResponse.json({ error: 'A scanned product no longer exists. Reload and scan again.' }, { status: 400 })
     }
@@ -151,16 +145,31 @@ export async function POST(request: NextRequest) {
     const perCase = new Map(rows.map((row) => [row.id, row.unitsPerCase]))
     const note = checkoutNote(input.checkedOutBy, input.checkoutDate, lines, names)
 
-    // A draft manifest is the plan: the first checkout replaces it.
-    const adding = event.manifest?.status === 'PACKED'
-    const existing = new Map((adding ? event.manifest?.items ?? [] : []).map((item) => [item.productId, item]))
-
-    const manifest = await prisma.$transaction(async (tx) => {
-      const notes = [event.manifest?.notes, note].filter(Boolean).join('\n')
-      const saved = await tx.eventManifest.upsert({
+    const { manifest, adding } = await prisma.$transaction(async (tx) => {
+      // Write the manifest row before reading it: the write holds its row lock
+      // until this transaction commits, so a second packer checking out for the
+      // same show waits here and then reads this cart, rather than both merging
+      // onto the same starting point and the later one overwriting the first.
+      await tx.eventManifest.upsert({
         where: { eventId: event.id },
-        create: { eventId: event.id, status: 'PACKED', packedAt: new Date(), notes },
-        update: { status: 'PACKED', packedAt: event.manifest?.packedAt ?? new Date(), notes },
+        create: { eventId: event.id },
+        update: { updatedAt: new Date() },
+      })
+      const current = await tx.eventManifest.findUnique({ where: { eventId: event.id }, include: { items: true } })
+      if (!current) throw new Error('The manifest vanished mid-checkout')
+      if (current.status === 'RETURNED') throw new ReturnedError()
+
+      // A draft manifest is the plan: the first checkout replaces it.
+      const adding = current.status === 'PACKED'
+      const existing = new Map((adding ? current.items : []).map((item) => [item.productId, item]))
+
+      const saved = await tx.eventManifest.update({
+        where: { id: current.id },
+        data: {
+          status: 'PACKED',
+          packedAt: current.packedAt ?? new Date(),
+          notes: [current.notes, note].filter(Boolean).join('\n'),
+        },
       })
       if (!adding) await tx.eventManifestItem.deleteMany({ where: { manifestId: saved.id } })
 
@@ -172,7 +181,7 @@ export async function POST(request: NextRequest) {
           update: merged,
         })
       }
-      return saved
+      return { manifest: saved, adding }
     })
 
     const cases = input.cases.reduce((sum, entry) => sum + (entry.half ? 0.5 : 1), 0)
@@ -189,6 +198,12 @@ export async function POST(request: NextRequest) {
       manifestId: manifest.id,
     })
   } catch (error) {
+    if (error instanceof ReturnedError) {
+      return NextResponse.json(
+        { error: 'This show is already marked Returned. Reopen its manifest before checking more salsa out.' },
+        { status: 409 },
+      )
+    }
     console.error('[admin-desktop] show checkout save failed:', error)
     return NextResponse.json({ error: 'The checkout could not be saved. Nothing was changed; try again.' }, { status: 500 })
   }
