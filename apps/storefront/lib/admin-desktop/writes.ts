@@ -1300,7 +1300,7 @@ const fundraiserHandlers: Record<string, WriteHandler> = {
     schema: z.object({}),
     async run(_values, context) {
       const id = requireRecord(context)
-      const { name, email } = await denyFundraiserAccount(id).catch(reviewFailed)
+      const { name, email } = await denyFundraiserAccount(id, context.actor.email).catch(reviewFailed)
       return { message: `${name} denied · ${email} removed` }
     },
   }),

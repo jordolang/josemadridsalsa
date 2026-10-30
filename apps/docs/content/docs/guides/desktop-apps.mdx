@@ -339,7 +339,9 @@ refusing an approval when the package has a salsa with no active product, and bo
 login, the draft campaign and the account, so the row disappears and the address could sign up
 again. It is offered only for accounts that were never approved, and it refuses (suggesting
 Decline instead) when the campaign or login has an order or the login is not fundraiser-only.
-It cannot be undone, and also needs `orders:write`.
+Because it deletes a login, it is held to the owner accounts, like every other user deletion,
+and it cannot be undone. The web admin's `/admin/fundraisers/accounts` page has the same
+**Deny as spam** button.
 
 ### Show checkout: loading the van by scanning cases
 

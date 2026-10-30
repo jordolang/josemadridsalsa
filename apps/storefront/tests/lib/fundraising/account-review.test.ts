@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  */
 
 const prismaMock = {
-  $transaction: vi.fn(async (ops: unknown[]) => ops),
+  $transaction: vi.fn(async (ops: unknown) => (typeof ops === 'function' ? ops(prismaMock) : ops)),
   fundraiserAccount: { findUnique: vi.fn(), update: vi.fn((args) => ({ op: 'account', ...args })) },
   fundraiser: {
     update: vi.fn((args) => ({ op: 'fundraiser', ...args })),
@@ -84,6 +84,7 @@ describe('reviewFundraiserAccount', () => {
 })
 
 describe('denyFundraiserAccount', () => {
+  const OWNER = 'mike@josemadridsalsa.com'
   const spam = (overrides: Record<string, unknown> = {}) => ({
     id: 'a1',
     status: 'PENDING',
@@ -98,7 +99,7 @@ describe('denyFundraiserAccount', () => {
   it('deletes the campaign and the login of a sign-up that never went live', async () => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam())
 
-    await expect(denyFundraiserAccount('a1')).resolves.toEqual({ name: 'Free Crypto', email: 'bot@spam.test' })
+    await expect(denyFundraiserAccount('a1', OWNER)).resolves.toEqual({ name: 'Free Crypto', email: 'bot@spam.test' })
     expect(prismaMock.fundraiser.delete).toHaveBeenCalledWith({ where: { id: 'f1' } })
     expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 'u9' } })
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
@@ -106,7 +107,7 @@ describe('denyFundraiserAccount', () => {
 
   it('also clears one that was declined earlier', async () => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam({ status: 'SUSPENDED' }))
-    await denyFundraiserAccount('a1')
+    await denyFundraiserAccount('a1', OWNER)
     expect(prismaMock.user.delete).toHaveBeenCalled()
   })
 
@@ -118,12 +119,18 @@ describe('denyFundraiserAccount', () => {
     ['has a login with orders', spam({ user: { id: 'u9', email: 'x@y.z', role: 'FUNDRAISER', _count: { orders: 1 } } })],
   ])('refuses one that %s', async (_case, account) => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(account)
-    await expect(denyFundraiserAccount('a1')).rejects.toMatchObject({ status: 409 })
+    await expect(denyFundraiserAccount('a1', OWNER)).rejects.toMatchObject({ status: 409 })
+    expect(prismaMock.fundraiser.delete).not.toHaveBeenCalled()
+  })
+
+  it('is held to the owner accounts, because it deletes a login', async () => {
+    prismaMock.fundraiserAccount.findUnique.mockResolvedValue(spam())
+    await expect(denyFundraiserAccount('a1', 'staff@josemadridsalsa.com')).rejects.toMatchObject({ status: 403 })
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
 
   it('says so when the account is gone', async () => {
     prismaMock.fundraiserAccount.findUnique.mockResolvedValue(null)
-    await expect(denyFundraiserAccount('nope')).rejects.toMatchObject({ status: 404 })
+    await expect(denyFundraiserAccount('nope', OWNER)).rejects.toMatchObject({ status: 404 })
   })
 })

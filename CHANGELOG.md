@@ -19,9 +19,10 @@ the root `package.json` is canonical.
   be approved, oldest first. Approve or decline in place; approval stocks the store from the
   chosen flavor package exactly as the web admin does. A new sign-up also raises a desktop
   notification and counts toward the dock or taskbar badge.
-- **Deny as spam in the desktop fundraiser verifications.** A never-approved sign-up can be
-  denied with **Deny as spam** (⌘⌫), which deletes its login, draft campaign and account so it
-  leaves the queue for good. Accounts with orders or a staff login are refused.
+- **Deny as spam for fundraiser sign-ups.** In the desktop verifications queue (⌘⌫) and on the
+  web admin's Fundraiser Accounts page, a never-approved sign-up can be denied with **Deny as
+  spam**, which deletes its login, draft campaign and account so it leaves the queue for good.
+  Owner accounts only; accounts with orders or a staff login are refused.
 
 ## [2.3] — 2026-10-30
 

@@ -1095,7 +1095,7 @@ describe('fundraiser verifications', () => {
   it('denies spam by deleting the sign-up and says whose login went', async () => {
     denyFundraiserAccount.mockResolvedValue({ name: 'Free Crypto', email: 'bot@spam.test' })
     const outcome = await WRITE_HANDLERS['fundraiserAccount.deny'].execute({}, { ...actor, recordId: 'a1' })
-    expect(denyFundraiserAccount).toHaveBeenCalledWith('a1')
+    expect(denyFundraiserAccount).toHaveBeenCalledWith('a1', actor.actor.email)
     expect(outcome.message).toBe('Free Crypto denied · bot@spam.test removed')
   })
 

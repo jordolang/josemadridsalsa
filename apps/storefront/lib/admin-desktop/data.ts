@@ -5477,7 +5477,7 @@ async function loadFundraiserVerifications(list: ListQuery = DEFAULT_LIST): Prom
       shortcut: '⌘⌫',
       danger: true,
       command: write('fundraiserAccount.deny', account.id, {
-        confirm: `Deny ${name} as spam? The sign-up, its draft campaign and the ${user.email} login are deleted. This cannot be undone.`,
+        confirm: `Deny ${name} as spam? The sign-up, its draft campaign and the ${user.email} login are deleted. This cannot be undone. Owner accounts only.`,
         danger: true,
       }),
     }
